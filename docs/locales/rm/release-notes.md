@@ -1,15 +1,9 @@
-## 3.0.0 — 2026-10-27
+## 3.0.1 — 2026-10-27
 
-### Identificaziuns dal navigatur Download Engine
+### Iconas da las extensiuns dal navigatur
 
-Las identificaziuns dal navigatur dovran ussa il num Download Engine. En Firefox, allontanai l’extensiun veglia da svilup avant d’installar la nova e controllai ils parameters e las permissiuns. Telechargiadas, progress e colonnas da spetga da l’applicaziun restan. L’applicaziun migrescha sias atgnas connexiuns e mantegna in host da cumpatibilitad separà per extensiuns veglias.
+Las extensiuns cuntegnan ussa il logo da Download Engine en grondezzas adattadas a la trav d’utensils ed a la butia. Ils pachets per Chrome, Edge, Brave e Firefox, il program d’installaziun per Windows e las versiuns portablas cuntegnan las medemas datotecas d’iconas.
 
-com.xetro.downloadengine · download-engine@xetro
+### Instrucziuns per installar las extensiuns
 
-### Infurmaziuns giuridicas e licenzas en Davart
-
-Davart porscha ussa in lectur offline per la licenza MIT da l’applicaziun e per ils avis da terzas partidas inclus. Ils texts originals pon vegnir legids e copiads. Ins po midar il document e returnar a Davart senza midar las telechargiadas. Ils elements da controlla suondan la lingua tschernida e s’adattan ad omadus temas.
-
-### Documentaziun
-
-Il README è vegnì amplifitgà cun logo, funcziuns, funtaunas da video, configuraziun ed automatisaziun. La documentaziun da segirezza declera permissiuns, datas localas, MCP e rapports da vulnerabilitads.
+Il README infurmescha ussa cleramain che l’approvaziun da las butias è anc pendenta. Chrome, Edge e Brave dovran il modus da sviluppader e Load unpacked. Firefox dovra Load Temporary Add-on; l’extensiun sto vegnir chargiada danovamain suenter mintga reaviertura dal navigatur. La secziun da configuraziun cuntegna colliaziuns a las instrucziuns da chargiar e colliar per mintga navigatur.

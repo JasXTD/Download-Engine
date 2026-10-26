@@ -1,15 +1,9 @@
-## 3.0.0 — 2026-10-27
+## 3.0.1 — 2026-10-27
 
-### Pengenal pelayar Download Engine
+### Ikon sambungan pelayar
 
-Pengenal pelayar kini menggunakan nama Download Engine. Untuk Firefox, buang sambungan pembangun lama sebelum memasang sambungan baharu dan semak semula tetapan serta kebenaran. Muat turun, kemajuan dan baris gilir desktop dikekalkan. Aplikasi memindahkan sambungannya sendiri dan mengekalkan hos keserasian berasingan untuk sambungan lama.
+Sambungan pelayar kini menyertakan logo Download Engine dalam saiz bar alat dan kedai. Pakej Chrome, Edge, Brave dan Firefox, pemasang Windows serta versi mudah alih menyertakan fail ikon yang sama.
 
-com.xetro.downloadengine · download-engine@xetro
+### Panduan pemasangan sambungan pelayar
 
-### Undang-undang dan lesen dalam Perihal
-
-Perihal kini menyediakan pembaca luar talian untuk lesen MIT aplikasi dan notis pihak ketiga yang disertakan. Baca dan salin teks asal, tukar dokumen dan kembali ke Perihal tanpa mengubah muat turun. Kawalan mengikut bahasa antara muka pilihan dan sesuai dengan kedua-dua tema.
-
-### Dokumentasi
-
-README diperluas dengan logo, ciri, sumber video, persediaan dan automasi. Dokumentasi keselamatan menerangkan kebenaran, data setempat, MCP dan pelaporan kelemahan.
+README kini menjelaskan bahawa kelulusan kedai pelayar masih belum diterima. Chrome, Edge dan Brave memerlukan mod pembangun dan Load unpacked; Firefox menggunakan Load Temporary Add-on dan perlu dimuatkan semula selepas setiap mula semula pelayar. Bahagian persediaan memautkan langkah pemuatan dan sambungan bagi setiap pelayar.

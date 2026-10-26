@@ -97,6 +97,7 @@ try {
                 Copy-Item -LiteralPath (Join-Path $workspaceRoot "extension\$file") -Destination $extensionRoot
             }
             Copy-Item -LiteralPath (Join-Path $workspaceRoot 'extension\_locales') -Destination $extensionRoot -Recurse
+            Copy-Item -LiteralPath (Join-Path $workspaceRoot 'extension\icons') -Destination $extensionRoot -Recurse
             Copy-Item -LiteralPath (Join-Path $workspaceRoot 'LICENSE') -Destination $extensionRoot
             $variant = if ($browserName -eq 'firefox') { 'firefox' } else { 'chromium' }
             $manifestSource = Join-Path $workspaceRoot "extension\manifest.$variant.json"

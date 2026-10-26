@@ -345,15 +345,19 @@ Source: "{#SourceRoot}\docs\releases.md"; DestDir: "{app}\docs"; Flags: ignoreve
 Source: "{#SourceRoot}\extension\i18n-catalog.js"; DestDir: "{app}\extensions\chrome"; Flags: ignoreversion
 Source: "{#SourceRoot}\extension\i18n.js"; DestDir: "{app}\extensions\chrome"; Flags: ignoreversion
 Source: "{#SourceRoot}\extension\_locales\*"; DestDir: "{app}\extensions\chrome\_locales"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "{#SourceRoot}\extension\icons\*"; DestDir: "{app}\extensions\chrome\icons"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "{#SourceRoot}\extension\i18n-catalog.js"; DestDir: "{app}\extensions\edge"; Flags: ignoreversion
 Source: "{#SourceRoot}\extension\i18n.js"; DestDir: "{app}\extensions\edge"; Flags: ignoreversion
 Source: "{#SourceRoot}\extension\_locales\*"; DestDir: "{app}\extensions\edge\_locales"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "{#SourceRoot}\extension\icons\*"; DestDir: "{app}\extensions\edge\icons"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "{#SourceRoot}\extension\i18n-catalog.js"; DestDir: "{app}\extensions\brave"; Flags: ignoreversion
 Source: "{#SourceRoot}\extension\i18n.js"; DestDir: "{app}\extensions\brave"; Flags: ignoreversion
 Source: "{#SourceRoot}\extension\_locales\*"; DestDir: "{app}\extensions\brave\_locales"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "{#SourceRoot}\extension\icons\*"; DestDir: "{app}\extensions\brave\icons"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "{#SourceRoot}\extension\i18n-catalog.js"; DestDir: "{app}\extensions\firefox"; Flags: ignoreversion
 Source: "{#SourceRoot}\extension\i18n.js"; DestDir: "{app}\extensions\firefox"; Flags: ignoreversion
 Source: "{#SourceRoot}\extension\_locales\*"; DestDir: "{app}\extensions\firefox\_locales"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "{#SourceRoot}\extension\icons\*"; DestDir: "{app}\extensions\firefox\icons"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "{#SourceRoot}\docs\localization.md"; DestDir: "{app}\docs"; Flags: ignoreversion
 Source: "{#SourceRoot}\docs\locales\*"; DestDir: "{app}\docs\locales"; Flags: ignoreversion recursesubdirs createallsubdirs
 

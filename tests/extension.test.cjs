@@ -43,6 +43,26 @@ test("Firefox declares local data transfers and optional login consent for AMO",
   });
 });
 
+test("store and toolbar icons exist at the sizes declared by both manifests", () => {
+  const fs = require("node:fs");
+  const path = require("node:path");
+  for (const variant of ["chromium", "firefox"]) {
+    const manifest = require("../extension/manifest." + variant + ".json");
+    const action = manifest.action || manifest.browser_action;
+    assert(manifest.icons, `${variant}: store icons are required`);
+    assert(action.default_icon, `${variant}: toolbar icons are required`);
+    for (const size of [16, 32, 48, 128]) {
+      const file = manifest.icons[size];
+      assert.equal(typeof file, "string", `${variant}: missing ${size}px icon`);
+      const png = fs.readFileSync(path.join(__dirname, "../extension", file));
+      assert.equal(png.subarray(0, 8).toString("hex"), "89504e470d0a1a0a");
+      assert.equal(png.readUInt32BE(16), size);
+      assert.equal(png.readUInt32BE(20), size);
+    }
+    for (const size of [16, 32]) assert.equal(action.default_icon[size], manifest.icons[size]);
+  }
+});
+
 test("extension and native registration use the same branded identities", () => {
   const fs = require("node:fs");
   const native = fs.readFileSync(require.resolve("../src/browser_setup.rs"), "utf8");

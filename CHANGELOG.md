@@ -4,6 +4,10 @@ Release notes are available offline in Help → Changelog. Newest releases appea
 
 ## 3.0.1 — 2026-10-27
 
+### Browser extension icons
+
+Browser extensions now include the Download Engine logo at toolbar and store sizes. Chrome, Edge, Brave and Firefox packages, the Windows installer and portable builds all include the same icon files.
+
 ### Browser extension setup guidance
 
 The README now makes it clear that browser-store approval is pending. Chrome, Edge and Brave currently require Developer mode and Load unpacked; Firefox uses Load Temporary Add-on and must be loaded again after each browser restart. Browser-specific loading and connection steps are linked directly from the setup section.

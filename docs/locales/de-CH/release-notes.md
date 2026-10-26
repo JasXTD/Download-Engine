@@ -1,15 +1,9 @@
-## 3.0.0 — 2026-10-27
+## 3.0.1 — 2026-10-27
 
-### Download Engine Browserkennungen
+### Symbole für Browser-Erweiterungen
 
-Die Browserkennungen verwenden jetzt den Namen Download Engine. Entfernen Sie in Firefox das alte Entwickler-Add-on vor der Neuinstallation und prüfen Sie Einstellungen und Berechtigungen erneut. Desktop-Downloads, Fortschritt und Warteschlangen bleiben erhalten. Die App migriert ihre eigenen Verbindungen und behält einen separaten Kompatibilitätshost für ältere Erweiterungen.
+Die Browser-Erweiterungen enthalten jetzt das Download Engine-Logo in passenden Grössen für Symbolleiste und Store. Die Pakete für Chrome, Edge, Brave und Firefox, das Windows-Installationsprogramm und die portablen Versionen enthalten dieselben Symboldateien.
 
-com.xetro.downloadengine · download-engine@xetro
+### Anleitung zur Einrichtung der Browser-Erweiterungen
 
-### Rechtliches und Lizenzen im Infofenster
-
-Das Infofenster bietet jetzt einen Offline-Leser für die MIT-Lizenz der Anwendung und die mitgelieferten Hinweise zu Drittanbietern. Originaltexte lassen sich lesen und kopieren, Dokumente wechseln und das Infofenster wieder öffnen, ohne Downloads zu verändern. Die Bedienelemente verwenden die gewählte Oberflächensprache und passen zu beiden Designs.
-
-### Dokumentation
-
-Die README wurde um Logo, Funktionen, Videoquellen, Einrichtung und Automatisierung erweitert. Die Sicherheitsdokumentation erklärt Berechtigungen, lokale Daten, MCP und Schwachstellenmeldungen.
+Die README weist nun deutlich auf die ausstehende Store-Freigabe hin. Chrome, Edge und Brave benötigen den Entwicklermodus und «Entpackte Erweiterung laden». Firefox verwendet ein temporäres Add-on, das nach jedem Browser-Neustart erneut geladen werden muss. Der Einrichtungsabschnitt verlinkt die Lade- und Verbindungsschritte für jeden Browser.

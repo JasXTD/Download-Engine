@@ -1,15 +1,9 @@
-## 3.0.0 — 2026-10-27
+## 3.0.1 — 2026-10-27
 
-### Identifiants navigateur Download Engine
+### Icônes des extensions de navigateur
 
-Les identifiants du navigateur utilisent désormais le nom Download Engine. Dans Firefox, retirez l’ancienne extension de développement avant d’installer la nouvelle, puis vérifiez ses réglages et autorisations. Les téléchargements, leur progression et les files de l’application sont conservés. L’application migre ses propres connexions et garde un hôte de compatibilité distinct pour les anciennes extensions.
+Les extensions incluent désormais le logo Download Engine aux tailles adaptées à la barre d’outils et à la boutique. Les paquets Chrome, Edge, Brave et Firefox, le programme d’installation Windows et les versions portables incluent les mêmes fichiers d’icônes.
 
-com.xetro.downloadengine · download-engine@xetro
+### Instructions d’installation des extensions
 
-### Informations légales et licences dans À propos
-
-À propos propose désormais un lecteur hors ligne pour la licence MIT de l’application et les mentions des composants tiers inclus. Vous pouvez lire et copier les textes originaux, changer de document et revenir à À propos sans modifier vos téléchargements. Les commandes suivent la langue choisie et conviennent aux deux thèmes.
-
-### Documentation
-
-Le README détaille davantage le logo, les fonctions, les sources vidéo, la configuration et l’automatisation. La documentation de sécurité explique les autorisations, les données locales, MCP et le signalement des vulnérabilités.
+Le README précise désormais que la validation par les boutiques est en attente. Chrome, Edge et Brave nécessitent le mode développeur et le chargement d’une extension non empaquetée. Firefox utilise un module temporaire, à recharger après chaque redémarrage du navigateur. La section de configuration renvoie aux étapes de chargement et de connexion pour chaque navigateur.

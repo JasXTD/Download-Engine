@@ -1,0 +1,1028 @@
+{
+  "m_a9f74d4af5d7dd2d": {
+    "message": "{0} skjult av filtre"
+  },
+  "m_b364264cdee56a63": {
+    "message": "{0} av {1} lenker · {2} valgt{3}"
+  },
+  "m_3e9174b076fa6723": {
+    "message": "{0} unike HTTP-/HTTPS-lenker funnet. Ingenting velges automatisk."
+  },
+  "m_4751f6a4b5d9bb30": {
+    "message": "{0}–{1} av {2}"
+  },
+  "m_2150dc95bcdb8850": {
+    "message": "En ny lenke venter allerede på gjennomgang i Download Engine."
+  },
+  "m_acca29cca3e064e3": {
+    "message": "Overleveringen trenger oppfølging. Bruk Fortsett i nettleserens nedlastingsliste hvis pauset. "
+  },
+  "m_da5cba54ff645402": {
+    "message": "Et sidesøk pågår allerede."
+  },
+  "m_93cbb4b9c437b588": {
+    "message": "En forespørsel fra velgeren sendes allerede."
+  },
+  "m_8b60e5b9af092e22": {
+    "message": "En gjennomgang åpnes allerede."
+  },
+  "m_fbb9b1f9dcbfeae4": {
+    "message": "En videogjennomgang åpnes allerede i Download Engine."
+  },
+  "m_69dfd976b317260d": {
+    "message": "En videogjennomgang åpnes allerede."
+  },
+  "m_f2ca785fd206a095": {
+    "message": "En videogjennomgang venter på bekreftelse. Bruk først Nettleservalg → Gjenopprett overleveringer."
+  },
+  "m_0e9839b644120fa4": {
+    "message": "Legg til {0} fil(er){1}"
+  },
+  "m_264137ad4e188078": {
+    "message": "Legg til fil-URL"
+  },
+  "m_d852059dca4ba30a": {
+    "message": "Legg til minst én filtype, eller skriv * for å fange alle typer."
+  },
+  "m_fba811a83d244b75": {
+    "message": "Legg til valgte filer"
+  },
+  "m_63889fe9a0f7922d": {
+    "message": "Lagt til i Download Engine"
+  },
+  "m_b42ec7eef98969f5": {
+    "message": "Lagt til i kø"
+  },
+  "m_035a4bf3220f575b": {
+    "message": "Lagt til med nettleserinnlogging"
+  },
+  "m_1fec4c2ee0889acb": {
+    "message": "Alle lenker"
+  },
+  "m_08e774c5bacc362a": {
+    "message": "Alle kilder"
+  },
+  "m_79c625de4b9fd500": {
+    "message": "Tillat kapseltilgang for nettstedet for å bruke innloggingen."
+  },
+  "m_26f0b4e0ff1f898e": {
+    "message": "Tillat nedlastingstilgang for automatisk fangst."
+  },
+  "m_5b94fcf971c23dee": {
+    "message": "Tillat nedlastingstilgang for en ny lenke til {0}. Automatisk fangst kan forbli av."
+  },
+  "m_2e62efd7ab18a82d": {
+    "message": "Tillat medieoppdagelse og nettstedstilgang for å følge medieforespørsler."
+  },
+  "m_48cc22965b91eff2": {
+    "message": "Tillat gjenopprettingstilgang"
+  },
+  "m_24e1772fedce2ed7": {
+    "message": "Tillat nettstedsinnlogging og nedlasting"
+  },
+  "m_5864c132f9bc0926": {
+    "message": "Tillat nettstedet"
+  },
+  "m_9ee4b5b0cf00b360": {
+    "message": "Tillat nettstedstilgang for å vise videoknappen."
+  },
+  "m_9f46b4f2f671c116": {
+    "message": "Alle størrelser"
+  },
+  "m_72c46a00422be09f": {
+    "message": "Godkjenn én filnedlasting."
+  },
+  "m_66f4804ee23ddc09": {
+    "message": "Arkiv"
+  },
+  "m_e404aa80d8df4adb": {
+    "message": "Arkiver"
+  },
+  "m_bc1b88907d3b748a": {
+    "message": "Lyd"
+  },
+  "m_571a9d4e6ae3e6e9": {
+    "message": "Automatisk fangst"
+  },
+  "m_551953291092c063": {
+    "message": "Automatisk fangst kunne ikke starte: "
+  },
+  "m_4b0437f552a7f60f": {
+    "message": "Automatisk fangst av."
+  },
+  "m_ca4588908fe682ee": {
+    "message": "Automatisk fangst av. Fortsett pausede nedlastinger i nettleserens nedlastingsliste."
+  },
+  "m_dbcbd988532e58f3": {
+    "message": "Automatisk fangst på for direkte filnedlastinger."
+  },
+  "m_a4885ab1c22dbeb0": {
+    "message": "Automatisk fangst forblir av. Åpne Download Engine → Verktøy → Nettleseroppsett, velg nettleser og Koble til nettleser. Prøv deretter her igjen. "
+  },
+  "m_bdf26652484911a4": {
+    "message": "Automatisk nedlastingsfangst"
+  },
+  "m_6259b8b41e217222": {
+    "message": "Automatiske mapper"
+  },
+  "m_6aa06201d769ad78": {
+    "message": "Tilgjengelige lenker"
+  },
+  "m_2cf57ca29785ac99": {
+    "message": "Nettleserkopien fortsatte"
+  },
+  "m_9ce0d857154f24e2": {
+    "message": "Nettleserspråk"
+  },
+  "m_9a06933b478415e9": {
+    "message": "Innloggingstilgang er fjernet for alle nettsteder. Eksisterende nedlastinger beholder krypterte data til du sletter dem i Download Engine."
+  },
+  "m_776802e7061330f7": {
+    "message": "Nettleserinnlogging kunne ikke sendes. Kontroller nettstedstilgang og apptilkobling."
+  },
+  "m_31eb4316301f4815": {
+    "message": "Nettleserinnlogging krever HTTPS. Åpne en sikker direkte fillenke."
+  },
+  "m_0017e5fbb9fd5905": {
+    "message": "Nettleservalg"
+  },
+  "m_f4a311ce61b95ad0": {
+    "message": "Fang filnedlastinger og finn videoer for skrivebordsappen Download Engine."
+  },
+  "m_90948ad9dbb580df": {
+    "message": "Fangstregler"
+  },
+  "m_720995cec7bccf29": {
+    "message": "Fangstreglene er utilgjengelige. Last inn utvidelsen på nytt."
+  },
+  "m_8f326a402a36befc": {
+    "message": "Fangstreglene er lagret."
+  },
+  "m_be5dff52eeb0fd5b": {
+    "message": "Kontroller tilkobling"
+  },
+  "m_c29aa06c2ddb8076": {
+    "message": "Kontroller disse filtypene: {0}"
+  },
+  "m_8151d4ddeed81415": {
+    "message": "Kontroller disse nettstedene: {0}"
+  },
+  "m_d6fdbb314af454a1": {
+    "message": "Kontrollerer opprinnelig gruppe…"
+  },
+  "m_ec963ffc911b8401": {
+    "message": "Kontrollerer…"
+  },
+  "m_ddec030e83b025f5": {
+    "message": "Velg en oppført HLS- eller DASH-video."
+  },
+  "m_a0f311dfdcbbc7c9": {
+    "message": "Velg en lagret kø og målmappe."
+  },
+  "m_9b02ef3f495e64ef": {
+    "message": "Velg filer fra siden"
+  },
+  "m_cbe8a50b6762fd46": {
+    "message": "Velg kvalitet i appen"
+  },
+  "m_c945c62180fcab9a": {
+    "message": "Velg videofiler og strømkvalitet i Download Engine"
+  },
+  "m_312bfa601066a8e4": {
+    "message": "Velg hva som skal lastes ned"
+  },
+  "m_83b12c2216efb4fd": {
+    "message": "Tøm"
+  },
+  "m_a8858ac749bc452b": {
+    "message": "Tøm logg"
+  },
+  "m_cea4d2e010b8fd52": {
+    "message": "Fjern merking"
+  },
+  "m_652c67c42dba3909": {
+    "message": "Lukk en annen lenkevelger først. Bruk Gjenopprett overleveringer for ventende grupper."
+  },
+  "m_b9ce2241762a7a45": {
+    "message": "Kobler til Download Engine…"
+  },
+  "m_83f23cdbeb423f39": {
+    "message": "Tilkoblingskontroll"
+  },
+  "m_d45e5aae2ee31082": {
+    "message": "Kapsellageret samsvarer ikke"
+  },
+  "m_101bd5ad093f5552": {
+    "message": "Kunne ikke fjerne nettstedstilgang. Bruk nettleserens utvidelsesinnstillinger."
+  },
+  "m_4a8c2b313a136fa4": {
+    "message": "Kunne ikke fortsette nettlesernedlastingen. Bruk Fortsett i nettleserens nedlastingsliste. "
+  },
+  "m_50746138b9d24c2b": {
+    "message": "Kunne ikke gå tilbake til utvidelsesvinduet:"
+  },
+  "m_936628cc4a394ede": {
+    "message": "Standardverdier gjenopprettet. Velg Lagre regler for å beholde dem."
+  },
+  "m_0690f959c9689317": {
+    "message": "Oppdag medier under surfing"
+  },
+  "m_4125b0325a1d9a1c": {
+    "message": "Oppdagede medier"
+  },
+  "m_ee71fa5ff80ee155": {
+    "message": "Oppdagelse på. Spill av medier for å oppdatere listen."
+  },
+  "m_c46c657680c1fb6a": {
+    "message": "Diagnostikklogg"
+  },
+  "m_da1e00181e6edfc0": {
+    "message": "Diagnostikkloggen er utilgjengelig. Last inn utvidelsen på nytt."
+  },
+  "m_97a6661033069fb1": {
+    "message": "Direkte filer og ukrypterte HLS-/DASH-forhåndsvisninger."
+  },
+  "m_d6bd8c0aeee80fed": {
+    "message": "Dokument"
+  },
+  "m_b4e929d8bcfe0418": {
+    "message": "Dokumenter"
+  },
+  "m_4b20f1e564f08418": {
+    "message": "Nedlastingstilgang endret. Aktiver automatisk fangst igjen når du er klar."
+  },
+  "m_de82471b8e92e8c9": {
+    "message": "Nedlastingstilgang ikke gitt. Automatisk fangst forblir av."
+  },
+  "m_26e9086fb67e1171": {
+    "message": "Nedlastingstilgang ikke gitt. Du kan fortsatt lime inn en ny lenke i Download Engine."
+  },
+  "m_86237283243c5c06": {
+    "message": "Nedlastingsmål"
+  },
+  "m_4fe58a9f465df20b": {
+    "message": "Download Engine"
+  },
+  "m_67061b40bd1fc990": {
+    "message": "Filen er i Download Engines kø, men nettleserkopien kunne ikke stoppes. Kontroller begge listene."
+  },
+  "m_ad28de051651de0a": {
+    "message": "Download Engine er tilkoblet."
+  },
+  "m_b5ee50a47681c17b": {
+    "message": "Download Engine oppdaterte eksisterende nedlasting. Nettleserkopien finnes også; kontroller begge listene."
+  },
+  "m_55cff9fa827ef904": {
+    "message": "Download Engine kopierer samsvarende innloggingskapsler fra originalfanen, inkludert Firefox-beholderen. Filen må være på samme server."
+  },
+  "m_b732f149ac000cfe": {
+    "message": "Nedlastingen ble beholdt i nettleseren: "
+  },
+  "m_4dfb918c17f5863a": {
+    "message": "Nedlastingen ble beholdt i nettleseren."
+  },
+  "m_3a7a16064f324d88": {
+    "message": "Last ned lenker fra siden"
+  },
+  "m_182321e7f219bcc2": {
+    "message": "Nedlasting sendt til Download Engine."
+  },
+  "m_d1db69fff45e2607": {
+    "message": "Last ned med nettleserinnlogging…"
+  },
+  "m_9e6a91c146c14996": {
+    "message": "Last ned video"
+  },
+  "m_e1e91278b3b950c4": {
+    "message": "Last ned video med Download Engine — gjennomgå først"
+  },
+  "m_36886174177ac2af": {
+    "message": "Last ned med Download Engine"
+  },
+  "m_cc5c7b4f90b18c40": {
+    "message": "Aktiver oppdagelse med nettstedstilgang. Bruker ikke innloggingen din."
+  },
+  "m_e2d9eaba91bf0037": {
+    "message": "Angi en fullstendig HTTP- eller HTTPS-filadresse."
+  },
+  "m_6e42641a11a1c04e": {
+    "message": "Angi en minste størrelse mellom 0 og 1 TB."
+  },
+  "m_4eb6084d5e196685": {
+    "message": "Eksisterende nedlasting oppdatert i Download Engine."
+  },
+  "m_2eabb5731ec0a7f5": {
+    "message": "Utvidelsesspråk"
+  },
+  "m_d8e40338c0625f5b": {
+    "message": "Fil / lenke"
+  },
+  "m_fb6219471a55d640": {
+    "message": "Filnedlastinger fanges automatisk. Koble til skrivebordsappen i nettleseroppsettet."
+  },
+  "m_95b44f14672ddf20": {
+    "message": "Filnavn, lenketekst eller URL"
+  },
+  "m_ea1df05210c29d1e": {
+    "message": "Filtype"
+  },
+  "m_6ebe2a3778d6510e": {
+    "message": "Filtyper som skal fanges"
+  },
+  "m_4ac686f1fff7a0ce": {
+    "message": "Filens URL"
+  },
+  "m_7cd46f2b72f2f96d": {
+    "message": "filer og lenker"
+  },
+  "m_91c34f985f2ccf2e": {
+    "message": "Finn videoer på siden"
+  },
+  "m_abb03e243f8f426a": {
+    "message": "Finn videoer med Download Engine"
+  },
+  "m_c14ae1090e852370": {
+    "message": "Fullfør den åpne tillatelsesforespørselen før du endrer flere innstillinger."
+  },
+  "m_3b36902cb433c0af": {
+    "message": "Mapper administreres i Download Engine-innstillingene."
+  },
+  "m_fb1c8ed06249aced": {
+    "message": "Fant {0} {1}. Gjennomgå i den nye fanen."
+  },
+  "m_dac55102f2a6291b": {
+    "message": "Funnet i"
+  },
+  "m_cf58b80fa579dabc": {
+    "message": "Ny lenke funnet. Gjennomgå datakontrollen i Download Engine og bekreft fortsettelse."
+  },
+  "m_23b41d51987507df": {
+    "message": "HLS / DASH åpner en skrivebordsforhåndsvisning; direkte og krypterte strømmer støttes ikke. Aktiver medieoppdagelse før avspilling for flere strømmer."
+  },
+  "m_1aa4cb0bcca76e92": {
+    "message": "Bilde"
+  },
+  "m_be7e2f20129365c2": {
+    "message": "Bilder"
+  },
+  "m_28d71345fcbdb6bc": {
+    "message": "Avbrutt overlevering gjenopprettet; nedlastingen ble beholdt i nettleseren."
+  },
+  "m_ddedfe53cbb11f79": {
+    "message": "Avbrutt gjenoppretting frigitt til nettleseren."
+  },
+  "m_7182c1f1f59286fa": {
+    "message": "Ugyldig innstilling for automatisk fangst."
+  },
+  "m_419be78ea9367d52": {
+    "message": "Ugyldig nettleserinnloggingsforespørsel."
+  },
+  "m_615de39dbabcd451": {
+    "message": "Ugyldige fangstregler."
+  },
+  "m_4e6451d9c7a05b34": {
+    "message": "Ugyldig diagnostikkinnstilling."
+  },
+  "m_ebe2abb4cddb35fc": {
+    "message": "Ugyldig lenkevelgeridentifikator."
+  },
+  "m_438fc9ceb0904b0d": {
+    "message": "Ugyldig medieoppdagelsesinnstilling."
+  },
+  "m_cfd2d68349b7432a": {
+    "message": "Ugyldig sidesøkemodus."
+  },
+  "m_53621c0588be411a": {
+    "message": "Ugyldig forespørselsidentifikator."
+  },
+  "m_fd72d477bb65dc79": {
+    "message": "Ugyldig videoknappinnstilling."
+  },
+  "m_e20a4b411a818b8b": {
+    "message": "Ugyldig nettsted for videoknapp."
+  },
+  "m_c2e9a31124f7d0f7": {
+    "message": "Hold den opprinnelige innloggede fanen åpen."
+  },
+  "m_019e66b1bd219970": {
+    "message": "Hold opprinnelig innlogget fane åpen. Privat surfing støttes ikke."
+  },
+  "m_251452cbeaef4875": {
+    "message": "Størst først"
+  },
+  "m_52296e73ceec6ce1": {
+    "message": "Lenkegjenoppretting"
+  },
+  "m_ccc96d8740521cb4": {
+    "message": "Laster inn sidelenker…"
+  },
+  "m_b9f867064b204410": {
+    "message": "Laster inn nettsted…"
+  },
+  "m_6f1c11acccb3f806": {
+    "message": "Hovedkø"
+  },
+  "m_179b204ad2a7f5dc": {
+    "message": "Medieoppdagelse"
+  },
+  "m_d7b80c91cf6b7aa5": {
+    "message": "Medietilgang endret. Aktiver igjen når du er klar."
+  },
+  "m_36fb507d0e7b32e8": {
+    "message": "Medieoppdagelse av. Listen tømt."
+  },
+  "m_63cfe215acef08ce": {
+    "message": "Medieoppdagelse på. Start avspilling eller last siden på nytt."
+  },
+  "m_05dc18f8ce93981b": {
+    "message": "Medieoppdagelse er utilgjengelig. Last inn utvidelsen på nytt."
+  },
+  "m_7a05c2c962505cdb": {
+    "message": "Medielisten kunne ikke oppdateres. Slå oppdagelse av og på igjen."
+  },
+  "m_667d5d5489d7fc17": {
+    "message": "medieelementer"
+  },
+  "m_0c401d043fe13fb6": {
+    "message": "Medielisten tømt. Nye avspillingsforespørsler kan vises igjen."
+  },
+  "m_d8851b3df6edf1d3": {
+    "message": "Medier på siden"
+  },
+  "m_91a5e537e1bf2422": {
+    "message": "Minste filstørrelse"
+  },
+  "m_dcd1d5223f73b3a9": {
+    "message": "Navn"
+  },
+  "m_a8bc982bc423c5a7": {
+    "message": "Nettverksmedier"
+  },
+  "m_0cffcc196fd87d17": {
+    "message": "Aldri fang fra disse nettstedene"
+  },
+  "m_1ff57a29d7c9d11b": {
+    "message": "Neste"
+  },
+  "m_09f1c438851431f3": {
+    "message": "Ingen aktivitet registrert ennå."
+  },
+  "m_3f1536c1d3a3c78c": {
+    "message": "Ingen lenker lastet"
+  },
+  "m_507f9ea8cb63e18e": {
+    "message": "Ingen lenker samsvarer med filtrene."
+  },
+  "m_7eaa329a40093924": {
+    "message": "Ingen samsvarende filer"
+  },
+  "m_75d0a7642fe89d02": {
+    "message": "Ingen minimumsgrense"
+  },
+  "m_6dd1d3103295d8dc": {
+    "message": "Ingen respons fra utvidelsens bakgrunn."
+  },
+  "m_47788a2327f83840": {
+    "message": "Ingen støttet nettleserinnlogging kunne leses. Logg inn på nettstedet og prøv igjen. Private eller partisjonerte økter støttes ikke."
+  },
+  "m_1e9601e1e54c4d5a": {
+    "message": "Ingen støttede innloggingskapsler samsvarer med filen. Logg inn først. Private, partisjonerte og førstepartsisolerte økter støttes ikke."
+  },
+  "m_3e86480851090d8e": {
+    "message": "Av som standard. Aktiver for å finne video- og lydforespørsler mens du surfer."
+  },
+  "m_841fa2784ee46d5c": {
+    "message": "Av for nettstedet. Valget lagret."
+  },
+  "m_b6d42710b782d638": {
+    "message": "På som standard. Tillat nettstedet for å vise videoknapper."
+  },
+  "m_48ff08561347ceb3": {
+    "message": "På som standard. Åpne et nettsted for å endre innstillingen."
+  },
+  "m_718a1c9b01954136": {
+    "message": "På som standard. Spill av en video for å finne den, og velg deretter hva du vil laste ned."
+  },
+  "m_a5796db85ba454a2": {
+    "message": "På som standard. Slå av for å skjule videoknapper på nettstedet."
+  },
+  "m_b7e24a07e6b998ce": {
+    "message": "På som standard. Valget lagres for nettstedet."
+  },
+  "m_18aa46ba0236a241": {
+    "message": "Ett nettsted per linje. Underdomener er inkludert; * samsvarer med en hvilken som helst del av navnet."
+  },
+  "m_4e918bc632379980": {
+    "message": "Bare HTTP-/HTTPS-lenker uten innebygde innloggingsopplysninger støttes."
+  },
+  "m_c474c658148d459d": {
+    "message": "Bare valgte lenker sendes. Lenker kan vise til nettsider; filtyper bygger på navn og tilgjengelige mediemetadata."
+  },
+  "m_8bee84e594e99e34": {
+    "message": "Åpne en nettleserfane og åpne Download Engine igjen."
+  },
+  "m_c66ff2b172c3b834": {
+    "message": "Åpne en vanlig nettside for å stille inn videoknappen."
+  },
+  "m_aa4c148abfa53385": {
+    "message": "Åpne en vanlig nettside for å finne medier."
+  },
+  "m_215a54029c2b4b91": {
+    "message": "Åpne en vanlig nettside for å gjennomgå medier."
+  },
+  "m_a9a64a3ba1e37620": {
+    "message": "Åpne en HTTP- eller HTTPS-side og klikk utvidelsen der."
+  },
+  "m_5d404dc8daf23871": {
+    "message": "Åpne Download Engine-utvidelsen og prøv igjen."
+  },
+  "m_1c911c28ea089770": {
+    "message": "Åpne det innloggede nettstedet i en vanlig fane og velg en fil på samme server."
+  },
+  "m_b4c5fc73a947b6af": {
+    "message": "Åpnet i appen"
+  },
+  "m_c751d726c402d9ab": {
+    "message": "Åpner videogjennomgang i Download Engine"
+  },
+  "m_c926c2c50e65d5a5": {
+    "message": "Åpner…"
+  },
+  "m_1a0c32d68ceb4922": {
+    "message": "Opprinnelig mål"
+  },
+  "m_15a84d473a2dc5ef": {
+    "message": "Opprinnelig kø"
+  },
+  "m_5e19e35a09649309": {
+    "message": "Annet / ukjent"
+  },
+  "m_57d2af91bc34f0b3": {
+    "message": "Sideressurs"
+  },
+  "m_2d327768547d6bfa": {
+    "message": "Sideressurser"
+  },
+  "m_58dc76ebf2ef2844": {
+    "message": "Sidelenke"
+  },
+  "m_101737af4b45f970": {
+    "message": "Sidelenker"
+  },
+  "m_aded8b818cfb9479": {
+    "message": "SIDELENKER"
+  },
+  "m_c902c6b1e1a4c529": {
+    "message": "Sidelenker · Download Engine"
+  },
+  "m_9a3faea57df5b5b3": {
+    "message": "Siderekkefølge"
+  },
+  "m_445999cff1f693bb": {
+    "message": "Sidelenkeinnsamling er utilgjengelig i private vinduer."
+  },
+  "m_a7a9dc5bcf71adb2": {
+    "message": "Pauset"
+  },
+  "m_40d12c1cd050aea2": {
+    "message": "Ventende gjennomganger og nedlastinger gjenopprettet. Nettleseroverleveringer kontrollert."
+  },
+  "m_d101686dfb461d7b": {
+    "message": "Tillatelse tilbakekalt"
+  },
+  "m_fb44b7bd4a949eee": {
+    "message": "Forhåndsvis DASH"
+  },
+  "m_a891a492d8d0c27e": {
+    "message": "Forhåndsvis HLS"
+  },
+  "m_a57b08a480b822a0": {
+    "message": "Forrige"
+  },
+  "m_6d4977e17532e718": {
+    "message": "Private, partisjonerte og førstepartsisolerte økter støttes ikke. Automatisk fangst forblir anonym."
+  },
+  "m_90920d93e2c7e632": {
+    "message": "Program"
+  },
+  "m_b6747064b2a6dd95": {
+    "message": "Programmer"
+  },
+  "m_3b2fe03e36893916": {
+    "message": "Kø"
+  },
+  "m_68b16a818cc085cf": {
+    "message": "Siste innstillinger, tilkoblingskontroller og videogjennomganger, lagret bare i denne nettleseren."
+  },
+  "m_98d7576ae1a9c3fc": {
+    "message": "Gjenopprett eksisterende nedlasting"
+  },
+  "m_da9f4135cbe4b48b": {
+    "message": "Gjenopprett overleveringer"
+  },
+  "m_c73c9c73104c4316": {
+    "message": "Gjenopprettingstilgang aktivert. Klikk samme fil på nettsiden og gjennomgå i Download Engine."
+  },
+  "m_acfeb89bc6c13696": {
+    "message": "Gjenoppretting avbrutt. Nedlastingen forblir i nettleseren."
+  },
+  "m_d662ba072dd18ac7": {
+    "message": "Gjenoppretting kontrollert. Se pausede filer i nettleserens nedlastingsliste."
+  },
+  "m_ad787fd387d7b9ad": {
+    "message": "Gjenoppretting kunne ikke starte: "
+  },
+  "m_24cedb972410650c": {
+    "message": "Gjenoppretting trenger oppfølging. Bruk Fortsett i nettleserens nedlastingsliste ved behov. "
+  },
+  "m_5273e2f102fe7c0d": {
+    "message": "Gjenoppretting stoppet: "
+  },
+  "m_1d57f666d95264c7": {
+    "message": "Oppdater logg"
+  },
+  "m_2e1d57637f97896b": {
+    "message": "Last inn mål på nytt"
+  },
+  "m_9202490cb35dbda0": {
+    "message": "Last inn Download Engine-utvidelsen på nytt for å fullføre oppdateringen."
+  },
+  "m_b330cbc172cf1e68": {
+    "message": "Fjern tilgang til nettleserinnlogging"
+  },
+  "m_bf98564718ee4abb": {
+    "message": "Fjern utvidelsens tilgang til nettstedet"
+  },
+  "m_45a4092662eb386c": {
+    "message": "Fjerning stopper lesing av informasjonskapsler på alle nettsteder. Videogjenkjenning fortsetter. Slett lagrede data i Download Engine → Autentisering → Ingen."
+  },
+  "m_22799a32fabd0898": {
+    "message": "Fjernet nettstedstilgang stopper fremtidig kapsellesing. Slett en kopi ved å fjerne nedlastingen i Download Engine eller velge Autentisering → Ingen."
+  },
+  "m_5923e8de81d8741b": {
+    "message": "Åpne utvidelsen igjen og prøv."
+  },
+  "m_20a3253602a7fcee": {
+    "message": "Rapportert filstørrelse"
+  },
+  "m_3e536eb4562fe176": {
+    "message": "Løs ventende gruppe før videoforhåndsvisning."
+  },
+  "m_602f8e637002a585": {
+    "message": "Gjenopprett standard"
+  },
+  "m_913b0a77f27fc498": {
+    "message": "Prøv samme gruppe igjen"
+  },
+  "m_60d03e7404e40486": {
+    "message": "Prøv ventende gruppe igjen før du endrer valget."
+  },
+  "m_de8cfa0e6bb6d592": {
+    "message": "Prøv samme gruppe igjen for å kontrollere mottak."
+  },
+  "m_70786ccffcb091cd": {
+    "message": "Gjennomgå "
+  },
+  "m_ad8286257814524c": {
+    "message": "Gjennomgå ↗"
+  },
+  "m_8c76a4f01cdeec77": {
+    "message": "Gjennomgå sidens lenker og ressurser og legg ønskede filer i køen."
+  },
+  "m_3f21ed22e0fcea7e": {
+    "message": "Gjennomgå sidens lenker og legg ønskede filer i køen."
+  },
+  "m_1ee0fc616e9e22a3": {
+    "message": "Gjennomgå videoen i Download Engine"
+  },
+  "m_3bc941f7f11d1ac7": {
+    "message": "Gjennomgå videoen i Download Engine. Ingenting er lastet ned."
+  },
+  "m_41b3d85b43f47094": {
+    "message": "Gjennomgå nettstedets innlogging i den nye fanen."
+  },
+  "m_193df65a5f826122": {
+    "message": "Høyreklikk → Last ned med Download Engine sender alltid lenken, uansett disse reglene."
+  },
+  "m_852bfbb688dd15da": {
+    "message": "Høyreklikk en fillenke for å sende til appen, eller aktiver automatisk fangst."
+  },
+  "m_c071cf5f5ed6f884": {
+    "message": "Kjører"
+  },
+  "m_e5dbdffb88164817": {
+    "message": "Lagre regler"
+  },
+  "m_1daa7df740ac086c": {
+    "message": "Lagre i"
+  },
+  "m_198a1c7a2183aefc": {
+    "message": "Lagrer valgte filer…"
+  },
+  "m_dd298e20fc073647": {
+    "message": "Søk i lenker"
+  },
+  "m_2a78025de6aae5e7": {
+    "message": "Velg"
+  },
+  "m_1f7133c21072a138": {
+    "message": "Velg "
+  },
+  "m_e116a9b3a597ac1e": {
+    "message": "Velg alle samsvarende filer på alle sider"
+  },
+  "m_dea1a3e66e47d981": {
+    "message": "Velg mellom 1 og 1 000 oppførte lenker."
+  },
+  "m_b908effe1a7c133b": {
+    "message": "Velg direkte videofiler eller forhåndsvis HLS / DASH for å velge kvalitet og lyd i Download Engine."
+  },
+  "m_ead5d68c99cc77a8": {
+    "message": "Velg færre lenker for gruppen."
+  },
+  "m_e1ce37067ddc2ab5": {
+    "message": "Velg logg"
+  },
+  "m_313175419d438c50": {
+    "message": "Velg treff"
+  },
+  "m_87a73c5380c6c916": {
+    "message": "Velg filer å legge til."
+  },
+  "m_12576160b98349a6": {
+    "message": "Velg loggen og trykk Ctrl+C for å kopiere."
+  },
+  "m_3ac5caf9518d7822": {
+    "message": "Send fillenker eller valgte sidelenker til Download Engine, med valgfri automatisk fangst."
+  },
+  "m_b8ed5279e897be5d": {
+    "message": "Sender…"
+  },
+  "m_9fa4fffd6b2390aa": {
+    "message": "Skill med mellomrom. * samsvarer med alle tegn, for eksempel r0*. Skriv bare * for å fange alle typer."
+  },
+  "m_818cd8d91aea3a16": {
+    "message": "Innstilling"
+  },
+  "m_64d28781ada09e2e": {
+    "message": "Nettstedstilgang fjernet. Eksisterende nedlastinger beholder den krypterte kopien til du fjerner den i Download Engine."
+  },
+  "m_b1dc42771ae048ea": {
+    "message": "Nettstedstilgang ikke gitt. Tillat nettstedet for å vise videoknapper."
+  },
+  "m_683653872b36eaa7": {
+    "message": "Nettstedstilgang ikke gitt. Ingen innlogging sendt."
+  },
+  "m_f09f3886349140ea": {
+    "message": "Nettstedstillatelsen kunne ikke fjernes."
+  },
+  "m_1af851907331c0ed": {
+    "message": "Størrelse"
+  },
+  "m_d94adb63dbcd8018": {
+    "message": "Størrelse mangler på siden"
+  },
+  "m_2a817d337803db0d": {
+    "message": "Størrelsesenhet"
+  },
+  "m_873395540b2cfea9": {
+    "message": "Ukjent størrelse"
+  },
+  "m_80b858ffa465e189": {
+    "message": "Mindre filer blir i nettleseren. La feltet stå tomt for alle størrelser."
+  },
+  "m_bec69036aa27e7fa": {
+    "message": "Sorter"
+  },
+  "m_af45940023cd4d24": {
+    "message": "Kildeside"
+  },
+  "m_329c0763bd9ec092": {
+    "message": "Start avspilling med oppdagelse på, eller bruk Finn videoer."
+  },
+  "m_febbea5fb07c20c8": {
+    "message": "Appen bekreftet ikke avbruddet. Nettleserkopien ble beholdt; kontroller appen før nytt forsøk."
+  },
+  "m_fbb00942fda85125": {
+    "message": "Appen bekreftet ikke den nye lenken"
+  },
+  "m_ec379e9b433646d8": {
+    "message": "Appen bekreftet ikke overleveringen. Nettlesernedlastingen ble beholdt; kontroller også Download Engine for en kopi."
+  },
+  "m_903e073f9cd11362": {
+    "message": "Nettleserkopien ble fullført eller fortsatte under avbruddet"
+  },
+  "m_1c9fd224194b7ee7": {
+    "message": "Nettleseren kunne ikke pause nedlastingen"
+  },
+  "m_eed9387ac150e8fe": {
+    "message": "Nettleseren kunne ikke lese siden. Prøv en vanlig nettside."
+  },
+  "m_f3cfbd4cbe900742": {
+    "message": "Nedlastingen ble beholdt i nettleseren og mottatt av Download Engine. Kontroller begge listene."
+  },
+  "m_d69c84ad2351aa26": {
+    "message": "Innloggingsoverleveringen ble ikke bekreftet. Kontroller apptilkoblingen og prøv samme forespørsel igjen."
+  },
+  "m_55e44ceeae345baf": {
+    "message": "Skrivebordsappen kunne ikke legge til nedlastingen."
+  },
+  "m_6f841f3073957b4a": {
+    "message": "Appen bekreftet ikke en lagret nedlasting."
+  },
+  "m_2b3a9305582ef2d1": {
+    "message": "Nettlesergjenoppretting ble ikke bekreftet. Oppdater Download Engine og prøv igjen."
+  },
+  "m_e6c0313fd505b718": {
+    "message": "Appen bekreftet ikke nettleseroverleveringen."
+  },
+  "m_bedea1012885305a": {
+    "message": "Appen bekreftet ikke hele den lagrede gruppen. Prøv samme gruppe igjen."
+  },
+  "m_390e7750e59f2870": {
+    "message": "Videoforhåndsvisningen ble ikke bekreftet. Oppdater Download Engine eller prøv igjen."
+  },
+  "m_1947644923407952": {
+    "message": "Videogjennomgangen ble ikke bekreftet. Oppdater Download Engine og bruk Gjenopprett overleveringer."
+  },
+  "m_088826a3e5e4e204": {
+    "message": "Skrivebordsappen svarte ikke i tide."
+  },
+  "m_bd3ccbbad5af2986": {
+    "message": "Skrivebordsappen ga et ugyldig svar."
+  },
+  "m_535e3e6ab89880c5": {
+    "message": "Utvidelsens bakgrunn svarte ikke."
+  },
+  "m_988db6830a99c691": {
+    "message": "Utvidelsen svarte ikke."
+  },
+  "m_306540f92d0513e3": {
+    "message": "Utvidelsen svarte ikke. Last inn fanen på nytt."
+  },
+  "m_d122305531039ccd": {
+    "message": "Utvidelsen svarte ikke. Prøv samme forespørsel igjen."
+  },
+  "m_30289712f9fad302": {
+    "message": "Siste gruppe mangler bekreftet svar. Nytt forsøk sender samme gruppe uten duplikater. Hold nettleseren åpen til det er løst."
+  },
+  "m_e72a03f673ade934": {
+    "message": "Originalfanen ble lukket. Åpne nettstedet og prøv igjen."
+  },
+  "m_290b216afbebe4b2": {
+    "message": "Siden ble endret. Klikk videoknappen igjen."
+  },
+  "m_110b363e52b4a6d5": {
+    "message": "Siden ble endret. Åpne utvidelsen igjen og prøv."
+  },
+  "m_9ade37e9a32e749d": {
+    "message": "Siden ble endret. Åpne utvidelsen igjen."
+  },
+  "m_f314de530158f111": {
+    "message": "Siden ga en ugyldig lenkeliste."
+  },
+  "m_26af77d95664e615": {
+    "message": "Grensen for lagrede videoknappnettsteder er nådd."
+  },
+  "m_91947dba22da73b5": {
+    "message": "Innstillingen ble endret under tillatelsesforespørselen."
+  },
+  "m_dbd704dc9a27d238": {
+    "message": "Ingen ventende gruppe å prøve igjen."
+  },
+  "m_b418ac2881c78a7a": {
+    "message": "Gruppen sendes allerede."
+  },
+  "m_604518b6a7b13e73": {
+    "message": "Lenkevelgeren er utløpt. Samle sidelenker igjen fra utvidelsen."
+  },
+  "m_68fd909eec66f301": {
+    "message": "Innloggingsforespørselen er utløpt. Kontroller Download Engine-køen før du sender igjen."
+  },
+  "m_14204d3bb3d2fc5e": {
+    "message": "Medieoppføringen er utløpt. Spill av igjen for å oppdage den."
+  },
+  "m_d5993dba7abddfa4": {
+    "message": "For mye lenkedata på siden. Prøv en mindre side."
+  },
+  "m_359c18c81b3a8742": {
+    "message": "For mye videodata på siden. Prøv en mindre side."
+  },
+  "m_601ed5513a7de1ff": {
+    "message": "Stor side. Et begrenset antall lenker vises; åpne en mindre side for å samle flere."
+  },
+  "m_f35a9682d7be0bd2": {
+    "message": "Nettstedets innlogging er for stor. Last ned filen i nettleseren."
+  },
+  "m_a13331f2e442016c": {
+    "message": "Nettstedets kapsler kan ikke overføres trygt. Last ned filen i nettleseren."
+  },
+  "m_d8b8392e2c542950": {
+    "message": "Prøv igjen"
+  },
+  "m_baaddf70fb5d432b": {
+    "message": "Type"
+  },
+  "m_b764cdc0eab71374": {
+    "message": "Ukjent"
+  },
+  "m_b3744a5c9e3a8a5f": {
+    "message": "Ukjent tillatelsesinnstilling."
+  },
+  "m_037c426c05970681": {
+    "message": "Side uten tittel"
+  },
+  "m_24f3b0891ed85ed6": {
+    "message": "Oppdater skrivebordsappen for grupper av sidelenker."
+  },
+  "m_239bbb679e8b5ed9": {
+    "message": "Oppdater skrivebordsappen før automatisk fangst aktiveres."
+  },
+  "m_edfcdbe6f4310523": {
+    "message": "Oppdater skrivebordsappen før nettleserinnlogging brukes."
+  },
+  "m_6ef631778917843c": {
+    "message": "Bruk nettleserinnlogging · Download Engine"
+  },
+  "m_a84b376c126bf400": {
+    "message": "Bruk Finn videoer, eller aktiver oppdagelse og start avspilling."
+  },
+  "m_a1426ad7784ebbbc": {
+    "message": "Bruk Forhåndsvis HLS eller DASH for å velge kvalitet før du legger til en strøm."
+  },
+  "m_244ef0cdc79df596": {
+    "message": "Bruk Fortsett i nettleserens nedlastingsliste; gjenoppretting kunne ikke frigi den pausede kopien."
+  },
+  "m_acfe566ca2e566e7": {
+    "message": "Bruk nettstedets innlogging"
+  },
+  "m_69da05b04d99b754": {
+    "message": "Bruk nettstedets innlogging (gjennomgå først)"
+  },
+  "m_d4aa36ffd2cc2537": {
+    "message": "Bruk opptil {0} filtyper."
+  },
+  "m_850e8821a631dd82": {
+    "message": "Bruk opptil {0} nettsteder."
+  },
+  "m_27eb9ee5a85d401e": {
+    "message": "Bruker automatiske mapperegler i Download Engine-innstillingene."
+  },
+  "m_d534be829e32196b": {
+    "message": "Video"
+  },
+  "m_9e745d40aad9b039": {
+    "message": "Videoknapp"
+  },
+  "m_99f89003e6428eab": {
+    "message": "Videoknappen kunne ikke oppdatere en åpen fane:"
+  },
+  "m_d0113821d8075479": {
+    "message": "Videoknapp på nettstedet"
+  },
+  "m_c1c069858f0e43e0": {
+    "message": "Videoknapper er bare tilgjengelige på vanlige toppnivåsider."
+  },
+  "m_bf8f3f1e22b98e76": {
+    "message": "Videoknapper deaktivert for nettstedet eller nettstedstilgang mangler."
+  },
+  "m_b6a9e2a18c985463": {
+    "message": "Videoknapper av for nettstedet."
+  },
+  "m_4fcff88a23263c1d": {
+    "message": "Videoknapper på for nettstedet. Klikk for å gjennomgå tilgjengelige videoer."
+  },
+  "m_33a6de083bd3b681": {
+    "message": "Videonedlastinger"
+  },
+  "m_1999f0d064cfbc7c": {
+    "message": "Videonedlastinger — Download Engine"
+  },
+  "m_74d5e1a5adca3103": {
+    "message": "Videofil"
+  },
+  "m_d007a137f798c162": {
+    "message": "VIDEOFILER"
+  },
+  "m_cfe370de13214b8b": {
+    "message": "Videogjennomgang"
+  },
+  "m_c08d78254e705099": {
+    "message": "Videostrøm"
+  },
+  "m_991cf9db508be663": {
+    "message": "Venter på {0}. Klikk nedlastingslenken på originalside og gjennomgå i Download Engine."
+  },
+  "m_487420533636d10c": {
+    "message": "Nettstedstilgang ikke gitt. Medieoppdagelse forblir av."
+  },
+  "m_11fcf7333cfe5a60": {
+    "message": "Windows krypterer kopien for kontoen din. Den brukes bare til denne nedlastingen, i opptil 24 timer, og fjernes ved fullføring eller sletting. Utlogging i nettleseren sletter ikke kopien."
+  },
+  "extensionName": {
+    "message": "Download Engine-integrasjon"
+  },
+  "extensionDescription": {
+    "message": "Fang filnedlastinger og finn videoer for skrivebordsappen Download Engine."
+  }
+}

@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en"><head><script src="i18n-catalog.js"></script><script src="i18n.js"></script><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Download Engine</title><link rel="stylesheet" href="popup.css"></head>
+<body><header><span class="mark" aria-hidden="true">↓</span><h1>Download Engine</h1></header>
+<section id="link-recovery" class="capture" hidden><strong>Recover existing download</strong><p id="link-recovery-hint" class="hint"></p><button id="link-recovery-allow" class="secondary" type="button" hidden>Allow recovery access</button></section>
+<section class="capture compact"><label class="toggle" for="auto-capture"><span>Automatic download capture</span><input id="auto-capture" type="checkbox" role="switch"></label>
+<details id="capture-rules"><summary>Capture rules</summary><form id="capture-rules-form" novalidate>
+<label class="rule" for="capture-types">File types to capture</label>
+<textarea id="capture-types" rows="5" maxlength="32768" spellcheck="false" aria-describedby="capture-types-hint"></textarea>
+<p id="capture-types-hint" class="hint">Separate with spaces. * matches any characters, for example r0*. Enter * alone to capture every type.</p>
+<label class="rule" for="capture-min-size">Minimum file size</label>
+<div class="size-row"><input id="capture-min-size" type="number" min="0" step="any" placeholder="No minimum" aria-describedby="capture-size-hint"><select id="capture-size-unit" aria-label="Size unit"><option value="KB">KB</option><option value="MB" selected>MB</option></select></div>
+<p id="capture-size-hint" class="hint">Smaller files stay in the browser. Leave empty for any size.</p>
+<label class="rule" for="capture-sites">Never capture from these sites</label>
+<textarea id="capture-sites" rows="3" maxlength="32768" spellcheck="false" placeholder="example.com" aria-describedby="capture-sites-hint"></textarea>
+<p id="capture-sites-hint" class="hint">One site per line. Includes its subdomains; * matches any part of a name.</p>
+<div class="actions"><button id="capture-rules-defaults" class="secondary" type="button">Restore defaults</button><button id="capture-rules-save" type="submit">Save rules</button></div>
+<p id="capture-rules-status" class="hint" role="status" aria-live="polite" hidden></p>
+<p class="hint">Right-click → Download with Download Engine always sends the link, whatever these rules say.</p>
+</form></details></section>
+<section class="media-panel" aria-labelledby="media-heading">
+  <div class="section-heading"><h2 id="media-heading">Media on this page <span id="media-count" class="count">0</span></h2><button id="clear-media" class="quiet" type="button" disabled>Clear</button></div>
+  <label class="toggle detection" for="media-detection"><span>Detect media while browsing</span><input id="media-detection" type="checkbox" role="switch" disabled></label>
+  <p id="media-hint" class="hint">On by default. Play a video to detect it, then choose what to download.</p>
+  <div id="media-list" class="media-list" aria-label="Detected media"></div>
+  <p id="media-empty" class="empty">Use Find videos to scan this page, or enable detection and start playback.</p>
+  <button id="page-videos" class="page-links" type="button">Find videos on this page <span aria-hidden="true">↗</span></button>
+</section>
+<button id="page-links" class="page-links" type="button">Choose files from this page <span aria-hidden="true">↗</span></button>
+<details id="manual-download"><summary>Add a file URL</summary><form id="download-form"><label for="url">File URL</label><input id="url" type="url" placeholder="https://example.com/file.zip" required spellcheck="false"><label class="login-option"><input id="browser-login" type="checkbox"> Use this site’s login (review first)</label><button id="send" type="submit">Download with Download Engine</button></form></details>
+<p id="status" role="status">File downloads are captured automatically. Connect the desktop app in Browser setup.</p>
+<details id="browser-options"><summary>Browser options</summary>
+<label class="language-option" for="display-language">Extension language<select id="display-language"><option value="system">Browser language</option><option value="en" lang="en">English</option><option value="zh-CN" lang="zh-CN">简体中文</option><option value="zh-TW" lang="zh-TW">繁體中文</option><option value="ms" lang="ms">Bahasa Melayu</option><option value="ja" lang="ja">日本語</option><option value="ko" lang="ko">한국어</option><option value="vi" lang="vi">Tiếng Việt</option><option value="th" lang="th">ไทย</option><option value="pl" lang="pl">Polski</option><option value="ru" lang="ru">Русский</option><option value="uk" lang="uk">Українська</option><option value="ar" lang="ar">العربية</option><option value="de" lang="de">Deutsch</option><option value="fr" lang="fr">Français</option><option value="sv" lang="sv">Svenska</option><option value="no" lang="no">Norsk bokmål</option><option value="de-CH" lang="de-CH">Deutsch (Schweiz)</option><option value="it" lang="it">Italiano</option><option value="rm" lang="rm">Rumantsch Grischun</option></select></label>
+<section id="video-site-option" class="capture"><label class="toggle" for="video-button"><span>Video button on this site</span><input id="video-button" type="checkbox" role="switch" aria-describedby="video-button-hint" checked disabled></label><p id="video-button-hint">On by default. Your choice is saved for this site.</p><button id="video-site-access" class="secondary" type="button" hidden disabled>Allow this site</button></section>
+<div class="actions"><button id="check" class="secondary" type="button">Check connection</button><button id="recover" class="secondary" type="button">Recover handoffs</button></div>
+<p id="connection-status" class="hint" role="status" aria-live="polite" hidden></p>
+</details>
+<details id="diagnostics"><summary>Diagnostic log</summary><p class="hint">Recent settings, connection checks and video reviews, saved only in this browser.</p><textarea id="diagnostic-log" rows="7" readonly aria-label="Diagnostic log" spellcheck="false"></textarea><div class="actions"><button id="refresh-log" class="secondary" type="button">Refresh log</button><button id="select-log" class="secondary" type="button">Select log</button><button id="clear-log" class="secondary" type="button">Clear log</button></div><p class="hint">Select the log, then press Ctrl+C to copy it.</p></details>
+<footer>Direct files and unencrypted HLS / DASH previews.</footer>
+<script src="popup.js"></script></body></html>
+

@@ -1,0 +1,1028 @@
+{
+  "m_a9f74d4af5d7dd2d": {
+    "message": "{0} mục bị ẩn bởi bộ lọc"
+  },
+  "m_b364264cdee56a63": {
+    "message": "{0} / {1} liên kết · chọn {2}{3}"
+  },
+  "m_3e9174b076fa6723": {
+    "message": "Tìm thấy {0} liên kết HTTP/HTTPS duy nhất. Không tự chọn mục nào."
+  },
+  "m_4751f6a4b5d9bb30": {
+    "message": "{0}–{1} trên {2}"
+  },
+  "m_2150dc95bcdb8850": {
+    "message": "Liên kết mới đang chờ duyệt trong Download Engine."
+  },
+  "m_acca29cca3e064e3": {
+    "message": "Bàn giao cần xử lý. Nếu tạm dừng, hãy tiếp tục trong danh sách tải của trình duyệt. "
+  },
+  "m_da5cba54ff645402": {
+    "message": "Đang có lượt quét trang."
+  },
+  "m_93cbb4b9c437b588": {
+    "message": "Đang gửi yêu cầu từ bộ chọn này."
+  },
+  "m_8b60e5b9af092e22": {
+    "message": "Đang mở phần duyệt."
+  },
+  "m_fbb9b1f9dcbfeae4": {
+    "message": "Đang mở duyệt video trong Download Engine."
+  },
+  "m_69dfd976b317260d": {
+    "message": "Đang mở phần duyệt video."
+  },
+  "m_f2ca785fd206a095": {
+    "message": "Đang chờ xác nhận video. Dùng Tùy chọn trình duyệt → Khôi phục bàn giao trước."
+  },
+  "m_0e9839b644120fa4": {
+    "message": "Thêm {0} tệp{1}"
+  },
+  "m_264137ad4e188078": {
+    "message": "Thêm URL tệp"
+  },
+  "m_d852059dca4ba30a": {
+    "message": "Thêm ít nhất một loại tệp, hoặc nhập * để bắt mọi loại."
+  },
+  "m_fba811a83d244b75": {
+    "message": "Thêm tệp đã chọn"
+  },
+  "m_63889fe9a0f7922d": {
+    "message": "Đã thêm vào Download Engine"
+  },
+  "m_b42ec7eef98969f5": {
+    "message": "Đã thêm vào hàng đợi"
+  },
+  "m_035a4bf3220f575b": {
+    "message": "Đã thêm với đăng nhập trình duyệt"
+  },
+  "m_1fec4c2ee0889acb": {
+    "message": "Tất cả liên kết"
+  },
+  "m_08e774c5bacc362a": {
+    "message": "Mọi nguồn"
+  },
+  "m_79c625de4b9fd500": {
+    "message": "Cho phép truy cập cookie trang để dùng đăng nhập."
+  },
+  "m_26f0b4e0ff1f898e": {
+    "message": "Cấp quyền tải xuống để bật tự động bắt tải."
+  },
+  "m_5b94fcf971c23dee": {
+    "message": "Cấp quyền tải xuống để tìm liên kết mới cho {0}. Tự động bắt tải có thể vẫn tắt."
+  },
+  "m_2e62efd7ab18a82d": {
+    "message": "Cho phép phát hiện và quyền trang web để theo dõi yêu cầu phương tiện."
+  },
+  "m_48cc22965b91eff2": {
+    "message": "Cho phép truy cập khôi phục"
+  },
+  "m_24e1772fedce2ed7": {
+    "message": "Cho phép đăng nhập và tải"
+  },
+  "m_5864c132f9bc0926": {
+    "message": "Cho phép trang này"
+  },
+  "m_9ee4b5b0cf00b360": {
+    "message": "Cho phép truy cập trang này để hiện nút video."
+  },
+  "m_9f46b4f2f671c116": {
+    "message": "Mọi kích thước"
+  },
+  "m_72c46a00422be09f": {
+    "message": "Cho phép tải một tệp."
+  },
+  "m_66f4804ee23ddc09": {
+    "message": "Tệp nén"
+  },
+  "m_e404aa80d8df4adb": {
+    "message": "Tệp nén"
+  },
+  "m_bc1b88907d3b748a": {
+    "message": "Âm thanh"
+  },
+  "m_571a9d4e6ae3e6e9": {
+    "message": "Tự bắt tải xuống"
+  },
+  "m_551953291092c063": {
+    "message": "Không bắt đầu được tự động bắt tải: "
+  },
+  "m_4b0437f552a7f60f": {
+    "message": "Tự động bắt tải đã tắt."
+  },
+  "m_ca4588908fe682ee": {
+    "message": "Tự động bắt tải đã tắt. Nếu bị tạm dừng, tiếp tục trong danh sách Tải xuống của trình duyệt."
+  },
+  "m_dbcbd988532e58f3": {
+    "message": "Tự động bắt tải đã bật cho liên kết tệp trực tiếp."
+  },
+  "m_a4885ab1c22dbeb0": {
+    "message": "Tự động bắt tải vẫn tắt. Mở Download Engine → Công cụ → Thiết lập trình duyệt, chọn trình duyệt và Kết nối trình duyệt rồi thử lại. "
+  },
+  "m_bdf26652484911a4": {
+    "message": "Tự bắt tải xuống"
+  },
+  "m_6259b8b41e217222": {
+    "message": "Thư mục tự động"
+  },
+  "m_6aa06201d769ad78": {
+    "message": "Liên kết có sẵn"
+  },
+  "m_2cf57ca29785ac99": {
+    "message": "Bản trong trình duyệt đã tiếp tục"
+  },
+  "m_9ce0d857154f24e2": {
+    "message": "Ngôn ngữ trình duyệt"
+  },
+  "m_9a06933b478415e9": {
+    "message": "Đã gỡ quyền đăng nhập cho mọi trang. Các lượt tải hiện có giữ bản lưu mã hóa cho đến khi bạn xóa trong Download Engine."
+  },
+  "m_776802e7061330f7": {
+    "message": "Không gửi được đăng nhập trình duyệt. Kiểm tra quyền trang và kết nối ứng dụng."
+  },
+  "m_31eb4316301f4815": {
+    "message": "Đăng nhập trình duyệt cần HTTPS. Mở liên kết tệp trực tiếp an toàn."
+  },
+  "m_0017e5fbb9fd5905": {
+    "message": "Tùy chọn trình duyệt"
+  },
+  "m_f4a311ce61b95ad0": {
+    "message": "Tiếp nhận tải xuống tệp và phát hiện video cho ứng dụng Download Engine."
+  },
+  "m_90948ad9dbb580df": {
+    "message": "Quy tắc bắt tải"
+  },
+  "m_720995cec7bccf29": {
+    "message": "Quy tắc bắt tải không khả dụng. Tải lại tiện ích."
+  },
+  "m_8f326a402a36befc": {
+    "message": "Đã lưu quy tắc bắt tải."
+  },
+  "m_be5dff52eeb0fd5b": {
+    "message": "Kiểm tra kết nối"
+  },
+  "m_c29aa06c2ddb8076": {
+    "message": "Kiểm tra các loại tệp này: {0}"
+  },
+  "m_8151d4ddeed81415": {
+    "message": "Kiểm tra các trang này: {0}"
+  },
+  "m_d6fdbb314af454a1": {
+    "message": "Đang kiểm tra đợt gốc…"
+  },
+  "m_ec963ffc911b8401": {
+    "message": "Đang kiểm tra…"
+  },
+  "m_ddec030e83b025f5": {
+    "message": "Chọn video HLS hoặc DASH trong danh sách."
+  },
+  "m_a0f311dfdcbbc7c9": {
+    "message": "Chọn hàng đợi đã lưu và thư mục đích."
+  },
+  "m_9b02ef3f495e64ef": {
+    "message": "Chọn tệp từ trang này"
+  },
+  "m_cbe8a50b6762fd46": {
+    "message": "Chọn chất lượng trong ứng dụng"
+  },
+  "m_c945c62180fcab9a": {
+    "message": "Chọn tệp video và chất lượng luồng trong Download Engine"
+  },
+  "m_312bfa601066a8e4": {
+    "message": "Chọn nội dung tải xuống"
+  },
+  "m_83b12c2216efb4fd": {
+    "message": "Xóa"
+  },
+  "m_a8858ac749bc452b": {
+    "message": "Xóa nhật ký"
+  },
+  "m_cea4d2e010b8fd52": {
+    "message": "Bỏ chọn"
+  },
+  "m_652c67c42dba3909": {
+    "message": "Đóng bộ chọn liên kết khác trước. Dùng Khôi phục bàn giao cho lô đang chờ."
+  },
+  "m_b9ce2241762a7a45": {
+    "message": "Đang kết nối Download Engine…"
+  },
+  "m_83f23cdbeb423f39": {
+    "message": "Kiểm tra kết nối"
+  },
+  "m_d45e5aae2ee31082": {
+    "message": "Kho cookie không khớp"
+  },
+  "m_101bd5ad093f5552": {
+    "message": "Không xóa được quyền trang. Dùng cài đặt tiện ích của trình duyệt."
+  },
+  "m_4a8c2b313a136fa4": {
+    "message": "Không tiếp tục được lượt tải trình duyệt. Dùng Tiếp tục trong danh sách Tải xuống. "
+  },
+  "m_50746138b9d24c2b": {
+    "message": "Không quay lại được cửa sổ tiện ích:"
+  },
+  "m_936628cc4a394ede": {
+    "message": "Đã khôi phục mặc định. Chọn Lưu quy tắc để giữ lại."
+  },
+  "m_0690f959c9689317": {
+    "message": "Phát hiện nội dung khi duyệt web"
+  },
+  "m_4125b0325a1d9a1c": {
+    "message": "Nội dung đã phát hiện"
+  },
+  "m_ee71fa5ff80ee155": {
+    "message": "Đã bật phát hiện. Phát nội dung để cập nhật danh sách."
+  },
+  "m_c46c657680c1fb6a": {
+    "message": "Nhật ký chẩn đoán"
+  },
+  "m_da1e00181e6edfc0": {
+    "message": "Nhật ký chẩn đoán không khả dụng. Tải lại tiện ích."
+  },
+  "m_97a6661033069fb1": {
+    "message": "Tệp trực tiếp và xem trước HLS / DASH không mã hóa."
+  },
+  "m_d6bd8c0aeee80fed": {
+    "message": "Tài liệu"
+  },
+  "m_b4e929d8bcfe0418": {
+    "message": "Tài liệu"
+  },
+  "m_4b20f1e564f08418": {
+    "message": "Quyền tải xuống đã đổi. Bật lại tự động bắt tải khi sẵn sàng."
+  },
+  "m_de82471b8e92e8c9": {
+    "message": "Chưa cấp quyền tải xuống. Tự động bắt tải vẫn tắt."
+  },
+  "m_26e9086fb67e1171": {
+    "message": "Chưa cấp quyền tải xuống. Bạn vẫn có thể dán liên kết mới vào Download Engine."
+  },
+  "m_86237283243c5c06": {
+    "message": "Vị trí tải xuống"
+  },
+  "m_4fe58a9f465df20b": {
+    "message": "Download Engine"
+  },
+  "m_67061b40bd1fc990": {
+    "message": "Download Engine đã nhận tệp nhưng không dừng được bản trong trình duyệt. Kiểm tra cả hai danh sách."
+  },
+  "m_ad28de051651de0a": {
+    "message": "Download Engine đã kết nối."
+  },
+  "m_b5ee50a47681c17b": {
+    "message": "Đã cập nhật lượt tải hiện có. Bản trình duyệt vẫn còn; kiểm tra cả hai danh sách."
+  },
+  "m_55cff9fa827ef904": {
+    "message": "Download Engine sao chép cookie đăng nhập phù hợp từ thẻ gốc, kể cả vùng chứa Firefox. Tệp phải cùng máy chủ."
+  },
+  "m_b732f149ac000cfe": {
+    "message": "Giữ lượt tải trong trình duyệt: "
+  },
+  "m_4dfb918c17f5863a": {
+    "message": "Đã giữ lượt tải trong trình duyệt."
+  },
+  "m_3a7a16064f324d88": {
+    "message": "Tải liên kết từ trang này"
+  },
+  "m_182321e7f219bcc2": {
+    "message": "Đã gửi lượt tải tới Download Engine."
+  },
+  "m_d1db69fff45e2607": {
+    "message": "Tải bằng đăng nhập trình duyệt…"
+  },
+  "m_9e6a91c146c14996": {
+    "message": "Tải video"
+  },
+  "m_e1e91278b3b950c4": {
+    "message": "Tải video bằng Download Engine — xem xét trước"
+  },
+  "m_36886174177ac2af": {
+    "message": "Tải bằng Download Engine"
+  },
+  "m_cc5c7b4f90b18c40": {
+    "message": "Bật phát hiện với quyền truy cập trang. Không dùng đăng nhập của bạn."
+  },
+  "m_e2d9eaba91bf0037": {
+    "message": "Nhập URL tệp HTTP hoặc HTTPS đầy đủ."
+  },
+  "m_6e42641a11a1c04e": {
+    "message": "Nhập kích thước tối thiểu từ 0 đến 1 TB."
+  },
+  "m_4eb6084d5e196685": {
+    "message": "Đã cập nhật lượt tải hiện có trong Download Engine."
+  },
+  "m_2eabb5731ec0a7f5": {
+    "message": "Ngôn ngữ tiện ích"
+  },
+  "m_d8e40338c0625f5b": {
+    "message": "Tệp / liên kết"
+  },
+  "m_fb6219471a55d640": {
+    "message": "Tự động tiếp nhận tải xuống tệp. Kết nối ứng dụng máy tính trong Thiết lập trình duyệt."
+  },
+  "m_95b44f14672ddf20": {
+    "message": "Tên tệp, văn bản liên kết hoặc URL"
+  },
+  "m_ea1df05210c29d1e": {
+    "message": "Loại tệp"
+  },
+  "m_6ebe2a3778d6510e": {
+    "message": "Loại tệp cần bắt"
+  },
+  "m_4ac686f1fff7a0ce": {
+    "message": "URL tệp"
+  },
+  "m_7cd46f2b72f2f96d": {
+    "message": "tệp và liên kết"
+  },
+  "m_91c34f985f2ccf2e": {
+    "message": "Tìm video trên trang này"
+  },
+  "m_abb03e243f8f426a": {
+    "message": "Tìm video bằng Download Engine"
+  },
+  "m_c14ae1090e852370": {
+    "message": "Hoàn tất yêu cầu quyền đang mở trước khi đổi cài đặt khác."
+  },
+  "m_3b36902cb433c0af": {
+    "message": "Quản lý thư mục trong cài đặt Download Engine."
+  },
+  "m_fb1c8ed06249aced": {
+    "message": "Tìm thấy {0} {1}. Duyệt trong thẻ mới."
+  },
+  "m_dac55102f2a6291b": {
+    "message": "Tìm trong"
+  },
+  "m_cf58b80fa579dabc": {
+    "message": "Đã tìm thấy liên kết mới. Xem kiểm tra dữ liệu đã lưu trong Download Engine rồi xác nhận tiếp tục."
+  },
+  "m_23b41d51987507df": {
+    "message": "HLS/DASH mở xem trước trên máy tính; không hỗ trợ trực tiếp/mã hóa. Bật phát hiện trước khi phát để tìm thêm luồng."
+  },
+  "m_1aa4cb0bcca76e92": {
+    "message": "Hình ảnh"
+  },
+  "m_be7e2f20129365c2": {
+    "message": "Hình ảnh"
+  },
+  "m_28d71345fcbdb6bc": {
+    "message": "Đã khôi phục bàn giao bị gián đoạn; giữ lượt tải trong trình duyệt."
+  },
+  "m_ddedfe53cbb11f79": {
+    "message": "Đã trả lượt khôi phục bị gián đoạn về trình duyệt."
+  },
+  "m_7182c1f1f59286fa": {
+    "message": "Cài đặt tự bắt tải — Không hợp lệ"
+  },
+  "m_419be78ea9367d52": {
+    "message": "Yêu cầu đăng nhập trình duyệt — Không hợp lệ"
+  },
+  "m_615de39dbabcd451": {
+    "message": "Quy tắc bắt tải không hợp lệ."
+  },
+  "m_4e6451d9c7a05b34": {
+    "message": "Cài đặt chẩn đoán — Không hợp lệ"
+  },
+  "m_ebe2abb4cddb35fc": {
+    "message": "Mã bộ chọn liên kết — Không hợp lệ"
+  },
+  "m_438fc9ceb0904b0d": {
+    "message": "Cài đặt phát hiện nội dung — Không hợp lệ"
+  },
+  "m_cfd2d68349b7432a": {
+    "message": "Chế độ quét trang — Không hợp lệ"
+  },
+  "m_53621c0588be411a": {
+    "message": "Mã yêu cầu — Không hợp lệ"
+  },
+  "m_fd72d477bb65dc79": {
+    "message": "Cài đặt nút video — Không hợp lệ"
+  },
+  "m_e20a4b411a818b8b": {
+    "message": "Trang của nút video — Không hợp lệ"
+  },
+  "m_c2e9a31124f7d0f7": {
+    "message": "Giữ thẻ gốc đã đăng nhập mở."
+  },
+  "m_019e66b1bd219970": {
+    "message": "Giữ thẻ gốc đã đăng nhập mở. Không hỗ trợ duyệt riêng tư."
+  },
+  "m_251452cbeaef4875": {
+    "message": "Lớn nhất trước"
+  },
+  "m_52296e73ceec6ce1": {
+    "message": "Khôi phục liên kết"
+  },
+  "m_ccc96d8740521cb4": {
+    "message": "Đang tải liên kết trang…"
+  },
+  "m_b9f867064b204410": {
+    "message": "Đang tải trang…"
+  },
+  "m_6f1c11acccb3f806": {
+    "message": "Hàng đợi chính"
+  },
+  "m_179b204ad2a7f5dc": {
+    "message": "Phát hiện đa phương tiện"
+  },
+  "m_d7b80c91cf6b7aa5": {
+    "message": "Quyền phát hiện phương tiện đã đổi. Bật lại khi sẵn sàng."
+  },
+  "m_36fb507d0e7b32e8": {
+    "message": "Đã tắt phát hiện phương tiện và xóa danh sách."
+  },
+  "m_63cfe215acef08ce": {
+    "message": "Đã bật phát hiện phương tiện. Phát video hoặc tải lại trang."
+  },
+  "m_05dc18f8ce93981b": {
+    "message": "Phát hiện phương tiện không khả dụng. Tải lại tiện ích."
+  },
+  "m_7a05c2c962505cdb": {
+    "message": "Không cập nhật được danh sách phương tiện. Tắt rồi bật lại phát hiện."
+  },
+  "m_667d5d5489d7fc17": {
+    "message": "mục đa phương tiện"
+  },
+  "m_0c401d043fe13fb6": {
+    "message": "Đã xóa danh sách. Yêu cầu phát mới có thể xuất hiện lại."
+  },
+  "m_d8851b3df6edf1d3": {
+    "message": "Nội dung đa phương tiện trên trang"
+  },
+  "m_91a5e537e1bf2422": {
+    "message": "Kích thước tệp tối thiểu"
+  },
+  "m_dcd1d5223f73b3a9": {
+    "message": "Tên"
+  },
+  "m_a8bc982bc423c5a7": {
+    "message": "Nội dung mạng"
+  },
+  "m_0cffcc196fd87d17": {
+    "message": "Không bắt tải từ các trang này"
+  },
+  "m_1ff57a29d7c9d11b": {
+    "message": "Tiếp"
+  },
+  "m_09f1c438851431f3": {
+    "message": "Chưa ghi lại hoạt động nào."
+  },
+  "m_3f1536c1d3a3c78c": {
+    "message": "Chưa tải liên kết"
+  },
+  "m_507f9ea8cb63e18e": {
+    "message": "Không có liên kết khớp bộ lọc."
+  },
+  "m_7eaa329a40093924": {
+    "message": "Không có tệp khớp"
+  },
+  "m_75d0a7642fe89d02": {
+    "message": "Không có tối thiểu"
+  },
+  "m_6dd1d3103295d8dc": {
+    "message": "Tiến trình nền tiện ích không phản hồi."
+  },
+  "m_47788a2327f83840": {
+    "message": "Không đọc được đăng nhập được hỗ trợ. Đăng nhập rồi thử lại. Không hỗ trợ phiên riêng tư hoặc phân vùng."
+  },
+  "m_1e9601e1e54c4d5a": {
+    "message": "Không có cookie đăng nhập phù hợp. Đăng nhập trang trước. Không hỗ trợ phiên riêng tư, phân vùng hoặc cô lập bên thứ nhất."
+  },
+  "m_3e86480851090d8e": {
+    "message": "Mặc định tắt. Bật để tìm yêu cầu video và âm thanh khi duyệt web."
+  },
+  "m_841fa2784ee46d5c": {
+    "message": "Đã tắt cho trang này. Lựa chọn đã được lưu."
+  },
+  "m_b6d42710b782d638": {
+    "message": "Mặc định bật. Cho phép truy cập trang để hiện nút video."
+  },
+  "m_48ff08561347ceb3": {
+    "message": "Mặc định bật. Mở trang web để đổi cài đặt."
+  },
+  "m_718a1c9b01954136": {
+    "message": "Mặc định bật. Phát video để phát hiện, rồi chọn nội dung tải xuống."
+  },
+  "m_a5796db85ba454a2": {
+    "message": "Mặc định bật. Tắt để ẩn nút video trên trang này."
+  },
+  "m_b7e24a07e6b998ce": {
+    "message": "Mặc định bật. Lựa chọn được lưu cho trang này."
+  },
+  "m_18aa46ba0236a241": {
+    "message": "Mỗi dòng một trang, bao gồm cả tên miền phụ; * khớp với bất kỳ phần nào của tên."
+  },
+  "m_4e918bc632379980": {
+    "message": "Chỉ hỗ trợ liên kết HTTP/HTTPS không chứa thông tin đăng nhập."
+  },
+  "m_c474c658148d459d": {
+    "message": "Chỉ gửi liên kết đã chọn. Liên kết có thể dẫn đến trang web; loại tệp dựa vào tên và thông tin đa phương tiện."
+  },
+  "m_8bee84e594e99e34": {
+    "message": "Mở thẻ trình duyệt rồi mở lại Download Engine."
+  },
+  "m_c66ff2b172c3b834": {
+    "message": "Mở trang web thông thường để thiết lập nút video."
+  },
+  "m_aa4c148abfa53385": {
+    "message": "Mở trang web thông thường để tìm phương tiện."
+  },
+  "m_215a54029c2b4b91": {
+    "message": "Mở trang web thông thường để duyệt phương tiện."
+  },
+  "m_a9a64a3ba1e37620": {
+    "message": "Mở trang HTTP hoặc HTTPS rồi nhấp tiện ích trên trang đó."
+  },
+  "m_5d404dc8daf23871": {
+    "message": "Mở tiện ích Download Engine và thử lại."
+  },
+  "m_1c911c28ea089770": {
+    "message": "Mở trang đã đăng nhập trong thẻ thường rồi chọn tệp trên cùng máy chủ."
+  },
+  "m_b4c5fc73a947b6af": {
+    "message": "Đã mở trong ứng dụng"
+  },
+  "m_c751d726c402d9ab": {
+    "message": "Đang mở xem xét video trong Download Engine"
+  },
+  "m_c926c2c50e65d5a5": {
+    "message": "Đang mở…"
+  },
+  "m_1a0c32d68ceb4922": {
+    "message": "Vị trí lưu gốc"
+  },
+  "m_15a84d473a2dc5ef": {
+    "message": "Hàng đợi gốc"
+  },
+  "m_5e19e35a09649309": {
+    "message": "Khác / không rõ"
+  },
+  "m_57d2af91bc34f0b3": {
+    "message": "Tài nguyên trang"
+  },
+  "m_2d327768547d6bfa": {
+    "message": "Tài nguyên trang"
+  },
+  "m_58dc76ebf2ef2844": {
+    "message": "Liên kết trang"
+  },
+  "m_101737af4b45f970": {
+    "message": "Liên kết trang"
+  },
+  "m_aded8b818cfb9479": {
+    "message": "Liên kết trang"
+  },
+  "m_c902c6b1e1a4c529": {
+    "message": "Liên kết trang · Download Engine"
+  },
+  "m_9a3faea57df5b5b3": {
+    "message": "Thứ tự trang"
+  },
+  "m_445999cff1f693bb": {
+    "message": "Không thu thập liên kết trong cửa sổ riêng tư."
+  },
+  "m_a7a9dc5bcf71adb2": {
+    "message": "Đã tạm dừng"
+  },
+  "m_40d12c1cd050aea2": {
+    "message": "Đã khôi phục các lượt duyệt và tải đang chờ; kiểm tra bàn giao trình duyệt."
+  },
+  "m_d101686dfb461d7b": {
+    "message": "Quyền đã bị thu hồi"
+  },
+  "m_fb44b7bd4a949eee": {
+    "message": "Xem trước DASH"
+  },
+  "m_a891a492d8d0c27e": {
+    "message": "Xem trước HLS"
+  },
+  "m_a57b08a480b822a0": {
+    "message": "Trước"
+  },
+  "m_6d4977e17532e718": {
+    "message": "Không hỗ trợ phiên riêng tư, phân vùng hoặc cô lập bên thứ nhất. Tự bắt tải xuống vẫn ẩn danh."
+  },
+  "m_90920d93e2c7e632": {
+    "message": "Chương trình"
+  },
+  "m_b6747064b2a6dd95": {
+    "message": "Chương trình"
+  },
+  "m_3b2fe03e36893916": {
+    "message": "Hàng đợi"
+  },
+  "m_68b16a818cc085cf": {
+    "message": "Cài đặt, kiểm tra kết nối và xem video gần đây chỉ lưu trong trình duyệt này."
+  },
+  "m_98d7576ae1a9c3fc": {
+    "message": "Khôi phục tải xuống hiện có"
+  },
+  "m_da9f4135cbe4b48b": {
+    "message": "Khôi phục chuyển giao"
+  },
+  "m_c73c9c73104c4316": {
+    "message": "Đã cấp quyền khôi phục. Nhấp cùng tệp trên trang rồi duyệt trong Download Engine."
+  },
+  "m_acfeb89bc6c13696": {
+    "message": "Đã hủy khôi phục. Lượt tải ở lại trong trình duyệt."
+  },
+  "m_d662ba072dd18ac7": {
+    "message": "Đã kiểm tra khôi phục. Xem tệp bị tạm dừng trong danh sách Tải xuống của trình duyệt."
+  },
+  "m_ad787fd387d7b9ad": {
+    "message": "Không bắt đầu được khôi phục: "
+  },
+  "m_24cedb972410650c": {
+    "message": "Khôi phục cần xử lý. Tiếp tục trong danh sách tải của trình duyệt nếu cần. "
+  },
+  "m_5273e2f102fe7c0d": {
+    "message": "Đã dừng khôi phục: "
+  },
+  "m_1d57f666d95264c7": {
+    "message": "Làm mới nhật ký"
+  },
+  "m_2e1d57637f97896b": {
+    "message": "Tải lại vị trí lưu"
+  },
+  "m_9202490cb35dbda0": {
+    "message": "Tải lại tiện ích Download Engine để hoàn tất cập nhật."
+  },
+  "m_b330cbc172cf1e68": {
+    "message": "Gỡ quyền truy cập đăng nhập trình duyệt"
+  },
+  "m_bf98564718ee4abb": {
+    "message": "Gỡ quyền truy cập tiện ích cho trang này"
+  },
+  "m_45a4092662eb386c": {
+    "message": "Gỡ quyền đăng nhập sẽ ngừng đọc cookie trên mọi trang. Phát hiện video vẫn hoạt động. Xóa bản lưu tại Download Engine → Xác thực → Không có."
+  },
+  "m_22799a32fabd0898": {
+    "message": "Gỡ quyền sẽ dừng việc đọc cookie sau này. Để xóa bản chụp hiện có, xóa lượt tải hoặc chọn Xác thực → Không có."
+  },
+  "m_5923e8de81d8741b": {
+    "message": "Mở lại tiện ích và thử lại."
+  },
+  "m_20a3253602a7fcee": {
+    "message": "Kích thước được báo"
+  },
+  "m_3e536eb4562fe176": {
+    "message": "Xử lý lô đang chờ trước khi xem trước video."
+  },
+  "m_602f8e637002a585": {
+    "message": "Khôi phục mặc định"
+  },
+  "m_913b0a77f27fc498": {
+    "message": "Thử lại cùng đợt"
+  },
+  "m_60d03e7404e40486": {
+    "message": "Thử lại lô đang chờ trước khi đổi lựa chọn."
+  },
+  "m_de8cfa0e6bb6d592": {
+    "message": "Thử lại cùng lô để kiểm tra đã nhận."
+  },
+  "m_70786ccffcb091cd": {
+    "message": "Xem xét"
+  },
+  "m_ad8286257814524c": {
+    "message": "Xem xét ↗"
+  },
+  "m_8c76a4f01cdeec77": {
+    "message": "Xem liên kết và tài nguyên trên trang, rồi thêm tệp cần tải vào hàng đợi."
+  },
+  "m_3f21ed22e0fcea7e": {
+    "message": "Xem liên kết trên trang rồi thêm tệp muốn tải vào hàng đợi."
+  },
+  "m_1ee0fc616e9e22a3": {
+    "message": "Xem video trong Download Engine"
+  },
+  "m_3bc941f7f11d1ac7": {
+    "message": "Duyệt video trong Download Engine. Chưa tải gì xuống."
+  },
+  "m_41b3d85b43f47094": {
+    "message": "Duyệt thông tin đăng nhập trang này trong thẻ mới."
+  },
+  "m_193df65a5f826122": {
+    "message": "Nhấp chuột phải → Tải bằng Download Engine luôn gửi liên kết, bất kể các quy tắc này."
+  },
+  "m_852bfbb688dd15da": {
+    "message": "Nhấp chuột phải vào liên kết để gửi tới ứng dụng, hoặc bật tự bắt tải xuống."
+  },
+  "m_c071cf5f5ed6f884": {
+    "message": "Đang chạy"
+  },
+  "m_e5dbdffb88164817": {
+    "message": "Lưu quy tắc"
+  },
+  "m_1daa7df740ac086c": {
+    "message": "Lưu vào"
+  },
+  "m_198a1c7a2183aefc": {
+    "message": "Đang lưu tệp đã chọn…"
+  },
+  "m_dd298e20fc073647": {
+    "message": "Tìm liên kết"
+  },
+  "m_2a78025de6aae5e7": {
+    "message": "Chọn"
+  },
+  "m_1f7133c21072a138": {
+    "message": "Chọn"
+  },
+  "m_e116a9b3a597ac1e": {
+    "message": "Chọn mọi tệp khớp trên tất cả trang"
+  },
+  "m_dea1a3e66e47d981": {
+    "message": "Chọn từ 1 đến 1.000 liên kết trong danh sách."
+  },
+  "m_b908effe1a7c133b": {
+    "message": "Chọn tệp video trực tiếp hoặc xem trước HLS / DASH để chọn chất lượng và âm thanh trong Download Engine."
+  },
+  "m_ead5d68c99cc77a8": {
+    "message": "Chọn ít liên kết hơn cho lô này."
+  },
+  "m_e1ce37067ddc2ab5": {
+    "message": "Chọn nhật ký"
+  },
+  "m_313175419d438c50": {
+    "message": "Chọn mục khớp"
+  },
+  "m_87a73c5380c6c916": {
+    "message": "Chọn tệp muốn thêm."
+  },
+  "m_12576160b98349a6": {
+    "message": "Chọn nhật ký rồi nhấn Ctrl+C để sao chép."
+  },
+  "m_3ac5caf9518d7822": {
+    "message": "Gửi liên kết tệp hoặc liên kết đã chọn tới Download Engine, tùy chọn tự bắt tải xuống."
+  },
+  "m_b8ed5279e897be5d": {
+    "message": "Đang gửi…"
+  },
+  "m_9fa4fffd6b2390aa": {
+    "message": "Phân tách bằng dấu cách. * khớp với mọi ký tự, ví dụ r0*. Chỉ nhập * để bắt mọi loại."
+  },
+  "m_818cd8d91aea3a16": {
+    "message": "Cài đặt"
+  },
+  "m_64d28781ada09e2e": {
+    "message": "Đã xóa quyền trang. Lượt tải cũ giữ bản chụp mã hóa tới khi bạn xóa trong Download Engine."
+  },
+  "m_b1dc42771ae048ea": {
+    "message": "Chưa cấp quyền trang này. Cho phép để hiện nút video."
+  },
+  "m_683653872b36eaa7": {
+    "message": "Chưa cấp quyền trang. Không gửi thông tin đăng nhập."
+  },
+  "m_f09f3886349140ea": {
+    "message": "Không xóa được quyền trang."
+  },
+  "m_1af851907331c0ed": {
+    "message": "Kích thước"
+  },
+  "m_d94adb63dbcd8018": {
+    "message": "Trang không cung cấp kích thước"
+  },
+  "m_2a817d337803db0d": {
+    "message": "Đơn vị kích thước"
+  },
+  "m_873395540b2cfea9": {
+    "message": "Không rõ kích thước"
+  },
+  "m_80b858ffa465e189": {
+    "message": "Tệp nhỏ hơn sẽ ở lại trình duyệt. Để trống để nhận mọi kích thước."
+  },
+  "m_bec69036aa27e7fa": {
+    "message": "Sắp xếp"
+  },
+  "m_af45940023cd4d24": {
+    "message": "Trang nguồn"
+  },
+  "m_329c0763bd9ec092": {
+    "message": "Phát khi bật phát hiện hoặc dùng Tìm video để quét trang."
+  },
+  "m_febbea5fb07c20c8": {
+    "message": "Chưa xác nhận hủy. Giữ bản trong trình duyệt; kiểm tra ứng dụng trước khi thử lại."
+  },
+  "m_fbb00942fda85125": {
+    "message": "Ứng dụng chưa xác nhận liên kết mới"
+  },
+  "m_ec379e9b433646d8": {
+    "message": "Ứng dụng chưa xác nhận bàn giao. Giữ lượt tải trong trình duyệt; kiểm tra Download Engine nếu có bản khác."
+  },
+  "m_903e073f9cd11362": {
+    "message": "Bản trong trình duyệt đã xong hoặc tiếp tục trong khi hủy"
+  },
+  "m_1c9fd224194b7ee7": {
+    "message": "Trình duyệt không tạm dừng được lượt tải"
+  },
+  "m_eed9387ac150e8fe": {
+    "message": "Trình duyệt không đọc được trang. Thử trang web thông thường."
+  },
+  "m_f3cfbd4cbe900742": {
+    "message": "Giữ lượt tải trong trình duyệt và Download Engine cũng đã nhận. Kiểm tra cả hai danh sách."
+  },
+  "m_d69c84ad2351aa26": {
+    "message": "Chưa xác nhận bàn giao đăng nhập. Kiểm tra kết nối ứng dụng rồi thử lại cùng yêu cầu."
+  },
+  "m_55e44ceeae345baf": {
+    "message": "Ứng dụng không thêm được lượt tải."
+  },
+  "m_6f841f3073957b4a": {
+    "message": "Ứng dụng chưa xác nhận lượt tải đã lưu."
+  },
+  "m_2b3a9305582ef2d1": {
+    "message": "Chưa xác nhận khôi phục trình duyệt. Cập nhật Download Engine và thử lại."
+  },
+  "m_e6c0313fd505b718": {
+    "message": "Ứng dụng chưa xác nhận bàn giao trình duyệt."
+  },
+  "m_bedea1012885305a": {
+    "message": "Chưa xác nhận lưu toàn bộ lô. Thử lại đúng lô này."
+  },
+  "m_390e7750e59f2870": {
+    "message": "Chưa xác nhận xem trước video. Cập nhật Download Engine hoặc thử lại."
+  },
+  "m_1947644923407952": {
+    "message": "Chưa xác nhận duyệt video. Cập nhật Download Engine rồi dùng Khôi phục bàn giao."
+  },
+  "m_088826a3e5e4e204": {
+    "message": "Ứng dụng máy tính không phản hồi kịp."
+  },
+  "m_bd3ccbbad5af2986": {
+    "message": "Ứng dụng trả về phản hồi không hợp lệ."
+  },
+  "m_535e3e6ab89880c5": {
+    "message": "Tiến trình nền tiện ích không phản hồi."
+  },
+  "m_988db6830a99c691": {
+    "message": "Tiện ích không phản hồi."
+  },
+  "m_306540f92d0513e3": {
+    "message": "Tiện ích không phản hồi. Tải lại thẻ này để thử lại."
+  },
+  "m_d122305531039ccd": {
+    "message": "Tiện ích không phản hồi. Thử lại đúng yêu cầu này."
+  },
+  "m_30289712f9fad302": {
+    "message": "Lô trước chưa được xác nhận. Thử lại gửi cùng lô, không thêm trùng. Giữ trình duyệt mở tới khi xử lý xong."
+  },
+  "m_e72a03f673ade934": {
+    "message": "Thẻ gốc đã đóng. Mở trang và thử lại."
+  },
+  "m_290b216afbebe4b2": {
+    "message": "Trang đã đổi. Nhấp lại nút video."
+  },
+  "m_110b363e52b4a6d5": {
+    "message": "Trang đã đổi. Mở lại tiện ích rồi thử lại."
+  },
+  "m_9ade37e9a32e749d": {
+    "message": "Trang đã đổi. Mở lại tiện ích."
+  },
+  "m_f314de530158f111": {
+    "message": "Trang trả về danh sách liên kết không hợp lệ."
+  },
+  "m_26af77d95664e615": {
+    "message": "Đã đạt giới hạn trang lưu cho nút video."
+  },
+  "m_91947dba22da73b5": {
+    "message": "Cài đặt đã đổi khi đang yêu cầu quyền."
+  },
+  "m_dbd704dc9a27d238": {
+    "message": "Không có lô đang chờ để thử lại."
+  },
+  "m_b418ac2881c78a7a": {
+    "message": "Lô này đang được gửi."
+  },
+  "m_604518b6a7b13e73": {
+    "message": "Bộ chọn liên kết hết hạn. Thu thập lại liên kết từ tiện ích."
+  },
+  "m_68fd909eec66f301": {
+    "message": "Yêu cầu đăng nhập hết hạn. Kiểm tra hàng đợi Download Engine trước khi gửi lại."
+  },
+  "m_14204d3bb3d2fc5e": {
+    "message": "Mục phương tiện đã hết hạn. Phát lại để phát hiện."
+  },
+  "m_d5993dba7abddfa4": {
+    "message": "Dữ liệu liên kết quá nhiều. Thử trang nhỏ hơn."
+  },
+  "m_359c18c81b3a8742": {
+    "message": "Dữ liệu video quá nhiều. Thử trang nhỏ hơn."
+  },
+  "m_601ed5513a7de1ff": {
+    "message": "Trang quá lớn nên chỉ hiện một phần liên kết. Mở trang nhỏ hơn để thu thập thêm."
+  },
+  "m_f35a9682d7be0bd2": {
+    "message": "Dữ liệu đăng nhập trang quá lớn. Tải bằng trình duyệt."
+  },
+  "m_a13331f2e442016c": {
+    "message": "Không chuyển cookie trang này an toàn được. Tải tệp bằng trình duyệt."
+  },
+  "m_d8b8392e2c542950": {
+    "message": "Thử lại"
+  },
+  "m_baaddf70fb5d432b": {
+    "message": "Loại"
+  },
+  "m_b764cdc0eab71374": {
+    "message": "Không rõ"
+  },
+  "m_b3744a5c9e3a8a5f": {
+    "message": "Cài đặt quyền không xác định."
+  },
+  "m_037c426c05970681": {
+    "message": "Trang chưa có tiêu đề"
+  },
+  "m_24f3b0891ed85ed6": {
+    "message": "Cập nhật ứng dụng để dùng lô liên kết trang."
+  },
+  "m_239bbb679e8b5ed9": {
+    "message": "Cập nhật Download Engine trước khi bật tự động bắt tải."
+  },
+  "m_edfcdbe6f4310523": {
+    "message": "Cập nhật Download Engine trước khi dùng đăng nhập trình duyệt."
+  },
+  "m_6ef631778917843c": {
+    "message": "Đăng nhập trình duyệt · Download Engine"
+  },
+  "m_a84b376c126bf400": {
+    "message": "Dùng tìm video để quét trang, hoặc bật phát hiện rồi phát nội dung."
+  },
+  "m_a1426ad7784ebbbc": {
+    "message": "Dùng Xem trước HLS hoặc DASH để chọn chất lượng trước khi thêm luồng."
+  },
+  "m_244ef0cdc79df596": {
+    "message": "Không giải phóng được bản bị tạm dừng. Tiếp tục trong danh sách tải của trình duyệt."
+  },
+  "m_acfe566ca2e566e7": {
+    "message": "Dùng đăng nhập trang này"
+  },
+  "m_69da05b04d99b754": {
+    "message": "Dùng đăng nhập trang này (xem xét trước)"
+  },
+  "m_d4aa36ffd2cc2537": {
+    "message": "Dùng tối đa {0} loại tệp."
+  },
+  "m_850e8821a631dd82": {
+    "message": "Dùng tối đa {0} trang."
+  },
+  "m_27eb9ee5a85d401e": {
+    "message": "Dùng quy tắc thư mục tự động trong cài đặt Download Engine."
+  },
+  "m_d534be829e32196b": {
+    "message": "Video"
+  },
+  "m_9e745d40aad9b039": {
+    "message": "Nút video"
+  },
+  "m_99f89003e6428eab": {
+    "message": "Không cập nhật được nút video trên thẻ đang mở:"
+  },
+  "m_d0113821d8075479": {
+    "message": "Nút video trên trang này"
+  },
+  "m_c1c069858f0e43e0": {
+    "message": "Nút video chỉ dùng trên trang thông thường ở cấp cao nhất."
+  },
+  "m_bf8f3f1e22b98e76": {
+    "message": "Nút video bị tắt hoặc chưa cấp quyền trang này."
+  },
+  "m_b6a9e2a18c985463": {
+    "message": "Nút video đã tắt cho trang này."
+  },
+  "m_4fcff88a23263c1d": {
+    "message": "Nút video đã bật cho trang này. Nhấp nút để duyệt video."
+  },
+  "m_33a6de083bd3b681": {
+    "message": "Tải video"
+  },
+  "m_1999f0d064cfbc7c": {
+    "message": "Tải video — Download Engine"
+  },
+  "m_74d5e1a5adca3103": {
+    "message": "Tệp video"
+  },
+  "m_d007a137f798c162": {
+    "message": "TỆP VIDEO"
+  },
+  "m_cfe370de13214b8b": {
+    "message": "Xem xét video"
+  },
+  "m_c08d78254e705099": {
+    "message": "Luồng video"
+  },
+  "m_991cf9db508be663": {
+    "message": "Đang chờ {0}. Nhấp liên kết tải trên trang gốc rồi duyệt trong Download Engine."
+  },
+  "m_487420533636d10c": {
+    "message": "Chưa cấp quyền trang web. Phát hiện phương tiện vẫn tắt."
+  },
+  "m_11fcf7333cfe5a60": {
+    "message": "Windows mã hóa bản chụp cho tài khoản của bạn. Chỉ dùng cho lượt tải này trong tối đa 24 giờ, rồi xóa khi tải xong hoặc bạn xóa lượt tải. Đăng xuất trình duyệt không xóa bản chụp."
+  },
+  "extensionName": {
+    "message": "Tích hợp Download Engine"
+  },
+  "extensionDescription": {
+    "message": "Tiếp nhận tải xuống tệp và phát hiện video cho ứng dụng Download Engine."
+  }
+}

@@ -1,0 +1,269 @@
+# Rust dependency licenses
+
+These are locked Cargo dependencies, unmodified except epaint (see below). Download Engine's MIT license does not replace their licenses. Alternative licenses remain alternatives; self_cell is used under Apache-2.0. This inventory includes build/test dependencies as well as runtime dependencies.
+
+MPL-covered source and published crates that omit workspace license files are included in `sources/`. A `.crate` file is a gzip-compressed tar archive; extract it with `tar -xzf filename.crate`. The included source is the unmodified upstream crate; its SHA-256 is checked against Cargo.lock, or for a modified crate against the published crates.io checksum. Other source links identify the exact published versions.
+
+Download Engine builds a modified copy of epaint 0.36.2 (bidirectional text layout, so Latin text and numbers keep their order inside right-to-left text). The modified source is `vendor/epaint` in the Download Engine source release; `vendor/epaint/XDOWNLOADER-PATCH.md` lists the changed files.
+
+- **accesskit 0.24.1** — Apache-2.0. [LICENSE-Apache-2.0](rust/accesskit-0.24.1/LICENSE-Apache-2.0); [included source](sources/accesskit-0.24.1.crate).
+- **adler2 2.0.1** — 0BSD OR MIT OR Apache-2.0. [LICENSE-0BSD](rust/adler2-2.0.1/LICENSE-0BSD), [LICENSE-APACHE](rust/adler2-2.0.1/LICENSE-APACHE), [LICENSE-MIT](rust/adler2-2.0.1/LICENSE-MIT).
+- **ahash 0.8.12** — MIT OR Apache-2.0. [LICENSE-APACHE](rust/ahash-0.8.12/LICENSE-APACHE), [LICENSE-MIT](rust/ahash-0.8.12/LICENSE-MIT).
+- **anyhow 1.0.104** — MIT OR Apache-2.0. [LICENSE-APACHE](rust/anyhow-1.0.104/LICENSE-APACHE), [LICENSE-MIT](rust/anyhow-1.0.104/LICENSE-MIT).
+- **arboard 3.6.1** — MIT OR Apache-2.0. [LICENSE-APACHE.txt](rust/arboard-3.6.1/LICENSE-APACHE.txt), [LICENSE-MIT.txt](rust/arboard-3.6.1/LICENSE-MIT.txt).
+- **arrayvec 0.7.8** — MIT OR Apache-2.0. [LICENSE-APACHE](rust/arrayvec-0.7.8/LICENSE-APACHE), [LICENSE-MIT](rust/arrayvec-0.7.8/LICENSE-MIT).
+- **atomic-waker 1.1.2** — Apache-2.0 OR MIT. [LICENSE-APACHE](rust/atomic-waker-1.1.2/LICENSE-APACHE), [LICENSE-MIT](rust/atomic-waker-1.1.2/LICENSE-MIT), [LICENSE-THIRD-PARTY](rust/atomic-waker-1.1.2/LICENSE-THIRD-PARTY).
+- **autocfg 1.5.1** — Apache-2.0 OR MIT. [LICENSE-APACHE](rust/autocfg-1.5.1/LICENSE-APACHE), [LICENSE-MIT](rust/autocfg-1.5.1/LICENSE-MIT).
+- **base64 0.23.1** — MIT OR Apache-2.0. [LICENSE-APACHE](rust/base64-0.23.1/LICENSE-APACHE), [LICENSE-MIT](rust/base64-0.23.1/LICENSE-MIT).
+- **bitflags 2.13.2** — MIT OR Apache-2.0. [LICENSE-APACHE](rust/bitflags-2.13.2/LICENSE-APACHE), [LICENSE-MIT](rust/bitflags-2.13.2/LICENSE-MIT).
+- **block-buffer 0.10.4** — MIT OR Apache-2.0. [LICENSE-APACHE](rust/block-buffer-0.10.4/LICENSE-APACHE), [LICENSE-MIT](rust/block-buffer-0.10.4/LICENSE-MIT).
+- **bstr 1.13.1** — MIT OR Apache-2.0. [COPYING](rust/bstr-1.13.1/COPYING), [LICENSE-APACHE](rust/bstr-1.13.1/LICENSE-APACHE), [LICENSE-MIT](rust/bstr-1.13.1/LICENSE-MIT).
+- **bytemuck_derive 1.12.1** — Zlib OR Apache-2.0 OR MIT. [LICENSE-APACHE](rust/bytemuck_derive-1.12.1/LICENSE-APACHE), [LICENSE-MIT](rust/bytemuck_derive-1.12.1/LICENSE-MIT), [LICENSE-ZLIB](rust/bytemuck_derive-1.12.1/LICENSE-ZLIB).
+- **bytemuck 1.25.2** — Zlib OR Apache-2.0 OR MIT. [LICENSE-APACHE](rust/bytemuck-1.25.2/LICENSE-APACHE), [LICENSE-MIT](rust/bytemuck-1.25.2/LICENSE-MIT), [LICENSE-ZLIB](rust/bytemuck-1.25.2/LICENSE-ZLIB).
+- **byteorder-lite 0.1.0** — Unlicense OR MIT. [LICENSE-MIT](rust/byteorder-lite-0.1.0/LICENSE-MIT).
+- **bytes 1.12.1** — MIT. [LICENSE](rust/bytes-1.12.1/LICENSE).
+- **cc 1.6.0** — MIT OR Apache-2.0. [LICENSE-APACHE](rust/cc-1.6.0/LICENSE-APACHE), [LICENSE-MIT](rust/cc-1.6.0/LICENSE-MIT).
+- **cfg_aliases 0.2.2** — MIT. [LICENSE](rust/cfg_aliases-0.2.2/LICENSE).
+- **cfg-if 1.0.5** — MIT OR Apache-2.0. [LICENSE-APACHE](rust/cfg-if-1.0.5/LICENSE-APACHE), [LICENSE-MIT](rust/cfg-if-1.0.5/LICENSE-MIT).
+- **chrono 0.4.45** — MIT OR Apache-2.0. [LICENSE.txt](rust/chrono-0.4.45/LICENSE.txt).
+- **clipboard-win 5.4.3** — BSL-1.0. [LICENSE-BSL-1.0](rust/clipboard-win-5.4.3/LICENSE-BSL-1.0); [included source](sources/clipboard-win-5.4.3.crate).
+- **color 0.3.3** — Apache-2.0 OR MIT. [LICENSE-APACHE](rust/color-0.3.3/LICENSE-APACHE), [LICENSE-MIT](rust/color-0.3.3/LICENSE-MIT).
+- **cpufeatures 0.2.17** — MIT OR Apache-2.0. [LICENSE-APACHE](rust/cpufeatures-0.2.17/LICENSE-APACHE), [LICENSE-MIT](rust/cpufeatures-0.2.17/LICENSE-MIT).
+- **crc32fast 1.5.2** — MIT OR Apache-2.0. [LICENSE-APACHE](rust/crc32fast-1.5.2/LICENSE-APACHE), [LICENSE-MIT](rust/crc32fast-1.5.2/LICENSE-MIT).
+- **crypto-common 0.1.7** — MIT OR Apache-2.0. [LICENSE-APACHE](rust/crypto-common-0.1.7/LICENSE-APACHE), [LICENSE-MIT](rust/crypto-common-0.1.7/LICENSE-MIT).
+- **cssparser 0.37.0** — MPL-2.0. [LICENSE](rust/cssparser-0.37.0/LICENSE); [included source](sources/cssparser-0.37.0.crate).
+- **cssparser-macros 0.7.1** — MPL-2.0. [LICENSE](rust/cssparser-macros-0.7.1/LICENSE); [included source](sources/cssparser-macros-0.7.1.crate).
+- **cursor-icon 1.2.0** — MIT OR Apache-2.0 OR Zlib. [LICENSE-APACHE](rust/cursor-icon-1.2.0/LICENSE-APACHE), [LICENSE-MIT](rust/cursor-icon-1.2.0/LICENSE-MIT), [LICENSE-ZLIB](rust/cursor-icon-1.2.0/LICENSE-ZLIB).
+- **derive_more 2.1.1** — MIT. [LICENSE](rust/derive_more-2.1.1/LICENSE).
+- **derive_more-impl 2.1.1** — MIT. [LICENSE](rust/derive_more-impl-2.1.1/LICENSE).
+- **digest 0.10.7** — MIT OR Apache-2.0. [LICENSE-APACHE](rust/digest-0.10.7/LICENSE-APACHE), [LICENSE-MIT](rust/digest-0.10.7/LICENSE-MIT).
+- **displaydoc 0.2.7** — MIT OR Apache-2.0. [LICENSE-APACHE](rust/displaydoc-0.2.7/LICENSE-APACHE), [LICENSE-MIT](rust/displaydoc-0.2.7/LICENSE-MIT).
+- **document-features 0.2.12** — MIT OR Apache-2.0. [LICENSE-APACHE](rust/document-features-0.2.12/LICENSE-APACHE), [LICENSE-MIT](rust/document-features-0.2.12/LICENSE-MIT).
+- **dpi 0.1.2** — Apache-2.0 AND MIT. [LICENSE](rust/dpi-0.1.2/LICENSE), [LICENSE-LIBM-MIT](rust/dpi-0.1.2/LICENSE-LIBM-MIT).
+- **dtoa 1.0.11** — MIT OR Apache-2.0. [LICENSE-APACHE](rust/dtoa-1.0.11/LICENSE-APACHE), [LICENSE-MIT](rust/dtoa-1.0.11/LICENSE-MIT).
+- **dtoa-short 0.3.5** — MPL-2.0. [LICENSE](rust/dtoa-short-0.3.5/LICENSE); [included source](sources/dtoa-short-0.3.5.crate).
+- **ecolor 0.36.2** — Apache-2.0. [LICENSE-Apache-2.0](rust/ecolor-0.36.2/LICENSE-Apache-2.0); [included source](sources/ecolor-0.36.2.crate).
+- **eframe 0.36.2** — Apache-2.0. [LICENSE-Apache-2.0](rust/eframe-0.36.2/LICENSE-Apache-2.0); [included source](sources/eframe-0.36.2.crate).
+- **ego-tree 0.11.0** — ISC. [LICENSE](rust/ego-tree-0.11.0/LICENSE).
+- **egui_glow 0.36.2** — Apache-2.0. [LICENSE-Apache-2.0](rust/egui_glow-0.36.2/LICENSE-Apache-2.0); [included source](sources/egui_glow-0.36.2.crate).
+- **egui 0.36.2** — Apache-2.0. [LICENSE-Apache-2.0](rust/egui-0.36.2/LICENSE-Apache-2.0); [included source](sources/egui-0.36.2.crate).
+- **egui-winit 0.36.2** — Apache-2.0. [LICENSE-Apache-2.0](rust/egui-winit-0.36.2/LICENSE-Apache-2.0); [included source](sources/egui-winit-0.36.2.crate).
+- **either 1.19.0** — MIT OR Apache-2.0. [LICENSE-APACHE](rust/either-1.19.0/LICENSE-APACHE), [LICENSE-MIT](rust/either-1.19.0/LICENSE-MIT).
+- **emath 0.36.2** — Apache-2.0. [LICENSE-Apache-2.0](rust/emath-0.36.2/LICENSE-Apache-2.0); [included source](sources/emath-0.36.2.crate).
+- **epaint_default_fonts 0.36.2** — (MIT OR Apache-2.0) AND OFL-1.1 AND Ubuntu-font-1.0. [emoji-icon-font-mit-license.txt](rust/epaint_default_fonts-0.36.2/fonts/emoji-icon-font-mit-license.txt), [Hack-Regular.txt](rust/epaint_default_fonts-0.36.2/fonts/Hack-Regular.txt), [OFL.txt](rust/epaint_default_fonts-0.36.2/fonts/OFL.txt), [UFL.txt](rust/epaint_default_fonts-0.36.2/fonts/UFL.txt).
+- **epaint 0.36.2** — Apache-2.0, modified copy. [LICENSE-Apache-2.0](rust/epaint-0.36.2/LICENSE-Apache-2.0); [included source](sources/epaint-0.36.2.crate).
+- **erased-serde 0.4.10** — MIT OR Apache-2.0. [LICENSE-APACHE](rust/erased-serde-0.4.10/LICENSE-APACHE), [LICENSE-MIT](rust/erased-serde-0.4.10/LICENSE-MIT).
+- **error-code 3.4.0** — BSL-1.0. [LICENSE](rust/error-code-3.4.0/LICENSE).
+- **euclid 0.22.14** — MIT OR Apache-2.0. [COPYRIGHT](rust/euclid-0.22.14/COPYRIGHT), [LICENSE-APACHE](rust/euclid-0.22.14/LICENSE-APACHE), [LICENSE-MIT](rust/euclid-0.22.14/LICENSE-MIT).
+- **fallible-iterator 0.3.0** — MIT/Apache-2.0. [LICENSE-APACHE](rust/fallible-iterator-0.3.0/LICENSE-APACHE), [LICENSE-MIT](rust/fallible-iterator-0.3.0/LICENSE-MIT).
+- **fallible-streaming-iterator 0.1.9** — MIT/Apache-2.0. [LICENSE-APACHE](rust/fallible-streaming-iterator-0.1.9/LICENSE-APACHE), [LICENSE-MIT](rust/fallible-streaming-iterator-0.1.9/LICENSE-MIT).
+- **fastrand 2.5.0** — Apache-2.0 OR MIT. [LICENSE-APACHE](rust/fastrand-2.5.0/LICENSE-APACHE), [LICENSE-MIT](rust/fastrand-2.5.0/LICENSE-MIT).
+- **fax 0.2.7** — MIT. [LICENSE](rust/fax-0.2.7/LICENSE).
+- **fdeflate 0.3.7** — MIT OR Apache-2.0. [LICENSE-APACHE](rust/fdeflate-0.3.7/LICENSE-APACHE), [LICENSE-MIT](rust/fdeflate-0.3.7/LICENSE-MIT).
+- **fearless_simd 0.4.1** — Apache-2.0 OR MIT. [LICENSE-APACHE](rust/fearless_simd-0.4.1/LICENSE-APACHE), [LICENSE-MIT](rust/fearless_simd-0.4.1/LICENSE-MIT).
+- **find-msvc-tools 0.1.14** — MIT OR Apache-2.0. [LICENSE-APACHE](rust/find-msvc-tools-0.1.14/LICENSE-APACHE), [LICENSE-MIT](rust/find-msvc-tools-0.1.14/LICENSE-MIT).
+- **flate2 1.1.10** — MIT OR Apache-2.0. [LICENSE-APACHE](rust/flate2-1.1.10/LICENSE-APACHE), [LICENSE-MIT](rust/flate2-1.1.10/LICENSE-MIT).
+- **foldhash 0.2.0** — Zlib. [LICENSE](rust/foldhash-0.2.0/LICENSE).
+- **font-types 0.12.6** — MIT OR Apache-2.0. [LICENSE-APACHE](rust/font-types-0.12.6/LICENSE-APACHE), [LICENSE-MIT](rust/font-types-0.12.6/LICENSE-MIT).
+- **form_urlencoded 1.2.2** — MIT OR Apache-2.0. [LICENSE-APACHE](rust/form_urlencoded-1.2.2/LICENSE-APACHE), [LICENSE-MIT](rust/form_urlencoded-1.2.2/LICENSE-MIT).
+- **fs2 0.4.3** — MIT/Apache-2.0. [LICENSE-APACHE](rust/fs2-0.4.3/LICENSE-APACHE), [LICENSE-MIT](rust/fs2-0.4.3/LICENSE-MIT).
+- **futures-channel 0.3.34** — MIT OR Apache-2.0. [LICENSE-APACHE](rust/futures-channel-0.3.34/LICENSE-APACHE), [LICENSE-MIT](rust/futures-channel-0.3.34/LICENSE-MIT).
+- **futures-core 0.3.34** — MIT OR Apache-2.0. [LICENSE-APACHE](rust/futures-core-0.3.34/LICENSE-APACHE), [LICENSE-MIT](rust/futures-core-0.3.34/LICENSE-MIT).
+- **futures-io 0.3.34** — MIT OR Apache-2.0. [LICENSE-APACHE](rust/futures-io-0.3.34/LICENSE-APACHE), [LICENSE-MIT](rust/futures-io-0.3.34/LICENSE-MIT).
+- **futures-macro 0.3.34** — MIT OR Apache-2.0. [LICENSE-APACHE](rust/futures-macro-0.3.34/LICENSE-APACHE), [LICENSE-MIT](rust/futures-macro-0.3.34/LICENSE-MIT).
+- **futures-sink 0.3.34** — MIT OR Apache-2.0. [LICENSE-APACHE](rust/futures-sink-0.3.34/LICENSE-APACHE), [LICENSE-MIT](rust/futures-sink-0.3.34/LICENSE-MIT).
+- **futures-task 0.3.34** — MIT OR Apache-2.0. [LICENSE-APACHE](rust/futures-task-0.3.34/LICENSE-APACHE), [LICENSE-MIT](rust/futures-task-0.3.34/LICENSE-MIT).
+- **futures-util 0.3.34** — MIT OR Apache-2.0. [LICENSE-APACHE](rust/futures-util-0.3.34/LICENSE-APACHE), [LICENSE-MIT](rust/futures-util-0.3.34/LICENSE-MIT).
+- **generic-array 0.14.7** — MIT. [LICENSE](rust/generic-array-0.14.7/LICENSE).
+- **getrandom 0.4.3** — MIT OR Apache-2.0. [LICENSE-APACHE](rust/getrandom-0.4.3/LICENSE-APACHE), [LICENSE-MIT](rust/getrandom-0.4.3/LICENSE-MIT).
+- **gl_generator 0.14.0** — Apache-2.0. [LICENSE-Apache-2.0](rust/gl_generator-0.14.0/LICENSE-Apache-2.0); [included source](sources/gl_generator-0.14.0.crate).
+- **glifo 0.2.0** — Apache-2.0 OR MIT. [LICENSE-APACHE](rust/glifo-0.2.0/LICENSE-APACHE), [LICENSE-MIT](rust/glifo-0.2.0/LICENSE-MIT).
+- **glow 0.17.0** — MIT OR Apache-2.0 OR Zlib. [LICENSE-APACHE](rust/glow-0.17.0/LICENSE-APACHE), [LICENSE-MIT](rust/glow-0.17.0/LICENSE-MIT), [LICENSE-ZLIB](rust/glow-0.17.0/LICENSE-ZLIB).
+- **glutin_egl_sys 0.7.1** — Apache-2.0. [LICENSE](rust/glutin_egl_sys-0.7.1/LICENSE).
+- **glutin_wgl_sys 0.6.1** — Apache-2.0. [LICENSE](rust/glutin_wgl_sys-0.6.1/LICENSE).
+- **glutin 0.32.3** — Apache-2.0. [LICENSE](rust/glutin-0.32.3/LICENSE).
+- **glutin-winit 0.5.0** — MIT. [LICENSE](rust/glutin-winit-0.5.0/LICENSE).
+- **guillotiere 0.7.0** — MIT/Apache-2.0. [LICENSE-APACHE](rust/guillotiere-0.7.0/LICENSE-APACHE), [LICENSE-MIT](rust/guillotiere-0.7.0/LICENSE-MIT).
+- **half 2.7.1** — MIT OR Apache-2.0. [LICENSE-APACHE](rust/half-2.7.1/LICENSE-APACHE), [LICENSE-MIT](rust/half-2.7.1/LICENSE-MIT).
+- **harfrust 0.12.0** — MIT. [LICENSE](rust/harfrust-0.12.0/LICENSE).
+- **hashbrown 0.17.1** — MIT OR Apache-2.0. [LICENSE-APACHE](rust/hashbrown-0.17.1/LICENSE-APACHE), [LICENSE-MIT](rust/hashbrown-0.17.1/LICENSE-MIT).
+- **hashlink 0.12.2** — MIT OR Apache-2.0. [LICENSE-APACHE](rust/hashlink-0.12.2/LICENSE-APACHE), [LICENSE-MIT](rust/hashlink-0.12.2/LICENSE-MIT).
+- **html5ever 0.39.0** — MIT OR Apache-2.0. [LICENSE-APACHE](rust/html5ever-0.39.0/LICENSE-APACHE), [LICENSE-MIT](rust/html5ever-0.39.0/LICENSE-MIT).
+- **http 1.5.0** — MIT OR Apache-2.0. [LICENSE-APACHE](rust/http-1.5.0/LICENSE-APACHE), [LICENSE-MIT](rust/http-1.5.0/LICENSE-MIT).
+- **http-body 1.1.0** — MIT. [LICENSE](rust/http-body-1.1.0/LICENSE).
+- **http-body-util 0.1.5** — MIT. [LICENSE](rust/http-body-util-0.1.5/LICENSE).
+- **httparse 1.10.1** — MIT OR Apache-2.0. [LICENSE-APACHE](rust/httparse-1.10.1/LICENSE-APACHE), [LICENSE-MIT](rust/httparse-1.10.1/LICENSE-MIT).
+- **httpdate 1.0.3** — MIT OR Apache-2.0. [LICENSE-APACHE](rust/httpdate-1.0.3/LICENSE-APACHE), [LICENSE-MIT](rust/httpdate-1.0.3/LICENSE-MIT).
+- **hyper 1.12.0** — MIT. [LICENSE](rust/hyper-1.12.0/LICENSE).
+- **hyper-tls 0.6.0** — MIT/Apache-2.0. [LICENSE-APACHE](rust/hyper-tls-0.6.0/LICENSE-APACHE), [LICENSE-MIT](rust/hyper-tls-0.6.0/LICENSE-MIT).
+- **hyper-util 0.1.21** — MIT. [LICENSE](rust/hyper-util-0.1.21/LICENSE).
+- **icu_collections 2.3.0** — Unicode-3.0. [LICENSE](rust/icu_collections-2.3.0/LICENSE).
+- **icu_locale_core 2.3.0** — Unicode-3.0. [LICENSE](rust/icu_locale_core-2.3.0/LICENSE).
+- **icu_normalizer_data 2.3.0** — Unicode-3.0. [LICENSE](rust/icu_normalizer_data-2.3.0/LICENSE).
+- **icu_normalizer 2.3.0** — Unicode-3.0. [LICENSE](rust/icu_normalizer-2.3.0/LICENSE).
+- **icu_properties_data 2.3.0** — Unicode-3.0. [LICENSE](rust/icu_properties_data-2.3.0/LICENSE).
+- **icu_properties 2.3.0** — Unicode-3.0. [LICENSE](rust/icu_properties-2.3.0/LICENSE).
+- **icu_provider 2.3.1** — Unicode-3.0. [LICENSE](rust/icu_provider-2.3.1/LICENSE).
+- **idna_adapter 1.2.2** — Apache-2.0 OR MIT. [LICENSE-APACHE](rust/idna_adapter-1.2.2/LICENSE-APACHE), [LICENSE-MIT](rust/idna_adapter-1.2.2/LICENSE-MIT).
+- **idna 1.1.0** — MIT OR Apache-2.0. [LICENSE-APACHE](rust/idna-1.1.0/LICENSE-APACHE), [LICENSE-MIT](rust/idna-1.1.0/LICENSE-MIT).
+- **image 0.25.10** — MIT OR Apache-2.0. [LICENSE-APACHE](rust/image-0.25.10/LICENSE-APACHE), [LICENSE-MIT](rust/image-0.25.10/LICENSE-MIT).
+- **ipnet 2.12.2** — MIT OR Apache-2.0. [LICENSE-APACHE](rust/ipnet-2.12.2/LICENSE-APACHE), [LICENSE-MIT](rust/ipnet-2.12.2/LICENSE-MIT).
+- **itertools 0.15.0** — MIT OR Apache-2.0. [LICENSE-APACHE](rust/itertools-0.15.0/LICENSE-APACHE), [LICENSE-MIT](rust/itertools-0.15.0/LICENSE-MIT).
+- **itoa 1.0.18** — MIT OR Apache-2.0. [LICENSE-APACHE](rust/itoa-1.0.18/LICENSE-APACHE), [LICENSE-MIT](rust/itoa-1.0.18/LICENSE-MIT).
+- **jobserver 0.1.35** — MIT OR Apache-2.0. [LICENSE-APACHE](rust/jobserver-0.1.35/LICENSE-APACHE), [LICENSE-MIT](rust/jobserver-0.1.35/LICENSE-MIT).
+- **khronos_api 3.1.0** — Apache-2.0. [LICENSE-Apache-2.0](rust/khronos_api-3.1.0/LICENSE-Apache-2.0); [included source](sources/khronos_api-3.1.0.crate).
+- **kurbo 0.13.1** — Apache-2.0 OR MIT. [LICENSE-APACHE](rust/kurbo-0.13.1/LICENSE-APACHE), [LICENSE-MIT](rust/kurbo-0.13.1/LICENSE-MIT).
+- **libc 0.2.190** — MIT OR Apache-2.0. [LICENSE-APACHE](rust/libc-0.2.190/LICENSE-APACHE), [LICENSE-MIT](rust/libc-0.2.190/LICENSE-MIT).
+- **libloading 0.8.9** — ISC. [LICENSE](rust/libloading-0.8.9/LICENSE).
+- **libsqlite3-sys 0.38.2** — MIT. [LICENSE](rust/libsqlite3-sys-0.38.2/LICENSE), [LICENSE](rust/libsqlite3-sys-0.38.2/sqlcipher/LICENSE).
+- **linebender_resource_handle 0.1.1** — Apache-2.0 OR MIT. [AUTHORS](rust/linebender_resource_handle-0.1.1/AUTHORS), [LICENSE-APACHE](rust/linebender_resource_handle-0.1.1/LICENSE-APACHE), [LICENSE-MIT](rust/linebender_resource_handle-0.1.1/LICENSE-MIT).
+- **litemap 0.8.3** — Unicode-3.0. [LICENSE](rust/litemap-0.8.3/LICENSE).
+- **litrs 1.0.0** — MIT OR Apache-2.0. [LICENSE-APACHE](rust/litrs-1.0.0/LICENSE-APACHE), [LICENSE-MIT](rust/litrs-1.0.0/LICENSE-MIT).
+- **lock_api 0.4.14** — MIT OR Apache-2.0. [LICENSE-APACHE](rust/lock_api-0.4.14/LICENSE-APACHE), [LICENSE-MIT](rust/lock_api-0.4.14/LICENSE-MIT).
+- **log 0.4.34** — MIT OR Apache-2.0. [LICENSE-APACHE](rust/log-0.4.34/LICENSE-APACHE), [LICENSE-MIT](rust/log-0.4.34/LICENSE-MIT).
+- **lua-src 551.0.2** — MIT. [LICENSE](rust/lua-src-551.0.2/LICENSE).
+- **luajit-src 210.7.4+c6ffc14** — MIT. [LICENSE](rust/luajit-src-210.7.4+c6ffc14/LICENSE), [COPYRIGHT](rust/luajit-src-210.7.4+c6ffc14/luajit2/COPYRIGHT).
+- **markup5ever 0.39.0** — MIT OR Apache-2.0. [LICENSE-APACHE](rust/markup5ever-0.39.0/LICENSE-APACHE), [LICENSE-MIT](rust/markup5ever-0.39.0/LICENSE-MIT).
+- **memchr 2.8.3** — Unlicense OR MIT. [COPYING](rust/memchr-2.8.3/COPYING), [LICENSE-MIT](rust/memchr-2.8.3/LICENSE-MIT).
+- **miniz_oxide 0.8.9** — MIT OR Zlib OR Apache-2.0. [LICENSE](rust/miniz_oxide-0.8.9/LICENSE), [LICENSE-APACHE.md](rust/miniz_oxide-0.8.9/LICENSE-APACHE.md), [LICENSE-MIT.md](rust/miniz_oxide-0.8.9/LICENSE-MIT.md), [LICENSE-ZLIB.md](rust/miniz_oxide-0.8.9/LICENSE-ZLIB.md).
+- **miniz_oxide 0.9.1** — MIT OR Zlib OR Apache-2.0. [LICENSE](rust/miniz_oxide-0.9.1/LICENSE), [LICENSE-APACHE.md](rust/miniz_oxide-0.9.1/LICENSE-APACHE.md), [LICENSE-MIT.md](rust/miniz_oxide-0.9.1/LICENSE-MIT.md), [LICENSE-ZLIB.md](rust/miniz_oxide-0.9.1/LICENSE-ZLIB.md).
+- **mio 1.2.4** — MIT. [LICENSE](rust/mio-1.2.4/LICENSE).
+- **mlua 0.12.2** — MIT. [LICENSE](rust/mlua-0.12.2/LICENSE).
+- **mlua-sys 0.13.0** — MIT. [LICENSE-MIT-mlua](rust/mlua-sys-0.13.0/LICENSE-MIT-mlua); [included source](sources/mlua-sys-0.13.0.crate).
+- **moxcms 0.8.1** — BSD-3-Clause OR Apache-2.0. [LICENSE-APACHE.md](rust/moxcms-0.8.1/LICENSE-APACHE.md), [LICENSE.md](rust/moxcms-0.8.1/LICENSE.md).
+- **native-tls 0.2.18** — MIT OR Apache-2.0. [LICENSE-APACHE](rust/native-tls-0.2.18/LICENSE-APACHE), [LICENSE-MIT](rust/native-tls-0.2.18/LICENSE-MIT).
+- **new_debug_unreachable 1.0.6** — MIT. [LICENSE-MIT](rust/new_debug_unreachable-1.0.6/LICENSE-MIT).
+- **nohash-hasher 0.2.0** — Apache-2.0 OR MIT. [LICENSE-APACHE](rust/nohash-hasher-0.2.0/LICENSE-APACHE), [LICENSE-MIT](rust/nohash-hasher-0.2.0/LICENSE-MIT).
+- **num-traits 0.2.19** — MIT OR Apache-2.0. [LICENSE-APACHE](rust/num-traits-0.2.19/LICENSE-APACHE), [LICENSE-MIT](rust/num-traits-0.2.19/LICENSE-MIT).
+- **once_cell 1.21.4** — MIT OR Apache-2.0. [LICENSE-APACHE](rust/once_cell-1.21.4/LICENSE-APACHE), [LICENSE-MIT](rust/once_cell-1.21.4/LICENSE-MIT).
+- **ordered-float 2.10.1** — MIT. [LICENSE-MIT](rust/ordered-float-2.10.1/LICENSE-MIT).
+- **parking_lot_core 0.9.12** — MIT OR Apache-2.0. [LICENSE-APACHE](rust/parking_lot_core-0.9.12/LICENSE-APACHE), [LICENSE-MIT](rust/parking_lot_core-0.9.12/LICENSE-MIT).
+- **parking_lot 0.12.5** — MIT OR Apache-2.0. [LICENSE-APACHE](rust/parking_lot-0.12.5/LICENSE-APACHE), [LICENSE-MIT](rust/parking_lot-0.12.5/LICENSE-MIT).
+- **peniko 0.6.1** — Apache-2.0 OR MIT. [LICENSE-APACHE](rust/peniko-0.6.1/LICENSE-APACHE), [LICENSE-MIT](rust/peniko-0.6.1/LICENSE-MIT).
+- **percent-encoding 2.3.2** — MIT OR Apache-2.0. [LICENSE-APACHE](rust/percent-encoding-2.3.2/LICENSE-APACHE), [LICENSE-MIT](rust/percent-encoding-2.3.2/LICENSE-MIT).
+- **phf_codegen 0.13.1** — MIT. [LICENSE](rust/phf_codegen-0.13.1/LICENSE).
+- **phf_generator 0.13.1** — MIT. [LICENSE](rust/phf_generator-0.13.1/LICENSE).
+- **phf_macros 0.13.1** — MIT. [LICENSE](rust/phf_macros-0.13.1/LICENSE).
+- **phf_shared 0.13.1** — MIT. [LICENSE](rust/phf_shared-0.13.1/LICENSE).
+- **phf 0.13.1** — MIT. [LICENSE](rust/phf-0.13.1/LICENSE).
+- **pin-project-lite 0.2.17** — Apache-2.0 OR MIT. [LICENSE-APACHE](rust/pin-project-lite-0.2.17/LICENSE-APACHE), [LICENSE-MIT](rust/pin-project-lite-0.2.17/LICENSE-MIT).
+- **pkg-config 0.3.34** — MIT OR Apache-2.0. [LICENSE-APACHE](rust/pkg-config-0.3.34/LICENSE-APACHE), [LICENSE-MIT](rust/pkg-config-0.3.34/LICENSE-MIT).
+- **png 0.18.1** — MIT OR Apache-2.0. [LICENSE-APACHE](rust/png-0.18.1/LICENSE-APACHE), [LICENSE-MIT](rust/png-0.18.1/LICENSE-MIT).
+- **polycool 0.4.0** — MIT OR Apache-2.0. [LICENSE-APACHE](rust/polycool-0.4.0/LICENSE-APACHE), [LICENSE-MIT](rust/polycool-0.4.0/LICENSE-MIT).
+- **potential_utf 0.1.6** — Unicode-3.0. [LICENSE](rust/potential_utf-0.1.6/LICENSE).
+- **precomputed-hash 0.1.1** — MIT. [LICENSE](rust/precomputed-hash-0.1.1/LICENSE).
+- **proc-macro2 1.0.107** — MIT OR Apache-2.0. [LICENSE-APACHE](rust/proc-macro2-1.0.107/LICENSE-APACHE), [LICENSE-MIT](rust/proc-macro2-1.0.107/LICENSE-MIT).
+- **profiling 1.0.18** — Apache-2.0. [LICENSE-Apache-2.0](rust/profiling-1.0.18/LICENSE-Apache-2.0); [included source](sources/profiling-1.0.18.crate).
+- **pxfm 0.1.30** — BSD-3-Clause OR Apache-2.0. [LICENSE-APACHE.md](rust/pxfm-0.1.30/LICENSE-APACHE.md), [LICENSE.md](rust/pxfm-0.1.30/LICENSE.md).
+- **quick-error 2.0.1** — MIT/Apache-2.0. [LICENSE-APACHE](rust/quick-error-2.0.1/LICENSE-APACHE), [LICENSE-MIT](rust/quick-error-2.0.1/LICENSE-MIT).
+- **quick-xml 0.41.0** — MIT. [LICENSE-MIT.md](rust/quick-xml-0.41.0/LICENSE-MIT.md).
+- **quote 1.0.47** — MIT OR Apache-2.0. [LICENSE-APACHE](rust/quote-1.0.47/LICENSE-APACHE), [LICENSE-MIT](rust/quote-1.0.47/LICENSE-MIT).
+- **raw-window-handle 0.6.2** — MIT OR Apache-2.0 OR Zlib. [LICENSE-APACHE.md](rust/raw-window-handle-0.6.2/LICENSE-APACHE.md), [LICENSE-MIT.md](rust/raw-window-handle-0.6.2/LICENSE-MIT.md), [LICENSE-ZLIB.md](rust/raw-window-handle-0.6.2/LICENSE-ZLIB.md).
+- **read-fonts 0.41.0** — MIT OR Apache-2.0. [LICENSE-APACHE](rust/read-fonts-0.41.0/LICENSE-APACHE), [LICENSE-MIT](rust/read-fonts-0.41.0/LICENSE-MIT).
+- **reqwest 0.13.5** — MIT OR Apache-2.0. [LICENSE-APACHE](rust/reqwest-0.13.5/LICENSE-APACHE), [LICENSE-MIT](rust/reqwest-0.13.5/LICENSE-MIT).
+- **rusqlite 0.40.2** — MIT. [LICENSE](rust/rusqlite-0.40.2/LICENSE).
+- **rustc_version 0.4.1** — MIT OR Apache-2.0. [LICENSE-APACHE](rust/rustc_version-0.4.1/LICENSE-APACHE), [LICENSE-MIT](rust/rustc_version-0.4.1/LICENSE-MIT).
+- **rustc-hash 2.1.3** — Apache-2.0 OR MIT. [LICENSE-APACHE](rust/rustc-hash-2.1.3/LICENSE-APACHE), [LICENSE-MIT](rust/rustc-hash-2.1.3/LICENSE-MIT).
+- **rustls-pki-types 1.15.1** — MIT OR Apache-2.0. [LICENSE-APACHE](rust/rustls-pki-types-1.15.1/LICENSE-APACHE), [LICENSE-MIT](rust/rustls-pki-types-1.15.1/LICENSE-MIT).
+- **same-file 1.0.6** — Unlicense/MIT. [COPYING](rust/same-file-1.0.6/COPYING), [LICENSE-MIT](rust/same-file-1.0.6/LICENSE-MIT).
+- **schannel 0.1.29** — MIT. [LICENSE.md](rust/schannel-0.1.29/LICENSE.md).
+- **scopeguard 1.2.0** — MIT OR Apache-2.0. [LICENSE-APACHE](rust/scopeguard-1.2.0/LICENSE-APACHE), [LICENSE-MIT](rust/scopeguard-1.2.0/LICENSE-MIT).
+- **scraper 0.27.0** — ISC. [LICENSE](rust/scraper-0.27.0/LICENSE).
+- **selectors 0.38.0** — MPL-2.0. [LICENSE-MPL-2.0](rust/selectors-0.38.0/LICENSE-MPL-2.0); [included source](sources/selectors-0.38.0.crate).
+- **self_cell 1.3.0** — Apache-2.0. [LICENSE-APACHE](rust/self_cell-1.3.0/LICENSE-APACHE), [LICENSE-GPLv2](rust/self_cell-1.3.0/LICENSE-GPLv2).
+- **semver 1.0.28** — MIT OR Apache-2.0. [LICENSE-APACHE](rust/semver-1.0.28/LICENSE-APACHE), [LICENSE-MIT](rust/semver-1.0.28/LICENSE-MIT).
+- **serde_core 1.0.229** — MIT OR Apache-2.0. [LICENSE-APACHE](rust/serde_core-1.0.229/LICENSE-APACHE), [LICENSE-MIT](rust/serde_core-1.0.229/LICENSE-MIT).
+- **serde_derive 1.0.229** — MIT OR Apache-2.0. [LICENSE-APACHE](rust/serde_derive-1.0.229/LICENSE-APACHE), [LICENSE-MIT](rust/serde_derive-1.0.229/LICENSE-MIT).
+- **serde_json 1.0.151** — MIT OR Apache-2.0. [LICENSE-APACHE](rust/serde_json-1.0.151/LICENSE-APACHE), [LICENSE-MIT](rust/serde_json-1.0.151/LICENSE-MIT).
+- **serde 1.0.229** — MIT OR Apache-2.0. [LICENSE-APACHE](rust/serde-1.0.229/LICENSE-APACHE), [LICENSE-MIT](rust/serde-1.0.229/LICENSE-MIT).
+- **serde-value 0.7.0** — MIT. [COPYING](rust/serde-value-0.7.0/COPYING).
+- **servo_arc 0.4.3** — MIT OR Apache-2.0. [LICENSE-APACHE](rust/servo_arc-0.4.3/LICENSE-APACHE), [LICENSE-MIT](rust/servo_arc-0.4.3/LICENSE-MIT).
+- **sha2 0.10.9** — MIT OR Apache-2.0. [LICENSE-APACHE](rust/sha2-0.10.9/LICENSE-APACHE), [LICENSE-MIT](rust/sha2-0.10.9/LICENSE-MIT).
+- **shlex 2.0.1** — MIT OR Apache-2.0. [LICENSE-APACHE](rust/shlex-2.0.1/LICENSE-APACHE), [LICENSE-MIT](rust/shlex-2.0.1/LICENSE-MIT).
+- **simd-adler32 0.3.10** — MIT. [LICENSE.md](rust/simd-adler32-0.3.10/LICENSE.md).
+- **siphasher 1.0.4** — MIT OR Apache-2.0. [COPYING](rust/siphasher-1.0.4/COPYING), [LICENSE-APACHE](rust/siphasher-1.0.4/LICENSE-APACHE), [LICENSE-MIT](rust/siphasher-1.0.4/LICENSE-MIT).
+- **skrifa 0.44.0** — MIT OR Apache-2.0. [LICENSE-APACHE](rust/skrifa-0.44.0/LICENSE-APACHE), [LICENSE-MIT](rust/skrifa-0.44.0/LICENSE-MIT).
+- **slab 0.4.12** — MIT. [LICENSE](rust/slab-0.4.12/LICENSE).
+- **smallvec 1.16.2** — MIT OR Apache-2.0. [LICENSE-APACHE](rust/smallvec-1.16.2/LICENSE-APACHE), [LICENSE-MIT](rust/smallvec-1.16.2/LICENSE-MIT).
+- **smol_str 0.2.2** — MIT OR Apache-2.0. [LICENSE-APACHE](rust/smol_str-0.2.2/LICENSE-APACHE), [LICENSE-MIT](rust/smol_str-0.2.2/LICENSE-MIT).
+- **socket2 0.6.5** — MIT OR Apache-2.0. [LICENSE-APACHE](rust/socket2-0.6.5/LICENSE-APACHE), [LICENSE-MIT](rust/socket2-0.6.5/LICENSE-MIT).
+- **stable_deref_trait 1.2.1** — MIT OR Apache-2.0. [LICENSE-APACHE](rust/stable_deref_trait-1.2.1/LICENSE-APACHE), [LICENSE-MIT](rust/stable_deref_trait-1.2.1/LICENSE-MIT).
+- **static_assertions 1.1.0** — MIT OR Apache-2.0. [LICENSE-APACHE](rust/static_assertions-1.1.0/LICENSE-APACHE), [LICENSE-MIT](rust/static_assertions-1.1.0/LICENSE-MIT).
+- **string_cache_codegen 0.6.1** — MIT OR Apache-2.0. [LICENSE-APACHE](rust/string_cache_codegen-0.6.1/LICENSE-APACHE), [LICENSE-MIT](rust/string_cache_codegen-0.6.1/LICENSE-MIT).
+- **string_cache 0.9.0** — MIT OR Apache-2.0. [LICENSE-APACHE](rust/string_cache-0.9.0/LICENSE-APACHE), [LICENSE-MIT](rust/string_cache-0.9.0/LICENSE-MIT).
+- **syn 2.0.119** — MIT OR Apache-2.0. [LICENSE-APACHE](rust/syn-2.0.119/LICENSE-APACHE), [LICENSE-MIT](rust/syn-2.0.119/LICENSE-MIT).
+- **syn 3.0.6** — MIT OR Apache-2.0. [LICENSE-APACHE](rust/syn-3.0.6/LICENSE-APACHE), [LICENSE-MIT](rust/syn-3.0.6/LICENSE-MIT).
+- **sync_wrapper 1.0.2** — Apache-2.0. [LICENSE](rust/sync_wrapper-1.0.2/LICENSE).
+- **synstructure 0.14.0** — MIT. [LICENSE](rust/synstructure-0.14.0/LICENSE).
+- **tempfile 3.27.0** — MIT OR Apache-2.0. [LICENSE-APACHE](rust/tempfile-3.27.0/LICENSE-APACHE), [LICENSE-MIT](rust/tempfile-3.27.0/LICENSE-MIT).
+- **tendril 0.5.1** — MIT OR Apache-2.0. [LICENSE-APACHE](rust/tendril-0.5.1/LICENSE-APACHE), [LICENSE-MIT](rust/tendril-0.5.1/LICENSE-MIT).
+- **thiserror 2.0.21** — MIT OR Apache-2.0. [LICENSE-APACHE](rust/thiserror-2.0.21/LICENSE-APACHE), [LICENSE-MIT](rust/thiserror-2.0.21/LICENSE-MIT).
+- **thiserror-impl 2.0.21** — MIT OR Apache-2.0. [LICENSE-APACHE](rust/thiserror-impl-2.0.21/LICENSE-APACHE), [LICENSE-MIT](rust/thiserror-impl-2.0.21/LICENSE-MIT).
+- **tiff 0.11.3** — MIT. [LICENSE](rust/tiff-0.11.3/LICENSE).
+- **tinystr 0.8.4** — Unicode-3.0. [LICENSE](rust/tinystr-0.8.4/LICENSE).
+- **tokio 1.53.3** — MIT. [LICENSE](rust/tokio-1.53.3/LICENSE).
+- **tokio-macros 2.7.2** — MIT. [LICENSE](rust/tokio-macros-2.7.2/LICENSE).
+- **tokio-native-tls 0.3.1** — MIT. [LICENSE](rust/tokio-native-tls-0.3.1/LICENSE).
+- **tokio-util 0.7.19** — MIT. [LICENSE](rust/tokio-util-0.7.19/LICENSE).
+- **tower 0.5.3** — MIT. [LICENSE](rust/tower-0.5.3/LICENSE).
+- **tower-http 0.6.11** — MIT. [LICENSE](rust/tower-http-0.6.11/LICENSE).
+- **tower-layer 0.3.3** — MIT. [LICENSE](rust/tower-layer-0.3.3/LICENSE).
+- **tower-service 0.3.3** — MIT. [LICENSE](rust/tower-service-0.3.3/LICENSE).
+- **tracing 0.1.44** — MIT. [LICENSE](rust/tracing-0.1.44/LICENSE).
+- **tracing-core 0.1.36** — MIT. [LICENSE](rust/tracing-core-0.1.36/LICENSE), [LICENSE](rust/tracing-core-0.1.36/src/spin/LICENSE).
+- **try-lock 0.2.5** — MIT. [LICENSE](rust/try-lock-0.2.5/LICENSE).
+- **typeid 1.0.3** — MIT OR Apache-2.0. [LICENSE-APACHE](rust/typeid-1.0.3/LICENSE-APACHE), [LICENSE-MIT](rust/typeid-1.0.3/LICENSE-MIT).
+- **typenum 1.20.1** — MIT OR Apache-2.0. [LICENSE](rust/typenum-1.20.1/LICENSE), [LICENSE-APACHE](rust/typenum-1.20.1/LICENSE-APACHE), [LICENSE-MIT](rust/typenum-1.20.1/LICENSE-MIT).
+- **unicode-general-category 1.1.0** — Apache-2.0. [LICENSE](rust/unicode-general-category-1.1.0/LICENSE).
+- **unicode-ident 1.0.26** — (MIT OR Apache-2.0) AND Unicode-3.0. [LICENSE-APACHE](rust/unicode-ident-1.0.26/LICENSE-APACHE), [LICENSE-MIT](rust/unicode-ident-1.0.26/LICENSE-MIT), [LICENSE-UNICODE](rust/unicode-ident-1.0.26/LICENSE-UNICODE).
+- **unicode-segmentation 1.13.3** — MIT OR Apache-2.0. [COPYRIGHT](rust/unicode-segmentation-1.13.3/COPYRIGHT), [LICENSE-APACHE](rust/unicode-segmentation-1.13.3/LICENSE-APACHE), [LICENSE-MIT](rust/unicode-segmentation-1.13.3/LICENSE-MIT).
+- **url 2.5.8** — MIT OR Apache-2.0. [LICENSE-APACHE](rust/url-2.5.8/LICENSE-APACHE), [LICENSE-MIT](rust/url-2.5.8/LICENSE-MIT).
+- **utf8_iter 1.0.4** — Apache-2.0 OR MIT. [COPYRIGHT](rust/utf8_iter-1.0.4/COPYRIGHT), [LICENSE-APACHE](rust/utf8_iter-1.0.4/LICENSE-APACHE), [LICENSE-MIT](rust/utf8_iter-1.0.4/LICENSE-MIT).
+- **uuid 1.27.0** — Apache-2.0 OR MIT. [LICENSE-APACHE](rust/uuid-1.27.0/LICENSE-APACHE), [LICENSE-MIT](rust/uuid-1.27.0/LICENSE-MIT).
+- **vcpkg 0.2.15** — MIT/Apache-2.0. [LICENSE-APACHE](rust/vcpkg-0.2.15/LICENSE-APACHE), [LICENSE-MIT](rust/vcpkg-0.2.15/LICENSE-MIT).
+- **vello_common 0.1.0** — Apache-2.0 OR MIT. [LICENSE-APACHE](rust/vello_common-0.1.0/LICENSE-APACHE), [LICENSE-MIT](rust/vello_common-0.1.0/LICENSE-MIT).
+- **vello_cpu 0.1.0** — Apache-2.0 OR MIT. [LICENSE-APACHE](rust/vello_cpu-0.1.0/LICENSE-APACHE), [LICENSE-MIT](rust/vello_cpu-0.1.0/LICENSE-MIT).
+- **version_check 0.9.5** — MIT/Apache-2.0. [LICENSE-APACHE](rust/version_check-0.9.5/LICENSE-APACHE), [LICENSE-MIT](rust/version_check-0.9.5/LICENSE-MIT).
+- **want 0.3.2** — MIT. [LICENSE](rust/want-0.3.2/LICENSE).
+- **web_atoms 0.2.6** — MIT OR Apache-2.0. [LICENSE-APACHE](rust/web_atoms-0.2.6/LICENSE-APACHE), [LICENSE-MIT](rust/web_atoms-0.2.6/LICENSE-MIT).
+- **web-time 1.1.0** — MIT OR Apache-2.0. [LICENSE-APACHE](rust/web-time-1.1.0/LICENSE-APACHE), [LICENSE-MIT](rust/web-time-1.1.0/LICENSE-MIT).
+- **weezl 0.1.12** — MIT OR Apache-2.0. [LICENSE-APACHE](rust/weezl-0.1.12/LICENSE-APACHE), [LICENSE-MIT](rust/weezl-0.1.12/LICENSE-MIT).
+- **which 8.0.6** — MIT. [LICENSE.txt](rust/which-8.0.6/LICENSE.txt).
+- **winapi 0.3.9** — MIT/Apache-2.0. [LICENSE-APACHE](rust/winapi-0.3.9/LICENSE-APACHE), [LICENSE-MIT](rust/winapi-0.3.9/LICENSE-MIT).
+- **winapi-util 0.1.11** — Unlicense OR MIT. [COPYING](rust/winapi-util-0.1.11/COPYING), [LICENSE-MIT](rust/winapi-util-0.1.11/LICENSE-MIT).
+- **windows_x86_64_msvc 0.52.6** — MIT OR Apache-2.0. [license-apache-2.0](rust/windows_x86_64_msvc-0.52.6/license-apache-2.0), [license-mit](rust/windows_x86_64_msvc-0.52.6/license-mit).
+- **windows_x86_64_msvc 0.53.1** — MIT OR Apache-2.0. [license-apache-2.0](rust/windows_x86_64_msvc-0.53.1/license-apache-2.0), [license-mit](rust/windows_x86_64_msvc-0.53.1/license-mit).
+- **windows 0.62.2** — MIT OR Apache-2.0. [license-apache-2.0](rust/windows-0.62.2/license-apache-2.0), [license-mit](rust/windows-0.62.2/license-mit).
+- **windows-collections 0.3.2** — MIT OR Apache-2.0. [license-apache-2.0](rust/windows-collections-0.3.2/license-apache-2.0), [license-mit](rust/windows-collections-0.3.2/license-mit).
+- **windows-core 0.62.2** — MIT OR Apache-2.0. [license-apache-2.0](rust/windows-core-0.62.2/license-apache-2.0), [license-mit](rust/windows-core-0.62.2/license-mit).
+- **windows-future 0.3.2** — MIT OR Apache-2.0. [license-apache-2.0](rust/windows-future-0.3.2/license-apache-2.0), [license-mit](rust/windows-future-0.3.2/license-mit).
+- **windows-implement 0.60.2** — MIT OR Apache-2.0. [license-apache-2.0](rust/windows-implement-0.60.2/license-apache-2.0), [license-mit](rust/windows-implement-0.60.2/license-mit).
+- **windows-interface 0.59.3** — MIT OR Apache-2.0. [license-apache-2.0](rust/windows-interface-0.59.3/license-apache-2.0), [license-mit](rust/windows-interface-0.59.3/license-mit).
+- **windows-link 0.2.1** — MIT OR Apache-2.0. [license-apache-2.0](rust/windows-link-0.2.1/license-apache-2.0), [license-mit](rust/windows-link-0.2.1/license-mit).
+- **windows-numerics 0.3.1** — MIT OR Apache-2.0. [license-apache-2.0](rust/windows-numerics-0.3.1/license-apache-2.0), [license-mit](rust/windows-numerics-0.3.1/license-mit).
+- **windows-registry 0.6.1** — MIT OR Apache-2.0. [license-apache-2.0](rust/windows-registry-0.6.1/license-apache-2.0), [license-mit](rust/windows-registry-0.6.1/license-mit).
+- **windows-result 0.4.1** — MIT OR Apache-2.0. [license-apache-2.0](rust/windows-result-0.4.1/license-apache-2.0), [license-mit](rust/windows-result-0.4.1/license-mit).
+- **windows-strings 0.5.1** — MIT OR Apache-2.0. [license-apache-2.0](rust/windows-strings-0.5.1/license-apache-2.0), [license-mit](rust/windows-strings-0.5.1/license-mit).
+- **windows-sys 0.52.0** — MIT OR Apache-2.0. [license-apache-2.0](rust/windows-sys-0.52.0/license-apache-2.0), [license-mit](rust/windows-sys-0.52.0/license-mit).
+- **windows-sys 0.60.2** — MIT OR Apache-2.0. [license-apache-2.0](rust/windows-sys-0.60.2/license-apache-2.0), [license-mit](rust/windows-sys-0.60.2/license-mit).
+- **windows-sys 0.61.2** — MIT OR Apache-2.0. [license-apache-2.0](rust/windows-sys-0.61.2/license-apache-2.0), [license-mit](rust/windows-sys-0.61.2/license-mit).
+- **windows-targets 0.52.6** — MIT OR Apache-2.0. [license-apache-2.0](rust/windows-targets-0.52.6/license-apache-2.0), [license-mit](rust/windows-targets-0.52.6/license-mit).
+- **windows-targets 0.53.5** — MIT OR Apache-2.0. [license-apache-2.0](rust/windows-targets-0.53.5/license-apache-2.0), [license-mit](rust/windows-targets-0.53.5/license-mit).
+- **windows-threading 0.2.1** — MIT OR Apache-2.0. [license-apache-2.0](rust/windows-threading-0.2.1/license-apache-2.0), [license-mit](rust/windows-threading-0.2.1/license-mit).
+- **winit 0.30.13** — Apache-2.0. [LICENSE](rust/winit-0.30.13/LICENSE).
+- **writeable 0.6.4** — Unicode-3.0. [LICENSE](rust/writeable-0.6.4/LICENSE).
+- **xml-rs 0.8.29** — MIT. [LICENSE](rust/xml-rs-0.8.29/LICENSE).
+- **yoke 0.8.3** — Unicode-3.0. [LICENSE](rust/yoke-0.8.3/LICENSE).
+- **yoke-derive 0.8.4** — Unicode-3.0. [LICENSE](rust/yoke-derive-0.8.4/LICENSE).
+- **zerocopy 0.8.62** — BSD-2-Clause OR Apache-2.0 OR MIT. [LICENSE-APACHE](rust/zerocopy-0.8.62/LICENSE-APACHE), [LICENSE-BSD](rust/zerocopy-0.8.62/LICENSE-BSD), [LICENSE-MIT](rust/zerocopy-0.8.62/LICENSE-MIT).
+- **zerocopy-derive 0.8.62** — BSD-2-Clause OR Apache-2.0 OR MIT. [LICENSE-APACHE](rust/zerocopy-derive-0.8.62/LICENSE-APACHE), [LICENSE-BSD](rust/zerocopy-derive-0.8.62/LICENSE-BSD), [LICENSE-MIT](rust/zerocopy-derive-0.8.62/LICENSE-MIT).
+- **zerofrom 0.1.8** — Unicode-3.0. [LICENSE](rust/zerofrom-0.1.8/LICENSE).
+- **zerofrom-derive 0.1.8** — Unicode-3.0. [LICENSE](rust/zerofrom-derive-0.1.8/LICENSE).
+- **zeroize 1.9.1** — Apache-2.0 OR MIT. [LICENSE-APACHE](rust/zeroize-1.9.1/LICENSE-APACHE), [LICENSE-MIT](rust/zeroize-1.9.1/LICENSE-MIT).
+- **zerotrie 0.2.5** — Unicode-3.0. [LICENSE](rust/zerotrie-0.2.5/LICENSE).
+- **zerovec 0.11.8** — Unicode-3.0. [LICENSE](rust/zerovec-0.11.8/LICENSE).
+- **zerovec-derive 0.11.6** — Unicode-3.0. [LICENSE](rust/zerovec-derive-0.11.6/LICENSE).
+- **zlib-rs 0.6.8** — Zlib. [LICENSE](rust/zlib-rs-0.6.8/LICENSE).
+- **zmij 1.0.23** — MIT. [LICENSE-MIT](rust/zmij-1.0.23/LICENSE-MIT).
+- **zune-core 0.5.3** — MIT OR Apache-2.0 OR Zlib. [LICENSE-APACHE](rust/zune-core-0.5.3/LICENSE-APACHE), [LICENSE-MIT](rust/zune-core-0.5.3/LICENSE-MIT), [LICENSE-ZLIB](rust/zune-core-0.5.3/LICENSE-ZLIB).
+- **zune-jpeg 0.5.15** — MIT OR Apache-2.0 OR Zlib. [LICENSE-APACHE](rust/zune-jpeg-0.5.15/LICENSE-APACHE), [LICENSE-MIT](rust/zune-jpeg-0.5.15/LICENSE-MIT), [LICENSE-ZLIB](rust/zune-jpeg-0.5.15/LICENSE-ZLIB).

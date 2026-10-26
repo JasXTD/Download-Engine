@@ -1,0 +1,12 @@
+<!doctype html>
+<html lang="en"><head><script src="i18n-catalog.js"></script><script src="i18n.js"></script><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Use browser login · Download Engine</title><link rel="stylesheet" href="popup.css"></head>
+<body class="login-page"><header><span class="mark">↓</span><div><h1>Use this site's login</h1><p>Approve one file download.</p></div></header>
+<section class="capture"><strong id="origin">Loading site…</strong><p id="file-url"></p></section>
+<p>Download Engine will copy matching login cookies from the original site tab, including its Firefox container. The file must be on the same server.</p>
+<p>Windows encrypts this snapshot for your account. It is used for this download only, for up to 24 hours, and removed when the download completes or you remove it. Signing out in the browser does not erase the saved snapshot.</p>
+<p>Private, partitioned and first-party-isolated sessions are not supported. Automatic capture stays anonymous.</p>
+<button id="approve" type="button" disabled>Allow site login &amp; download</button>
+<p id="status" role="status">Keep the original signed-in site tab open.</p>
+<button id="forget" class="secondary" type="button" disabled>Remove browser login access</button>
+<footer>Removing login access stops cookie reads on all sites. Video detection keeps working. Delete saved snapshots in Download Engine → Authentication → None.</footer>
+<script src="login.js"></script></body></html>

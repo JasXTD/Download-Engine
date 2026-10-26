@@ -1,0 +1,1028 @@
+{
+  "m_a9f74d4af5d7dd2d": {
+    "message": "{0} 項被篩選器隱藏"
+  },
+  "m_b364264cdee56a63": {
+    "message": "{0}/{1} 個連結 · 已選 {2} 個{3}"
+  },
+  "m_3e9174b076fa6723": {
+    "message": "找到 {0} 個不重複的 HTTP/HTTPS 連結。不會自動選取任何項目。"
+  },
+  "m_4751f6a4b5d9bb30": {
+    "message": "{0}–{1} / {2}"
+  },
+  "m_2150dc95bcdb8850": {
+    "message": "已有新連結在 Download Engine 中等候確認。"
+  },
+  "m_acca29cca3e064e3": {
+    "message": "交接需要處理。若已暫停，請在瀏覽器下載清單中繼續。 "
+  },
+  "m_da5cba54ff645402": {
+    "message": "已有頁面掃描正在進行。"
+  },
+  "m_93cbb4b9c437b588": {
+    "message": "此選擇器的要求已在傳送中。"
+  },
+  "m_8b60e5b9af092e22": {
+    "message": "確認視窗已在開啟中。"
+  },
+  "m_fbb9b1f9dcbfeae4": {
+    "message": "影片確認已在 Download Engine 中開啟中。"
+  },
+  "m_69dfd976b317260d": {
+    "message": "影片確認視窗已在開啟中。"
+  },
+  "m_f2ca785fd206a095": {
+    "message": "影片確認正在等候核准。請先使用瀏覽器選項 → 復原交接。"
+  },
+  "m_0e9839b644120fa4": {
+    "message": "新增檔案：{0}{1}"
+  },
+  "m_264137ad4e188078": {
+    "message": "新增檔案連結"
+  },
+  "m_d852059dca4ba30a": {
+    "message": "請至少新增一種檔案類型，或輸入 * 以擷取所有類型。"
+  },
+  "m_fba811a83d244b75": {
+    "message": "新增選定檔案"
+  },
+  "m_63889fe9a0f7922d": {
+    "message": "已新增至 Download Engine"
+  },
+  "m_b42ec7eef98969f5": {
+    "message": "已加入佇列"
+  },
+  "m_035a4bf3220f575b": {
+    "message": "已使用瀏覽器登入新增"
+  },
+  "m_1fec4c2ee0889acb": {
+    "message": "所有連結"
+  },
+  "m_08e774c5bacc362a": {
+    "message": "所有來源"
+  },
+  "m_79c625de4b9fd500": {
+    "message": "請允許此網站的 Cookie 存取以使用登入資訊。"
+  },
+  "m_26f0b4e0ff1f898e": {
+    "message": "請允許下載存取以啟用自動擷取。"
+  },
+  "m_5b94fcf971c23dee": {
+    "message": "允許下載存取以尋找 {0} 的新連結。自動擷取可以保持關閉。"
+  },
+  "m_2e62efd7ab18a82d": {
+    "message": "允許媒體偵測和網站存取以監測媒體要求。"
+  },
+  "m_48cc22965b91eff2": {
+    "message": "允許復原存取"
+  },
+  "m_24e1772fedce2ed7": {
+    "message": "允許網站登入並下載"
+  },
+  "m_5864c132f9bc0926": {
+    "message": "允許此網站"
+  },
+  "m_9ee4b5b0cf00b360": {
+    "message": "請允許此網站存取以顯示影片按鈕。"
+  },
+  "m_9f46b4f2f671c116": {
+    "message": "任意大小"
+  },
+  "m_72c46a00422be09f": {
+    "message": "核准一個檔案下載。"
+  },
+  "m_66f4804ee23ddc09": {
+    "message": "壓縮檔案"
+  },
+  "m_e404aa80d8df4adb": {
+    "message": "壓縮檔案"
+  },
+  "m_bc1b88907d3b748a": {
+    "message": "音訊"
+  },
+  "m_571a9d4e6ae3e6e9": {
+    "message": "自動擷取"
+  },
+  "m_551953291092c063": {
+    "message": "自動擷取無法啟動："
+  },
+  "m_4b0437f552a7f60f": {
+    "message": "自動擷取已關閉。"
+  },
+  "m_ca4588908fe682ee": {
+    "message": "自動擷取已關閉。若下載已暫停，請在瀏覽器下載清單中繼續。"
+  },
+  "m_dbcbd988532e58f3": {
+    "message": "檔案直接連結的自動擷取已開啟。"
+  },
+  "m_a4885ab1c22dbeb0": {
+    "message": "自動擷取保持關閉。開啟 Download Engine → 工具 → 瀏覽器設定，選擇瀏覽器並連接，然後在此重試。 "
+  },
+  "m_bdf26652484911a4": {
+    "message": "自動擷取下載"
+  },
+  "m_6259b8b41e217222": {
+    "message": "自動資料夾"
+  },
+  "m_6aa06201d769ad78": {
+    "message": "可用連結"
+  },
+  "m_2cf57ca29785ac99": {
+    "message": "瀏覽器副本已繼續"
+  },
+  "m_9ce0d857154f24e2": {
+    "message": "跟隨瀏覽器"
+  },
+  "m_9a06933b478415e9": {
+    "message": "已移除所有網站的瀏覽器登入存取權限。現有下載保留加密快照，直到您在 Download Engine 中將其刪除。"
+  },
+  "m_776802e7061330f7": {
+    "message": "無法傳送瀏覽器登入資訊。請檢查網站存取權限和桌面連線。"
+  },
+  "m_31eb4316301f4815": {
+    "message": "瀏覽器登入需要 HTTPS。請開啟安全的檔案直接連結。"
+  },
+  "m_0017e5fbb9fd5905": {
+    "message": "瀏覽器選項"
+  },
+  "m_f4a311ce61b95ad0": {
+    "message": "為 Download Engine 桌面應用程式接管檔案下載並偵測影片。"
+  },
+  "m_90948ad9dbb580df": {
+    "message": "擷取規則"
+  },
+  "m_720995cec7bccf29": {
+    "message": "擷取規則無法使用。請重新載入擴充功能。"
+  },
+  "m_8f326a402a36befc": {
+    "message": "擷取規則已儲存。"
+  },
+  "m_be5dff52eeb0fd5b": {
+    "message": "檢查連線"
+  },
+  "m_c29aa06c2ddb8076": {
+    "message": "請檢查這些檔案類型：{0}"
+  },
+  "m_8151d4ddeed81415": {
+    "message": "請檢查這些網站：{0}"
+  },
+  "m_d6fdbb314af454a1": {
+    "message": "正在檢查原批次…"
+  },
+  "m_ec963ffc911b8401": {
+    "message": "正在檢查…"
+  },
+  "m_ddec030e83b025f5": {
+    "message": "請選擇列出的 HLS 或 DASH 影片。"
+  },
+  "m_a0f311dfdcbbc7c9": {
+    "message": "請選擇已儲存佇列和目的地資料夾。"
+  },
+  "m_9b02ef3f495e64ef": {
+    "message": "從此頁面選擇檔案"
+  },
+  "m_cbe8a50b6762fd46": {
+    "message": "在應用程式中選擇畫質"
+  },
+  "m_c945c62180fcab9a": {
+    "message": "在 Download Engine 中選擇影片檔案和串流畫質"
+  },
+  "m_312bfa601066a8e4": {
+    "message": "選擇下載內容"
+  },
+  "m_83b12c2216efb4fd": {
+    "message": "清除"
+  },
+  "m_a8858ac749bc452b": {
+    "message": "清除記錄"
+  },
+  "m_cea4d2e010b8fd52": {
+    "message": "清除選取"
+  },
+  "m_652c67c42dba3909": {
+    "message": "請先關閉另一個連結選擇器。待處理批次請使用復原交接。"
+  },
+  "m_b9ce2241762a7a45": {
+    "message": "正在連接 Download Engine…"
+  },
+  "m_83f23cdbeb423f39": {
+    "message": "連線檢查"
+  },
+  "m_d45e5aae2ee31082": {
+    "message": "Cookie 儲存區不符"
+  },
+  "m_101bd5ad093f5552": {
+    "message": "無法移除網站存取權限。請使用瀏覽器擴充功能設定。"
+  },
+  "m_4a8c2b313a136fa4": {
+    "message": "無法繼續瀏覽器下載。請在瀏覽器下載清單中繼續。 "
+  },
+  "m_50746138b9d24c2b": {
+    "message": "無法返回擴充功能彈出視窗："
+  },
+  "m_936628cc4a394ede": {
+    "message": "已還原預設值。選擇「儲存規則」以保留。"
+  },
+  "m_0690f959c9689317": {
+    "message": "瀏覽時偵測媒體"
+  },
+  "m_4125b0325a1d9a1c": {
+    "message": "偵測到的媒體"
+  },
+  "m_ee71fa5ff80ee155": {
+    "message": "偵測已開啟。播放媒體可更新此清單。"
+  },
+  "m_c46c657680c1fb6a": {
+    "message": "診斷記錄"
+  },
+  "m_da1e00181e6edfc0": {
+    "message": "診斷記錄無法使用。請重新載入擴充功能。"
+  },
+  "m_97a6661033069fb1": {
+    "message": "檔案直接連結及未加密的 HLS / DASH 預覽。"
+  },
+  "m_d6bd8c0aeee80fed": {
+    "message": "文件"
+  },
+  "m_b4e929d8bcfe0418": {
+    "message": "文件"
+  },
+  "m_4b20f1e564f08418": {
+    "message": "下載存取權限已變更。準備好後請重新啟用自動擷取。"
+  },
+  "m_de82471b8e92e8c9": {
+    "message": "未授予下載存取權限。自動擷取保持關閉。"
+  },
+  "m_26e9086fb67e1171": {
+    "message": "未授予下載存取權限。您仍可在 Download Engine 中貼上新連結。"
+  },
+  "m_86237283243c5c06": {
+    "message": "下載目的地"
+  },
+  "m_4fe58a9f465df20b": {
+    "message": "Download Engine"
+  },
+  "m_67061b40bd1fc990": {
+    "message": "Download Engine 已將檔案加入佇列，但無法停止瀏覽器副本。請檢查兩個下載清單。"
+  },
+  "m_ad28de051651de0a": {
+    "message": "Download Engine 已連接。"
+  },
+  "m_b5ee50a47681c17b": {
+    "message": "Download Engine 已更新現有下載。瀏覽器副本仍保留；請檢查兩個下載清單。"
+  },
+  "m_55cff9fa827ef904": {
+    "message": "Download Engine 將從原網站分頁複製相符的登入 Cookie，包括其 Firefox 容器。檔案必須位於同一伺服器。"
+  },
+  "m_b732f149ac000cfe": {
+    "message": "下載保留在瀏覽器中："
+  },
+  "m_4dfb918c17f5863a": {
+    "message": "下載保留在瀏覽器中。"
+  },
+  "m_3a7a16064f324d88": {
+    "message": "下載此頁面的連結"
+  },
+  "m_182321e7f219bcc2": {
+    "message": "下載已傳送至 Download Engine。"
+  },
+  "m_d1db69fff45e2607": {
+    "message": "使用瀏覽器登入下載…"
+  },
+  "m_9e6a91c146c14996": {
+    "message": "下載影片"
+  },
+  "m_e1e91278b3b950c4": {
+    "message": "使用 Download Engine 下載影片 — 先確認"
+  },
+  "m_36886174177ac2af": {
+    "message": "使用 Download Engine 下載"
+  },
+  "m_cc5c7b4f90b18c40": {
+    "message": "啟用偵測並允許網站存取。不會使用登入資訊。"
+  },
+  "m_e2d9eaba91bf0037": {
+    "message": "請輸入完整的 HTTP 或 HTTPS 檔案連結。"
+  },
+  "m_6e42641a11a1c04e": {
+    "message": "請輸入 0 到 1 TB 之間的最小大小。"
+  },
+  "m_4eb6084d5e196685": {
+    "message": "Download Engine 中的現有下載已更新。"
+  },
+  "m_2eabb5731ec0a7f5": {
+    "message": "擴充功能語言"
+  },
+  "m_d8e40338c0625f5b": {
+    "message": "檔案 / 連結"
+  },
+  "m_fb6219471a55d640": {
+    "message": "自動接管檔案下載。請在瀏覽器設定中連接桌面應用程式。"
+  },
+  "m_95b44f14672ddf20": {
+    "message": "檔案名稱、連結文字或連結位址"
+  },
+  "m_ea1df05210c29d1e": {
+    "message": "檔案類型"
+  },
+  "m_6ebe2a3778d6510e": {
+    "message": "要擷取的檔案類型"
+  },
+  "m_4ac686f1fff7a0ce": {
+    "message": "檔案連結"
+  },
+  "m_7cd46f2b72f2f96d": {
+    "message": "檔案和連結"
+  },
+  "m_91c34f985f2ccf2e": {
+    "message": "尋找此頁面的影片"
+  },
+  "m_abb03e243f8f426a": {
+    "message": "使用 Download Engine 尋找影片"
+  },
+  "m_c14ae1090e852370": {
+    "message": "請先完成目前權限要求，再變更其他設定。"
+  },
+  "m_3b36902cb433c0af": {
+    "message": "資料夾在 Download Engine 設定中管理。"
+  },
+  "m_fb1c8ed06249aced": {
+    "message": "找到 {0} 個{1}。請在新分頁中確認。"
+  },
+  "m_dac55102f2a6291b": {
+    "message": "發現位置"
+  },
+  "m_cf58b80fa579dabc": {
+    "message": "已找到新連結。請在 Download Engine 中檢查已儲存資料的核對結果，再確認繼續。"
+  },
+  "m_23b41d51987507df": {
+    "message": "HLS / DASH 會開啟桌面預覽；不支援直播或加密串流。播放前啟用媒體偵測可找到更多串流。"
+  },
+  "m_1aa4cb0bcca76e92": {
+    "message": "圖片"
+  },
+  "m_be7e2f20129365c2": {
+    "message": "圖片"
+  },
+  "m_28d71345fcbdb6bc": {
+    "message": "中斷的交接已復原；下載保留在瀏覽器中。"
+  },
+  "m_ddedfe53cbb11f79": {
+    "message": "中斷的復原已釋放回瀏覽器。"
+  },
+  "m_7182c1f1f59286fa": {
+    "message": "自動擷取設定無效。"
+  },
+  "m_419be78ea9367d52": {
+    "message": "瀏覽器登入要求無效。"
+  },
+  "m_615de39dbabcd451": {
+    "message": "擷取規則無效。"
+  },
+  "m_4e6451d9c7a05b34": {
+    "message": "診斷設定無效。"
+  },
+  "m_ebe2abb4cddb35fc": {
+    "message": "連結選擇器識別碼無效。"
+  },
+  "m_438fc9ceb0904b0d": {
+    "message": "媒體偵測設定無效。"
+  },
+  "m_cfd2d68349b7432a": {
+    "message": "頁面掃描模式無效。"
+  },
+  "m_53621c0588be411a": {
+    "message": "要求識別碼無效。"
+  },
+  "m_fd72d477bb65dc79": {
+    "message": "影片按鈕設定無效。"
+  },
+  "m_e20a4b411a818b8b": {
+    "message": "影片按鈕的網站無效。"
+  },
+  "m_c2e9a31124f7d0f7": {
+    "message": "請保持已登入的原網站分頁開啟。"
+  },
+  "m_019e66b1bd219970": {
+    "message": "請保持原已登入分頁開啟。不支援隱私瀏覽。"
+  },
+  "m_251452cbeaef4875": {
+    "message": "最大的優先"
+  },
+  "m_52296e73ceec6ce1": {
+    "message": "連結復原"
+  },
+  "m_ccc96d8740521cb4": {
+    "message": "正在載入頁面連結…"
+  },
+  "m_b9f867064b204410": {
+    "message": "正在載入網站…"
+  },
+  "m_6f1c11acccb3f806": {
+    "message": "主佇列"
+  },
+  "m_179b204ad2a7f5dc": {
+    "message": "媒體偵測"
+  },
+  "m_d7b80c91cf6b7aa5": {
+    "message": "媒體偵測存取權限已變更。準備好後請重新啟用。"
+  },
+  "m_36fb507d0e7b32e8": {
+    "message": "媒體偵測已關閉。清單已清空。"
+  },
+  "m_63cfe215acef08ce": {
+    "message": "媒體偵測已開啟。開始播放或重新載入頁面。"
+  },
+  "m_05dc18f8ce93981b": {
+    "message": "媒體偵測無法使用。請重新載入擴充功能後重試。"
+  },
+  "m_7a05c2c962505cdb": {
+    "message": "媒體探索無法更新清單。請關閉並重新開啟偵測後重試。"
+  },
+  "m_667d5d5489d7fc17": {
+    "message": "媒體項"
+  },
+  "m_0c401d043fe13fb6": {
+    "message": "媒體清單已清空。新的播放要求會再次出現。"
+  },
+  "m_d8851b3df6edf1d3": {
+    "message": "此頁面的媒體"
+  },
+  "m_91a5e537e1bf2422": {
+    "message": "最小檔案大小"
+  },
+  "m_dcd1d5223f73b3a9": {
+    "message": "名稱"
+  },
+  "m_a8bc982bc423c5a7": {
+    "message": "網路媒體"
+  },
+  "m_0cffcc196fd87d17": {
+    "message": "不從以下網站擷取"
+  },
+  "m_1ff57a29d7c9d11b": {
+    "message": "下一頁"
+  },
+  "m_09f1c438851431f3": {
+    "message": "尚無活動記錄。"
+  },
+  "m_3f1536c1d3a3c78c": {
+    "message": "未載入連結"
+  },
+  "m_507f9ea8cb63e18e": {
+    "message": "沒有符合篩選條件的連結。"
+  },
+  "m_7eaa329a40093924": {
+    "message": "沒有相符的檔案"
+  },
+  "m_75d0a7642fe89d02": {
+    "message": "無最小值"
+  },
+  "m_6dd1d3103295d8dc": {
+    "message": "擴充功能背景未回應。"
+  },
+  "m_47788a2327f83840": {
+    "message": "無法讀取支援的瀏覽器登入資訊。請登入此網站後重試。不支援隱私或分割工作階段。"
+  },
+  "m_1e9601e1e54c4d5a": {
+    "message": "沒有支援的登入 Cookie 符合此檔案。請先登入網站。不支援隱私、分割和第一方隔離工作階段。"
+  },
+  "m_3e86480851090d8e": {
+    "message": "預設關閉。啟用後可在瀏覽時尋找影音要求。"
+  },
+  "m_841fa2784ee46d5c": {
+    "message": "此網站已關閉。您的選擇已儲存。"
+  },
+  "m_b6d42710b782d638": {
+    "message": "預設開啟。允許此網站以顯示影片按鈕。"
+  },
+  "m_48ff08561347ceb3": {
+    "message": "預設開啟。開啟網站以變更其設定。"
+  },
+  "m_718a1c9b01954136": {
+    "message": "預設開啟。播放影片以進行偵測，再選擇要下載的內容。"
+  },
+  "m_a5796db85ba454a2": {
+    "message": "預設開啟。關閉可隱藏此網站的影片按鈕。"
+  },
+  "m_b7e24a07e6b998ce": {
+    "message": "預設開啟。您的選擇依網站儲存。"
+  },
+  "m_18aa46ba0236a241": {
+    "message": "每行一個網站，包括其子網域；* 符合名稱中的任意部分。"
+  },
+  "m_4e918bc632379980": {
+    "message": "僅支援不含內嵌登入資訊的 HTTP/HTTPS 連結。"
+  },
+  "m_c474c658148d459d": {
+    "message": "僅將選定連結傳送至 Download Engine。連結可能指向網頁；檔案類型根據名稱和可用媒體資訊判斷。"
+  },
+  "m_8bee84e594e99e34": {
+    "message": "請開啟瀏覽器分頁並重新開啟 Download Engine。"
+  },
+  "m_c66ff2b172c3b834": {
+    "message": "開啟一般網頁以設定影片按鈕。"
+  },
+  "m_aa4c148abfa53385": {
+    "message": "請開啟一般網頁以尋找媒體。"
+  },
+  "m_215a54029c2b4b91": {
+    "message": "請開啟一般網頁以確認媒體。"
+  },
+  "m_a9a64a3ba1e37620": {
+    "message": "開啟 HTTP 或 HTTPS 網頁，然後在該頁面點選擴充功能。"
+  },
+  "m_5d404dc8daf23871": {
+    "message": "請開啟 Download Engine 擴充功能後重試。"
+  },
+  "m_1c911c28ea089770": {
+    "message": "在一般分頁中開啟已登入網站，然後選擇同一伺服器上的檔案。"
+  },
+  "m_b4c5fc73a947b6af": {
+    "message": "已在應用程式中開啟"
+  },
+  "m_c751d726c402d9ab": {
+    "message": "正在 Download Engine 中開啟影片確認"
+  },
+  "m_c926c2c50e65d5a5": {
+    "message": "正在開啟…"
+  },
+  "m_1a0c32d68ceb4922": {
+    "message": "原目的地"
+  },
+  "m_15a84d473a2dc5ef": {
+    "message": "原佇列"
+  },
+  "m_5e19e35a09649309": {
+    "message": "其他 / 未知"
+  },
+  "m_57d2af91bc34f0b3": {
+    "message": "頁面資源"
+  },
+  "m_2d327768547d6bfa": {
+    "message": "頁面資源"
+  },
+  "m_58dc76ebf2ef2844": {
+    "message": "頁面連結"
+  },
+  "m_101737af4b45f970": {
+    "message": "頁面連結"
+  },
+  "m_aded8b818cfb9479": {
+    "message": "頁面連結"
+  },
+  "m_c902c6b1e1a4c529": {
+    "message": "頁面連結 · Download Engine"
+  },
+  "m_9a3faea57df5b5b3": {
+    "message": "頁面順序"
+  },
+  "m_445999cff1f693bb": {
+    "message": "隱私視窗中無法收集頁面連結。"
+  },
+  "m_a7a9dc5bcf71adb2": {
+    "message": "已暫停"
+  },
+  "m_40d12c1cd050aea2": {
+    "message": "待確認項目和下載已復原。已檢查瀏覽器交接。"
+  },
+  "m_d101686dfb461d7b": {
+    "message": "權限已撤銷"
+  },
+  "m_fb44b7bd4a949eee": {
+    "message": "預覽 DASH"
+  },
+  "m_a891a492d8d0c27e": {
+    "message": "預覽 HLS"
+  },
+  "m_a57b08a480b822a0": {
+    "message": "上一頁"
+  },
+  "m_6d4977e17532e718": {
+    "message": "不支援隱私、分割和第一方隔離工作階段。自動擷取保持匿名。"
+  },
+  "m_90920d93e2c7e632": {
+    "message": "程式"
+  },
+  "m_b6747064b2a6dd95": {
+    "message": "程式"
+  },
+  "m_3b2fe03e36893916": {
+    "message": "佇列"
+  },
+  "m_68b16a818cc085cf": {
+    "message": "最近的設定、連線檢查和影片確認，僅儲存在此瀏覽器中。"
+  },
+  "m_98d7576ae1a9c3fc": {
+    "message": "復原現有下載"
+  },
+  "m_da9f4135cbe4b48b": {
+    "message": "復原交接"
+  },
+  "m_c73c9c73104c4316": {
+    "message": "復原存取已啟用。請在網頁上點選相同檔案，然後在 Download Engine 中確認。"
+  },
+  "m_acfeb89bc6c13696": {
+    "message": "復原已取消。下載保留在瀏覽器中。"
+  },
+  "m_d662ba072dd18ac7": {
+    "message": "復原檢查完成。暫停的檔案請查看瀏覽器下載清單。"
+  },
+  "m_ad787fd387d7b9ad": {
+    "message": "復原無法啟動："
+  },
+  "m_24cedb972410650c": {
+    "message": "復原需要處理。如有需要，請在瀏覽器下載清單中繼續。 "
+  },
+  "m_5273e2f102fe7c0d": {
+    "message": "復原已停止："
+  },
+  "m_1d57f666d95264c7": {
+    "message": "重新整理記錄"
+  },
+  "m_2e1d57637f97896b": {
+    "message": "重新載入目的地"
+  },
+  "m_9202490cb35dbda0": {
+    "message": "請重新載入 Download Engine 擴充功能以完成更新。"
+  },
+  "m_b330cbc172cf1e68": {
+    "message": "移除瀏覽器登入存取權限"
+  },
+  "m_bf98564718ee4abb": {
+    "message": "移除此網站的擴充功能存取權限"
+  },
+  "m_45a4092662eb386c": {
+    "message": "移除登入存取權限會停止讀取所有網站的 Cookie。影片偵測仍可使用。在 Download Engine → 驗證 → 無中刪除已儲存的快照。"
+  },
+  "m_22799a32fabd0898": {
+    "message": "移除網站存取可停止後續 Cookie 讀取。要刪除現有快照，請在 Download Engine 中移除下載或選擇驗證 → 無。"
+  },
+  "m_5923e8de81d8741b": {
+    "message": "請重新開啟擴充功能後重試。"
+  },
+  "m_20a3253602a7fcee": {
+    "message": "回報的檔案大小"
+  },
+  "m_3e536eb4562fe176": {
+    "message": "預覽影片前請處理待確認批次。"
+  },
+  "m_602f8e637002a585": {
+    "message": "還原預設值"
+  },
+  "m_913b0a77f27fc498": {
+    "message": "重試同一批次"
+  },
+  "m_60d03e7404e40486": {
+    "message": "變更選擇前請重試待確認批次。"
+  },
+  "m_de8cfa0e6bb6d592": {
+    "message": "重試同一批次以檢查接收確認。"
+  },
+  "m_70786ccffcb091cd": {
+    "message": "確認 "
+  },
+  "m_ad8286257814524c": {
+    "message": "確認 ↗"
+  },
+  "m_8c76a4f01cdeec77": {
+    "message": "確認此頁面上的連結和資源，然後將所需檔案加入佇列。"
+  },
+  "m_3f21ed22e0fcea7e": {
+    "message": "確認此頁面上的連結，然後將所需檔案加入佇列。"
+  },
+  "m_1ee0fc616e9e22a3": {
+    "message": "在 Download Engine 中確認影片"
+  },
+  "m_3bc941f7f11d1ac7": {
+    "message": "請在 Download Engine 中確認影片。尚未下載任何內容。"
+  },
+  "m_41b3d85b43f47094": {
+    "message": "在新分頁中確認此網站的瀏覽器登入資訊。"
+  },
+  "m_193df65a5f826122": {
+    "message": "右鍵選單中的「使用 Download Engine 下載」一律會傳送連結，不受這些規則限制。"
+  },
+  "m_852bfbb688dd15da": {
+    "message": "以滑鼠右鍵點選檔案連結傳送至應用程式，或開啟自動擷取。"
+  },
+  "m_c071cf5f5ed6f884": {
+    "message": "執行中"
+  },
+  "m_e5dbdffb88164817": {
+    "message": "儲存規則"
+  },
+  "m_1daa7df740ac086c": {
+    "message": "儲存至"
+  },
+  "m_198a1c7a2183aefc": {
+    "message": "正在儲存選定檔案…"
+  },
+  "m_dd298e20fc073647": {
+    "message": "搜尋連結"
+  },
+  "m_2a78025de6aae5e7": {
+    "message": "選取"
+  },
+  "m_1f7133c21072a138": {
+    "message": "選取 "
+  },
+  "m_e116a9b3a597ac1e": {
+    "message": "選取所有頁面上相符的檔案"
+  },
+  "m_dea1a3e66e47d981": {
+    "message": "請選擇 1 至 1,000 個列出的連結。"
+  },
+  "m_b908effe1a7c133b": {
+    "message": "選擇影片直接連結，或預覽 HLS / DASH 串流以在 Download Engine 中選擇畫質和音軌。"
+  },
+  "m_ead5d68c99cc77a8": {
+    "message": "請為此批次選擇更少連結。"
+  },
+  "m_e1ce37067ddc2ab5": {
+    "message": "選取記錄"
+  },
+  "m_313175419d438c50": {
+    "message": "選取相符項目"
+  },
+  "m_87a73c5380c6c916": {
+    "message": "選擇要新增的檔案。"
+  },
+  "m_12576160b98349a6": {
+    "message": "選取記錄後按 Ctrl+C 複製。"
+  },
+  "m_3ac5caf9518d7822": {
+    "message": "將檔案連結或頁面中選定的連結傳送至 Download Engine，可選自動擷取下載。"
+  },
+  "m_b8ed5279e897be5d": {
+    "message": "正在傳送…"
+  },
+  "m_9fa4fffd6b2390aa": {
+    "message": "以空格分隔。* 符合任意字元，例如 r0*。只輸入 * 可擷取所有類型。"
+  },
+  "m_818cd8d91aea3a16": {
+    "message": "設定"
+  },
+  "m_64d28781ada09e2e": {
+    "message": "網站存取權限已移除。現有下載會保留加密快照，直到您在 Download Engine 中刪除。"
+  },
+  "m_b1dc42771ae048ea": {
+    "message": "未授予網站存取權限。請允許此網站以顯示影片按鈕。"
+  },
+  "m_683653872b36eaa7": {
+    "message": "未授予網站存取權限。未傳送登入資訊。"
+  },
+  "m_f09f3886349140ea": {
+    "message": "無法移除網站權限。"
+  },
+  "m_1af851907331c0ed": {
+    "message": "大小"
+  },
+  "m_d94adb63dbcd8018": {
+    "message": "此頁面未提供大小"
+  },
+  "m_2a817d337803db0d": {
+    "message": "大小單位"
+  },
+  "m_873395540b2cfea9": {
+    "message": "大小未知"
+  },
+  "m_80b858ffa465e189": {
+    "message": "較小的檔案保留在瀏覽器中。留空表示任意大小。"
+  },
+  "m_bec69036aa27e7fa": {
+    "message": "排序"
+  },
+  "m_af45940023cd4d24": {
+    "message": "來源頁面"
+  },
+  "m_329c0763bd9ec092": {
+    "message": "啟用偵測後開始播放，或使用尋找影片掃描此頁面。"
+  },
+  "m_febbea5fb07c20c8": {
+    "message": "應用程式無法確認取消。瀏覽器副本已保留；重試前請檢查應用程式。"
+  },
+  "m_fbb00942fda85125": {
+    "message": "應用程式未確認新連結"
+  },
+  "m_ec379e9b433646d8": {
+    "message": "應用程式未確認交接。已保留瀏覽器下載；若 Download Engine 中也出現副本，請一併檢查。"
+  },
+  "m_903e073f9cd11362": {
+    "message": "取消期間瀏覽器副本已完成或繼續"
+  },
+  "m_1c9fd224194b7ee7": {
+    "message": "瀏覽器無法暫停此下載"
+  },
+  "m_eed9387ac150e8fe": {
+    "message": "瀏覽器無法讀取此頁面。請嘗試一般網頁。"
+  },
+  "m_f3cfbd4cbe900742": {
+    "message": "下載保留在瀏覽器中，Download Engine 也已收到。請檢查兩個下載清單。"
+  },
+  "m_d69c84ad2351aa26": {
+    "message": "瀏覽器登入交接未確認。請檢查桌面連線，再重試同一要求。"
+  },
+  "m_55e44ceeae345baf": {
+    "message": "桌面應用程式無法新增此下載。"
+  },
+  "m_6f841f3073957b4a": {
+    "message": "桌面應用程式未確認下載已儲存。"
+  },
+  "m_2b3a9305582ef2d1": {
+    "message": "桌面應用程式未確認瀏覽器復原。請更新 Download Engine 後重試。"
+  },
+  "m_e6c0313fd505b718": {
+    "message": "桌面應用程式未確認瀏覽器交接。"
+  },
+  "m_bedea1012885305a": {
+    "message": "桌面應用程式未確認完整儲存的批次。請重試同一批次。"
+  },
+  "m_390e7750e59f2870": {
+    "message": "桌面應用程式未確認影片預覽。請更新 Download Engine 或重試。"
+  },
+  "m_1947644923407952": {
+    "message": "桌面應用程式未確認影片確認要求。請更新 Download Engine，再使用復原交接。"
+  },
+  "m_088826a3e5e4e204": {
+    "message": "桌面應用程式未及時回應。"
+  },
+  "m_bd3ccbbad5af2986": {
+    "message": "桌面應用程式傳回無效回應。"
+  },
+  "m_535e3e6ab89880c5": {
+    "message": "擴充功能背景未回應。"
+  },
+  "m_988db6830a99c691": {
+    "message": "擴充功能未回應。"
+  },
+  "m_306540f92d0513e3": {
+    "message": "擴充功能未回應。重新載入此分頁後重試。"
+  },
+  "m_d122305531039ccd": {
+    "message": "擴充功能未回應。請重試同一要求。"
+  },
+  "m_30289712f9fad302": {
+    "message": "上一批次沒有確認回覆。重試會傳送同一批次，不會重複新增。解決前請保持瀏覽器開啟。"
+  },
+  "m_e72a03f673ade934": {
+    "message": "原網站分頁已關閉。開啟網站後重試。"
+  },
+  "m_290b216afbebe4b2": {
+    "message": "頁面已變更。請再次點選影片按鈕。"
+  },
+  "m_110b363e52b4a6d5": {
+    "message": "頁面已變更。請重新開啟擴充功能後重試。"
+  },
+  "m_9ade37e9a32e749d": {
+    "message": "頁面已變更。請重新開啟擴充功能。"
+  },
+  "m_f314de530158f111": {
+    "message": "頁面傳回無效連結清單。"
+  },
+  "m_26af77d95664e615": {
+    "message": "已達到影片按鈕儲存網站數量上限。"
+  },
+  "m_91947dba22da73b5": {
+    "message": "要求權限期間設定已變更。"
+  },
+  "m_dbd704dc9a27d238": {
+    "message": "沒有可重試的待確認批次。"
+  },
+  "m_b418ac2881c78a7a": {
+    "message": "此批次已在傳送中。"
+  },
+  "m_604518b6a7b13e73": {
+    "message": "此連結選擇器已過期。請透過擴充功能重新收集頁面連結。"
+  },
+  "m_68fd909eec66f301": {
+    "message": "此登入要求已過期。重新傳送檔案前請檢查 Download Engine 佇列。"
+  },
+  "m_14204d3bb3d2fc5e": {
+    "message": "此媒體項目已過期。重新播放以再次偵測。"
+  },
+  "m_d5993dba7abddfa4": {
+    "message": "此頁面的連結資料過多。請嘗試較小頁面。"
+  },
+  "m_359c18c81b3a8742": {
+    "message": "此頁面的影片資料過多。請嘗試較小頁面。"
+  },
+  "m_601ed5513a7de1ff": {
+    "message": "此頁面較大，僅顯示有限連結。開啟較小頁面可收集更多連結。"
+  },
+  "m_f35a9682d7be0bd2": {
+    "message": "此網站的瀏覽器登入資訊過大。請在瀏覽器中下載檔案。"
+  },
+  "m_a13331f2e442016c": {
+    "message": "無法安全傳輸此網站的 Cookie。請在瀏覽器中下載檔案。"
+  },
+  "m_d8b8392e2c542950": {
+    "message": "重試"
+  },
+  "m_baaddf70fb5d432b": {
+    "message": "類型"
+  },
+  "m_b764cdc0eab71374": {
+    "message": "未知"
+  },
+  "m_b3744a5c9e3a8a5f": {
+    "message": "未知的權限設定。"
+  },
+  "m_037c426c05970681": {
+    "message": "無標題頁面"
+  },
+  "m_24f3b0891ed85ed6": {
+    "message": "請更新桌面應用程式以使用頁面連結批次。"
+  },
+  "m_239bbb679e8b5ed9": {
+    "message": "啟用自動擷取前請更新 Download Engine 桌面應用程式。"
+  },
+  "m_edfcdbe6f4310523": {
+    "message": "使用瀏覽器登入前請更新 Download Engine 桌面應用程式。"
+  },
+  "m_6ef631778917843c": {
+    "message": "使用瀏覽器登入 · Download Engine"
+  },
+  "m_a84b376c126bf400": {
+    "message": "使用尋找影片掃描此頁面，或啟用偵測並開始播放。"
+  },
+  "m_a1426ad7784ebbbc": {
+    "message": "新增串流前請使用預覽 HLS 或預覽 DASH 選擇畫質。"
+  },
+  "m_244ef0cdc79df596": {
+    "message": "復原無法釋放暫停的副本。請在瀏覽器下載清單中繼續。"
+  },
+  "m_acfe566ca2e566e7": {
+    "message": "使用此網站的登入資訊"
+  },
+  "m_69da05b04d99b754": {
+    "message": "使用此網站的登入資訊（先確認）"
+  },
+  "m_d4aa36ffd2cc2537": {
+    "message": "最多可使用 {0} 種檔案類型。"
+  },
+  "m_850e8821a631dd82": {
+    "message": "最多可使用 {0} 個網站。"
+  },
+  "m_27eb9ee5a85d401e": {
+    "message": "使用 Download Engine 設定中的自動資料夾規則。"
+  },
+  "m_d534be829e32196b": {
+    "message": "影片"
+  },
+  "m_9e745d40aad9b039": {
+    "message": "影片按鈕"
+  },
+  "m_99f89003e6428eab": {
+    "message": "影片按鈕無法更新已開啟的分頁："
+  },
+  "m_d0113821d8075479": {
+    "message": "此網站的影片按鈕"
+  },
+  "m_c1c069858f0e43e0": {
+    "message": "影片按鈕僅在一般頂層頁面可用。"
+  },
+  "m_bf8f3f1e22b98e76": {
+    "message": "此網站的影片按鈕已停用或缺少網站存取權限。"
+  },
+  "m_b6a9e2a18c985463": {
+    "message": "此網站的影片按鈕已關閉。"
+  },
+  "m_4fcff88a23263c1d": {
+    "message": "此網站的影片按鈕已開啟。點選按鈕可確認可用影片。"
+  },
+  "m_33a6de083bd3b681": {
+    "message": "影片下載"
+  },
+  "m_1999f0d064cfbc7c": {
+    "message": "影片下載 — Download Engine"
+  },
+  "m_74d5e1a5adca3103": {
+    "message": "影片檔案"
+  },
+  "m_d007a137f798c162": {
+    "message": "影片檔案"
+  },
+  "m_cfe370de13214b8b": {
+    "message": "影片確認"
+  },
+  "m_c08d78254e705099": {
+    "message": "影片串流"
+  },
+  "m_991cf9db508be663": {
+    "message": "等候 {0}。請在原頁面點選下載連結，然後在 Download Engine 中確認。"
+  },
+  "m_487420533636d10c": {
+    "message": "未授予網站存取權限。媒體偵測保持關閉。"
+  },
+  "m_11fcf7333cfe5a60": {
+    "message": "Windows 為您的帳戶加密此快照。它僅用於本次下載，最長 24 小時，並在下載完成或移除時刪除。在瀏覽器登出不會刪除已儲存快照。"
+  },
+  "extensionName": {
+    "message": "Download Engine 瀏覽器整合"
+  },
+  "extensionDescription": {
+    "message": "為 Download Engine 桌面應用程式接管檔案下載並偵測影片。"
+  }
+}

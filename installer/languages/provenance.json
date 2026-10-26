@@ -1,0 +1,98 @@
+[
+  {
+    "file": "ChineseSimplified.isl",
+    "source": "https://raw.githubusercontent.com/jrsoftware/issrc/e0a6c1a244535d8f177bfdf3c2e06a28c7ef1ccc/Files/Languages/ChineseSimplified.isl",
+    "sha256": "93D74E31B95E630C4D3582E46C48306A54F598893277C79B16F701EBC2405538"
+  },
+  {
+    "file": "ChineseTraditional.isl",
+    "source": "https://raw.githubusercontent.com/jrsoftware/issrc/e0a6c1a244535d8f177bfdf3c2e06a28c7ef1ccc/Files/Languages/ChineseTraditional.isl",
+    "sha256": "A46888A0B7AE8C275A87022E091C689A146B294EB74F0DB9A13004548CBF5252"
+  },
+  {
+    "file": "Malaysian.isl",
+    "source": "https://raw.githubusercontent.com/jrsoftware/issrc/e0a6c1a244535d8f177bfdf3c2e06a28c7ef1ccc/Files/Languages/Unofficial/Malaysian.isl",
+    "sha256": "4AFDFB13321705DE0256B8844F2EE233C79E2E37F2E9DDFD3F4234EBB119405B"
+  },
+  {
+    "file": "Vietnamese.isl",
+    "source": "https://raw.githubusercontent.com/jrsoftware/issrc/e0a6c1a244535d8f177bfdf3c2e06a28c7ef1ccc/Files/Languages/Unofficial/Vietnamese.isl",
+    "sha256": "57DC908F9DC599F1800556100D35A661EA6D2436C75650F2E73EE6BF89A376FE"
+  },
+  {
+    "file": "Japanese.isl",
+    "source": "Bundled reviewed Inno Setup compiler: Languages/Japanese.isl",
+    "sha256": "D5450537BB128112347BF86A4BDC3A4BE0605414DF0BC4FC90F55AAEF1BA369B"
+  },
+  {
+    "file": "Korean.isl",
+    "source": "Bundled reviewed Inno Setup compiler: Languages/Korean.isl",
+    "sha256": "CB56D6EA5C082BCF6B4ACC1AE4C303BA91F662B1D0BFE05E4D3902C38C41E02A"
+  },
+  {
+    "file": "Thai.isl",
+    "source": "Bundled reviewed Inno Setup compiler: Languages/Thai.isl",
+    "sha256": "CDC0A1AF65AC503EE1F0B5EF9D14D81B8C173BA80A3CE78BA86E15E285A149B3"
+  },
+  {
+    "file": "Polish.isl",
+    "source": "Bundled reviewed Inno Setup compiler: Languages/Polish.isl",
+    "sha256": "593F14B249AFB49D38976816A4A3C73E13E354D1698F9F98D584C1C6C6A18E48"
+  },
+  {
+    "file": "Russian.isl",
+    "source": "Bundled reviewed Inno Setup compiler: Languages/Russian.isl",
+    "sha256": "81981FE6CFEF7F3B2F744BEAC1494F4D2B29CEA69C96A08D1C0A6B79DC0ED8F2"
+  },
+  {
+    "file": "Ukrainian.isl",
+    "source": "Bundled reviewed Inno Setup compiler: Languages/Ukrainian.isl",
+    "sha256": "6BE2EF58D24CC03AFCE84ADAB88E021B3368D884D04599EDB663065042935FAD",
+    "upstreamSha256": "FA3E7841017229D14B3B59417FA9AA860A71CE1F683F3FDAFDD5BF266A47C668",
+    "localChanges": "2026-10-19: removed duplicated %1 filename placeholder in VerificationKeyNotFound."
+  },
+  {
+    "file": "Arabic.isl",
+    "source": "Bundled reviewed Inno Setup compiler: Languages/Arabic.isl",
+    "sha256": "D621121EBA68640CC9CB3E1E63593D9B5905C15AB6D1DCFA168DF603F52E0CAD"
+  },
+  {
+    "file": "German.isl",
+    "source": "Bundled reviewed Inno Setup compiler: Languages/German.isl",
+    "sha256": "F016F4A957DE8C59E8DB2DA788357B4C923CECADCA6F0C6EAB404FB28015CAC9"
+  },
+  {
+    "file": "French.isl",
+    "source": "Bundled reviewed Inno Setup compiler: Languages/French.isl",
+    "sha256": "145BF4EA34EAA79C52E4FCB77CE3EEE9720B0D424C69458CB99592BC52121FBA"
+  },
+  {
+    "file": "Swedish.isl",
+    "source": "Bundled reviewed Inno Setup compiler: Languages/Swedish.isl",
+    "sha256": "D52B0CEE3FC175449848B6787AE0D0FEA8EC0A097B1D96656B6FB9C3F07F6E2F",
+    "upstreamSha256": "A4FD431E2956C2D76C45FBDC97A55380AE00956854D8233934DA03505B390531",
+    "localChanges": "2026-10-19: removed unsupported %1 placeholder in ConfirmDeleteSharedFile2; the compiler renders the filename separately."
+  },
+  {
+    "file": "Norwegian.isl",
+    "source": "Bundled reviewed Inno Setup compiler: Languages/Norwegian.isl",
+    "sha256": "19119D601D4C40C0B42A2A99C932D5FC65521C67A01D3803780AF2620CDFD5FF"
+  },
+  {
+    "file": "GermanSwiss.isl",
+    "source": "Derived locally from bundled reviewed Inno Setup Languages/German.isl; Swiss standard German spelling, LanguageName and LanguageID $0807",
+    "baseSha256": "F016F4A957DE8C59E8DB2DA788357B4C923CECADCA6F0C6EAB404FB28015CAC9",
+    "sha256": "3960B2590C7C61794DFC955DDE2A17618CE028376BFB5DD454A14B13AFE2D3C3"
+  },
+  {
+    "file": "Italian.isl",
+    "source": "Bundled reviewed Inno Setup compiler: Languages/Italian.isl",
+    "sha256": "18034C57F1133682B1B2E95AFA327F232CDCF41BF1A44BC2B5AAB1F8D3332A77"
+  },
+  {
+    "file": "Romansh.isl",
+    "source": "XDownloader-authored Rumantsch Grischun translation using the bundled Inno Setup Default.isl message schema; LanguageID $0417",
+    "baseSha256": "42A5F6F7DBBDDF26CC278F67DB5D894235CE1D126A6856702E31BD02023A1316",
+    "sha256": "E11DE534F5BAF39E8D217054573F8397F4D32E06B349B27B98BB9D7333717867"
+  }
+]

@@ -1,0 +1,55 @@
+:root { color-scheme: light dark; --bg:#f5f7f7; --panel:#fff; --text:#223033; --muted:#5b686e; --line:#cdd6d9; --accent:#167b5b; --tint:#e7f3ed; --error:#a32725; }
+* { box-sizing:border-box; }
+body { margin:0; background:var(--bg); color:var(--text); font:14px/1.5 system-ui,Segoe UI,sans-serif; }
+main { max-width:1120px; margin:auto; padding:28px 32px 24px; }
+header { display:flex; align-items:center; gap:16px; margin-bottom:28px; }
+.brand { font-size:18px; font-weight:700; } .tag { color:var(--muted); font-size:11px; letter-spacing:.14em; }
+h1 { margin:0; font-size:29px; line-height:1.25; letter-spacing:-.02em; }
+.intro { color:var(--muted); margin:8px 0 20px; }
+.source { display:flex; flex-direction:column; gap:3px; border-left:3px solid var(--accent); padding:2px 14px; }
+.source strong, .source span { overflow-wrap:anywhere; } .source span { color:var(--muted); font-size:12px; }
+.hint { color:var(--muted); font-size:12px; margin:10px 0 16px; }
+.card { background:var(--panel); border:1px solid var(--line); border-radius:12px; overflow:hidden; }
+.filters, .destination-fields { display:flex; align-items:end; gap:16px; }
+.filters { padding:18px 20px; } label { display:flex; flex-direction:column; gap:6px; color:var(--muted); font-size:12px; }
+.search { flex:1; } .filters select { min-width:180px; }
+input, select, button { font:inherit; color:var(--text); background:var(--panel); border:1px solid var(--line); border-radius:7px; }
+input, select { min-height:40px; padding:8px 11px; font-size:14px; }
+button { padding:9px 14px; cursor:pointer; font-size:13px; font-weight:500; }
+button:hover:enabled { background:var(--tint); border-color:var(--accent); }
+button:disabled { opacity:.5; cursor:default; } :focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+.selection { display:flex; justify-content:space-between; align-items:center; gap:10px; padding:0 20px 14px; color:var(--muted); font-size:12px; }
+.selection button { padding:5px 9px; margin-right:6px; background:transparent; }
+.table-wrap { max-height:400px; overflow:auto; border-top:1px solid var(--line); }
+table { width:100%; border-collapse:collapse; table-layout:fixed; text-align:left; }
+th { font-weight:500; color:var(--muted); background:var(--bg); position:sticky; top:0; z-index:1; font-size:12px; }
+th, td { padding:10px 16px; border-bottom:1px solid var(--line); } tbody tr:last-child td { border-bottom:0; }
+tr.selected { background:var(--tint); } .check { width:52px; padding-right:4px; } .kind { width:130px; }
+.check input { width:17px; height:17px; min-height:0; accent-color:var(--accent); vertical-align:middle; cursor:pointer; }
+.file-name { display:block; font-weight:550; overflow-wrap:anywhere; } .link-url { display:block; color:var(--muted); font-size:12px; text-overflow:ellipsis; overflow:hidden; white-space:nowrap; margin-top:2px; }
+.type-label { color:var(--muted); font-size:12px; } #empty { text-align:center; padding:32px; color:var(--muted); }
+.type-label button { padding:6px 8px; font-size:12px; }
+.destination { padding:18px 20px 12px; margin-top:16px; } .destination-fields label { flex:1; min-width:0; } .destination-fields select { width:100%; }
+#folder-path { margin:10px 0 0; overflow-wrap:anywhere; }
+footer { display:flex; align-items:center; justify-content:space-between; gap:24px; margin-top:18px; }
+#status { margin:0; color:var(--muted); overflow-wrap:anywhere; } #status.error { color:var(--error); } #status.success { color:#167d45; }
+.primary { background:var(--accent); color:white; border-color:var(--accent); padding:11px 20px; white-space:nowrap; }
+.primary:hover:enabled { filter:brightness(1.08); } .footnote { margin-top:18px; }
+.sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
+@media(prefers-color-scheme:dark) { :root { --bg:#222729; --panel:#272d30; --text:#edf1f2; --muted:#b0bbc2; --line:#3b4449; --accent:#69d4b1; --tint:#243d3a; --error:#ff9e96; } #status.success { color:#69d4b1; } .primary {color:#142d25} }
+.extra-filters{display:flex;gap:14px;padding:0 20px 16px;flex-wrap:wrap}.extra-filters label{flex:1;min-width:135px}.extra-filters select{width:100%;min-width:0}.size{width:100px}.size-label{color:var(--muted);font-size:12px;white-space:nowrap}.source-label{font-size:10px;color:var(--muted);font-weight:400;margin-left:8px}.pagination{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 20px;border-top:1px solid var(--line);font-size:12px;color:var(--muted)}.pagination button{padding:5px 9px;margin-left:5px}.file-name{overflow:hidden;white-space:nowrap;text-overflow:ellipsis}.table-wrap{scrollbar-gutter:stable}@media(max-width:650px){.size{width:74px}.size-label{font-size:10px}.extra-filters{gap:8px}.extra-filters label{min-width:100px}.pagination{padding:10px}.source-label{display:none}}
+@media(max-width:650px) { main { padding:20px 16px; } h1 { font-size:24px; } header { margin-bottom:20px; } .filters, .destination-fields { flex-wrap:wrap; gap:12px; } .filters label { flex-basis:100%; } .filters select { min-width:0; width:100%; } .destination-fields label { flex-basis:100%; } .selection { align-items:start; flex-direction:column; } .kind { width:96px; } th, td { padding-left:10px; padding-right:10px; } .check { width:38px; } footer { align-items:stretch; flex-direction:column; gap:14px; } }
+
+/* Keep technical identifiers readable inside the Arabic interface. */
+:root[dir="rtl"] { text-align: start; }
+:root[dir="rtl"] table { text-align: start; }
+:root[dir="rtl"] .source { border-left: 0; border-right: 3px solid var(--accent); }
+:root[dir="rtl"] .selection button { margin-right: 0; margin-left: 6px; }
+:root[dir="rtl"] .pagination button { margin-left: 0; margin-right: 5px; }
+:root[dir="rtl"] .source-label { margin-left: 0; margin-right: 8px; }
+:root[dir="rtl"] .check { padding-right: 16px; padding-left: 4px; }
+input[type="url"], #page-url, .link-url, pre, code { direction: ltr; unicode-bidi: isolate; text-align: start; }
+/* Addresses stay left-to-right but sit on the same side as their Arabic titles. */
+:root[dir="rtl"] #page-url, :root[dir="rtl"] .link-url { text-align: right; }
+/* A Latin file name keeps its start visible; the ellipsis replaces its end. */
+:root[dir="rtl"] .file-name bdi { display: inline-block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; vertical-align: bottom; unicode-bidi: plaintext; }

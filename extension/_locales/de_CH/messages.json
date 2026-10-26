@@ -1,0 +1,1028 @@
+{
+  "m_a9f74d4af5d7dd2d": {
+    "message": "{0} durch Filter ausgeblendet"
+  },
+  "m_b364264cdee56a63": {
+    "message": "{0} von {1} Links · {2} ausgewählt{3}"
+  },
+  "m_3e9174b076fa6723": {
+    "message": "{0} eindeutige HTTP-/HTTPS-Links gefunden. Nichts wird automatisch ausgewählt."
+  },
+  "m_4751f6a4b5d9bb30": {
+    "message": "{0}–{1} von {2}"
+  },
+  "m_2150dc95bcdb8850": {
+    "message": "Ein neuer Link wartet bereits in Download Engine auf Prüfung."
+  },
+  "m_acca29cca3e064e3": {
+    "message": "Übergabe erfordert Aufmerksamkeit. Bei Pause Fortsetzen in der Browser-Downloadliste wählen. "
+  },
+  "m_da5cba54ff645402": {
+    "message": "Ein Seitenscan läuft bereits."
+  },
+  "m_93cbb4b9c437b588": {
+    "message": "Eine Anfrage dieser Auswahl wird bereits gesendet."
+  },
+  "m_8b60e5b9af092e22": {
+    "message": "Eine Übersicht wird bereits geöffnet."
+  },
+  "m_fbb9b1f9dcbfeae4": {
+    "message": "Videoübersicht wird bereits in Download Engine geöffnet."
+  },
+  "m_69dfd976b317260d": {
+    "message": "Eine Videoübersicht wird bereits geöffnet."
+  },
+  "m_f2ca785fd206a095": {
+    "message": "Videoübersicht wartet auf Bestätigung. Zuerst Browseroptionen → Übergaben wiederherstellen wählen."
+  },
+  "m_0e9839b644120fa4": {
+    "message": "{0} Datei(en){1} hinzufügen"
+  },
+  "m_264137ad4e188078": {
+    "message": "Datei-URL hinzufügen"
+  },
+  "m_d852059dca4ba30a": {
+    "message": "Mindestens einen Dateityp hinzufügen oder * eingeben, um alle Typen zu erfassen."
+  },
+  "m_fba811a83d244b75": {
+    "message": "Ausgewählte Dateien hinzufügen"
+  },
+  "m_63889fe9a0f7922d": {
+    "message": "Zu Download Engine hinzugefügt"
+  },
+  "m_b42ec7eef98969f5": {
+    "message": "Zur Warteschlange hinzugefügt"
+  },
+  "m_035a4bf3220f575b": {
+    "message": "Mit Browseranmeldung hinzugefügt"
+  },
+  "m_1fec4c2ee0889acb": {
+    "message": "Alle Links"
+  },
+  "m_08e774c5bacc362a": {
+    "message": "Alle Quellen"
+  },
+  "m_79c625de4b9fd500": {
+    "message": "Cookiezugriff für diese Website erlauben, um Anmeldung zu verwenden."
+  },
+  "m_26f0b4e0ff1f898e": {
+    "message": "Downloadzugriff zur automatischen Erfassung erlauben."
+  },
+  "m_5b94fcf971c23dee": {
+    "message": "Downloadzugriff erlauben, um neuen Link für {0} zu finden. Automatische Erfassung kann aus bleiben."
+  },
+  "m_2e62efd7ab18a82d": {
+    "message": "Medienerkennung und Website-Zugriff zur Erfassung von Medienanfragen erlauben."
+  },
+  "m_48cc22965b91eff2": {
+    "message": "Wiederherstellungszugriff erlauben"
+  },
+  "m_24e1772fedce2ed7": {
+    "message": "Website-Anmeldung & Download erlauben"
+  },
+  "m_5864c132f9bc0926": {
+    "message": "Diese Website erlauben"
+  },
+  "m_9ee4b5b0cf00b360": {
+    "message": "Website-Zugriff erlauben, um Videoschaltfläche anzuzeigen."
+  },
+  "m_9f46b4f2f671c116": {
+    "message": "Jede Grösse"
+  },
+  "m_72c46a00422be09f": {
+    "message": "Einen Dateidownload genehmigen."
+  },
+  "m_66f4804ee23ddc09": {
+    "message": "Archiv"
+  },
+  "m_e404aa80d8df4adb": {
+    "message": "Archive"
+  },
+  "m_bc1b88907d3b748a": {
+    "message": "Audio"
+  },
+  "m_571a9d4e6ae3e6e9": {
+    "message": "Automatische Erfassung"
+  },
+  "m_551953291092c063": {
+    "message": "Automatische Erfassung konnte nicht starten: "
+  },
+  "m_4b0437f552a7f60f": {
+    "message": "Automatische Erfassung aus."
+  },
+  "m_ca4588908fe682ee": {
+    "message": "Automatische Erfassung aus. Pausierte Downloads in der Downloadliste des Browsers fortsetzen."
+  },
+  "m_dbcbd988532e58f3": {
+    "message": "Automatische Erfassung für direkte Dateidownloads aktiv."
+  },
+  "m_a4885ab1c22dbeb0": {
+    "message": "Automatische Erfassung bleibt aus. Download Engine → Werkzeuge → Browsereinrichtung öffnen, Browser wählen und Browser verbinden. Dann hier erneut versuchen. "
+  },
+  "m_bdf26652484911a4": {
+    "message": "Automatische Downloaderfassung"
+  },
+  "m_6259b8b41e217222": {
+    "message": "Automatische Ordner"
+  },
+  "m_6aa06201d769ad78": {
+    "message": "Verfügbare Links"
+  },
+  "m_2cf57ca29785ac99": {
+    "message": "Browserkopie fortgesetzt"
+  },
+  "m_9ce0d857154f24e2": {
+    "message": "Browsersprache"
+  },
+  "m_9a06933b478415e9": {
+    "message": "Browser-Anmeldezugriff für alle Websites entfernt. Bestehende Downloads behalten ihre verschlüsselten Daten, bis Sie diese in Download Engine löschen."
+  },
+  "m_776802e7061330f7": {
+    "message": "Browseranmeldung konnte nicht gesendet werden. Website-Zugriff und Desktopverbindung prüfen."
+  },
+  "m_31eb4316301f4815": {
+    "message": "Browseranmeldung erfordert HTTPS. Sicheren direkten Dateilink öffnen."
+  },
+  "m_0017e5fbb9fd5905": {
+    "message": "Browseroptionen"
+  },
+  "m_f4a311ce61b95ad0": {
+    "message": "Dateidownloads übernehmen und Videos für die Desktop-App Download Engine erkennen."
+  },
+  "m_90948ad9dbb580df": {
+    "message": "Erfassungsregeln"
+  },
+  "m_720995cec7bccf29": {
+    "message": "Erfassungsregeln nicht verfügbar. Erweiterung neu laden."
+  },
+  "m_8f326a402a36befc": {
+    "message": "Erfassungsregeln gespeichert."
+  },
+  "m_be5dff52eeb0fd5b": {
+    "message": "Verbindung prüfen"
+  },
+  "m_c29aa06c2ddb8076": {
+    "message": "Diese Dateitypen prüfen: {0}"
+  },
+  "m_8151d4ddeed81415": {
+    "message": "Diese Websites prüfen: {0}"
+  },
+  "m_d6fdbb314af454a1": {
+    "message": "Ursprünglicher Stapel wird geprüft…"
+  },
+  "m_ec963ffc911b8401": {
+    "message": "Wird geprüft…"
+  },
+  "m_ddec030e83b025f5": {
+    "message": "Aufgelistetes HLS- oder DASH-Video wählen."
+  },
+  "m_a0f311dfdcbbc7c9": {
+    "message": "Gespeicherte Warteschlange und Zielordner wählen."
+  },
+  "m_9b02ef3f495e64ef": {
+    "message": "Dateien dieser Seite auswählen"
+  },
+  "m_cbe8a50b6762fd46": {
+    "message": "Qualität in App wählen"
+  },
+  "m_c945c62180fcab9a": {
+    "message": "Videodateien und Streamqualität in Download Engine wählen"
+  },
+  "m_312bfa601066a8e4": {
+    "message": "Downloads auswählen"
+  },
+  "m_83b12c2216efb4fd": {
+    "message": "Leeren"
+  },
+  "m_a8858ac749bc452b": {
+    "message": "Protokoll leeren"
+  },
+  "m_cea4d2e010b8fd52": {
+    "message": "Auswahl aufheben"
+  },
+  "m_652c67c42dba3909": {
+    "message": "Zuerst andere Linkauswahl schliessen. Ausstehende Stapel über Übergaben wiederherstellen klären."
+  },
+  "m_b9ce2241762a7a45": {
+    "message": "Verbindung mit Download Engine…"
+  },
+  "m_83f23cdbeb423f39": {
+    "message": "Verbindungsprüfung"
+  },
+  "m_d45e5aae2ee31082": {
+    "message": "Cookiespeicher stimmt nicht überein"
+  },
+  "m_101bd5ad093f5552": {
+    "message": "Website-Zugriff konnte nicht entfernt werden. Erweiterungseinstellungen des Browsers verwenden."
+  },
+  "m_4a8c2b313a136fa4": {
+    "message": "Browserdownload konnte nicht fortgesetzt werden. Fortsetzen in der Browser-Downloadliste wählen. "
+  },
+  "m_50746138b9d24c2b": {
+    "message": "Rückkehr zum Erweiterungsfenster nicht möglich:"
+  },
+  "m_936628cc4a394ede": {
+    "message": "Standardwerte wiederhergestellt. Zum Übernehmen „Regeln speichern“ wählen."
+  },
+  "m_0690f959c9689317": {
+    "message": "Medien beim Surfen erkennen"
+  },
+  "m_4125b0325a1d9a1c": {
+    "message": "Erkannte Medien"
+  },
+  "m_ee71fa5ff80ee155": {
+    "message": "Erkennung an. Medien abspielen, um Liste zu aktualisieren."
+  },
+  "m_c46c657680c1fb6a": {
+    "message": "Diagnoseprotokoll"
+  },
+  "m_da1e00181e6edfc0": {
+    "message": "Diagnoseprotokoll nicht verfügbar. Erweiterung neu laden."
+  },
+  "m_97a6661033069fb1": {
+    "message": "Direkte Dateien und unverschlüsselte HLS-/DASH-Vorschauen."
+  },
+  "m_d6bd8c0aeee80fed": {
+    "message": "Dokument"
+  },
+  "m_b4e929d8bcfe0418": {
+    "message": "Dokumente"
+  },
+  "m_4b20f1e564f08418": {
+    "message": "Downloadzugriff geändert. Automatische Erfassung bei Bedarf erneut aktivieren."
+  },
+  "m_de82471b8e92e8c9": {
+    "message": "Downloadzugriff nicht gewährt. Automatische Erfassung bleibt aus."
+  },
+  "m_26e9086fb67e1171": {
+    "message": "Downloadzugriff nicht gewährt. Sie können weiter einen neuen Link in Download Engine einfügen."
+  },
+  "m_86237283243c5c06": {
+    "message": "Downloadziel"
+  },
+  "m_4fe58a9f465df20b": {
+    "message": "Download Engine"
+  },
+  "m_67061b40bd1fc990": {
+    "message": "Datei in Download Engine eingereiht, aber Browserkopie konnte nicht gestoppt werden. Beide Downloadlisten prüfen."
+  },
+  "m_ad28de051651de0a": {
+    "message": "Download Engine ist verbunden."
+  },
+  "m_b5ee50a47681c17b": {
+    "message": "Download Engine hat bestehenden Download aktualisiert. Browserkopie bleibt ebenfalls; beide Listen prüfen."
+  },
+  "m_55cff9fa827ef904": {
+    "message": "Download Engine kopiert passende Anmeldecookies aus dem ursprünglichen Website-Tab, einschliesslich dessen Firefox-Container. Die Datei muss auf demselben Server liegen."
+  },
+  "m_b732f149ac000cfe": {
+    "message": "Download im Browser behalten: "
+  },
+  "m_4dfb918c17f5863a": {
+    "message": "Download im Browser behalten."
+  },
+  "m_3a7a16064f324d88": {
+    "message": "Links dieser Seite herunterladen"
+  },
+  "m_182321e7f219bcc2": {
+    "message": "Download a Download Engine gesendet."
+  },
+  "m_d1db69fff45e2607": {
+    "message": "Mit Browseranmeldung herunterladen…"
+  },
+  "m_9e6a91c146c14996": {
+    "message": "Video herunterladen"
+  },
+  "m_e1e91278b3b950c4": {
+    "message": "Video mit Download Engine herunterladen — zuerst prüfen"
+  },
+  "m_36886174177ac2af": {
+    "message": "Mit Download Engine herunterladen"
+  },
+  "m_cc5c7b4f90b18c40": {
+    "message": "Erkennung mit Website-Zugriff aktivieren. Verwendet Ihre Anmeldung nicht."
+  },
+  "m_e2d9eaba91bf0037": {
+    "message": "Vollständige HTTP- oder HTTPS-Datei-URL eingeben."
+  },
+  "m_6e42641a11a1c04e": {
+    "message": "Mindestgrösse zwischen 0 und 1 TB eingeben."
+  },
+  "m_4eb6084d5e196685": {
+    "message": "Bestehender Download in Download Engine aktualisiert."
+  },
+  "m_2eabb5731ec0a7f5": {
+    "message": "Erweiterungssprache"
+  },
+  "m_d8e40338c0625f5b": {
+    "message": "Datei / Link"
+  },
+  "m_fb6219471a55d640": {
+    "message": "Dateidownloads werden automatisch übernommen. Desktop-App in der Browsereinrichtung verbinden."
+  },
+  "m_95b44f14672ddf20": {
+    "message": "Dateiname, Linktext oder URL"
+  },
+  "m_ea1df05210c29d1e": {
+    "message": "Dateityp"
+  },
+  "m_6ebe2a3778d6510e": {
+    "message": "Zu erfassende Dateitypen"
+  },
+  "m_4ac686f1fff7a0ce": {
+    "message": "Datei-URL"
+  },
+  "m_7cd46f2b72f2f96d": {
+    "message": "Dateien und Links"
+  },
+  "m_91c34f985f2ccf2e": {
+    "message": "Videos auf dieser Seite suchen"
+  },
+  "m_abb03e243f8f426a": {
+    "message": "Videos mit Download Engine suchen"
+  },
+  "m_c14ae1090e852370": {
+    "message": "Offene Berechtigungsanfrage vor weiteren Änderungen abschliessen."
+  },
+  "m_3b36902cb433c0af": {
+    "message": "Ordner werden in Download-Engine-Einstellungen verwaltet."
+  },
+  "m_fb1c8ed06249aced": {
+    "message": "{0} {1} gefunden. Im neuen Tab prüfen."
+  },
+  "m_dac55102f2a6291b": {
+    "message": "Gefunden in"
+  },
+  "m_cf58b80fa579dabc": {
+    "message": "Neuer Link gefunden. Datenprüfung in Download Engine prüfen, dann Fortsetzen bestätigen."
+  },
+  "m_23b41d51987507df": {
+    "message": "HLS / DASH öffnet eine Desktopvorschau; Live- und verschlüsselte Streams werden nicht unterstützt. Medienerkennung vor Wiedergabe aktivieren, um mehr Streams zu finden."
+  },
+  "m_1aa4cb0bcca76e92": {
+    "message": "Bild"
+  },
+  "m_be7e2f20129365c2": {
+    "message": "Bilder"
+  },
+  "m_28d71345fcbdb6bc": {
+    "message": "Unterbrochene Übergabe wiederhergestellt; Download im Browser behalten."
+  },
+  "m_ddedfe53cbb11f79": {
+    "message": "Unterbrochene Wiederherstellung an Browser freigegeben."
+  },
+  "m_7182c1f1f59286fa": {
+    "message": "Ungültige Einstellung für automatische Erfassung."
+  },
+  "m_419be78ea9367d52": {
+    "message": "Ungültige Browseranmeldungsanfrage."
+  },
+  "m_615de39dbabcd451": {
+    "message": "Ungültige Erfassungsregeln."
+  },
+  "m_4e6451d9c7a05b34": {
+    "message": "Ungültige Diagnoseeinstellung."
+  },
+  "m_ebe2abb4cddb35fc": {
+    "message": "Ungültige Linkauswahlkennung."
+  },
+  "m_438fc9ceb0904b0d": {
+    "message": "Ungültige Medienerkennungseinstellung."
+  },
+  "m_cfd2d68349b7432a": {
+    "message": "Ungültiger Seitenscanmodus."
+  },
+  "m_53621c0588be411a": {
+    "message": "Ungültige Anfragekennung."
+  },
+  "m_fd72d477bb65dc79": {
+    "message": "Ungültige Videoschaltflächen-Einstellung."
+  },
+  "m_e20a4b411a818b8b": {
+    "message": "Ungültige Website für Videoschaltfläche."
+  },
+  "m_c2e9a31124f7d0f7": {
+    "message": "Ursprünglichen angemeldeten Website-Tab offen lassen."
+  },
+  "m_019e66b1bd219970": {
+    "message": "Ursprünglichen angemeldeten Tab offen lassen. Privates Surfen wird nicht unterstützt."
+  },
+  "m_251452cbeaef4875": {
+    "message": "Grösste zuerst"
+  },
+  "m_52296e73ceec6ce1": {
+    "message": "Linkwiederherstellung"
+  },
+  "m_ccc96d8740521cb4": {
+    "message": "Seitenlinks werden geladen…"
+  },
+  "m_b9f867064b204410": {
+    "message": "Website wird geladen…"
+  },
+  "m_6f1c11acccb3f806": {
+    "message": "Hauptwarteschlange"
+  },
+  "m_179b204ad2a7f5dc": {
+    "message": "Medienerkennung"
+  },
+  "m_d7b80c91cf6b7aa5": {
+    "message": "Medienerkennungszugriff geändert. Bei Bedarf erneut aktivieren."
+  },
+  "m_36fb507d0e7b32e8": {
+    "message": "Medienerkennung aus. Liste geleert."
+  },
+  "m_63cfe215acef08ce": {
+    "message": "Medienerkennung an. Wiedergabe starten oder Seite neu laden."
+  },
+  "m_05dc18f8ce93981b": {
+    "message": "Medienerkennung nicht verfügbar. Erweiterung neu laden und erneut versuchen."
+  },
+  "m_7a05c2c962505cdb": {
+    "message": "Medienliste konnte nicht aktualisiert werden. Erkennung aus- und wieder einschalten."
+  },
+  "m_667d5d5489d7fc17": {
+    "message": "Medieneinträge"
+  },
+  "m_0c401d043fe13fb6": {
+    "message": "Medienliste geleert. Neue Wiedergabeanfragen können erneut erscheinen."
+  },
+  "m_d8851b3df6edf1d3": {
+    "message": "Medien auf dieser Seite"
+  },
+  "m_91a5e537e1bf2422": {
+    "message": "Mindestdateigrösse"
+  },
+  "m_dcd1d5223f73b3a9": {
+    "message": "Name"
+  },
+  "m_a8bc982bc423c5a7": {
+    "message": "Netzwerkmedien"
+  },
+  "m_0cffcc196fd87d17": {
+    "message": "Nie von diesen Websites erfassen"
+  },
+  "m_1ff57a29d7c9d11b": {
+    "message": "Weiter"
+  },
+  "m_09f1c438851431f3": {
+    "message": "Noch keine Aktivität aufgezeichnet."
+  },
+  "m_3f1536c1d3a3c78c": {
+    "message": "Keine Links geladen"
+  },
+  "m_507f9ea8cb63e18e": {
+    "message": "Keine Links entsprechen den Filtern."
+  },
+  "m_7eaa329a40093924": {
+    "message": "Keine passenden Dateien"
+  },
+  "m_75d0a7642fe89d02": {
+    "message": "Kein Minimum"
+  },
+  "m_6dd1d3103295d8dc": {
+    "message": "Keine Antwort vom Erweiterungshintergrund."
+  },
+  "m_47788a2327f83840": {
+    "message": "Keine unterstützte Browseranmeldung lesbar. Auf Website anmelden und erneut versuchen. Private oder partitionierte Sitzungen werden nicht unterstützt."
+  },
+  "m_1e9601e1e54c4d5a": {
+    "message": "Keine unterstützten Anmeldecookies passen zur Datei. Zuerst auf Website anmelden. Private, partitionierte und erstanbieterisolierte Sitzungen werden nicht unterstützt."
+  },
+  "m_3e86480851090d8e": {
+    "message": "Standardmässig aus. Aktivieren, um Video- und Audioanfragen beim Surfen zu finden."
+  },
+  "m_841fa2784ee46d5c": {
+    "message": "Für diese Website aus. Auswahl gespeichert."
+  },
+  "m_b6d42710b782d638": {
+    "message": "Standardmässig an. Website-Zugriff erlauben, um Videoschaltflächen anzuzeigen."
+  },
+  "m_48ff08561347ceb3": {
+    "message": "Standardmässig an. Website öffnen, um die Einstellung zu ändern."
+  },
+  "m_718a1c9b01954136": {
+    "message": "Standardmässig aktiviert. Video abspielen, erkennen lassen und Download auswählen."
+  },
+  "m_a5796db85ba454a2": {
+    "message": "Standardmässig an. Ausschalten, um Videoschaltflächen auf dieser Website auszublenden."
+  },
+  "m_b7e24a07e6b998ce": {
+    "message": "Standardmässig an. Auswahl für diese Website gespeichert."
+  },
+  "m_18aa46ba0236a241": {
+    "message": "Eine Website pro Zeile, einschliesslich Subdomains; * steht für einen beliebigen Teil des Namens."
+  },
+  "m_4e918bc632379980": {
+    "message": "Nur HTTP-/HTTPS-Links ohne eingebettete Zugangsdaten werden unterstützt."
+  },
+  "m_c474c658148d459d": {
+    "message": "Nur ausgewählte Links werden gesendet. Links können auf Webseiten zeigen; Dateitypen basieren auf Namen und verfügbaren Medienmetadaten."
+  },
+  "m_8bee84e594e99e34": {
+    "message": "Browsertab öffnen und Download Engine erneut öffnen."
+  },
+  "m_c66ff2b172c3b834": {
+    "message": "Normale Webseite öffnen, um Videoschaltfläche einzustellen."
+  },
+  "m_aa4c148abfa53385": {
+    "message": "Normale Webseite öffnen, um Medien zu finden."
+  },
+  "m_215a54029c2b4b91": {
+    "message": "Normale Webseite öffnen, um Medien zu prüfen."
+  },
+  "m_a9a64a3ba1e37620": {
+    "message": "HTTP- oder HTTPS-Webseite öffnen und dort Erweiterung anklicken."
+  },
+  "m_5d404dc8daf23871": {
+    "message": "Download-Engine-Erweiterung öffnen und erneut versuchen."
+  },
+  "m_1c911c28ea089770": {
+    "message": "Angemeldete Website in normalem Tab öffnen, dann Datei auf demselben Server wählen."
+  },
+  "m_b4c5fc73a947b6af": {
+    "message": "In App geöffnet"
+  },
+  "m_c751d726c402d9ab": {
+    "message": "Videoübersicht wird in Download Engine geöffnet"
+  },
+  "m_c926c2c50e65d5a5": {
+    "message": "Wird geöffnet…"
+  },
+  "m_1a0c32d68ceb4922": {
+    "message": "Ursprüngliches Ziel"
+  },
+  "m_15a84d473a2dc5ef": {
+    "message": "Ursprüngliche Warteschlange"
+  },
+  "m_5e19e35a09649309": {
+    "message": "Sonstige / unbekannt"
+  },
+  "m_57d2af91bc34f0b3": {
+    "message": "Seitenressource"
+  },
+  "m_2d327768547d6bfa": {
+    "message": "Seitenressourcen"
+  },
+  "m_58dc76ebf2ef2844": {
+    "message": "Seitenlink"
+  },
+  "m_101737af4b45f970": {
+    "message": "Seitenlinks"
+  },
+  "m_aded8b818cfb9479": {
+    "message": "SEITENLINKS"
+  },
+  "m_c902c6b1e1a4c529": {
+    "message": "Seitenlinks · Download Engine"
+  },
+  "m_9a3faea57df5b5b3": {
+    "message": "Seitenreihenfolge"
+  },
+  "m_445999cff1f693bb": {
+    "message": "Seitenlinks sammeln in privaten Fenstern nicht verfügbar."
+  },
+  "m_a7a9dc5bcf71adb2": {
+    "message": "Pausiert"
+  },
+  "m_40d12c1cd050aea2": {
+    "message": "Ausstehende Prüfungen und Downloads wiederhergestellt. Browserübergaben geprüft."
+  },
+  "m_d101686dfb461d7b": {
+    "message": "Berechtigung widerrufen"
+  },
+  "m_fb44b7bd4a949eee": {
+    "message": "DASH-Vorschau"
+  },
+  "m_a891a492d8d0c27e": {
+    "message": "HLS-Vorschau"
+  },
+  "m_a57b08a480b822a0": {
+    "message": "Zurück"
+  },
+  "m_6d4977e17532e718": {
+    "message": "Private, partitionierte und erstanbieterisolierte Sitzungen werden nicht unterstützt. Automatische Erfassung bleibt anonym."
+  },
+  "m_90920d93e2c7e632": {
+    "message": "Programm"
+  },
+  "m_b6747064b2a6dd95": {
+    "message": "Programme"
+  },
+  "m_3b2fe03e36893916": {
+    "message": "Warteschlange"
+  },
+  "m_68b16a818cc085cf": {
+    "message": "Letzte Einstellungen, Verbindungsprüfungen und Videoübersichten, nur in diesem Browser gespeichert."
+  },
+  "m_98d7576ae1a9c3fc": {
+    "message": "Bestehenden Download wiederherstellen"
+  },
+  "m_da9f4135cbe4b48b": {
+    "message": "Übergaben wiederherstellen"
+  },
+  "m_c73c9c73104c4316": {
+    "message": "Wiederherstellungszugriff aktiviert. Dieselbe Datei auf der Webseite anklicken und in Download Engine prüfen."
+  },
+  "m_acfeb89bc6c13696": {
+    "message": "Wiederherstellung abgebrochen. Download bleibt im Browser."
+  },
+  "m_d662ba072dd18ac7": {
+    "message": "Wiederherstellung geprüft. Pausierte Dateien in der Browser-Downloadliste prüfen."
+  },
+  "m_ad787fd387d7b9ad": {
+    "message": "Wiederherstellung konnte nicht starten: "
+  },
+  "m_24cedb972410650c": {
+    "message": "Wiederherstellung erfordert Aufmerksamkeit. Bei Bedarf Fortsetzen in der Browser-Downloadliste verwenden. "
+  },
+  "m_5273e2f102fe7c0d": {
+    "message": "Wiederherstellung gestoppt: "
+  },
+  "m_1d57f666d95264c7": {
+    "message": "Protokoll aktualisieren"
+  },
+  "m_2e1d57637f97896b": {
+    "message": "Ziele neu laden"
+  },
+  "m_9202490cb35dbda0": {
+    "message": "Download-Engine-Erweiterung neu laden, um Aktualisierung abzuschliessen."
+  },
+  "m_b330cbc172cf1e68": {
+    "message": "Browser-Anmeldezugriff entfernen"
+  },
+  "m_bf98564718ee4abb": {
+    "message": "Erweiterungszugriff auf diese Website entfernen"
+  },
+  "m_45a4092662eb386c": {
+    "message": "Entfernen beendet das Lesen von Cookies auf allen Websites. Videoerkennung bleibt aktiv. Gespeicherte Daten unter Download Engine → Authentifizierung → Keine löschen."
+  },
+  "m_22799a32fabd0898": {
+    "message": "Website-Zugriff entfernen stoppt künftiges Cookielesen. Gespeicherte Kopie löschen: Download in Download Engine entfernen oder Anmeldung → Keine wählen."
+  },
+  "m_5923e8de81d8741b": {
+    "message": "Erweiterung erneut öffnen und versuchen."
+  },
+  "m_20a3253602a7fcee": {
+    "message": "Gemeldete Dateigrösse"
+  },
+  "m_3e536eb4562fe176": {
+    "message": "Ausstehenden Stapel vor Videovorschau klären."
+  },
+  "m_602f8e637002a585": {
+    "message": "Standard wiederherstellen"
+  },
+  "m_913b0a77f27fc498": {
+    "message": "Denselben Stapel erneut versuchen"
+  },
+  "m_60d03e7404e40486": {
+    "message": "Ausstehenden Stapel vor Änderung der Auswahl erneut versuchen."
+  },
+  "m_de8cfa0e6bb6d592": {
+    "message": "Denselben Stapel erneut senden, um Empfang zu prüfen."
+  },
+  "m_70786ccffcb091cd": {
+    "message": "Prüfen "
+  },
+  "m_ad8286257814524c": {
+    "message": "Prüfen ↗"
+  },
+  "m_8c76a4f01cdeec77": {
+    "message": "Links und Ressourcen dieser Seite prüfen und gewünschte Dateien einreihen."
+  },
+  "m_3f21ed22e0fcea7e": {
+    "message": "Links dieser Seite prüfen und gewünschte Dateien einreihen."
+  },
+  "m_1ee0fc616e9e22a3": {
+    "message": "Video in Download Engine prüfen"
+  },
+  "m_3bc941f7f11d1ac7": {
+    "message": "Video in Download Engine prüfen. Es wurde nichts heruntergeladen."
+  },
+  "m_41b3d85b43f47094": {
+    "message": "Browseranmeldung dieser Website im neuen Tab prüfen."
+  },
+  "m_193df65a5f826122": {
+    "message": "Rechtsklick → „Mit Download Engine herunterladen“ sendet den Link immer, unabhängig von diesen Regeln."
+  },
+  "m_852bfbb688dd15da": {
+    "message": "Dateilink rechts anklicken, um ihn an die App zu senden, oder automatische Erfassung aktivieren."
+  },
+  "m_c071cf5f5ed6f884": {
+    "message": "Läuft"
+  },
+  "m_e5dbdffb88164817": {
+    "message": "Regeln speichern"
+  },
+  "m_1daa7df740ac086c": {
+    "message": "Speichern unter"
+  },
+  "m_198a1c7a2183aefc": {
+    "message": "Ausgewählte Dateien werden gespeichert…"
+  },
+  "m_dd298e20fc073647": {
+    "message": "Links suchen"
+  },
+  "m_2a78025de6aae5e7": {
+    "message": "Auswählen"
+  },
+  "m_1f7133c21072a138": {
+    "message": "Auswählen: "
+  },
+  "m_e116a9b3a597ac1e": {
+    "message": "Alle passenden Dateien auf allen Seiten auswählen"
+  },
+  "m_dea1a3e66e47d981": {
+    "message": "1 bis 1.000 aufgelistete Links auswählen."
+  },
+  "m_b908effe1a7c133b": {
+    "message": "Direkte Videodateien auswählen oder HLS-/DASH-Vorschau öffnen, um Qualität und Audio in Download Engine zu wählen."
+  },
+  "m_ead5d68c99cc77a8": {
+    "message": "Weniger Links für diesen Stapel auswählen."
+  },
+  "m_e1ce37067ddc2ab5": {
+    "message": "Protokoll auswählen"
+  },
+  "m_313175419d438c50": {
+    "message": "Treffer auswählen"
+  },
+  "m_87a73c5380c6c916": {
+    "message": "Hinzuzufügende Dateien auswählen."
+  },
+  "m_12576160b98349a6": {
+    "message": "Protokoll auswählen und mit Strg+C kopieren."
+  },
+  "m_3ac5caf9518d7822": {
+    "message": "Dateilinks oder ausgewählte Seitenlinks a Download Engine senden, mit optionaler automatischer Downloaderfassung."
+  },
+  "m_b8ed5279e897be5d": {
+    "message": "Wird gesendet…"
+  },
+  "m_9fa4fffd6b2390aa": {
+    "message": "Mit Leerzeichen trennen. * steht für beliebige Zeichen, z. B. r0*. Nur * eingeben, um alle Typen zu erfassen."
+  },
+  "m_818cd8d91aea3a16": {
+    "message": "Einstellung"
+  },
+  "m_64d28781ada09e2e": {
+    "message": "Website-Zugriff entfernt. Bestehende Downloads behalten die verschlüsselte Kopie, bis Sie sie in Download Engine entfernen."
+  },
+  "m_b1dc42771ae048ea": {
+    "message": "Website-Zugriff nicht gewährt. Zugriff erlauben, um Videoschaltflächen anzuzeigen."
+  },
+  "m_683653872b36eaa7": {
+    "message": "Website-Zugriff nicht gewährt. Keine Anmeldung gesendet."
+  },
+  "m_f09f3886349140ea": {
+    "message": "Website-Berechtigung konnte nicht entfernt werden."
+  },
+  "m_1af851907331c0ed": {
+    "message": "Grösse"
+  },
+  "m_d94adb63dbcd8018": {
+    "message": "Grösse auf dieser Seite nicht verfügbar"
+  },
+  "m_2a817d337803db0d": {
+    "message": "Grösseneinheit"
+  },
+  "m_873395540b2cfea9": {
+    "message": "Grösse unbekannt"
+  },
+  "m_80b858ffa465e189": {
+    "message": "Kleinere Dateien bleiben im Browser. Leer lassen für jede Grösse."
+  },
+  "m_bec69036aa27e7fa": {
+    "message": "Sortieren"
+  },
+  "m_af45940023cd4d24": {
+    "message": "Quellseite"
+  },
+  "m_329c0763bd9ec092": {
+    "message": "Bei aktiver Erkennung Wiedergabe starten oder Videos suchen wählen."
+  },
+  "m_febbea5fb07c20c8": {
+    "message": "App hat Abbruch nicht bestätigt. Browserkopie behalten; App vor erneutem Versuch prüfen."
+  },
+  "m_fbb00942fda85125": {
+    "message": "App hat neuen Link nicht bestätigt"
+  },
+  "m_ec379e9b433646d8": {
+    "message": "App hat Übergabe nicht bestätigt. Browserdownload bleibt erhalten; Download Engine ebenfalls auf eine Kopie prüfen."
+  },
+  "m_903e073f9cd11362": {
+    "message": "Browserkopie während Abbruch fertiggestellt oder fortgesetzt"
+  },
+  "m_1c9fd224194b7ee7": {
+    "message": "Browser konnte diesen Download nicht pausieren"
+  },
+  "m_eed9387ac150e8fe": {
+    "message": "Browser konnte Seite nicht lesen. Normale Webseite versuchen."
+  },
+  "m_f3cfbd4cbe900742": {
+    "message": "Browserdownload behalten und auch a Download Engine übergeben. Beide Downloadlisten prüfen."
+  },
+  "m_d69c84ad2351aa26": {
+    "message": "Browseranmeldungsübergabe nicht bestätigt. Desktopverbindung prüfen und dieselbe Anfrage erneut versuchen."
+  },
+  "m_55e44ceeae345baf": {
+    "message": "Desktop-App konnte Download nicht hinzufügen."
+  },
+  "m_6f841f3073957b4a": {
+    "message": "Desktop-App hat gespeicherten Download nicht bestätigt."
+  },
+  "m_2b3a9305582ef2d1": {
+    "message": "Desktop-App hat Browserwiederherstellung nicht bestätigt. Download Engine aktualisieren und erneut versuchen."
+  },
+  "m_e6c0313fd505b718": {
+    "message": "Desktop-App hat Browserübergabe nicht bestätigt."
+  },
+  "m_bedea1012885305a": {
+    "message": "Desktop-App hat vollständigen gespeicherten Stapel nicht bestätigt. Denselben Stapel erneut versuchen."
+  },
+  "m_390e7750e59f2870": {
+    "message": "Desktop-App hat Videovorschau nicht bestätigt. Download Engine aktualisieren oder erneut versuchen."
+  },
+  "m_1947644923407952": {
+    "message": "Desktop-App hat Videoübersicht nicht bestätigt. Download Engine aktualisieren, dann Übergaben wiederherstellen wählen."
+  },
+  "m_088826a3e5e4e204": {
+    "message": "Desktop-App hat nicht rechtzeitig geantwortet."
+  },
+  "m_bd3ccbbad5af2986": {
+    "message": "Desktop-App gab ungültige Antwort zurück."
+  },
+  "m_535e3e6ab89880c5": {
+    "message": "Erweiterungshintergrund antwortet nicht."
+  },
+  "m_988db6830a99c691": {
+    "message": "Erweiterung antwortet nicht."
+  },
+  "m_306540f92d0513e3": {
+    "message": "Erweiterung antwortet nicht. Tab neu laden und erneut versuchen."
+  },
+  "m_d122305531039ccd": {
+    "message": "Erweiterung antwortet nicht. Dieselbe Anfrage erneut versuchen."
+  },
+  "m_30289712f9fad302": {
+    "message": "Letzter Stapel ohne bestätigte Antwort. Wiederholen sendet denselben Stapel ohne Duplikate. Browser bis zur Klärung offen lassen."
+  },
+  "m_e72a03f673ade934": {
+    "message": "Ursprünglicher Website-Tab geschlossen. Website öffnen und erneut versuchen."
+  },
+  "m_290b216afbebe4b2": {
+    "message": "Seite geändert. Videoschaltfläche erneut anklicken."
+  },
+  "m_110b363e52b4a6d5": {
+    "message": "Seite geändert. Erweiterung erneut öffnen und versuchen."
+  },
+  "m_9ade37e9a32e749d": {
+    "message": "Seite geändert. Erweiterung erneut öffnen."
+  },
+  "m_f314de530158f111": {
+    "message": "Seite lieferte ungültige Linkliste."
+  },
+  "m_26af77d95664e615": {
+    "message": "Limit gespeicherter Websites für Videoschaltflächen erreicht."
+  },
+  "m_91947dba22da73b5": {
+    "message": "Einstellung während der Berechtigungsanfrage geändert."
+  },
+  "m_dbd704dc9a27d238": {
+    "message": "Kein ausstehender Stapel zum Wiederholen."
+  },
+  "m_b418ac2881c78a7a": {
+    "message": "Dieser Stapel wird bereits gesendet."
+  },
+  "m_604518b6a7b13e73": {
+    "message": "Linkauswahl abgelaufen. Seitenlinks erneut mit Erweiterung sammeln."
+  },
+  "m_68fd909eec66f301": {
+    "message": "Anmeldungsanfrage abgelaufen. Vor erneutem Senden die Download-Engine-Warteschlange prüfen."
+  },
+  "m_14204d3bb3d2fc5e": {
+    "message": "Medieneintrag abgelaufen. Erneut abspielen, um ihn zu erkennen."
+  },
+  "m_d5993dba7abddfa4": {
+    "message": "Zu viele Linkdaten auf dieser Seite. Kleinere Seite versuchen."
+  },
+  "m_359c18c81b3a8742": {
+    "message": "Zu viele Videodaten auf dieser Seite. Kleinere Seite versuchen."
+  },
+  "m_601ed5513a7de1ff": {
+    "message": "Grosse Seite. Nur begrenzte Linkauswahl angezeigt; kleinere Seite öffnen, um weitere zu sammeln."
+  },
+  "m_f35a9682d7be0bd2": {
+    "message": "Browseranmeldung dieser Website zu gross. Datei im Browser herunterladen."
+  },
+  "m_a13331f2e442016c": {
+    "message": "Cookies dieser Website können nicht sicher übertragen werden. Datei im Browser herunterladen."
+  },
+  "m_d8b8392e2c542950": {
+    "message": "Erneut versuchen"
+  },
+  "m_baaddf70fb5d432b": {
+    "message": "Typ"
+  },
+  "m_b764cdc0eab71374": {
+    "message": "Unbekannt"
+  },
+  "m_b3744a5c9e3a8a5f": {
+    "message": "Unbekannte Berechtigungseinstellung."
+  },
+  "m_037c426c05970681": {
+    "message": "Unbenannte Seite"
+  },
+  "m_24f3b0891ed85ed6": {
+    "message": "Desktop-App für Seitenlink-Stapel aktualisieren."
+  },
+  "m_239bbb679e8b5ed9": {
+    "message": "Desktop-App vor Aktivierung der automatischen Erfassung aktualisieren."
+  },
+  "m_edfcdbe6f4310523": {
+    "message": "Download-Engine-Desktop-App vor Browseranmeldung aktualisieren."
+  },
+  "m_6ef631778917843c": {
+    "message": "Browseranmeldung verwenden · Download Engine"
+  },
+  "m_a84b376c126bf400": {
+    "message": "Videos suchen wählen oder Erkennung aktivieren und Wiedergabe starten."
+  },
+  "m_a1426ad7784ebbbc": {
+    "message": "Vor dem Hinzufügen eines Streams Qualität über HLS- oder DASH-Vorschau wählen."
+  },
+  "m_244ef0cdc79df596": {
+    "message": "Fortsetzen in der Browser-Downloadliste verwenden; Wiederherstellung konnte pausierte Kopie nicht freigeben."
+  },
+  "m_acfe566ca2e566e7": {
+    "message": "Anmeldung dieser Website verwenden"
+  },
+  "m_69da05b04d99b754": {
+    "message": "Anmeldung dieser Website verwenden (zuerst prüfen)"
+  },
+  "m_d4aa36ffd2cc2537": {
+    "message": "Höchstens {0} Dateitypen verwenden."
+  },
+  "m_850e8821a631dd82": {
+    "message": "Höchstens {0} Websites verwenden."
+  },
+  "m_27eb9ee5a85d401e": {
+    "message": "Verwendet automatische Ordnerregeln in Download-Engine-Einstellungen."
+  },
+  "m_d534be829e32196b": {
+    "message": "Video"
+  },
+  "m_9e745d40aad9b039": {
+    "message": "Videoschaltfläche"
+  },
+  "m_99f89003e6428eab": {
+    "message": "Videoschaltfläche konnte offenen Tab nicht aktualisieren:"
+  },
+  "m_d0113821d8075479": {
+    "message": "Videoschaltfläche auf dieser Website"
+  },
+  "m_c1c069858f0e43e0": {
+    "message": "Videoschaltflächen nur auf normalen Hauptseiten verfügbar."
+  },
+  "m_bf8f3f1e22b98e76": {
+    "message": "Videoschaltflächen für diese Website deaktiviert oder Website-Zugriff fehlt."
+  },
+  "m_b6a9e2a18c985463": {
+    "message": "Videoschaltflächen für diese Website aus."
+  },
+  "m_4fcff88a23263c1d": {
+    "message": "Videoschaltflächen für diese Website an. Anklicken, um verfügbare Videos zu prüfen."
+  },
+  "m_33a6de083bd3b681": {
+    "message": "Videodownloads"
+  },
+  "m_1999f0d064cfbc7c": {
+    "message": "Videodownloads — Download Engine"
+  },
+  "m_74d5e1a5adca3103": {
+    "message": "Videodatei"
+  },
+  "m_d007a137f798c162": {
+    "message": "VIDEODATEIEN"
+  },
+  "m_cfe370de13214b8b": {
+    "message": "Videoübersicht"
+  },
+  "m_c08d78254e705099": {
+    "message": "Videostream"
+  },
+  "m_991cf9db508be663": {
+    "message": "Wartet auf {0}. Downloadlink auf ursprünglicher Seite anklicken, dann in Download Engine prüfen."
+  },
+  "m_487420533636d10c": {
+    "message": "Website-Zugriff nicht gewährt. Medienerkennung bleibt aus."
+  },
+  "m_11fcf7333cfe5a60": {
+    "message": "Windows verschlüsselt diese Kopie für Ihr Konto. Sie gilt nur für diesen Download, maximal 24 Stunden, und wird bei Abschluss oder Entfernen gelöscht. Abmelden im Browser löscht die gespeicherte Kopie nicht."
+  },
+  "extensionName": {
+    "message": "Download-Engine-Integration"
+  },
+  "extensionDescription": {
+    "message": "Dateidownloads übernehmen und Videos für die Desktop-App Download Engine erkennen."
+  }
+}

@@ -1,0 +1,1702 @@
+{
+  "Audio": [
+    "音频",
+    "音訊",
+    "Audio"
+  ],
+  "Video": [
+    "视频",
+    "影片",
+    "Video"
+  ],
+  "Unknown": [
+    "未知",
+    "未知",
+    "Tidak diketahui"
+  ],
+  "Video downloads": [
+    "视频下载",
+    "影片下載",
+    "Muat turun video"
+  ],
+  "Check connection": [
+    "检查连接",
+    "檢查連線",
+    "Semak sambungan"
+  ],
+  "Size unknown": [
+    "大小未知",
+    "大小未知",
+    "Saiz tidak diketahui"
+  ],
+  "Download Engine": [
+    "Download Engine",
+    "Download Engine",
+    "Download Engine"
+  ],
+  "Clear": [
+    "清除",
+    "清除",
+    "Kosongkan"
+  ],
+  "File URL": [
+    "文件链接",
+    "檔案連結",
+    "URL fail"
+  ],
+  "Documents": [
+    "文档",
+    "文件",
+    "Dokumen"
+  ],
+  "Archives": [
+    "压缩文件",
+    "壓縮檔案",
+    "Arkib"
+  ],
+  "Images": [
+    "图片",
+    "圖片",
+    "Imej"
+  ],
+  "All sources": [
+    "所有来源",
+    "所有來源",
+    "Semua sumber"
+  ],
+  "Name": [
+    "名称",
+    "名稱",
+    "Nama"
+  ],
+  "Clear selection": [
+    "清除选择",
+    "清除選取",
+    "Kosongkan pilihan"
+  ],
+  "Queue": [
+    "队列",
+    "佇列",
+    "Giliran"
+  ],
+  "Save to": [
+    "保存到",
+    "儲存至",
+    "Simpan ke"
+  ],
+  "Reload destinations": [
+    "重新加载目标",
+    "重新載入目的地",
+    "Muat semula destinasi"
+  ],
+  "Add selected files": [
+    "添加选定文件",
+    "新增選定檔案",
+    "Tambah fail terpilih"
+  ],
+  "Invalid diagnostic setting.": [
+    "诊断设置无效。",
+    "診斷設定無效。",
+    "Tetapan diagnostik tidak sah."
+  ],
+  "No response from the extension background.": [
+    "扩展后台未响应。",
+    "擴充功能背景未回應。",
+    "Tiada respons daripada latar belakang sambungan."
+  ],
+  "The desktop app did not respond in time.": [
+    "桌面应用未及时响应。",
+    "桌面應用程式未及時回應。",
+    "Aplikasi desktop tidak memberikan respons dalam masa ditetapkan."
+  ],
+  "Media detection is unavailable. Reload the extension to retry.": [
+    "媒体检测不可用。请重新加载扩展后重试。",
+    "媒體偵測無法使用。請重新載入擴充功能後重試。",
+    "Pengesanan media tidak tersedia. Muat semula sambungan untuk mencuba lagi."
+  ],
+  "Recovery access enabled. Click the same file on its webpage, then review it in Download Engine.": [
+    "恢复访问已启用。请在网页上点击相同文件，然后在 Download Engine 中确认。",
+    "復原存取已啟用。請在網頁上點選相同檔案，然後在 Download Engine 中確認。",
+    "Akses pemulihan diaktifkan. Klik fail yang sama pada laman, kemudian semak dalam Download Engine."
+  ],
+  "Download access was not granted. You can still paste a fresh link in Download Engine.": [
+    "未授予下载访问权限。您仍可在 Download Engine 中粘贴新链接。",
+    "未授予下載存取權限。您仍可在 Download Engine 中貼上新連結。",
+    "Akses muat turun tidak diberikan. Anda masih boleh menampal pautan baharu dalam Download Engine."
+  ],
+  "Download access was not granted. Automatic capture stays off.": [
+    "未授予下载访问权限。自动捕获保持关闭。",
+    "未授予下載存取權限。自動擷取保持關閉。",
+    "Akses muat turun tidak diberikan. Tangkapan automatik kekal dimatikan."
+  ],
+  "Website access was not granted. Media detection stays off.": [
+    "未授予网站访问权限。媒体检测保持关闭。",
+    "未授予網站存取權限。媒體偵測保持關閉。",
+    "Akses laman tidak diberikan. Pengesanan media kekal dimatikan."
+  ],
+  "Invalid video button site.": [
+    "视频按钮的网站无效。",
+    "影片按鈕的網站無效。",
+    "Laman butang video tidak sah."
+  ],
+  "Site access was not granted. Allow this site to show video buttons.": [
+    "未授予网站访问权限。请允许此网站以显示视频按钮。",
+    "未授予網站存取權限。請允許此網站以顯示影片按鈕。",
+    "Akses laman tidak diberikan. Benarkan laman ini untuk menunjukkan butang video."
+  ],
+  "Automatic capture is off. If a download is paused, use Resume in the browser Downloads list.": [
+    "自动捕获已关闭。若下载已暂停，请在浏览器下载列表中恢复。",
+    "自動擷取已關閉。若下載已暫停，請在瀏覽器下載清單中繼續。",
+    "Tangkapan automatik dimatikan. Jika muat turun dijeda, gunakan Sambung dalam senarai Muat turun pelayar."
+  ],
+  "Download with Download Engine": [
+    "使用 Download Engine 下载",
+    "使用 Download Engine 下載",
+    "Muat turun dengan Download Engine"
+  ],
+  "Download using browser login…": [
+    "使用浏览器登录下载…",
+    "使用瀏覽器登入下載…",
+    "Muat turun menggunakan log masuk pelayar…"
+  ],
+  "Find videos with Download Engine": [
+    "使用 Download Engine 查找视频",
+    "使用 Download Engine 尋找影片",
+    "Cari video dengan Download Engine"
+  ],
+  "Download links from this page": [
+    "下载此页面的链接",
+    "下載此頁面的連結",
+    "Muat turun pautan dari halaman ini"
+  ],
+  "Invalid automatic capture setting.": [
+    "自动捕获设置无效。",
+    "自動擷取設定無效。",
+    "Tetapan tangkapan automatik tidak sah."
+  ],
+  "Allow download access to enable automatic capture.": [
+    "请允许下载访问以启用自动捕获。",
+    "請允許下載存取以啟用自動擷取。",
+    "Benarkan akses muat turun untuk mengaktifkan tangkapan automatik."
+  ],
+  "Automatic capture stays off. Open Download Engine → Tools → Browser setup, select your browser, and choose Connect browser. Then retry here. ": [
+    "自动捕获保持关闭。打开 Download Engine → 工具 → 浏览器设置，选择浏览器并连接，然后在此重试。 ",
+    "自動擷取保持關閉。開啟 Download Engine → 工具 → 瀏覽器設定，選擇瀏覽器並連接，然後在此重試。 ",
+    "Tangkapan automatik kekal dimatikan. Buka Download Engine → Alat → Persediaan pelayar, pilih pelayar dan sambungkan. Kemudian cuba di sini. "
+  ],
+  "Update the Download Engine desktop app before enabling automatic capture.": [
+    "启用自动捕获前请更新 Download Engine 桌面应用。",
+    "啟用自動擷取前請更新 Download Engine 桌面應用程式。",
+    "Kemas kini aplikasi desktop Download Engine sebelum mengaktifkan tangkapan automatik."
+  ],
+  "Download access changed. Enable automatic capture again when ready.": [
+    "下载访问权限已更改。准备好后请重新启用自动捕获。",
+    "下載存取權限已變更。準備好後請重新啟用自動擷取。",
+    "Akses muat turun berubah. Aktifkan semula tangkapan automatik apabila sedia."
+  ],
+  "Automatic capture is on for direct file downloads.": [
+    "文件直链的自动捕获已开启。",
+    "檔案直接連結的自動擷取已開啟。",
+    "Tangkapan automatik dihidupkan untuk muat turun fail terus."
+  ],
+  "Automatic capture is off.": [
+    "自动捕获已关闭。",
+    "自動擷取已關閉。",
+    "Tangkapan automatik dimatikan."
+  ],
+  "Pending reviews and downloads recovered. Browser handoffs checked.": [
+    "待确认项目和下载已恢复。已检查浏览器交接。",
+    "待確認項目和下載已復原。已檢查瀏覽器交接。",
+    "Semakan dan muat turun tertunda dipulihkan. Penyerahan pelayar disemak."
+  ],
+  "Recovery checked. See the browser Downloads list for any paused files.": [
+    "恢复检查完成。暂停的文件请查看浏览器下载列表。",
+    "復原檢查完成。暫停的檔案請查看瀏覽器下載清單。",
+    "Pemulihan disemak. Lihat senarai Muat turun pelayar untuk fail dijeda."
+  ],
+  "Browser login requires HTTPS. Open a secure direct file link.": [
+    "浏览器登录需要 HTTPS。请打开安全的文件直链。",
+    "瀏覽器登入需要 HTTPS。請開啟安全的檔案直接連結。",
+    "Log masuk pelayar memerlukan HTTPS. Buka pautan fail terus yang selamat."
+  ],
+  "The browser copy finished or continued during cancellation": [
+    "取消期间浏览器副本已完成或继续",
+    "取消期間瀏覽器副本已完成或繼續",
+    "Salinan pelayar selesai atau diteruskan semasa pembatalan"
+  ],
+  "Download sent to Download Engine.": [
+    "下载已发送到 Download Engine。",
+    "下載已傳送至 Download Engine。",
+    "Muat turun dihantar ke Download Engine."
+  ],
+  "Download Engine has this file in its queue, but the browser copy could not be stopped. Check both download lists.": [
+    "Download Engine 已将文件加入队列，但无法停止浏览器副本。请检查两个下载列表。",
+    "Download Engine 已將檔案加入佇列，但無法停止瀏覽器副本。請檢查兩個下載清單。",
+    "Download Engine mempunyai fail dalam gilirannya, tetapi salinan pelayar tidak dapat dihentikan. Semak kedua-dua senarai muat turun."
+  ],
+  "The app did not confirm the handoff. The browser download was kept; check Download Engine too if a copy appears there.": [
+    "应用未确认交接。已保留浏览器下载；若 Download Engine 中也出现副本，请一并检查。",
+    "應用程式未確認交接。已保留瀏覽器下載；若 Download Engine 中也出現副本，請一併檢查。",
+    "Aplikasi tidak mengesahkan penyerahan. Muat turun pelayar dikekalkan; semak Download Engine juga jika salinan muncul di sana."
+  ],
+  "The browser download was kept, and Download Engine also received it. Check both download lists.": [
+    "下载保留在浏览器中，Download Engine 也已收到。请检查两个下载列表。",
+    "下載保留在瀏覽器中，Download Engine 也已收到。請檢查兩個下載清單。",
+    "Muat turun dikekalkan dalam pelayar dan Download Engine turut menerimanya. Semak kedua-dua senarai."
+  ],
+  "Download kept in the browser.": [
+    "下载保留在浏览器中。",
+    "下載保留在瀏覽器中。",
+    "Muat turun dikekalkan dalam pelayar."
+  ],
+  "Download kept in the browser: ": [
+    "下载保留在浏览器中：",
+    "下載保留在瀏覽器中：",
+    "Muat turun dikekalkan dalam pelayar: "
+  ],
+  "Could not resume the browser download. Use Resume in the browser Downloads list. ": [
+    "无法恢复浏览器下载。请在浏览器下载列表中恢复。 ",
+    "無法繼續瀏覽器下載。請在瀏覽器下載清單中繼續。 ",
+    "Tidak dapat menyambung muat turun pelayar. Gunakan Sambung dalam senarai Muat turun pelayar. "
+  ],
+  "Automatic capture could not start: ": [
+    "自动捕获无法启动：",
+    "自動擷取無法啟動：",
+    "Tangkapan automatik tidak dapat dimulakan: "
+  ],
+  "Interrupted handoff recovered; download kept in the browser.": [
+    "中断的交接已恢复；下载保留在浏览器中。",
+    "中斷的交接已復原；下載保留在瀏覽器中。",
+    "Penyerahan terganggu dipulihkan; muat turun dikekalkan dalam pelayar."
+  ],
+  "A handoff needs attention. Use Resume in the browser Downloads list if it is paused. ": [
+    "交接需要处理。若已暂停，请在浏览器下载列表中恢复。 ",
+    "交接需要處理。若已暫停，請在瀏覽器下載清單中繼續。 ",
+    "Penyerahan memerlukan perhatian. Gunakan Sambung dalam senarai Muat turun pelayar jika dijeda. "
+  ],
+  "Enter a complete HTTP or HTTPS file URL.": [
+    "请输入完整的 HTTP 或 HTTPS 文件链接。",
+    "請輸入完整的 HTTP 或 HTTPS 檔案連結。",
+    "Masukkan URL fail HTTP atau HTTPS yang lengkap."
+  ],
+  "Only HTTP/HTTPS links without embedded login details are supported.": [
+    "仅支持不含嵌入登录信息的 HTTP/HTTPS 链接。",
+    "僅支援不含內嵌登入資訊的 HTTP/HTTPS 連結。",
+    "Hanya pautan HTTP/HTTPS tanpa butiran log masuk terbenam disokong."
+  ],
+  "Invalid request identifier.": [
+    "请求标识符无效。",
+    "要求識別碼無效。",
+    "Pengecam permintaan tidak sah."
+  ],
+  "The desktop app returned an invalid response.": [
+    "桌面应用返回了无效响应。",
+    "桌面應用程式傳回無效回應。",
+    "Aplikasi desktop memberikan respons tidak sah."
+  ],
+  "The desktop app could not add this download.": [
+    "桌面应用无法添加此下载。",
+    "桌面應用程式無法新增此下載。",
+    "Aplikasi desktop tidak dapat menambah muat turun ini."
+  ],
+  "The desktop app did not confirm the complete saved batch. Retry this same batch.": [
+    "桌面应用未确认完整保存的批次。请重试同一批次。",
+    "桌面應用程式未確認完整儲存的批次。請重試同一批次。",
+    "Aplikasi desktop tidak mengesahkan keseluruhan kelompok tersimpan. Cuba semula kelompok yang sama."
+  ],
+  "Update the desktop app to use page-link batches.": [
+    "请更新桌面应用以使用页面链接批次。",
+    "請更新桌面應用程式以使用頁面連結批次。",
+    "Kemas kini aplikasi desktop untuk menggunakan kelompok pautan halaman."
+  ],
+  "The desktop app did not confirm a saved download.": [
+    "桌面应用未确认下载已保存。",
+    "桌面應用程式未確認下載已儲存。",
+    "Aplikasi desktop tidak mengesahkan muat turun tersimpan."
+  ],
+  "The desktop app did not confirm the video preview. Update Download Engine or retry.": [
+    "桌面应用未确认视频预览。请更新 Download Engine 或重试。",
+    "桌面應用程式未確認影片預覽。請更新 Download Engine 或重試。",
+    "Aplikasi desktop tidak mengesahkan pratonton video. Kemas kini Download Engine atau cuba lagi."
+  ],
+  "The desktop app did not confirm the video review. Update Download Engine, then use Recover handoffs.": [
+    "桌面应用未确认视频确认请求。请更新 Download Engine，再使用恢复交接。",
+    "桌面應用程式未確認影片確認要求。請更新 Download Engine，再使用復原交接。",
+    "Aplikasi desktop tidak mengesahkan semakan video. Kemas kini Download Engine, kemudian gunakan Pulihkan penyerahan."
+  ],
+  "The desktop app did not confirm the browser handoff.": [
+    "桌面应用未确认浏览器交接。",
+    "桌面應用程式未確認瀏覽器交接。",
+    "Aplikasi desktop tidak mengesahkan penyerahan pelayar."
+  ],
+  "The desktop app did not confirm browser recovery. Update Download Engine and retry.": [
+    "桌面应用未确认浏览器恢复。请更新 Download Engine 后重试。",
+    "桌面應用程式未確認瀏覽器復原。請更新 Download Engine 後重試。",
+    "Aplikasi desktop tidak mengesahkan pemulihan pelayar. Kemas kini Download Engine dan cuba lagi."
+  ],
+  "The app could not confirm cancellation. The browser copy was kept; check the app before retrying.": [
+    "应用无法确认取消。浏览器副本已保留；重试前请检查应用。",
+    "應用程式無法確認取消。瀏覽器副本已保留；重試前請檢查應用程式。",
+    "Aplikasi tidak dapat mengesahkan pembatalan. Salinan pelayar dikekalkan; semak aplikasi sebelum mencuba lagi."
+  ],
+  "Recovery cancelled. The download stays in the browser.": [
+    "恢复已取消。下载保留在浏览器中。",
+    "復原已取消。下載保留在瀏覽器中。",
+    "Pemulihan dibatalkan. Muat turun kekal dalam pelayar."
+  ],
+  "Browser copy continued": [
+    "浏览器副本已继续",
+    "瀏覽器副本已繼續",
+    "Salinan pelayar diteruskan"
+  ],
+  "Existing download updated in Download Engine.": [
+    "Download Engine 中的现有下载已更新。",
+    "Download Engine 中的現有下載已更新。",
+    "Muat turun sedia ada dikemas kini dalam Download Engine."
+  ],
+  "Download Engine updated the existing download. The browser copy also remains; check both download lists.": [
+    "Download Engine 已更新现有下载。浏览器副本仍保留；请检查两个下载列表。",
+    "Download Engine 已更新現有下載。瀏覽器副本仍保留；請檢查兩個下載清單。",
+    "Download Engine mengemas kini muat turun sedia ada. Salinan pelayar juga kekal; semak kedua-dua senarai."
+  ],
+  "A fresh link is already awaiting review in Download Engine.": [
+    "已有新链接在 Download Engine 中等待确认。",
+    "已有新連結在 Download Engine 中等候確認。",
+    "Pautan baharu sudah menunggu semakan dalam Download Engine."
+  ],
+  "The browser could not pause this download": [
+    "浏览器无法暂停此下载",
+    "瀏覽器無法暫停此下載",
+    "Pelayar tidak dapat menjeda muat turun ini"
+  ],
+  "The app did not confirm the fresh link": [
+    "应用未确认新链接",
+    "應用程式未確認新連結",
+    "Aplikasi tidak mengesahkan pautan baharu"
+  ],
+  "Fresh link found. Review the saved-data check in Download Engine, then confirm resuming.": [
+    "已找到新链接。请在 Download Engine 中检查已保存数据的核对结果，再确认恢复。",
+    "已找到新連結。請在 Download Engine 中檢查已儲存資料的核對結果，再確認繼續。",
+    "Pautan baharu ditemui. Semak pengesahan data tersimpan dalam Download Engine, kemudian sahkan sambungan semula."
+  ],
+  "Recovery stopped: ": [
+    "恢复已停止：",
+    "復原已停止：",
+    "Pemulihan dihentikan: "
+  ],
+  "Use Resume in the browser Downloads list; recovery could not release its paused copy.": [
+    "恢复无法释放暂停的副本。请在浏览器下载列表中恢复。",
+    "復原無法釋放暫停的副本。請在瀏覽器下載清單中繼續。",
+    "Gunakan Sambung dalam senarai Muat turun pelayar; pemulihan tidak dapat melepaskan salinan dijeda."
+  ],
+  "Recovery could not start: ": [
+    "恢复无法启动：",
+    "復原無法啟動：",
+    "Pemulihan tidak dapat dimulakan: "
+  ],
+  "Interrupted recovery released to the browser.": [
+    "中断的恢复已释放回浏览器。",
+    "中斷的復原已釋放回瀏覽器。",
+    "Pemulihan terganggu dilepaskan kepada pelayar."
+  ],
+  "Recovery needs attention. Use Resume in the browser Downloads list if necessary. ": [
+    "恢复需要处理。如有需要，请在浏览器下载列表中恢复。 ",
+    "復原需要處理。如有需要，請在瀏覽器下載清單中繼續。 ",
+    "Pemulihan memerlukan perhatian. Gunakan Sambung dalam senarai Muat turun pelayar jika perlu. "
+  ],
+  "Document": [
+    "文档",
+    "文件",
+    "Dokumen"
+  ],
+  "Archive": [
+    "压缩文件",
+    "壓縮檔案",
+    "Arkib"
+  ],
+  "Program": [
+    "程序",
+    "程式",
+    "Program"
+  ],
+  "Image": [
+    "图片",
+    "圖片",
+    "Imej"
+  ],
+  "The extension did not respond. Reload this tab to try again.": [
+    "扩展未响应。重新加载此标签页后重试。",
+    "擴充功能未回應。重新載入此分頁後重試。",
+    "Sambungan tidak memberikan respons. Muat semula tab ini untuk mencuba lagi."
+  ],
+  "Added to queue": [
+    "已加入队列",
+    "已加入佇列",
+    "Ditambah ke giliran"
+  ],
+  "Sending…": [
+    "正在发送…",
+    "正在傳送…",
+    "Menghantar…"
+  ],
+  "Retry same batch": [
+    "重试同一批次",
+    "重試同一批次",
+    "Cuba semula kelompok sama"
+  ],
+  "Add {0} file{1}": [
+    "添加文件：{0}{1}",
+    "新增檔案：{0}{1}",
+    "Tambah fail: {0}{1}"
+  ],
+  "{0}–{1} of {2}": [
+    "{0}–{1} / {2}",
+    "{0}–{1} / {2}",
+    "{0}–{1} daripada {2}"
+  ],
+  "No matching files": [
+    "没有匹配的文件",
+    "沒有相符的檔案",
+    "Tiada fail sepadan"
+  ],
+  "Select ": [
+    "选择 ",
+    "選取 ",
+    "Pilih "
+  ],
+  "Preview DASH": [
+    "预览 DASH",
+    "預覽 DASH",
+    "Pratonton DASH"
+  ],
+  "Preview HLS": [
+    "预览 HLS",
+    "預覽 HLS",
+    "Pratonton HLS"
+  ],
+  "Page link": [
+    "页面链接",
+    "頁面連結",
+    "Pautan halaman"
+  ],
+  "Page asset": [
+    "页面资源",
+    "頁面資源",
+    "Aset halaman"
+  ],
+  "Network media": [
+    "网络媒体",
+    "網路媒體",
+    "Media rangkaian"
+  ],
+  "Reported file size": [
+    "报告的文件大小",
+    "回報的檔案大小",
+    "Saiz fail dilaporkan"
+  ],
+  "Size not available from this page": [
+    "此页面未提供大小",
+    "此頁面未提供大小",
+    "Saiz tidak tersedia daripada halaman ini"
+  ],
+  "Uses the automatic folder rules in Download Engine Settings.": [
+    "使用 Download Engine 设置中的自动文件夹规则。",
+    "使用 Download Engine 設定中的自動資料夾規則。",
+    "Menggunakan peraturan folder automatik dalam Tetapan Download Engine."
+  ],
+  "Folders are managed in Download Engine Settings.": [
+    "文件夹在 Download Engine 设置中管理。",
+    "資料夾在 Download Engine 設定中管理。",
+    "Folder diurus dalam Tetapan Download Engine."
+  ],
+  "Video downloads — Download Engine": [
+    "视频下载 — Download Engine",
+    "影片下載 — Download Engine",
+    "Muat turun video — Download Engine"
+  ],
+  "VIDEO FILES": [
+    "视频文件",
+    "影片檔案",
+    "FAIL VIDEO"
+  ],
+  "Select direct video files, or preview an HLS / DASH stream to choose quality and audio in Download Engine.": [
+    "选择视频直链，或预览 HLS / DASH 流以在 Download Engine 中选择画质和音轨。",
+    "選擇影片直接連結，或預覽 HLS / DASH 串流以在 Download Engine 中選擇畫質和音軌。",
+    "Pilih fail video terus atau pratonton strim HLS / DASH untuk memilih kualiti dan audio dalam Download Engine."
+  ],
+  "Page links · Download Engine": [
+    "页面链接 · Download Engine",
+    "頁面連結 · Download Engine",
+    "Pautan halaman · Download Engine"
+  ],
+  "Choose what to download": [
+    "选择下载内容",
+    "選擇下載內容",
+    "Pilih kandungan untuk dimuat turun"
+  ],
+  "PAGE LINKS": [
+    "页面链接",
+    "頁面連結",
+    "PAUTAN HALAMAN"
+  ],
+  "Review the links and assets on this page, then add the files you want to your queue.": [
+    "确认此页面上的链接和资源，然后将所需文件加入队列。",
+    "確認此頁面上的連結和資源，然後將所需檔案加入佇列。",
+    "Semak pautan dan aset pada halaman ini, kemudian tambah fail yang dikehendaki ke giliran."
+  ],
+  "Untitled page": [
+    "无标题页面",
+    "無標題頁面",
+    "Halaman tanpa tajuk"
+  ],
+  "This page is large. Showing a limited set of links; open a smaller page to collect more.": [
+    "此页面较大，仅显示有限链接。打开较小页面可收集更多链接。",
+    "此頁面較大，僅顯示有限連結。開啟較小頁面可收集更多連結。",
+    "Halaman ini besar. Set pautan terhad dipaparkan; buka halaman lebih kecil untuk mengumpulkan lebih banyak."
+  ],
+  "{0} unique HTTP/HTTPS links found. Nothing is selected automatically.": [
+    "找到 {0} 个不重复的 HTTP/HTTPS 链接。不会自动选择任何项目。",
+    "找到 {0} 個不重複的 HTTP/HTTPS 連結。不會自動選取任何項目。",
+    "{0} pautan HTTP/HTTPS unik ditemui. Tiada pilihan dibuat secara automatik."
+  ],
+  "Original queue": [
+    "原队列",
+    "原佇列",
+    "Giliran asal"
+  ],
+  "Original destination": [
+    "原目标",
+    "原目的地",
+    "Destinasi asal"
+  ],
+  "The last batch has no confirmed reply. Retry sends the same batch and will not add it twice. Keep the browser open until resolved.": [
+    "上一批次没有确认回复。重试会发送同一批次，不会重复添加。解决前请保持浏览器打开。",
+    "上一批次沒有確認回覆。重試會傳送同一批次，不會重複新增。解決前請保持瀏覽器開啟。",
+    "Kelompok terakhir belum disahkan. Cubaan semula menghantar kelompok sama tanpa pendua. Biarkan pelayar terbuka sehingga selesai."
+  ],
+  "Select the files you want to add.": [
+    "选择要添加的文件。",
+    "選擇要新增的檔案。",
+    "Pilih fail untuk ditambah."
+  ],
+  "Checking the original batch…": [
+    "正在检查原批次…",
+    "正在檢查原批次…",
+    "Menyemak kelompok asal…"
+  ],
+  "Saving the selected files…": [
+    "正在保存选定文件…",
+    "正在儲存選定檔案…",
+    "Menyimpan fail terpilih…"
+  ],
+  "The extension did not respond.": [
+    "扩展未响应。",
+    "擴充功能未回應。",
+    "Sambungan tidak memberikan respons."
+  ],
+  "Site access was not granted. No login was sent.": [
+    "未授予网站访问权限。未发送登录信息。",
+    "未授予網站存取權限。未傳送登入資訊。",
+    "Akses laman tidak diberikan. Tiada log masuk dihantar."
+  ],
+  "The extension did not respond. Retry this same request.": [
+    "扩展未响应。请重试同一请求。",
+    "擴充功能未回應。請重試同一要求。",
+    "Sambungan tidak memberikan respons. Cuba semula permintaan yang sama."
+  ],
+  "Added to Download Engine": [
+    "已添加到 Download Engine",
+    "已新增至 Download Engine",
+    "Ditambah ke Download Engine"
+  ],
+  "Browser login could not be sent. Check site access and the desktop connection.": [
+    "无法发送浏览器登录信息。请检查网站访问权限和桌面连接。",
+    "無法傳送瀏覽器登入資訊。請檢查網站存取權限和桌面連線。",
+    "Log masuk pelayar tidak dapat dihantar. Semak akses laman dan sambungan desktop."
+  ],
+  "Site permission could not be removed.": [
+    "无法移除网站权限。",
+    "無法移除網站權限。",
+    "Kebenaran laman tidak dapat dibuang."
+  ],
+  "Site access removed. Existing downloads keep their encrypted snapshot until you remove it in Download Engine.": [
+    "网站访问权限已移除。现有下载会保留加密快照，直到您在 Download Engine 中删除。",
+    "網站存取權限已移除。現有下載會保留加密快照，直到您在 Download Engine 中刪除。",
+    "Akses laman dibuang. Muat turun sedia ada mengekalkan snapshot disulitkan sehingga dibuang dalam Download Engine."
+  ],
+  "Could not remove site access. Use the browser's extension settings.": [
+    "无法移除网站访问权限。请使用浏览器扩展设置。",
+    "無法移除網站存取權限。請使用瀏覽器擴充功能設定。",
+    "Tidak dapat membuang akses laman. Gunakan tetapan sambungan pelayar."
+  ],
+  "Media discovery could not update its list. Turn detection off and on to retry.": [
+    "媒体发现无法更新列表。请关闭并重新开启检测后重试。",
+    "媒體探索無法更新清單。請關閉並重新開啟偵測後重試。",
+    "Penemuan media tidak dapat mengemas kini senarai. Matikan dan hidupkan pengesanan untuk mencuba lagi."
+  ],
+  "Invalid media detection setting.": [
+    "媒体检测设置无效。",
+    "媒體偵測設定無效。",
+    "Tetapan pengesanan media tidak sah."
+  ],
+  "Allow media detection and website access to watch media requests.": [
+    "允许媒体检测和网站访问以监测媒体请求。",
+    "允許媒體偵測和網站存取以監測媒體要求。",
+    "Benarkan pengesanan media dan akses laman untuk memerhatikan permintaan media."
+  ],
+  "Media detection access changed. Enable it again when ready.": [
+    "媒体检测访问权限已更改。准备好后请重新启用。",
+    "媒體偵測存取權限已變更。準備好後請重新啟用。",
+    "Akses pengesanan media berubah. Aktifkan semula apabila sedia."
+  ],
+  "Media detection is on. Start playback or reload the page.": [
+    "媒体检测已开启。开始播放或重新加载页面。",
+    "媒體偵測已開啟。開始播放或重新載入頁面。",
+    "Pengesanan media dihidupkan. Mulakan main balik atau muat semula halaman."
+  ],
+  "Media detection is off. Its list has been cleared.": [
+    "媒体检测已关闭。列表已清空。",
+    "媒體偵測已關閉。清單已清空。",
+    "Pengesanan media dimatikan. Senarainya dikosongkan."
+  ],
+  "Media on this page": [
+    "此页面的媒体",
+    "此頁面的媒體",
+    "Media pada halaman ini"
+  ],
+  "The page changed. Reopen the extension.": [
+    "页面已更改。请重新打开扩展。",
+    "頁面已變更。請重新開啟擴充功能。",
+    "Halaman berubah. Buka semula sambungan."
+  ],
+  "Media list cleared. New playback requests can appear again.": [
+    "媒体列表已清空。新的播放请求会再次出现。",
+    "媒體清單已清空。新的播放要求會再次出現。",
+    "Senarai media dikosongkan. Permintaan main balik baharu boleh muncul lagi."
+  ],
+  "This media item expired. Play it again to detect it.": [
+    "此媒体项已过期。重新播放以再次检测。",
+    "此媒體項目已過期。重新播放以再次偵測。",
+    "Item media ini tamat tempoh. Mainkan semula untuk dikesan."
+  ],
+  "Unknown permission setting.": [
+    "未知的权限设置。",
+    "未知的權限設定。",
+    "Tetapan kebenaran tidak diketahui."
+  ],
+  "Finish the open permission request before changing another setting.": [
+    "请先完成当前权限请求，再更改其他设置。",
+    "請先完成目前權限要求，再變更其他設定。",
+    "Selesaikan permintaan kebenaran terbuka sebelum menukar tetapan lain."
+  ],
+  "Reopen the extension and try again.": [
+    "请重新打开扩展后重试。",
+    "請重新開啟擴充功能後重試。",
+    "Buka semula sambungan dan cuba lagi."
+  ],
+  "The setting changed while permission was being requested.": [
+    "请求权限期间设置已更改。",
+    "要求權限期間設定已變更。",
+    "Tetapan berubah semasa kebenaran diminta."
+  ],
+  "Could not return to the extension popup:": [
+    "无法返回扩展弹出窗口：",
+    "無法返回擴充功能彈出視窗：",
+    "Tidak dapat kembali ke pop timbul sambungan:"
+  ],
+  "Waiting for {0}. Click its download link on the original page, then review it in Download Engine.": [
+    "等待 {0}。请在原页面点击下载链接，然后在 Download Engine 中确认。",
+    "等候 {0}。請在原頁面點選下載連結，然後在 Download Engine 中確認。",
+    "Menunggu {0}. Klik pautan muat turunnya pada halaman asal, kemudian semak dalam Download Engine."
+  ],
+  "Allow download access to find a fresh link for {0}. Automatic capture can stay off.": [
+    "允许下载访问以查找 {0} 的新链接。自动捕获可以保持关闭。",
+    "允許下載存取以尋找 {0} 的新連結。自動擷取可以保持關閉。",
+    "Benarkan akses muat turun untuk mencari pautan baharu bagi {0}. Tangkapan automatik boleh kekal dimatikan."
+  ],
+  "Reload the Download Engine extension to finish updating it.": [
+    "请重新加载 Download Engine 扩展以完成更新。",
+    "請重新載入 Download Engine 擴充功能以完成更新。",
+    "Muat semula sambungan Download Engine untuk melengkapkan kemas kini."
+  ],
+  "The extension background did not respond.": [
+    "扩展后台未响应。",
+    "擴充功能背景未回應。",
+    "Latar belakang sambungan tidak memberikan respons."
+  ],
+  "Checking…": [
+    "正在检查…",
+    "正在檢查…",
+    "Menyemak…"
+  ],
+  "Connecting to Download Engine…": [
+    "正在连接 Download Engine…",
+    "正在連接 Download Engine…",
+    "Menyambung ke Download Engine…"
+  ],
+  "On by default. Open a website to change its setting.": [
+    "默认开启。打开网站以更改其设置。",
+    "預設開啟。開啟網站以變更其設定。",
+    "Dihidupkan secara lalai. Buka laman untuk menukar tetapannya."
+  ],
+  "Off for this site. Your choice is saved.": [
+    "此网站已关闭。您的选择已保存。",
+    "此網站已關閉。您的選擇已儲存。",
+    "Dimatikan untuk laman ini. Pilihan anda disimpan."
+  ],
+  "On by default. Turn off to hide video buttons on this site.": [
+    "默认开启。关闭可隐藏此网站的视频按钮。",
+    "預設開啟。關閉可隱藏此網站的影片按鈕。",
+    "Dihidupkan secara lalai. Matikan untuk menyembunyikan butang video pada laman ini."
+  ],
+  "On by default. Allow this site to show video buttons.": [
+    "默认开启。允许此网站以显示视频按钮。",
+    "預設開啟。允許此網站以顯示影片按鈕。",
+    "Dihidupkan secara lalai. Benarkan laman ini untuk menunjukkan butang video."
+  ],
+  "Review ↗": [
+    "确认 ↗",
+    "確認 ↗",
+    "Semak ↗"
+  ],
+  "Choose quality in app": [
+    "在应用中选择画质",
+    "在應用程式中選擇畫質",
+    "Pilih kualiti dalam aplikasi"
+  ],
+  "Review ": [
+    "确认 ",
+    "確認 ",
+    "Semak "
+  ],
+  "Detection is on. Play media to update this list.": [
+    "检测已开启。播放媒体可更新此列表。",
+    "偵測已開啟。播放媒體可更新此清單。",
+    "Pengesanan dihidupkan. Mainkan media untuk mengemas kini senarai."
+  ],
+  "Enable detection with website access. Does not use your login.": [
+    "启用检测并允许网站访问。不会使用登录信息。",
+    "啟用偵測並允許網站存取。不會使用登入資訊。",
+    "Aktifkan pengesanan dengan akses laman. Tidak menggunakan log masuk anda."
+  ],
+  "Start playback with detection on, or use Find videos to scan this page.": [
+    "启用检测后开始播放，或使用查找视频扫描此页面。",
+    "啟用偵測後開始播放，或使用尋找影片掃描此頁面。",
+    "Mulakan main balik dengan pengesanan aktif, atau gunakan Cari video untuk mengimbas halaman ini."
+  ],
+  "Open a regular web page to find its media.": [
+    "请打开普通网页以查找媒体。",
+    "請開啟一般網頁以尋找媒體。",
+    "Buka halaman web biasa untuk mencari medianya."
+  ],
+  "Diagnostic log is unavailable. Reload the extension.": [
+    "诊断日志不可用。请重新加载扩展。",
+    "診斷記錄無法使用。請重新載入擴充功能。",
+    "Log diagnostik tidak tersedia. Muat semula sambungan."
+  ],
+  "Automatic capture": [
+    "自动捕获",
+    "自動擷取",
+    "Tangkapan automatik"
+  ],
+  "Media detection": [
+    "媒体检测",
+    "媒體偵測",
+    "Pengesanan media"
+  ],
+  "Video button": [
+    "视频按钮",
+    "影片按鈕",
+    "Butang video"
+  ],
+  "Connection check": [
+    "连接检查",
+    "連線檢查",
+    "Semakan sambungan"
+  ],
+  "Video review": [
+    "视频确认",
+    "影片確認",
+    "Semakan video"
+  ],
+  "Link recovery": [
+    "链接恢复",
+    "連結復原",
+    "Pemulihan pautan"
+  ],
+  "Setting": [
+    "设置",
+    "設定",
+    "Tetapan"
+  ],
+  "No activity recorded yet.": [
+    "尚无活动记录。",
+    "尚無活動記錄。",
+    "Belum ada aktiviti direkodkan."
+  ],
+  "Open a browser tab and reopen Download Engine.": [
+    "请打开浏览器标签页并重新打开 Download Engine。",
+    "請開啟瀏覽器分頁並重新開啟 Download Engine。",
+    "Buka tab pelayar dan buka semula Download Engine."
+  ],
+  "Open a regular web page to configure its video button.": [
+    "打开普通网页以设置视频按钮。",
+    "開啟一般網頁以設定影片按鈕。",
+    "Buka halaman web biasa untuk menetapkan butang videonya."
+  ],
+  "Video button could not update an open tab:": [
+    "视频按钮无法更新已打开的标签页：",
+    "影片按鈕無法更新已開啟的分頁：",
+    "Butang video tidak dapat mengemas kini tab terbuka:"
+  ],
+  "Invalid video button setting.": [
+    "视频按钮设置无效。",
+    "影片按鈕設定無效。",
+    "Tetapan butang video tidak sah."
+  ],
+  "The page changed. Reopen the extension and try again.": [
+    "页面已更改。请重新打开扩展后重试。",
+    "頁面已變更。請重新開啟擴充功能後重試。",
+    "Halaman berubah. Buka semula sambungan dan cuba lagi."
+  ],
+  "Allow this site's access to show its video button.": [
+    "请允许此网站访问以显示视频按钮。",
+    "請允許此網站存取以顯示影片按鈕。",
+    "Benarkan akses laman ini untuk menunjukkan butang videonya."
+  ],
+  "The saved video-button site limit has been reached.": [
+    "已达到视频按钮保存网站数量上限。",
+    "已達到影片按鈕儲存網站數量上限。",
+    "Had laman butang video tersimpan telah dicapai."
+  ],
+  "Video buttons are on for this site. Click a button to review available videos.": [
+    "此网站的视频按钮已开启。点击按钮可确认可用视频。",
+    "此網站的影片按鈕已開啟。點選按鈕可確認可用影片。",
+    "Butang video dihidupkan untuk laman ini. Klik butang untuk menyemak video tersedia."
+  ],
+  "Video buttons are off for this site.": [
+    "此网站的视频按钮已关闭。",
+    "此網站的影片按鈕已關閉。",
+    "Butang video dimatikan untuk laman ini."
+  ],
+  "Video buttons are available in regular top-level pages only.": [
+    "视频按钮仅在普通顶层页面可用。",
+    "影片按鈕僅在一般頂層頁面可用。",
+    "Butang video hanya tersedia pada halaman biasa peringkat atas."
+  ],
+  "Video buttons are disabled for this site or website access is missing.": [
+    "此网站的视频按钮已禁用或缺少网站访问权限。",
+    "此網站的影片按鈕已停用或缺少網站存取權限。",
+    "Butang video dimatikan untuk laman ini atau akses laman tiada."
+  ],
+  "The page changed. Click its video button again.": [
+    "页面已更改。请再次点击视频按钮。",
+    "頁面已變更。請再次點選影片按鈕。",
+    "Halaman berubah. Klik butang videonya semula."
+  ],
+  "A video review is already opening.": [
+    "视频确认窗口已在打开中。",
+    "影片確認視窗已在開啟中。",
+    "Semakan video sedang dibuka."
+  ],
+  "Download video": [
+    "下载视频",
+    "下載影片",
+    "Muat turun video"
+  ],
+  "Choose video files and stream quality in Download Engine": [
+    "在 Download Engine 中选择视频文件和流媒体画质",
+    "在 Download Engine 中選擇影片檔案和串流畫質",
+    "Pilih fail video dan kualiti strim dalam Download Engine"
+  ],
+  "Download video with Download Engine — review first": [
+    "使用 Download Engine 下载视频 — 先确认",
+    "使用 Download Engine 下載影片 — 先確認",
+    "Muat turun video dengan Download Engine — semak dahulu"
+  ],
+  "Opening…": [
+    "正在打开…",
+    "正在開啟…",
+    "Membuka…"
+  ],
+  "Opening video review in Download Engine": [
+    "正在 Download Engine 中打开视频确认",
+    "正在 Download Engine 中開啟影片確認",
+    "Membuka semakan video dalam Download Engine"
+  ],
+  "Open the Download Engine extension and try again.": [
+    "请打开 Download Engine 扩展后重试。",
+    "請開啟 Download Engine 擴充功能後重試。",
+    "Buka sambungan Download Engine dan cuba lagi."
+  ],
+  "Opened in app": [
+    "已在应用中打开",
+    "已在應用程式中開啟",
+    "Dibuka dalam aplikasi"
+  ],
+  "Review the video in Download Engine": [
+    "在 Download Engine 中确认视频",
+    "在 Download Engine 中確認影片",
+    "Semak video dalam Download Engine"
+  ],
+  "Try again": [
+    "重试",
+    "重試",
+    "Cuba lagi"
+  ],
+  "Recover existing download": [
+    "恢复现有下载",
+    "復原現有下載",
+    "Pulihkan muat turun sedia ada"
+  ],
+  "Allow recovery access": [
+    "允许恢复访问",
+    "允許復原存取",
+    "Benarkan akses pemulihan"
+  ],
+  "Automatic download capture": [
+    "自动捕获下载",
+    "自動擷取下載",
+    "Tangkapan muat turun automatik"
+  ],
+  "Detect media while browsing": [
+    "浏览时检测媒体",
+    "瀏覽時偵測媒體",
+    "Kesan media semasa melayari"
+  ],
+  "Off by default. Enable to find video and audio requests as you browse.": [
+    "默认关闭。启用后可在浏览时查找音视频请求。",
+    "預設關閉。啟用後可在瀏覽時尋找影音要求。",
+    "Dimatikan secara lalai. Aktifkan untuk mencari permintaan video dan audio semasa melayari."
+  ],
+  "Use Find videos to scan this page, or enable detection and start playback.": [
+    "使用查找视频扫描此页面，或启用检测并开始播放。",
+    "使用尋找影片掃描此頁面，或啟用偵測並開始播放。",
+    "Gunakan Cari video untuk mengimbas halaman ini atau aktifkan pengesanan dan mulakan main balik."
+  ],
+  "Find videos on this page": [
+    "查找此页面的视频",
+    "尋找此頁面的影片",
+    "Cari video pada halaman ini"
+  ],
+  "Choose files from this page": [
+    "从此页面选择文件",
+    "從此頁面選擇檔案",
+    "Pilih fail dari halaman ini"
+  ],
+  "Add a file URL": [
+    "添加文件链接",
+    "新增檔案連結",
+    "Tambah URL fail"
+  ],
+  "Use this site’s login (review first)": [
+    "使用此网站的登录信息（先确认）",
+    "使用此網站的登入資訊（先確認）",
+    "Gunakan log masuk laman ini (semak dahulu)"
+  ],
+  "Right-click a file link to send it to the app, or turn on automatic capture.": [
+    "右键点击文件链接发送到应用，或开启自动捕获。",
+    "以滑鼠右鍵點選檔案連結傳送至應用程式，或開啟自動擷取。",
+    "Klik kanan pautan fail untuk menghantarnya ke aplikasi atau hidupkan tangkapan automatik."
+  ],
+  "Browser options": [
+    "浏览器选项",
+    "瀏覽器選項",
+    "Pilihan pelayar"
+  ],
+  "Video button on this site": [
+    "此网站的视频按钮",
+    "此網站的影片按鈕",
+    "Butang video pada laman ini"
+  ],
+  "On by default. Your choice is saved for this site.": [
+    "默认开启。您的选择按网站保存。",
+    "預設開啟。您的選擇依網站儲存。",
+    "Dihidupkan secara lalai. Pilihan anda disimpan untuk laman ini."
+  ],
+  "Allow this site": [
+    "允许此网站",
+    "允許此網站",
+    "Benarkan laman ini"
+  ],
+  "Recover handoffs": [
+    "恢复交接",
+    "復原交接",
+    "Pulihkan penyerahan"
+  ],
+  "Diagnostic log": [
+    "诊断日志",
+    "診斷記錄",
+    "Log diagnostik"
+  ],
+  "Recent settings, connection checks and video reviews, saved only in this browser.": [
+    "最近的设置、连接检查和视频确认，仅保存在此浏览器中。",
+    "最近的設定、連線檢查和影片確認，僅儲存在此瀏覽器中。",
+    "Tetapan, semakan sambungan dan semakan video terkini, disimpan hanya dalam pelayar ini."
+  ],
+  "Refresh log": [
+    "刷新日志",
+    "重新整理記錄",
+    "Segarkan log"
+  ],
+  "Select log": [
+    "选择日志",
+    "選取記錄",
+    "Pilih log"
+  ],
+  "Clear log": [
+    "清除日志",
+    "清除記錄",
+    "Kosongkan log"
+  ],
+  "Select the log, then press Ctrl+C to copy it.": [
+    "选择日志后按 Ctrl+C 复制。",
+    "選取記錄後按 Ctrl+C 複製。",
+    "Pilih log, kemudian tekan Ctrl+C untuk menyalin."
+  ],
+  "Direct files and unencrypted HLS / DASH previews.": [
+    "文件直链及未加密的 HLS / DASH 预览。",
+    "檔案直接連結及未加密的 HLS / DASH 預覽。",
+    "Fail terus dan pratonton HLS / DASH tanpa penyulitan."
+  ],
+  "Detected media": [
+    "检测到的媒体",
+    "偵測到的媒體",
+    "Media dikesan"
+  ],
+  "Review the links on this page, then add the files you want to your queue.": [
+    "确认此页面上的链接，然后将所需文件加入队列。",
+    "確認此頁面上的連結，然後將所需檔案加入佇列。",
+    "Semak pautan pada halaman ini, kemudian tambah fail yang dikehendaki ke giliran."
+  ],
+  "Loading page links…": [
+    "正在加载页面链接…",
+    "正在載入頁面連結…",
+    "Memuatkan pautan halaman…"
+  ],
+  "Search links": [
+    "搜索链接",
+    "搜尋連結",
+    "Cari pautan"
+  ],
+  "File type": [
+    "文件类型",
+    "檔案類型",
+    "Jenis fail"
+  ],
+  "All links": [
+    "所有链接",
+    "所有連結",
+    "Semua pautan"
+  ],
+  "Programs": [
+    "程序",
+    "程式",
+    "Program"
+  ],
+  "Other / unknown": [
+    "其他 / 未知",
+    "其他 / 未知",
+    "Lain-lain / tidak diketahui"
+  ],
+  "Found in": [
+    "发现位置",
+    "發現位置",
+    "Ditemui dalam"
+  ],
+  "Page links": [
+    "页面链接",
+    "頁面連結",
+    "Pautan halaman"
+  ],
+  "Page assets": [
+    "页面资源",
+    "頁面資源",
+    "Aset halaman"
+  ],
+  "Size": [
+    "大小",
+    "大小",
+    "Saiz"
+  ],
+  "Any size": [
+    "任意大小",
+    "任意大小",
+    "Sebarang saiz"
+  ],
+  "Sort": [
+    "排序",
+    "排序",
+    "Susun"
+  ],
+  "Page order": [
+    "页面顺序",
+    "頁面順序",
+    "Susunan halaman"
+  ],
+  "Largest first": [
+    "最大的优先",
+    "最大的優先",
+    "Terbesar dahulu"
+  ],
+  "Select matches": [
+    "选择匹配项",
+    "選取相符項目",
+    "Pilih padanan"
+  ],
+  "No links loaded": [
+    "未加载链接",
+    "未載入連結",
+    "Tiada pautan dimuatkan"
+  ],
+  "Select": [
+    "选择",
+    "選取",
+    "Pilih"
+  ],
+  "File / link": [
+    "文件 / 链接",
+    "檔案 / 連結",
+    "Fail / pautan"
+  ],
+  "Type": [
+    "类型",
+    "類型",
+    "Jenis"
+  ],
+  "No links match your filters.": [
+    "没有符合筛选条件的链接。",
+    "沒有符合篩選條件的連結。",
+    "Tiada pautan sepadan dengan penapis anda."
+  ],
+  "Previous": [
+    "上一页",
+    "上一頁",
+    "Sebelumnya"
+  ],
+  "Next": [
+    "下一页",
+    "下一頁",
+    "Seterusnya"
+  ],
+  "Only selected links are sent to Download Engine. Links may point to web pages; file types use names and available media metadata.": [
+    "仅将选定链接发送到 Download Engine。链接可能指向网页；文件类型根据名称和可用媒体信息判断。",
+    "僅將選定連結傳送至 Download Engine。連結可能指向網頁；檔案類型根據名稱和可用媒體資訊判斷。",
+    "Hanya pautan terpilih dihantar ke Download Engine. Pautan mungkin merujuk halaman web; jenis fail menggunakan nama dan metadata media tersedia."
+  ],
+  "Source page": [
+    "来源页面",
+    "來源頁面",
+    "Halaman sumber"
+  ],
+  "Available links": [
+    "可用链接",
+    "可用連結",
+    "Pautan tersedia"
+  ],
+  "File name, link text or URL": [
+    "文件名、链接文字或链接地址",
+    "檔案名稱、連結文字或連結位址",
+    "Nama fail, teks pautan atau URL"
+  ],
+  "Select all matching files across every page": [
+    "选择所有页面上匹配的文件",
+    "選取所有頁面上相符的檔案",
+    "Pilih semua fail sepadan merentas setiap halaman"
+  ],
+  "Download destination": [
+    "下载目标",
+    "下載目的地",
+    "Destinasi muat turun"
+  ],
+  "Use browser login · Download Engine": [
+    "使用浏览器登录 · Download Engine",
+    "使用瀏覽器登入 · Download Engine",
+    "Gunakan log masuk pelayar · Download Engine"
+  ],
+  "Use this site's login": [
+    "使用此网站的登录信息",
+    "使用此網站的登入資訊",
+    "Gunakan log masuk laman ini"
+  ],
+  "Approve one file download.": [
+    "批准一个文件下载。",
+    "核准一個檔案下載。",
+    "Luluskan satu muat turun fail."
+  ],
+  "Loading site…": [
+    "正在加载网站…",
+    "正在載入網站…",
+    "Memuatkan laman…"
+  ],
+  "Download Engine will copy matching login cookies from the original site tab, including its Firefox container. The file must be on the same server.": [
+    "Download Engine 将从原网站标签页复制匹配的登录 Cookie，包括其 Firefox 容器。文件必须位于同一服务器。",
+    "Download Engine 將從原網站分頁複製相符的登入 Cookie，包括其 Firefox 容器。檔案必須位於同一伺服器。",
+    "Download Engine menyalin kuki log masuk sepadan daripada tab laman asal, termasuk bekas Firefoxnya. Fail mesti berada pada pelayan yang sama."
+  ],
+  "Windows encrypts this snapshot for your account. It is used for this download only, for up to 24 hours, and removed when the download completes or you remove it. Signing out in the browser does not erase the saved snapshot.": [
+    "Windows 为您的账户加密此快照。它仅用于本次下载，最长 24 小时，并在下载完成或移除时删除。在浏览器退出登录不会删除已保存快照。",
+    "Windows 為您的帳戶加密此快照。它僅用於本次下載，最長 24 小時，並在下載完成或移除時刪除。在瀏覽器登出不會刪除已儲存快照。",
+    "Windows menyulitkan snapshot ini untuk akaun anda. Ia hanya untuk muat turun ini sehingga 24 jam, dan dibuang apabila muat turun selesai atau dibuang. Log keluar pelayar tidak memadam snapshot tersimpan."
+  ],
+  "Private, partitioned and first-party-isolated sessions are not supported. Automatic capture stays anonymous.": [
+    "不支持隐私、分区和第一方隔离会话。自动捕获保持匿名。",
+    "不支援隱私、分割和第一方隔離工作階段。自動擷取保持匿名。",
+    "Sesi peribadi, berpetak dan terasing pihak pertama tidak disokong. Tangkapan automatik kekal tanpa nama."
+  ],
+  "Allow site login & download": [
+    "允许网站登录并下载",
+    "允許網站登入並下載",
+    "Benarkan log masuk laman & muat turun"
+  ],
+  "Keep the original signed-in site tab open.": [
+    "请保持已登录的原网站标签页打开。",
+    "請保持已登入的原網站分頁開啟。",
+    "Biarkan tab laman asal yang sudah log masuk terbuka."
+  ],
+  "Remove this site's extension access": [
+    "移除此网站的扩展访问权限",
+    "移除此網站的擴充功能存取權限",
+    "Buang akses sambungan laman ini"
+  ],
+  "Removing site access stops future cookie reads. To delete an existing snapshot, remove the download in Download Engine or choose Authentication → None.": [
+    "移除网站访问可停止后续 Cookie 读取。要删除现有快照，请在 Download Engine 中移除下载或选择身份验证 → 无。",
+    "移除網站存取可停止後續 Cookie 讀取。要刪除現有快照，請在 Download Engine 中移除下載或選擇驗證 → 無。",
+    "Membuang akses laman menghentikan bacaan kuki seterusnya. Untuk memadam snapshot sedia ada, buang muat turun dalam Download Engine atau pilih Pengesahan → Tiada."
+  ],
+  "Send file links or selected links from a page to Download Engine, with optional automatic download capture.": [
+    "将文件链接或页面中选定的链接发送到 Download Engine，可选自动捕获下载。",
+    "將檔案連結或頁面中選定的連結傳送至 Download Engine，可選自動擷取下載。",
+    "Hantar pautan fail atau pautan terpilih dari halaman ke Download Engine, dengan tangkapan muat turun automatik pilihan."
+  ],
+  "Extension language": [
+    "扩展语言",
+    "擴充功能語言",
+    "Bahasa sambungan"
+  ],
+  "Browser language": [
+    "跟随浏览器",
+    "跟隨瀏覽器",
+    "Bahasa pelayar"
+  ],
+  "This site's cookies cannot be transferred safely. Download this file in the browser.": [
+    "无法安全传输此网站的 Cookie。请在浏览器中下载文件。",
+    "無法安全傳輸此網站的 Cookie。請在瀏覽器中下載檔案。",
+    "Kuki laman ini tidak dapat dipindahkan dengan selamat. Muat turun fail dalam pelayar."
+  ],
+  "No supported login cookies match this file. Sign in on this site first. Private, partitioned and first-party-isolated sessions are not supported.": [
+    "没有支持的登录 Cookie 匹配此文件。请先登录网站。不支持隐私、分区和第一方隔离会话。",
+    "沒有支援的登入 Cookie 符合此檔案。請先登入網站。不支援隱私、分割和第一方隔離工作階段。",
+    "Tiada kuki log masuk disokong sepadan dengan fail ini. Log masuk dahulu. Sesi peribadi, berpetak dan terasing pihak pertama tidak disokong."
+  ],
+  "This site's browser login is too large. Download this file in the browser.": [
+    "此网站的浏览器登录信息过大。请在浏览器中下载文件。",
+    "此網站的瀏覽器登入資訊過大。請在瀏覽器中下載檔案。",
+    "Log masuk pelayar laman ini terlalu besar. Muat turun fail dalam pelayar."
+  ],
+  "The original site tab was closed. Open the site and try again.": [
+    "原网站标签页已关闭。打开网站后重试。",
+    "原網站分頁已關閉。開啟網站後重試。",
+    "Tab laman asal ditutup. Buka laman dan cuba lagi."
+  ],
+  "Keep the original signed-in site tab open. Private browsing is not supported.": [
+    "请保持原已登录标签页打开。不支持隐私浏览。",
+    "請保持原已登入分頁開啟。不支援隱私瀏覽。",
+    "Biarkan tab asal yang dilog masuk terbuka. Pelayaran peribadi tidak disokong."
+  ],
+  "Open the signed-in site in a regular tab, then choose a file on that same server.": [
+    "在普通标签页中打开已登录网站，然后选择同一服务器上的文件。",
+    "在一般分頁中開啟已登入網站，然後選擇同一伺服器上的檔案。",
+    "Buka laman yang dilog masuk dalam tab biasa, kemudian pilih fail pada pelayan yang sama."
+  ],
+  "Review this site's browser login in the new tab.": [
+    "在新标签页中确认此网站的浏览器登录信息。",
+    "在新分頁中確認此網站的瀏覽器登入資訊。",
+    "Semak log masuk pelayar laman ini dalam tab baharu."
+  ],
+  "Invalid browser login request.": [
+    "浏览器登录请求无效。",
+    "瀏覽器登入要求無效。",
+    "Permintaan log masuk pelayar tidak sah."
+  ],
+  "This login request expired. Check the Download Engine queue before sending the file again.": [
+    "此登录请求已过期。重新发送文件前请检查 Download Engine 队列。",
+    "此登入要求已過期。重新傳送檔案前請檢查 Download Engine 佇列。",
+    "Permintaan log masuk tamat tempoh. Semak giliran Download Engine sebelum menghantar semula fail."
+  ],
+  "Added with browser login": [
+    "已使用浏览器登录添加",
+    "已使用瀏覽器登入新增",
+    "Ditambah dengan log masuk pelayar"
+  ],
+  "Allow cookie access for this site to use its login.": [
+    "请允许此网站的 Cookie 访问以使用登录信息。",
+    "請允許此網站的 Cookie 存取以使用登入資訊。",
+    "Benarkan akses kuki laman ini untuk menggunakan log masuknya."
+  ],
+  "Update the Download Engine desktop app before using browser login.": [
+    "使用浏览器登录前请更新 Download Engine 桌面应用。",
+    "使用瀏覽器登入前請更新 Download Engine 桌面應用程式。",
+    "Kemas kini aplikasi desktop Download Engine sebelum menggunakan log masuk pelayar."
+  ],
+  "Cookie store mismatch": [
+    "Cookie 存储不匹配",
+    "Cookie 儲存區不符",
+    "Stor kuki tidak sepadan"
+  ],
+  "Permission revoked": [
+    "权限已撤销",
+    "權限已撤銷",
+    "Kebenaran ditarik balik"
+  ],
+  "No supported browser login could be read. Sign in on this site and try again. Private or partitioned sessions are not supported.": [
+    "无法读取支持的浏览器登录信息。请登录此网站后重试。不支持隐私或分区会话。",
+    "無法讀取支援的瀏覽器登入資訊。請登入此網站後重試。不支援隱私或分割工作階段。",
+    "Tiada log masuk pelayar disokong dapat dibaca. Log masuk ke laman ini dan cuba lagi. Sesi peribadi atau berpetak tidak disokong."
+  ],
+  "The browser login handoff was not confirmed. Check the desktop connection, then retry this same request.": [
+    "浏览器登录交接未确认。请检查桌面连接，再重试同一请求。",
+    "瀏覽器登入交接未確認。請檢查桌面連線，再重試同一要求。",
+    "Penyerahan log masuk pelayar belum disahkan. Semak sambungan desktop, kemudian cuba semula permintaan sama."
+  ],
+  "{0} of {1} links · {2} selected{3}": [
+    "{0}/{1} 个链接 · 已选 {2} 个{3}",
+    "{0}/{1} 個連結 · 已選 {2} 個{3}",
+    "{0} daripada {1} pautan · {2} dipilih{3}"
+  ],
+  "Open a regular web page to review its media.": [
+    "请打开普通网页以确认媒体。",
+    "請開啟一般網頁以確認媒體。",
+    "Buka halaman web biasa untuk menyemak medianya."
+  ],
+  "Video stream": [
+    "视频流",
+    "影片串流",
+    "Strim video"
+  ],
+  "Video file": [
+    "视频文件",
+    "影片檔案",
+    "Fail video"
+  ],
+  "The page returned an invalid link list.": [
+    "页面返回了无效链接列表。",
+    "頁面傳回無效連結清單。",
+    "Halaman memberikan senarai pautan tidak sah."
+  ],
+  "This page contains too much link data. Try a smaller page.": [
+    "此页面的链接数据过多。请尝试较小页面。",
+    "此頁面的連結資料過多。請嘗試較小頁面。",
+    "Halaman ini mengandungi terlalu banyak data pautan. Cuba halaman lebih kecil."
+  ],
+  "Select between 1 and 1,000 listed links.": [
+    "请选择 1 至 1,000 个列出的链接。",
+    "請選擇 1 至 1,000 個列出的連結。",
+    "Pilih antara 1 hingga 1,000 pautan yang disenaraikan."
+  ],
+  "Choose a saved queue and destination folder.": [
+    "请选择已保存队列和目标文件夹。",
+    "請選擇已儲存佇列和目的地資料夾。",
+    "Pilih giliran tersimpan dan folder destinasi."
+  ],
+  "Use Preview HLS or Preview DASH to choose a quality before adding a stream.": [
+    "添加流媒体前请使用预览 HLS 或预览 DASH 选择画质。",
+    "新增串流前請使用預覽 HLS 或預覽 DASH 選擇畫質。",
+    "Gunakan Pratonton HLS atau Pratonton DASH untuk memilih kualiti sebelum menambah strim."
+  ],
+  "Invalid link picker identifier.": [
+    "链接选择器标识符无效。",
+    "連結選擇器識別碼無效。",
+    "Pengecam pemilih pautan tidak sah."
+  ],
+  "This link picker has expired. Collect the page links again from the extension.": [
+    "此链接选择器已过期。请通过扩展重新收集页面链接。",
+    "此連結選擇器已過期。請透過擴充功能重新收集頁面連結。",
+    "Pemilih pautan tamat tempoh. Kumpulkan pautan halaman semula melalui sambungan."
+  ],
+  "Invalid page scan mode.": [
+    "页面扫描模式无效。",
+    "頁面掃描模式無效。",
+    "Mod imbasan halaman tidak sah."
+  ],
+  "A page scan is already in progress.": [
+    "已有页面扫描正在进行。",
+    "已有頁面掃描正在進行。",
+    "Imbasan halaman sedang berjalan."
+  ],
+  "Open an HTTP or HTTPS web page, then click the extension on that page.": [
+    "打开 HTTP 或 HTTPS 网页，然后在该页面点击扩展。",
+    "開啟 HTTP 或 HTTPS 網頁，然後在該頁面點選擴充功能。",
+    "Buka halaman web HTTP atau HTTPS, kemudian klik sambungan pada halaman itu."
+  ],
+  "Page-link collection is not available in private windows.": [
+    "隐私窗口中无法收集页面链接。",
+    "隱私視窗中無法收集頁面連結。",
+    "Pengumpulan pautan halaman tidak tersedia dalam tetingkap peribadi."
+  ],
+  "Close another link picker first. Use Recover handoffs for any pending batch.": [
+    "请先关闭另一个链接选择器。待处理批次请使用恢复交接。",
+    "請先關閉另一個連結選擇器。待處理批次請使用復原交接。",
+    "Tutup pemilih pautan lain dahulu. Gunakan Pulihkan penyerahan untuk kelompok tertunda."
+  ],
+  "The browser could not read this page. Try an ordinary web page.": [
+    "浏览器无法读取此页面。请尝试普通网页。",
+    "瀏覽器無法讀取此頁面。請嘗試一般網頁。",
+    "Pelayar tidak dapat membaca halaman ini. Cuba halaman web biasa."
+  ],
+  "A review is already opening.": [
+    "确认窗口已在打开中。",
+    "確認視窗已在開啟中。",
+    "Semakan sedang dibuka."
+  ],
+  "Found {0} {1}. Review them in the new tab.": [
+    "找到 {0} 个{1}。请在新标签页中确认。",
+    "找到 {0} 個{1}。請在新分頁中確認。",
+    "{0} {1} ditemui. Semaknya dalam tab baharu."
+  ],
+  "A video review is awaiting confirmation. Use Browser options → Recover handoffs first.": [
+    "视频确认正在等待批准。请先使用浏览器选项 → 恢复交接。",
+    "影片確認正在等候核准。請先使用瀏覽器選項 → 復原交接。",
+    "Semakan video menunggu pengesahan. Gunakan Pilihan pelayar → Pulihkan penyerahan dahulu."
+  ],
+  "This page contains too much video data. Try a smaller page.": [
+    "此页面的视频数据过多。请尝试较小页面。",
+    "此頁面的影片資料過多。請嘗試較小頁面。",
+    "Halaman ini mengandungi terlalu banyak data video. Cuba halaman lebih kecil."
+  ],
+  "A video review is already opening in Download Engine.": [
+    "视频确认已在 Download Engine 中打开中。",
+    "影片確認已在 Download Engine 中開啟中。",
+    "Semakan video sedang dibuka dalam Download Engine."
+  ],
+  "Review the video in Download Engine. Nothing has been downloaded.": [
+    "请在 Download Engine 中确认视频。尚未下载任何内容。",
+    "請在 Download Engine 中確認影片。尚未下載任何內容。",
+    "Semak video dalam Download Engine. Belum ada apa-apa dimuat turun."
+  ],
+  "A request from this picker is already being sent.": [
+    "此选择器的请求已在发送中。",
+    "此選擇器的要求已在傳送中。",
+    "Permintaan pemilih ini sedang dihantar."
+  ],
+  "Resolve the pending batch before previewing a video.": [
+    "预览视频前请处理待确认批次。",
+    "預覽影片前請處理待確認批次。",
+    "Selesaikan kelompok tertunda sebelum pratonton video."
+  ],
+  "Choose a listed HLS or DASH video.": [
+    "请选择列出的 HLS 或 DASH 视频。",
+    "請選擇列出的 HLS 或 DASH 影片。",
+    "Pilih video HLS atau DASH yang disenaraikan."
+  ],
+  "This batch is already being sent.": [
+    "此批次已在发送中。",
+    "此批次已在傳送中。",
+    "Kelompok ini sedang dihantar."
+  ],
+  "Retry the pending batch before changing its selection.": [
+    "更改选择前请重试待确认批次。",
+    "變更選擇前請重試待確認批次。",
+    "Cuba semula kelompok tertunda sebelum menukar pilihannya."
+  ],
+  "There is no pending batch to retry.": [
+    "没有可重试的待确认批次。",
+    "沒有可重試的待確認批次。",
+    "Tiada kelompok tertunda untuk dicuba semula."
+  ],
+  "Select fewer links for this batch.": [
+    "请为此批次选择更少链接。",
+    "請為此批次選擇更少連結。",
+    "Pilih kurang pautan untuk kelompok ini."
+  ],
+  "media items": [
+    "媒体项",
+    "媒體項",
+    "item media"
+  ],
+  "files and links": [
+    "文件和链接",
+    "檔案和連結",
+    "fail dan pautan"
+  ],
+  "{0} hidden by filters": [
+    "{0} 项被筛选器隐藏",
+    "{0} 項被篩選器隱藏",
+    "{0} disembunyikan oleh penapis"
+  ],
+  "running": [
+    "运行中",
+    "執行中",
+    "berjalan"
+  ],
+  "paused": [
+    "已暂停",
+    "已暫停",
+    "dijeda"
+  ],
+  "Retry the same batch to check its receipt.": [
+    "重试同一批次以检查接收确认。",
+    "重試同一批次以檢查接收確認。",
+    "Cuba semula kelompok yang sama untuk menyemak pengesahannya."
+  ],
+  "HLS / DASH opens a desktop preview; live/encrypted streams are unsupported. Enable media detection before playback to find more streams.": [
+    "HLS / DASH 将打开桌面预览；不支持直播或加密流。播放前启用媒体检测可发现更多流。",
+    "HLS / DASH 會開啟桌面預覽；不支援直播或加密串流。播放前啟用媒體偵測可找到更多串流。",
+    "HLS / DASH membuka pratonton desktop; strim langsung atau disulitkan tidak disokong. Dayakan pengesanan media sebelum main balik untuk mencari lebih banyak strim."
+  ],
+  "Download Engine is connected.": [
+    "Download Engine 已连接。",
+    "Download Engine 已連接。",
+    "Download Engine disambungkan."
+  ],
+  "Main queue": [
+    "主队列",
+    "主佇列",
+    "Baris gilir utama"
+  ],
+  "Automatic folders": [
+    "自动文件夹",
+    "自動資料夾",
+    "Folder automatik"
+  ],
+  "Capture rules": [
+    "捕获规则",
+    "擷取規則",
+    "Peraturan tangkapan"
+  ],
+  "File types to capture": [
+    "要捕获的文件类型",
+    "要擷取的檔案類型",
+    "Jenis fail untuk ditangkap"
+  ],
+  "Separate with spaces. * matches any characters, for example r0*. Enter * alone to capture every type.": [
+    "用空格分隔。* 匹配任意字符，例如 r0*。只输入 * 可捕获所有类型。",
+    "以空格分隔。* 符合任意字元，例如 r0*。只輸入 * 可擷取所有類型。",
+    "Pisahkan dengan ruang. * sepadan dengan sebarang aksara, contohnya r0*. Masukkan * sahaja untuk menangkap semua jenis."
+  ],
+  "Minimum file size": [
+    "最小文件大小",
+    "最小檔案大小",
+    "Saiz fail minimum"
+  ],
+  "No minimum": [
+    "无最小值",
+    "無最小值",
+    "Tiada minimum"
+  ],
+  "Size unit": [
+    "大小单位",
+    "大小單位",
+    "Unit saiz"
+  ],
+  "Smaller files stay in the browser. Leave empty for any size.": [
+    "较小的文件保留在浏览器中。留空表示任意大小。",
+    "較小的檔案保留在瀏覽器中。留空表示任意大小。",
+    "Fail yang lebih kecil kekal dalam pelayar. Biarkan kosong untuk sebarang saiz."
+  ],
+  "Never capture from these sites": [
+    "不从以下网站捕获",
+    "不從以下網站擷取",
+    "Jangan tangkap daripada laman ini"
+  ],
+  "One site per line. Includes its subdomains; * matches any part of a name.": [
+    "每行一个网站，包括其子域名；* 匹配名称中的任意部分。",
+    "每行一個網站，包括其子網域；* 符合名稱中的任意部分。",
+    "Satu laman setiap baris. Termasuk subdomainnya; * sepadan dengan mana-mana bahagian nama."
+  ],
+  "Restore defaults": [
+    "恢复默认值",
+    "還原預設值",
+    "Pulihkan lalai"
+  ],
+  "Save rules": [
+    "保存规则",
+    "儲存規則",
+    "Simpan peraturan"
+  ],
+  "Right-click → Download with Download Engine always sends the link, whatever these rules say.": [
+    "右键菜单中的“使用 Download Engine 下载”始终会发送链接，不受这些规则限制。",
+    "右鍵選單中的「使用 Download Engine 下載」一律會傳送連結，不受這些規則限制。",
+    "Klik kanan → Muat turun dengan Download Engine sentiasa menghantar pautan, tanpa mengira peraturan ini."
+  ],
+  "Capture rules saved.": [
+    "捕获规则已保存。",
+    "擷取規則已儲存。",
+    "Peraturan tangkapan disimpan."
+  ],
+  "Defaults restored. Select Save rules to keep them.": [
+    "已恢复默认值。选择“保存规则”以保留。",
+    "已還原預設值。選擇「儲存規則」以保留。",
+    "Lalai dipulihkan. Pilih Simpan peraturan untuk mengekalkannya."
+  ],
+  "Check these file types: {0}": [
+    "请检查这些文件类型：{0}",
+    "請檢查這些檔案類型：{0}",
+    "Semak jenis fail ini: {0}"
+  ],
+  "Add at least one file type, or enter * to capture every type.": [
+    "请至少添加一种文件类型，或输入 * 以捕获所有类型。",
+    "請至少新增一種檔案類型，或輸入 * 以擷取所有類型。",
+    "Tambah sekurang-kurangnya satu jenis fail, atau masukkan * untuk menangkap semua jenis."
+  ],
+  "Use up to {0} file types.": [
+    "最多可使用 {0} 种文件类型。",
+    "最多可使用 {0} 種檔案類型。",
+    "Gunakan sehingga {0} jenis fail."
+  ],
+  "Enter a minimum size between 0 and 1 TB.": [
+    "请输入 0 到 1 TB 之间的最小大小。",
+    "請輸入 0 到 1 TB 之間的最小大小。",
+    "Masukkan saiz minimum antara 0 dan 1 TB."
+  ],
+  "Check these sites: {0}": [
+    "请检查这些网站：{0}",
+    "請檢查這些網站：{0}",
+    "Semak laman ini: {0}"
+  ],
+  "Use up to {0} sites.": [
+    "最多可使用 {0} 个网站。",
+    "最多可使用 {0} 個網站。",
+    "Gunakan sehingga {0} laman."
+  ],
+  "Invalid capture rules.": [
+    "捕获规则无效。",
+    "擷取規則無效。",
+    "Peraturan tangkapan tidak sah."
+  ],
+  "Capture rules are unavailable. Reload the extension.": [
+    "捕获规则不可用。请重新加载扩展。",
+    "擷取規則無法使用。請重新載入擴充功能。",
+    "Peraturan tangkapan tidak tersedia. Muat semula sambungan."
+  ],
+  "On by default. Play a video to detect it, then choose what to download.": [
+    "默认开启。播放视频以进行检测，再选择要下载的内容。",
+    "預設開啟。播放影片以進行偵測，再選擇要下載的內容。",
+    "Dihidupkan secara lalai. Mainkan video untuk mengesannya, kemudian pilih perkara untuk dimuat turun."
+  ],
+  "File downloads are captured automatically. Connect the desktop app in Browser setup.": [
+    "自动接管文件下载。请在浏览器设置中连接桌面应用。",
+    "自動接管檔案下載。請在瀏覽器設定中連接桌面應用程式。",
+    "Muat turun fail ditangkap secara automatik. Sambungkan aplikasi desktop dalam Persediaan pelayar."
+  ],
+  "Remove browser login access": [
+    "移除浏览器登录访问权限",
+    "移除瀏覽器登入存取權限",
+    "Alih keluar akses log masuk pelayar"
+  ],
+  "Removing login access stops cookie reads on all sites. Video detection keeps working. Delete saved snapshots in Download Engine → Authentication → None.": [
+    "移除登录访问权限会停止读取所有网站的 Cookie。视频检测仍可使用。在 Download Engine → 身份验证 → 无中删除已保存的快照。",
+    "移除登入存取權限會停止讀取所有網站的 Cookie。影片偵測仍可使用。在 Download Engine → 驗證 → 無中刪除已儲存的快照。",
+    "Mengalih keluar akses log masuk menghentikan bacaan kuki pada semua laman. Pengesanan video kekal aktif. Padam petikan tersimpan dalam Download Engine → Pengesahan → Tiada."
+  ],
+  "Browser login access removed for all sites. Existing downloads keep their encrypted snapshot until you remove it in Download Engine.": [
+    "已移除所有网站的浏览器登录访问权限。现有下载保留加密快照，直到您在 Download Engine 中将其删除。",
+    "已移除所有網站的瀏覽器登入存取權限。現有下載保留加密快照，直到您在 Download Engine 中將其刪除。",
+    "Akses log masuk pelayar dialih keluar untuk semua laman. Muat turun sedia ada menyimpan petikan disulitkan sehingga anda memadamkannya dalam Download Engine."
+  ],
+  "Capture file downloads and detect videos for the Download Engine desktop app.": [
+    "为 Download Engine 桌面应用接管文件下载并检测视频。",
+    "為 Download Engine 桌面應用程式接管檔案下載並偵測影片。",
+    "Tangkap muat turun fail dan kesan video untuk aplikasi desktop Download Engine."
+  ]
+}

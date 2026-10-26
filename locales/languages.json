@@ -1,0 +1,21 @@
+[
+  {"code":"en","variant":"English","name":"English","installer":"Default.isl"},
+  {"code":"zh-CN","variant":"SimplifiedChinese","name":"简体中文","installer":"ChineseSimplified.isl"},
+  {"code":"zh-TW","variant":"TraditionalChinese","name":"繁體中文","installer":"ChineseTraditional.isl"},
+  {"code":"ms","variant":"Malay","name":"Bahasa Melayu","installer":"Malaysian.isl"},
+  {"code":"ja","variant":"Japanese","name":"日本語","installer":"Japanese.isl"},
+  {"code":"ko","variant":"Korean","name":"한국어","installer":"Korean.isl"},
+  {"code":"vi","variant":"Vietnamese","name":"Tiếng Việt","installer":"Vietnamese.isl"},
+  {"code":"th","variant":"Thai","name":"ไทย","installer":"Thai.isl"},
+  {"code":"pl","variant":"Polish","name":"Polski","installer":"Polish.isl"},
+  {"code":"ru","variant":"Russian","name":"Русский","installer":"Russian.isl"},
+  {"code":"uk","variant":"Ukrainian","name":"Українська","installer":"Ukrainian.isl"},
+  {"code":"ar","variant":"Arabic","name":"العربية","installer":"Arabic.isl"},
+  {"code":"de","variant":"German","name":"Deutsch","installer":"German.isl"},
+  {"code":"fr","variant":"French","name":"Français","installer":"French.isl"},
+  {"code":"sv","variant":"Swedish","name":"Svenska","installer":"Swedish.isl"},
+  {"code":"no","variant":"NorwegianBokmal","name":"Norsk bokmål","installer":"Norwegian.isl","extensionAliases":["nb"]},
+  {"code":"de-CH","variant":"SwissGerman","name":"Deutsch (Schweiz)","installer":"GermanSwiss.isl"},
+  {"code":"it","variant":"Italian","name":"Italiano","installer":"Italian.isl"},
+  {"code":"rm","variant":"Romansh","name":"Rumantsch Grischun","installer":"Romansh.isl"}
+]

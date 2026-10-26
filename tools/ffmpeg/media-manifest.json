@@ -1,0 +1,133 @@
+{
+  "schema": 1,
+  "version": "9.0.2-xdownloader-security2",
+  "license": "GPL-3.0-or-later",
+  "builtAt": "2026-10-22",
+  "ffprobeSha256": "f4faba94399610c63c39998e35479b84fd0515bad753016689dd026027b697c9",
+  "files": [
+    {
+      "path": "ffmpeg.exe",
+      "sha256": "f1f9097330cc07678bebe983e1e5854bacce5f36cd851e234cdcf074ea54d577"
+    },
+    {
+      "path": "LICENSE",
+      "sha256": "8ceb4b9ee5adedde47b31e975c1d90c73ad27b6b165a1dcd80c7c545eb65b903"
+    },
+    {
+      "path": "licenses/COPYING.GPLv2",
+      "sha256": "8177f97513213526df2cf6184d8ff986c675afb514d4e68a404010521b880643"
+    },
+    {
+      "path": "licenses/COPYING.GPLv3",
+      "sha256": "8ceb4b9ee5adedde47b31e975c1d90c73ad27b6b165a1dcd80c7c545eb65b903"
+    },
+    {
+      "path": "licenses/COPYING.LGPLv2.1",
+      "sha256": "246041b6ecf9bc32d718a62c57877c78b5eb397b6467e74ed7ae2626ab189c30"
+    },
+    {
+      "path": "licenses/COPYING.LGPLv3",
+      "sha256": "da7eabb7bafdf7d3ae5e9f223aa5bdc1eece45ac569dc21b3b037520b4464768"
+    },
+    {
+      "path": "licenses/gcc-runtime-COPYRIGHT",
+      "sha256": "a481f772f7a53335f13b32c6c54eb1c8577ce97704edd3757ab7ed4287a8e96a"
+    },
+    {
+      "path": "licenses/LICENSE.md",
+      "sha256": "2e1d16c72fd74e12063776371da757322f8b77589386532f4fd8634bde7de1af"
+    },
+    {
+      "path": "licenses/mingw-w64-COPYRIGHT",
+      "sha256": "af23297b7d17e8e31817a5d58088de6fdafe34705bb5a7d1d330f08711b31314"
+    },
+    {
+      "path": "licenses/x264-COPYING",
+      "sha256": "32b1062f7da84967e7019d01ab805935caa7ab7321a7ced0e30ebe75e5df1670"
+    },
+    {
+      "path": "PROVENANCE.md",
+      "sha256": "0ccfa30b1786a4f721fabe4c2e4b13a0a870da50c53ce19195c1a4c63f057c83"
+    },
+    {
+      "path": "README.txt",
+      "sha256": "d1654c6f59098998c7063acb31690c82dddb1ead4c695f580ecc01da6a7f7842"
+    },
+    {
+      "path": "source/apply-security-fixes.sh",
+      "sha256": "1bc76b1bc4c4f2b3d3fe3a2a9b97724cc329d1739cf40ac533b948e56f21f9b8"
+    },
+    {
+      "path": "source/build-record/binaries.sha256",
+      "sha256": "eddadbbd9952d0fe85ed05634aa4ee1a65e67b1dfa8d60228e6f6c390643a998"
+    },
+    {
+      "path": "source/build-record/compiler-version.log",
+      "sha256": "13549e6c4cac8247e76bc165b70a1397d91be7e3acd697b7852ef7bcafd7913b"
+    },
+    {
+      "path": "source/build-record/config_components.h",
+      "sha256": "b41e852c0efd46c354bb2c2f21b7d51efafc966dbf12c655cff0f2f8d80a823e"
+    },
+    {
+      "path": "source/build-record/config.h",
+      "sha256": "c7f7072b92ab4979e4d0139b6402a6870dc36974e3a3c14261c24629900bcc00"
+    },
+    {
+      "path": "source/build-record/config.log",
+      "sha256": "b5415e44715d829305b08ef473aac01c77ac25f3206e386cc61f92ccc9a4346b"
+    },
+    {
+      "path": "source/build-record/config.mak",
+      "sha256": "5523009c0f333c64f8f6288456b0c9ba404f9f9d36caa6110d7e6912a3ad3378"
+    },
+    {
+      "path": "source/build-record/ffmpeg-pe.log",
+      "sha256": "43c636c0091523e485fa3d1dab60ad88864c2127eda70826a2c20c2d85adcd56"
+    },
+    {
+      "path": "source/build-record/ffprobe-pe.log",
+      "sha256": "47fb525c5609ce4a69d0b8b037afcb8f4114fb506cb357b8caf454dea9fc0398"
+    },
+    {
+      "path": "source/build-record/toolchain-packages.tsv",
+      "sha256": "39aad8a507f630fb2932d155c3ccc2833b3dcf8642729bde78ee9fbc6b7ae8de"
+    },
+    {
+      "path": "source/build-record/x264-config.h",
+      "sha256": "009096cd1d8994d1c5b3d65f4d74aa5bc0e28a3589c1a87b8a4fb5705c228057"
+    },
+    {
+      "path": "source/build-record/x264-config.mak",
+      "sha256": "aa703b54070c423ce2040ff16db67401d1c255e085171bd66238f2bcaccfc3ee"
+    },
+    {
+      "path": "source/build.sh",
+      "sha256": "ebec7e1bdd47bb84c46f4916d9d4d5161460914a0463a1d001c1505ba1941d5d"
+    },
+    {
+      "path": "source/Dockerfile",
+      "sha256": "09bb17ad32ad1558bc1d1ac98150ab736dc06d91507056b60a43058979c2c02c"
+    },
+    {
+      "path": "source/ffmpeg-946fcce07b6dcd0331c8cc609192aeff5e1924f8.tar.gz",
+      "sha256": "0aa2b1de2a5698b20a23e93d539a9a8e82ca0117496c5bdf05d198805f42bb3b"
+    },
+    {
+      "path": "source/README.md",
+      "sha256": "bc1933968b4dba48706d1c5caed24407ff0e8825786234766f9f24a0dbb7f1f3"
+    },
+    {
+      "path": "source/SHA256SUMS",
+      "sha256": "32eb8858abaf33c02c6fd763c84884b935fae2b507f4815246bf10beaab6ba6a"
+    },
+    {
+      "path": "source/test-hdr-metadata.c",
+      "sha256": "4cf14b68cc1b2abf674376961d1e725002f464b31b1b3ecfe963a78b400b25a4"
+    },
+    {
+      "path": "source/x264-0480cb05fa188d37ae87e8f4fd8f1aea3711f7ee.tar.gz",
+      "sha256": "d0967a1348c85dfde363bb52610403be898171493100561efa0dd05d5fd1ae50"
+    }
+  ]
+}

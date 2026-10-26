@@ -1,0 +1,10 @@
+# Keep generated text consistent across checkouts, including Windows.
+* text=auto eol=lf
+
+# Release checks verify these third-party sources and fixtures by their bytes.
+# Preserve their reviewed hashes even when core.autocrlf is enabled.
+tools/ffmpeg/** -text
+docs/licenses/** -text
+tests/fixtures/** -text
+vendor/** -text
+installer/languages/*.isl -text

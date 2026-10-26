@@ -1,0 +1,102 @@
+# Build output, release packages and local test artifacts
+/target/
+/dist/
+/artifacts/
+/coverage/
+/test-results/
+/playwright-report/
+/blob-report/
+/tmp/
+/temp/
+*.profraw
+*.profdata
+*.pdb
+*.dmp
+
+# App data and generated browser registrations if run from this folder
+/data/
+/downloads/
+/logs/
+/diagnostics/
+/portable.json
+/installed.json
+/installer-language.json
+/native-*.json
+/de.exe
+/de-*.exe
+*.db
+*.db-shm
+*.db-wal
+*.db-journal
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+*.sqlite-journal
+*.sqlite3
+*.sqlite3-shm
+*.sqlite3-wal
+*.sqlite3-journal
+*.dpapi
+
+# Local configuration, credentials and private signing certificates
+/AGENTS.md
+/.codex/
+/.agents/
+/.aws/
+/.ssh/
+.env
+.env.*
+!.env.example
+!.env.sample
+credentials.json
+credentials.*.json
+secrets.json
+secrets.*.json
+id_rsa
+id_dsa
+id_ecdsa
+id_ed25519
+*.pem
+*.key
+*.pfx
+*.p12
+# Public, self-signed FTPS test fixtures are required by the test suite.
+!/tests/fixtures/ftp/server.pfx
+!/tests/fixtures/ftp/alternate.pfx
+
+# Generated logs; preserve the shipped FFmpeg build records.
+*.log
+*.log.*
+!/tools/ffmpeg/source/build-record/*.log
+/tools/ffmpeg/source/rebuilt/
+
+# Python/Node tooling caches and virtual environments
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.venv/
+venv/
+node_modules/
+
+# Local editor, temporary backup and operating-system files
+/.vs/
+/.idea/
+/.vscode/
+*.user
+*.suo
+*.swp
+*.swo
+*.bak
+*.orig
+# Preserve the vendored crate's original package manifest.
+!/vendor/epaint/Cargo.toml.orig
+*.rej
+*.tmp
+*~
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Keep Cargo.lock, bundled FFmpeg, source archives, licenses and test ZIPs.
+# Do not add blanket rules for *.exe, *.zip, *.tar.gz or *.crate.

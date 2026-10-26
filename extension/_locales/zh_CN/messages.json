@@ -1,0 +1,1028 @@
+{
+  "m_a9f74d4af5d7dd2d": {
+    "message": "{0} 项被筛选器隐藏"
+  },
+  "m_b364264cdee56a63": {
+    "message": "{0}/{1} 个链接 · 已选 {2} 个{3}"
+  },
+  "m_3e9174b076fa6723": {
+    "message": "找到 {0} 个不重复的 HTTP/HTTPS 链接。不会自动选择任何项目。"
+  },
+  "m_4751f6a4b5d9bb30": {
+    "message": "{0}–{1} / {2}"
+  },
+  "m_2150dc95bcdb8850": {
+    "message": "已有新链接在 Download Engine 中等待确认。"
+  },
+  "m_acca29cca3e064e3": {
+    "message": "交接需要处理。若已暂停，请在浏览器下载列表中恢复。 "
+  },
+  "m_da5cba54ff645402": {
+    "message": "已有页面扫描正在进行。"
+  },
+  "m_93cbb4b9c437b588": {
+    "message": "此选择器的请求已在发送中。"
+  },
+  "m_8b60e5b9af092e22": {
+    "message": "确认窗口已在打开中。"
+  },
+  "m_fbb9b1f9dcbfeae4": {
+    "message": "视频确认已在 Download Engine 中打开中。"
+  },
+  "m_69dfd976b317260d": {
+    "message": "视频确认窗口已在打开中。"
+  },
+  "m_f2ca785fd206a095": {
+    "message": "视频确认正在等待批准。请先使用浏览器选项 → 恢复交接。"
+  },
+  "m_0e9839b644120fa4": {
+    "message": "添加文件：{0}{1}"
+  },
+  "m_264137ad4e188078": {
+    "message": "添加文件链接"
+  },
+  "m_d852059dca4ba30a": {
+    "message": "请至少添加一种文件类型，或输入 * 以捕获所有类型。"
+  },
+  "m_fba811a83d244b75": {
+    "message": "添加选定文件"
+  },
+  "m_63889fe9a0f7922d": {
+    "message": "已添加到 Download Engine"
+  },
+  "m_b42ec7eef98969f5": {
+    "message": "已加入队列"
+  },
+  "m_035a4bf3220f575b": {
+    "message": "已使用浏览器登录添加"
+  },
+  "m_1fec4c2ee0889acb": {
+    "message": "所有链接"
+  },
+  "m_08e774c5bacc362a": {
+    "message": "所有来源"
+  },
+  "m_79c625de4b9fd500": {
+    "message": "请允许此网站的 Cookie 访问以使用登录信息。"
+  },
+  "m_26f0b4e0ff1f898e": {
+    "message": "请允许下载访问以启用自动捕获。"
+  },
+  "m_5b94fcf971c23dee": {
+    "message": "允许下载访问以查找 {0} 的新链接。自动捕获可以保持关闭。"
+  },
+  "m_2e62efd7ab18a82d": {
+    "message": "允许媒体检测和网站访问以监测媒体请求。"
+  },
+  "m_48cc22965b91eff2": {
+    "message": "允许恢复访问"
+  },
+  "m_24e1772fedce2ed7": {
+    "message": "允许网站登录并下载"
+  },
+  "m_5864c132f9bc0926": {
+    "message": "允许此网站"
+  },
+  "m_9ee4b5b0cf00b360": {
+    "message": "请允许此网站访问以显示视频按钮。"
+  },
+  "m_9f46b4f2f671c116": {
+    "message": "任意大小"
+  },
+  "m_72c46a00422be09f": {
+    "message": "批准一个文件下载。"
+  },
+  "m_66f4804ee23ddc09": {
+    "message": "压缩文件"
+  },
+  "m_e404aa80d8df4adb": {
+    "message": "压缩文件"
+  },
+  "m_bc1b88907d3b748a": {
+    "message": "音频"
+  },
+  "m_571a9d4e6ae3e6e9": {
+    "message": "自动捕获"
+  },
+  "m_551953291092c063": {
+    "message": "自动捕获无法启动："
+  },
+  "m_4b0437f552a7f60f": {
+    "message": "自动捕获已关闭。"
+  },
+  "m_ca4588908fe682ee": {
+    "message": "自动捕获已关闭。若下载已暂停，请在浏览器下载列表中恢复。"
+  },
+  "m_dbcbd988532e58f3": {
+    "message": "文件直链的自动捕获已开启。"
+  },
+  "m_a4885ab1c22dbeb0": {
+    "message": "自动捕获保持关闭。打开 Download Engine → 工具 → 浏览器设置，选择浏览器并连接，然后在此重试。 "
+  },
+  "m_bdf26652484911a4": {
+    "message": "自动捕获下载"
+  },
+  "m_6259b8b41e217222": {
+    "message": "自动文件夹"
+  },
+  "m_6aa06201d769ad78": {
+    "message": "可用链接"
+  },
+  "m_2cf57ca29785ac99": {
+    "message": "浏览器副本已继续"
+  },
+  "m_9ce0d857154f24e2": {
+    "message": "跟随浏览器"
+  },
+  "m_9a06933b478415e9": {
+    "message": "已移除所有网站的浏览器登录访问权限。现有下载保留加密快照，直到您在 Download Engine 中将其删除。"
+  },
+  "m_776802e7061330f7": {
+    "message": "无法发送浏览器登录信息。请检查网站访问权限和桌面连接。"
+  },
+  "m_31eb4316301f4815": {
+    "message": "浏览器登录需要 HTTPS。请打开安全的文件直链。"
+  },
+  "m_0017e5fbb9fd5905": {
+    "message": "浏览器选项"
+  },
+  "m_f4a311ce61b95ad0": {
+    "message": "为 Download Engine 桌面应用接管文件下载并检测视频。"
+  },
+  "m_90948ad9dbb580df": {
+    "message": "捕获规则"
+  },
+  "m_720995cec7bccf29": {
+    "message": "捕获规则不可用。请重新加载扩展。"
+  },
+  "m_8f326a402a36befc": {
+    "message": "捕获规则已保存。"
+  },
+  "m_be5dff52eeb0fd5b": {
+    "message": "检查连接"
+  },
+  "m_c29aa06c2ddb8076": {
+    "message": "请检查这些文件类型：{0}"
+  },
+  "m_8151d4ddeed81415": {
+    "message": "请检查这些网站：{0}"
+  },
+  "m_d6fdbb314af454a1": {
+    "message": "正在检查原批次…"
+  },
+  "m_ec963ffc911b8401": {
+    "message": "正在检查…"
+  },
+  "m_ddec030e83b025f5": {
+    "message": "请选择列出的 HLS 或 DASH 视频。"
+  },
+  "m_a0f311dfdcbbc7c9": {
+    "message": "请选择已保存队列和目标文件夹。"
+  },
+  "m_9b02ef3f495e64ef": {
+    "message": "从此页面选择文件"
+  },
+  "m_cbe8a50b6762fd46": {
+    "message": "在应用中选择画质"
+  },
+  "m_c945c62180fcab9a": {
+    "message": "在 Download Engine 中选择视频文件和流媒体画质"
+  },
+  "m_312bfa601066a8e4": {
+    "message": "选择下载内容"
+  },
+  "m_83b12c2216efb4fd": {
+    "message": "清除"
+  },
+  "m_a8858ac749bc452b": {
+    "message": "清除日志"
+  },
+  "m_cea4d2e010b8fd52": {
+    "message": "清除选择"
+  },
+  "m_652c67c42dba3909": {
+    "message": "请先关闭另一个链接选择器。待处理批次请使用恢复交接。"
+  },
+  "m_b9ce2241762a7a45": {
+    "message": "正在连接 Download Engine…"
+  },
+  "m_83f23cdbeb423f39": {
+    "message": "连接检查"
+  },
+  "m_d45e5aae2ee31082": {
+    "message": "Cookie 存储不匹配"
+  },
+  "m_101bd5ad093f5552": {
+    "message": "无法移除网站访问权限。请使用浏览器扩展设置。"
+  },
+  "m_4a8c2b313a136fa4": {
+    "message": "无法恢复浏览器下载。请在浏览器下载列表中恢复。 "
+  },
+  "m_50746138b9d24c2b": {
+    "message": "无法返回扩展弹出窗口："
+  },
+  "m_936628cc4a394ede": {
+    "message": "已恢复默认值。选择“保存规则”以保留。"
+  },
+  "m_0690f959c9689317": {
+    "message": "浏览时检测媒体"
+  },
+  "m_4125b0325a1d9a1c": {
+    "message": "检测到的媒体"
+  },
+  "m_ee71fa5ff80ee155": {
+    "message": "检测已开启。播放媒体可更新此列表。"
+  },
+  "m_c46c657680c1fb6a": {
+    "message": "诊断日志"
+  },
+  "m_da1e00181e6edfc0": {
+    "message": "诊断日志不可用。请重新加载扩展。"
+  },
+  "m_97a6661033069fb1": {
+    "message": "文件直链及未加密的 HLS / DASH 预览。"
+  },
+  "m_d6bd8c0aeee80fed": {
+    "message": "文档"
+  },
+  "m_b4e929d8bcfe0418": {
+    "message": "文档"
+  },
+  "m_4b20f1e564f08418": {
+    "message": "下载访问权限已更改。准备好后请重新启用自动捕获。"
+  },
+  "m_de82471b8e92e8c9": {
+    "message": "未授予下载访问权限。自动捕获保持关闭。"
+  },
+  "m_26e9086fb67e1171": {
+    "message": "未授予下载访问权限。您仍可在 Download Engine 中粘贴新链接。"
+  },
+  "m_86237283243c5c06": {
+    "message": "下载目标"
+  },
+  "m_4fe58a9f465df20b": {
+    "message": "Download Engine"
+  },
+  "m_67061b40bd1fc990": {
+    "message": "Download Engine 已将文件加入队列，但无法停止浏览器副本。请检查两个下载列表。"
+  },
+  "m_ad28de051651de0a": {
+    "message": "Download Engine 已连接。"
+  },
+  "m_b5ee50a47681c17b": {
+    "message": "Download Engine 已更新现有下载。浏览器副本仍保留；请检查两个下载列表。"
+  },
+  "m_55cff9fa827ef904": {
+    "message": "Download Engine 将从原网站标签页复制匹配的登录 Cookie，包括其 Firefox 容器。文件必须位于同一服务器。"
+  },
+  "m_b732f149ac000cfe": {
+    "message": "下载保留在浏览器中："
+  },
+  "m_4dfb918c17f5863a": {
+    "message": "下载保留在浏览器中。"
+  },
+  "m_3a7a16064f324d88": {
+    "message": "下载此页面的链接"
+  },
+  "m_182321e7f219bcc2": {
+    "message": "下载已发送到 Download Engine。"
+  },
+  "m_d1db69fff45e2607": {
+    "message": "使用浏览器登录下载…"
+  },
+  "m_9e6a91c146c14996": {
+    "message": "下载视频"
+  },
+  "m_e1e91278b3b950c4": {
+    "message": "使用 Download Engine 下载视频 — 先确认"
+  },
+  "m_36886174177ac2af": {
+    "message": "使用 Download Engine 下载"
+  },
+  "m_cc5c7b4f90b18c40": {
+    "message": "启用检测并允许网站访问。不会使用登录信息。"
+  },
+  "m_e2d9eaba91bf0037": {
+    "message": "请输入完整的 HTTP 或 HTTPS 文件链接。"
+  },
+  "m_6e42641a11a1c04e": {
+    "message": "请输入 0 到 1 TB 之间的最小大小。"
+  },
+  "m_4eb6084d5e196685": {
+    "message": "Download Engine 中的现有下载已更新。"
+  },
+  "m_2eabb5731ec0a7f5": {
+    "message": "扩展语言"
+  },
+  "m_d8e40338c0625f5b": {
+    "message": "文件 / 链接"
+  },
+  "m_fb6219471a55d640": {
+    "message": "自动接管文件下载。请在浏览器设置中连接桌面应用。"
+  },
+  "m_95b44f14672ddf20": {
+    "message": "文件名、链接文字或链接地址"
+  },
+  "m_ea1df05210c29d1e": {
+    "message": "文件类型"
+  },
+  "m_6ebe2a3778d6510e": {
+    "message": "要捕获的文件类型"
+  },
+  "m_4ac686f1fff7a0ce": {
+    "message": "文件链接"
+  },
+  "m_7cd46f2b72f2f96d": {
+    "message": "文件和链接"
+  },
+  "m_91c34f985f2ccf2e": {
+    "message": "查找此页面的视频"
+  },
+  "m_abb03e243f8f426a": {
+    "message": "使用 Download Engine 查找视频"
+  },
+  "m_c14ae1090e852370": {
+    "message": "请先完成当前权限请求，再更改其他设置。"
+  },
+  "m_3b36902cb433c0af": {
+    "message": "文件夹在 Download Engine 设置中管理。"
+  },
+  "m_fb1c8ed06249aced": {
+    "message": "找到 {0} 个{1}。请在新标签页中确认。"
+  },
+  "m_dac55102f2a6291b": {
+    "message": "发现位置"
+  },
+  "m_cf58b80fa579dabc": {
+    "message": "已找到新链接。请在 Download Engine 中检查已保存数据的核对结果，再确认恢复。"
+  },
+  "m_23b41d51987507df": {
+    "message": "HLS / DASH 将打开桌面预览；不支持直播或加密流。播放前启用媒体检测可发现更多流。"
+  },
+  "m_1aa4cb0bcca76e92": {
+    "message": "图片"
+  },
+  "m_be7e2f20129365c2": {
+    "message": "图片"
+  },
+  "m_28d71345fcbdb6bc": {
+    "message": "中断的交接已恢复；下载保留在浏览器中。"
+  },
+  "m_ddedfe53cbb11f79": {
+    "message": "中断的恢复已释放回浏览器。"
+  },
+  "m_7182c1f1f59286fa": {
+    "message": "自动捕获设置无效。"
+  },
+  "m_419be78ea9367d52": {
+    "message": "浏览器登录请求无效。"
+  },
+  "m_615de39dbabcd451": {
+    "message": "捕获规则无效。"
+  },
+  "m_4e6451d9c7a05b34": {
+    "message": "诊断设置无效。"
+  },
+  "m_ebe2abb4cddb35fc": {
+    "message": "链接选择器标识符无效。"
+  },
+  "m_438fc9ceb0904b0d": {
+    "message": "媒体检测设置无效。"
+  },
+  "m_cfd2d68349b7432a": {
+    "message": "页面扫描模式无效。"
+  },
+  "m_53621c0588be411a": {
+    "message": "请求标识符无效。"
+  },
+  "m_fd72d477bb65dc79": {
+    "message": "视频按钮设置无效。"
+  },
+  "m_e20a4b411a818b8b": {
+    "message": "视频按钮的网站无效。"
+  },
+  "m_c2e9a31124f7d0f7": {
+    "message": "请保持已登录的原网站标签页打开。"
+  },
+  "m_019e66b1bd219970": {
+    "message": "请保持原已登录标签页打开。不支持隐私浏览。"
+  },
+  "m_251452cbeaef4875": {
+    "message": "最大的优先"
+  },
+  "m_52296e73ceec6ce1": {
+    "message": "链接恢复"
+  },
+  "m_ccc96d8740521cb4": {
+    "message": "正在加载页面链接…"
+  },
+  "m_b9f867064b204410": {
+    "message": "正在加载网站…"
+  },
+  "m_6f1c11acccb3f806": {
+    "message": "主队列"
+  },
+  "m_179b204ad2a7f5dc": {
+    "message": "媒体检测"
+  },
+  "m_d7b80c91cf6b7aa5": {
+    "message": "媒体检测访问权限已更改。准备好后请重新启用。"
+  },
+  "m_36fb507d0e7b32e8": {
+    "message": "媒体检测已关闭。列表已清空。"
+  },
+  "m_63cfe215acef08ce": {
+    "message": "媒体检测已开启。开始播放或重新加载页面。"
+  },
+  "m_05dc18f8ce93981b": {
+    "message": "媒体检测不可用。请重新加载扩展后重试。"
+  },
+  "m_7a05c2c962505cdb": {
+    "message": "媒体发现无法更新列表。请关闭并重新开启检测后重试。"
+  },
+  "m_667d5d5489d7fc17": {
+    "message": "媒体项"
+  },
+  "m_0c401d043fe13fb6": {
+    "message": "媒体列表已清空。新的播放请求会再次出现。"
+  },
+  "m_d8851b3df6edf1d3": {
+    "message": "此页面的媒体"
+  },
+  "m_91a5e537e1bf2422": {
+    "message": "最小文件大小"
+  },
+  "m_dcd1d5223f73b3a9": {
+    "message": "名称"
+  },
+  "m_a8bc982bc423c5a7": {
+    "message": "网络媒体"
+  },
+  "m_0cffcc196fd87d17": {
+    "message": "不从以下网站捕获"
+  },
+  "m_1ff57a29d7c9d11b": {
+    "message": "下一页"
+  },
+  "m_09f1c438851431f3": {
+    "message": "尚无活动记录。"
+  },
+  "m_3f1536c1d3a3c78c": {
+    "message": "未加载链接"
+  },
+  "m_507f9ea8cb63e18e": {
+    "message": "没有符合筛选条件的链接。"
+  },
+  "m_7eaa329a40093924": {
+    "message": "没有匹配的文件"
+  },
+  "m_75d0a7642fe89d02": {
+    "message": "无最小值"
+  },
+  "m_6dd1d3103295d8dc": {
+    "message": "扩展后台未响应。"
+  },
+  "m_47788a2327f83840": {
+    "message": "无法读取支持的浏览器登录信息。请登录此网站后重试。不支持隐私或分区会话。"
+  },
+  "m_1e9601e1e54c4d5a": {
+    "message": "没有支持的登录 Cookie 匹配此文件。请先登录网站。不支持隐私、分区和第一方隔离会话。"
+  },
+  "m_3e86480851090d8e": {
+    "message": "默认关闭。启用后可在浏览时查找音视频请求。"
+  },
+  "m_841fa2784ee46d5c": {
+    "message": "此网站已关闭。您的选择已保存。"
+  },
+  "m_b6d42710b782d638": {
+    "message": "默认开启。允许此网站以显示视频按钮。"
+  },
+  "m_48ff08561347ceb3": {
+    "message": "默认开启。打开网站以更改其设置。"
+  },
+  "m_718a1c9b01954136": {
+    "message": "默认开启。播放视频以进行检测，再选择要下载的内容。"
+  },
+  "m_a5796db85ba454a2": {
+    "message": "默认开启。关闭可隐藏此网站的视频按钮。"
+  },
+  "m_b7e24a07e6b998ce": {
+    "message": "默认开启。您的选择按网站保存。"
+  },
+  "m_18aa46ba0236a241": {
+    "message": "每行一个网站，包括其子域名；* 匹配名称中的任意部分。"
+  },
+  "m_4e918bc632379980": {
+    "message": "仅支持不含嵌入登录信息的 HTTP/HTTPS 链接。"
+  },
+  "m_c474c658148d459d": {
+    "message": "仅将选定链接发送到 Download Engine。链接可能指向网页；文件类型根据名称和可用媒体信息判断。"
+  },
+  "m_8bee84e594e99e34": {
+    "message": "请打开浏览器标签页并重新打开 Download Engine。"
+  },
+  "m_c66ff2b172c3b834": {
+    "message": "打开普通网页以设置视频按钮。"
+  },
+  "m_aa4c148abfa53385": {
+    "message": "请打开普通网页以查找媒体。"
+  },
+  "m_215a54029c2b4b91": {
+    "message": "请打开普通网页以确认媒体。"
+  },
+  "m_a9a64a3ba1e37620": {
+    "message": "打开 HTTP 或 HTTPS 网页，然后在该页面点击扩展。"
+  },
+  "m_5d404dc8daf23871": {
+    "message": "请打开 Download Engine 扩展后重试。"
+  },
+  "m_1c911c28ea089770": {
+    "message": "在普通标签页中打开已登录网站，然后选择同一服务器上的文件。"
+  },
+  "m_b4c5fc73a947b6af": {
+    "message": "已在应用中打开"
+  },
+  "m_c751d726c402d9ab": {
+    "message": "正在 Download Engine 中打开视频确认"
+  },
+  "m_c926c2c50e65d5a5": {
+    "message": "正在打开…"
+  },
+  "m_1a0c32d68ceb4922": {
+    "message": "原目标"
+  },
+  "m_15a84d473a2dc5ef": {
+    "message": "原队列"
+  },
+  "m_5e19e35a09649309": {
+    "message": "其他 / 未知"
+  },
+  "m_57d2af91bc34f0b3": {
+    "message": "页面资源"
+  },
+  "m_2d327768547d6bfa": {
+    "message": "页面资源"
+  },
+  "m_58dc76ebf2ef2844": {
+    "message": "页面链接"
+  },
+  "m_101737af4b45f970": {
+    "message": "页面链接"
+  },
+  "m_aded8b818cfb9479": {
+    "message": "页面链接"
+  },
+  "m_c902c6b1e1a4c529": {
+    "message": "页面链接 · Download Engine"
+  },
+  "m_9a3faea57df5b5b3": {
+    "message": "页面顺序"
+  },
+  "m_445999cff1f693bb": {
+    "message": "隐私窗口中无法收集页面链接。"
+  },
+  "m_a7a9dc5bcf71adb2": {
+    "message": "已暂停"
+  },
+  "m_40d12c1cd050aea2": {
+    "message": "待确认项目和下载已恢复。已检查浏览器交接。"
+  },
+  "m_d101686dfb461d7b": {
+    "message": "权限已撤销"
+  },
+  "m_fb44b7bd4a949eee": {
+    "message": "预览 DASH"
+  },
+  "m_a891a492d8d0c27e": {
+    "message": "预览 HLS"
+  },
+  "m_a57b08a480b822a0": {
+    "message": "上一页"
+  },
+  "m_6d4977e17532e718": {
+    "message": "不支持隐私、分区和第一方隔离会话。自动捕获保持匿名。"
+  },
+  "m_90920d93e2c7e632": {
+    "message": "程序"
+  },
+  "m_b6747064b2a6dd95": {
+    "message": "程序"
+  },
+  "m_3b2fe03e36893916": {
+    "message": "队列"
+  },
+  "m_68b16a818cc085cf": {
+    "message": "最近的设置、连接检查和视频确认，仅保存在此浏览器中。"
+  },
+  "m_98d7576ae1a9c3fc": {
+    "message": "恢复现有下载"
+  },
+  "m_da9f4135cbe4b48b": {
+    "message": "恢复交接"
+  },
+  "m_c73c9c73104c4316": {
+    "message": "恢复访问已启用。请在网页上点击相同文件，然后在 Download Engine 中确认。"
+  },
+  "m_acfeb89bc6c13696": {
+    "message": "恢复已取消。下载保留在浏览器中。"
+  },
+  "m_d662ba072dd18ac7": {
+    "message": "恢复检查完成。暂停的文件请查看浏览器下载列表。"
+  },
+  "m_ad787fd387d7b9ad": {
+    "message": "恢复无法启动："
+  },
+  "m_24cedb972410650c": {
+    "message": "恢复需要处理。如有需要，请在浏览器下载列表中恢复。 "
+  },
+  "m_5273e2f102fe7c0d": {
+    "message": "恢复已停止："
+  },
+  "m_1d57f666d95264c7": {
+    "message": "刷新日志"
+  },
+  "m_2e1d57637f97896b": {
+    "message": "重新加载目标"
+  },
+  "m_9202490cb35dbda0": {
+    "message": "请重新加载 Download Engine 扩展以完成更新。"
+  },
+  "m_b330cbc172cf1e68": {
+    "message": "移除浏览器登录访问权限"
+  },
+  "m_bf98564718ee4abb": {
+    "message": "移除此网站的扩展访问权限"
+  },
+  "m_45a4092662eb386c": {
+    "message": "移除登录访问权限会停止读取所有网站的 Cookie。视频检测仍可使用。在 Download Engine → 身份验证 → 无中删除已保存的快照。"
+  },
+  "m_22799a32fabd0898": {
+    "message": "移除网站访问可停止后续 Cookie 读取。要删除现有快照，请在 Download Engine 中移除下载或选择身份验证 → 无。"
+  },
+  "m_5923e8de81d8741b": {
+    "message": "请重新打开扩展后重试。"
+  },
+  "m_20a3253602a7fcee": {
+    "message": "报告的文件大小"
+  },
+  "m_3e536eb4562fe176": {
+    "message": "预览视频前请处理待确认批次。"
+  },
+  "m_602f8e637002a585": {
+    "message": "恢复默认值"
+  },
+  "m_913b0a77f27fc498": {
+    "message": "重试同一批次"
+  },
+  "m_60d03e7404e40486": {
+    "message": "更改选择前请重试待确认批次。"
+  },
+  "m_de8cfa0e6bb6d592": {
+    "message": "重试同一批次以检查接收确认。"
+  },
+  "m_70786ccffcb091cd": {
+    "message": "确认 "
+  },
+  "m_ad8286257814524c": {
+    "message": "确认 ↗"
+  },
+  "m_8c76a4f01cdeec77": {
+    "message": "确认此页面上的链接和资源，然后将所需文件加入队列。"
+  },
+  "m_3f21ed22e0fcea7e": {
+    "message": "确认此页面上的链接，然后将所需文件加入队列。"
+  },
+  "m_1ee0fc616e9e22a3": {
+    "message": "在 Download Engine 中确认视频"
+  },
+  "m_3bc941f7f11d1ac7": {
+    "message": "请在 Download Engine 中确认视频。尚未下载任何内容。"
+  },
+  "m_41b3d85b43f47094": {
+    "message": "在新标签页中确认此网站的浏览器登录信息。"
+  },
+  "m_193df65a5f826122": {
+    "message": "右键菜单中的“使用 Download Engine 下载”始终会发送链接，不受这些规则限制。"
+  },
+  "m_852bfbb688dd15da": {
+    "message": "右键点击文件链接发送到应用，或开启自动捕获。"
+  },
+  "m_c071cf5f5ed6f884": {
+    "message": "运行中"
+  },
+  "m_e5dbdffb88164817": {
+    "message": "保存规则"
+  },
+  "m_1daa7df740ac086c": {
+    "message": "保存到"
+  },
+  "m_198a1c7a2183aefc": {
+    "message": "正在保存选定文件…"
+  },
+  "m_dd298e20fc073647": {
+    "message": "搜索链接"
+  },
+  "m_2a78025de6aae5e7": {
+    "message": "选择"
+  },
+  "m_1f7133c21072a138": {
+    "message": "选择 "
+  },
+  "m_e116a9b3a597ac1e": {
+    "message": "选择所有页面上匹配的文件"
+  },
+  "m_dea1a3e66e47d981": {
+    "message": "请选择 1 至 1,000 个列出的链接。"
+  },
+  "m_b908effe1a7c133b": {
+    "message": "选择视频直链，或预览 HLS / DASH 流以在 Download Engine 中选择画质和音轨。"
+  },
+  "m_ead5d68c99cc77a8": {
+    "message": "请为此批次选择更少链接。"
+  },
+  "m_e1ce37067ddc2ab5": {
+    "message": "选择日志"
+  },
+  "m_313175419d438c50": {
+    "message": "选择匹配项"
+  },
+  "m_87a73c5380c6c916": {
+    "message": "选择要添加的文件。"
+  },
+  "m_12576160b98349a6": {
+    "message": "选择日志后按 Ctrl+C 复制。"
+  },
+  "m_3ac5caf9518d7822": {
+    "message": "将文件链接或页面中选定的链接发送到 Download Engine，可选自动捕获下载。"
+  },
+  "m_b8ed5279e897be5d": {
+    "message": "正在发送…"
+  },
+  "m_9fa4fffd6b2390aa": {
+    "message": "用空格分隔。* 匹配任意字符，例如 r0*。只输入 * 可捕获所有类型。"
+  },
+  "m_818cd8d91aea3a16": {
+    "message": "设置"
+  },
+  "m_64d28781ada09e2e": {
+    "message": "网站访问权限已移除。现有下载会保留加密快照，直到您在 Download Engine 中删除。"
+  },
+  "m_b1dc42771ae048ea": {
+    "message": "未授予网站访问权限。请允许此网站以显示视频按钮。"
+  },
+  "m_683653872b36eaa7": {
+    "message": "未授予网站访问权限。未发送登录信息。"
+  },
+  "m_f09f3886349140ea": {
+    "message": "无法移除网站权限。"
+  },
+  "m_1af851907331c0ed": {
+    "message": "大小"
+  },
+  "m_d94adb63dbcd8018": {
+    "message": "此页面未提供大小"
+  },
+  "m_2a817d337803db0d": {
+    "message": "大小单位"
+  },
+  "m_873395540b2cfea9": {
+    "message": "大小未知"
+  },
+  "m_80b858ffa465e189": {
+    "message": "较小的文件保留在浏览器中。留空表示任意大小。"
+  },
+  "m_bec69036aa27e7fa": {
+    "message": "排序"
+  },
+  "m_af45940023cd4d24": {
+    "message": "来源页面"
+  },
+  "m_329c0763bd9ec092": {
+    "message": "启用检测后开始播放，或使用查找视频扫描此页面。"
+  },
+  "m_febbea5fb07c20c8": {
+    "message": "应用无法确认取消。浏览器副本已保留；重试前请检查应用。"
+  },
+  "m_fbb00942fda85125": {
+    "message": "应用未确认新链接"
+  },
+  "m_ec379e9b433646d8": {
+    "message": "应用未确认交接。已保留浏览器下载；若 Download Engine 中也出现副本，请一并检查。"
+  },
+  "m_903e073f9cd11362": {
+    "message": "取消期间浏览器副本已完成或继续"
+  },
+  "m_1c9fd224194b7ee7": {
+    "message": "浏览器无法暂停此下载"
+  },
+  "m_eed9387ac150e8fe": {
+    "message": "浏览器无法读取此页面。请尝试普通网页。"
+  },
+  "m_f3cfbd4cbe900742": {
+    "message": "下载保留在浏览器中，Download Engine 也已收到。请检查两个下载列表。"
+  },
+  "m_d69c84ad2351aa26": {
+    "message": "浏览器登录交接未确认。请检查桌面连接，再重试同一请求。"
+  },
+  "m_55e44ceeae345baf": {
+    "message": "桌面应用无法添加此下载。"
+  },
+  "m_6f841f3073957b4a": {
+    "message": "桌面应用未确认下载已保存。"
+  },
+  "m_2b3a9305582ef2d1": {
+    "message": "桌面应用未确认浏览器恢复。请更新 Download Engine 后重试。"
+  },
+  "m_e6c0313fd505b718": {
+    "message": "桌面应用未确认浏览器交接。"
+  },
+  "m_bedea1012885305a": {
+    "message": "桌面应用未确认完整保存的批次。请重试同一批次。"
+  },
+  "m_390e7750e59f2870": {
+    "message": "桌面应用未确认视频预览。请更新 Download Engine 或重试。"
+  },
+  "m_1947644923407952": {
+    "message": "桌面应用未确认视频确认请求。请更新 Download Engine，再使用恢复交接。"
+  },
+  "m_088826a3e5e4e204": {
+    "message": "桌面应用未及时响应。"
+  },
+  "m_bd3ccbbad5af2986": {
+    "message": "桌面应用返回了无效响应。"
+  },
+  "m_535e3e6ab89880c5": {
+    "message": "扩展后台未响应。"
+  },
+  "m_988db6830a99c691": {
+    "message": "扩展未响应。"
+  },
+  "m_306540f92d0513e3": {
+    "message": "扩展未响应。重新加载此标签页后重试。"
+  },
+  "m_d122305531039ccd": {
+    "message": "扩展未响应。请重试同一请求。"
+  },
+  "m_30289712f9fad302": {
+    "message": "上一批次没有确认回复。重试会发送同一批次，不会重复添加。解决前请保持浏览器打开。"
+  },
+  "m_e72a03f673ade934": {
+    "message": "原网站标签页已关闭。打开网站后重试。"
+  },
+  "m_290b216afbebe4b2": {
+    "message": "页面已更改。请再次点击视频按钮。"
+  },
+  "m_110b363e52b4a6d5": {
+    "message": "页面已更改。请重新打开扩展后重试。"
+  },
+  "m_9ade37e9a32e749d": {
+    "message": "页面已更改。请重新打开扩展。"
+  },
+  "m_f314de530158f111": {
+    "message": "页面返回了无效链接列表。"
+  },
+  "m_26af77d95664e615": {
+    "message": "已达到视频按钮保存网站数量上限。"
+  },
+  "m_91947dba22da73b5": {
+    "message": "请求权限期间设置已更改。"
+  },
+  "m_dbd704dc9a27d238": {
+    "message": "没有可重试的待确认批次。"
+  },
+  "m_b418ac2881c78a7a": {
+    "message": "此批次已在发送中。"
+  },
+  "m_604518b6a7b13e73": {
+    "message": "此链接选择器已过期。请通过扩展重新收集页面链接。"
+  },
+  "m_68fd909eec66f301": {
+    "message": "此登录请求已过期。重新发送文件前请检查 Download Engine 队列。"
+  },
+  "m_14204d3bb3d2fc5e": {
+    "message": "此媒体项已过期。重新播放以再次检测。"
+  },
+  "m_d5993dba7abddfa4": {
+    "message": "此页面的链接数据过多。请尝试较小页面。"
+  },
+  "m_359c18c81b3a8742": {
+    "message": "此页面的视频数据过多。请尝试较小页面。"
+  },
+  "m_601ed5513a7de1ff": {
+    "message": "此页面较大，仅显示有限链接。打开较小页面可收集更多链接。"
+  },
+  "m_f35a9682d7be0bd2": {
+    "message": "此网站的浏览器登录信息过大。请在浏览器中下载文件。"
+  },
+  "m_a13331f2e442016c": {
+    "message": "无法安全传输此网站的 Cookie。请在浏览器中下载文件。"
+  },
+  "m_d8b8392e2c542950": {
+    "message": "重试"
+  },
+  "m_baaddf70fb5d432b": {
+    "message": "类型"
+  },
+  "m_b764cdc0eab71374": {
+    "message": "未知"
+  },
+  "m_b3744a5c9e3a8a5f": {
+    "message": "未知的权限设置。"
+  },
+  "m_037c426c05970681": {
+    "message": "无标题页面"
+  },
+  "m_24f3b0891ed85ed6": {
+    "message": "请更新桌面应用以使用页面链接批次。"
+  },
+  "m_239bbb679e8b5ed9": {
+    "message": "启用自动捕获前请更新 Download Engine 桌面应用。"
+  },
+  "m_edfcdbe6f4310523": {
+    "message": "使用浏览器登录前请更新 Download Engine 桌面应用。"
+  },
+  "m_6ef631778917843c": {
+    "message": "使用浏览器登录 · Download Engine"
+  },
+  "m_a84b376c126bf400": {
+    "message": "使用查找视频扫描此页面，或启用检测并开始播放。"
+  },
+  "m_a1426ad7784ebbbc": {
+    "message": "添加流媒体前请使用预览 HLS 或预览 DASH 选择画质。"
+  },
+  "m_244ef0cdc79df596": {
+    "message": "恢复无法释放暂停的副本。请在浏览器下载列表中恢复。"
+  },
+  "m_acfe566ca2e566e7": {
+    "message": "使用此网站的登录信息"
+  },
+  "m_69da05b04d99b754": {
+    "message": "使用此网站的登录信息（先确认）"
+  },
+  "m_d4aa36ffd2cc2537": {
+    "message": "最多可使用 {0} 种文件类型。"
+  },
+  "m_850e8821a631dd82": {
+    "message": "最多可使用 {0} 个网站。"
+  },
+  "m_27eb9ee5a85d401e": {
+    "message": "使用 Download Engine 设置中的自动文件夹规则。"
+  },
+  "m_d534be829e32196b": {
+    "message": "视频"
+  },
+  "m_9e745d40aad9b039": {
+    "message": "视频按钮"
+  },
+  "m_99f89003e6428eab": {
+    "message": "视频按钮无法更新已打开的标签页："
+  },
+  "m_d0113821d8075479": {
+    "message": "此网站的视频按钮"
+  },
+  "m_c1c069858f0e43e0": {
+    "message": "视频按钮仅在普通顶层页面可用。"
+  },
+  "m_bf8f3f1e22b98e76": {
+    "message": "此网站的视频按钮已禁用或缺少网站访问权限。"
+  },
+  "m_b6a9e2a18c985463": {
+    "message": "此网站的视频按钮已关闭。"
+  },
+  "m_4fcff88a23263c1d": {
+    "message": "此网站的视频按钮已开启。点击按钮可确认可用视频。"
+  },
+  "m_33a6de083bd3b681": {
+    "message": "视频下载"
+  },
+  "m_1999f0d064cfbc7c": {
+    "message": "视频下载 — Download Engine"
+  },
+  "m_74d5e1a5adca3103": {
+    "message": "视频文件"
+  },
+  "m_d007a137f798c162": {
+    "message": "视频文件"
+  },
+  "m_cfe370de13214b8b": {
+    "message": "视频确认"
+  },
+  "m_c08d78254e705099": {
+    "message": "视频流"
+  },
+  "m_991cf9db508be663": {
+    "message": "等待 {0}。请在原页面点击下载链接，然后在 Download Engine 中确认。"
+  },
+  "m_487420533636d10c": {
+    "message": "未授予网站访问权限。媒体检测保持关闭。"
+  },
+  "m_11fcf7333cfe5a60": {
+    "message": "Windows 为您的账户加密此快照。它仅用于本次下载，最长 24 小时，并在下载完成或移除时删除。在浏览器退出登录不会删除已保存快照。"
+  },
+  "extensionName": {
+    "message": "Download Engine 浏览器集成"
+  },
+  "extensionDescription": {
+    "message": "为 Download Engine 桌面应用接管文件下载并检测视频。"
+  }
+}

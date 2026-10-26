@@ -1,0 +1,1028 @@
+{
+  "m_a9f74d4af5d7dd2d": {
+    "message": "{0} disembunyikan oleh penapis"
+  },
+  "m_b364264cdee56a63": {
+    "message": "{0} daripada {1} pautan · {2} dipilih{3}"
+  },
+  "m_3e9174b076fa6723": {
+    "message": "{0} pautan HTTP/HTTPS unik ditemui. Tiada pilihan dibuat secara automatik."
+  },
+  "m_4751f6a4b5d9bb30": {
+    "message": "{0}–{1} daripada {2}"
+  },
+  "m_2150dc95bcdb8850": {
+    "message": "Pautan baharu sudah menunggu semakan dalam Download Engine."
+  },
+  "m_acca29cca3e064e3": {
+    "message": "Penyerahan memerlukan perhatian. Gunakan Sambung dalam senarai Muat turun pelayar jika dijeda. "
+  },
+  "m_da5cba54ff645402": {
+    "message": "Imbasan halaman sedang berjalan."
+  },
+  "m_93cbb4b9c437b588": {
+    "message": "Permintaan pemilih ini sedang dihantar."
+  },
+  "m_8b60e5b9af092e22": {
+    "message": "Semakan sedang dibuka."
+  },
+  "m_fbb9b1f9dcbfeae4": {
+    "message": "Semakan video sedang dibuka dalam Download Engine."
+  },
+  "m_69dfd976b317260d": {
+    "message": "Semakan video sedang dibuka."
+  },
+  "m_f2ca785fd206a095": {
+    "message": "Semakan video menunggu pengesahan. Gunakan Pilihan pelayar → Pulihkan penyerahan dahulu."
+  },
+  "m_0e9839b644120fa4": {
+    "message": "Tambah fail: {0}{1}"
+  },
+  "m_264137ad4e188078": {
+    "message": "Tambah URL fail"
+  },
+  "m_d852059dca4ba30a": {
+    "message": "Tambah sekurang-kurangnya satu jenis fail, atau masukkan * untuk menangkap semua jenis."
+  },
+  "m_fba811a83d244b75": {
+    "message": "Tambah fail terpilih"
+  },
+  "m_63889fe9a0f7922d": {
+    "message": "Ditambah ke Download Engine"
+  },
+  "m_b42ec7eef98969f5": {
+    "message": "Ditambah ke giliran"
+  },
+  "m_035a4bf3220f575b": {
+    "message": "Ditambah dengan log masuk pelayar"
+  },
+  "m_1fec4c2ee0889acb": {
+    "message": "Semua pautan"
+  },
+  "m_08e774c5bacc362a": {
+    "message": "Semua sumber"
+  },
+  "m_79c625de4b9fd500": {
+    "message": "Benarkan akses kuki laman ini untuk menggunakan log masuknya."
+  },
+  "m_26f0b4e0ff1f898e": {
+    "message": "Benarkan akses muat turun untuk mengaktifkan tangkapan automatik."
+  },
+  "m_5b94fcf971c23dee": {
+    "message": "Benarkan akses muat turun untuk mencari pautan baharu bagi {0}. Tangkapan automatik boleh kekal dimatikan."
+  },
+  "m_2e62efd7ab18a82d": {
+    "message": "Benarkan pengesanan media dan akses laman untuk memerhatikan permintaan media."
+  },
+  "m_48cc22965b91eff2": {
+    "message": "Benarkan akses pemulihan"
+  },
+  "m_24e1772fedce2ed7": {
+    "message": "Benarkan log masuk laman & muat turun"
+  },
+  "m_5864c132f9bc0926": {
+    "message": "Benarkan laman ini"
+  },
+  "m_9ee4b5b0cf00b360": {
+    "message": "Benarkan akses laman ini untuk menunjukkan butang videonya."
+  },
+  "m_9f46b4f2f671c116": {
+    "message": "Sebarang saiz"
+  },
+  "m_72c46a00422be09f": {
+    "message": "Luluskan satu muat turun fail."
+  },
+  "m_66f4804ee23ddc09": {
+    "message": "Arkib"
+  },
+  "m_e404aa80d8df4adb": {
+    "message": "Arkib"
+  },
+  "m_bc1b88907d3b748a": {
+    "message": "Audio"
+  },
+  "m_571a9d4e6ae3e6e9": {
+    "message": "Tangkapan automatik"
+  },
+  "m_551953291092c063": {
+    "message": "Tangkapan automatik tidak dapat dimulakan: "
+  },
+  "m_4b0437f552a7f60f": {
+    "message": "Tangkapan automatik dimatikan."
+  },
+  "m_ca4588908fe682ee": {
+    "message": "Tangkapan automatik dimatikan. Jika muat turun dijeda, gunakan Sambung dalam senarai Muat turun pelayar."
+  },
+  "m_dbcbd988532e58f3": {
+    "message": "Tangkapan automatik dihidupkan untuk muat turun fail terus."
+  },
+  "m_a4885ab1c22dbeb0": {
+    "message": "Tangkapan automatik kekal dimatikan. Buka Download Engine → Alat → Persediaan pelayar, pilih pelayar dan sambungkan. Kemudian cuba di sini. "
+  },
+  "m_bdf26652484911a4": {
+    "message": "Tangkapan muat turun automatik"
+  },
+  "m_6259b8b41e217222": {
+    "message": "Folder automatik"
+  },
+  "m_6aa06201d769ad78": {
+    "message": "Pautan tersedia"
+  },
+  "m_2cf57ca29785ac99": {
+    "message": "Salinan pelayar diteruskan"
+  },
+  "m_9ce0d857154f24e2": {
+    "message": "Bahasa pelayar"
+  },
+  "m_9a06933b478415e9": {
+    "message": "Akses log masuk pelayar dialih keluar untuk semua laman. Muat turun sedia ada menyimpan petikan disulitkan sehingga anda memadamkannya dalam Download Engine."
+  },
+  "m_776802e7061330f7": {
+    "message": "Log masuk pelayar tidak dapat dihantar. Semak akses laman dan sambungan desktop."
+  },
+  "m_31eb4316301f4815": {
+    "message": "Log masuk pelayar memerlukan HTTPS. Buka pautan fail terus yang selamat."
+  },
+  "m_0017e5fbb9fd5905": {
+    "message": "Pilihan pelayar"
+  },
+  "m_f4a311ce61b95ad0": {
+    "message": "Tangkap muat turun fail dan kesan video untuk aplikasi desktop Download Engine."
+  },
+  "m_90948ad9dbb580df": {
+    "message": "Peraturan tangkapan"
+  },
+  "m_720995cec7bccf29": {
+    "message": "Peraturan tangkapan tidak tersedia. Muat semula sambungan."
+  },
+  "m_8f326a402a36befc": {
+    "message": "Peraturan tangkapan disimpan."
+  },
+  "m_be5dff52eeb0fd5b": {
+    "message": "Semak sambungan"
+  },
+  "m_c29aa06c2ddb8076": {
+    "message": "Semak jenis fail ini: {0}"
+  },
+  "m_8151d4ddeed81415": {
+    "message": "Semak laman ini: {0}"
+  },
+  "m_d6fdbb314af454a1": {
+    "message": "Menyemak kelompok asal…"
+  },
+  "m_ec963ffc911b8401": {
+    "message": "Menyemak…"
+  },
+  "m_ddec030e83b025f5": {
+    "message": "Pilih video HLS atau DASH yang disenaraikan."
+  },
+  "m_a0f311dfdcbbc7c9": {
+    "message": "Pilih giliran tersimpan dan folder destinasi."
+  },
+  "m_9b02ef3f495e64ef": {
+    "message": "Pilih fail dari halaman ini"
+  },
+  "m_cbe8a50b6762fd46": {
+    "message": "Pilih kualiti dalam aplikasi"
+  },
+  "m_c945c62180fcab9a": {
+    "message": "Pilih fail video dan kualiti strim dalam Download Engine"
+  },
+  "m_312bfa601066a8e4": {
+    "message": "Pilih kandungan untuk dimuat turun"
+  },
+  "m_83b12c2216efb4fd": {
+    "message": "Kosongkan"
+  },
+  "m_a8858ac749bc452b": {
+    "message": "Kosongkan log"
+  },
+  "m_cea4d2e010b8fd52": {
+    "message": "Kosongkan pilihan"
+  },
+  "m_652c67c42dba3909": {
+    "message": "Tutup pemilih pautan lain dahulu. Gunakan Pulihkan penyerahan untuk kelompok tertunda."
+  },
+  "m_b9ce2241762a7a45": {
+    "message": "Menyambung ke Download Engine…"
+  },
+  "m_83f23cdbeb423f39": {
+    "message": "Semakan sambungan"
+  },
+  "m_d45e5aae2ee31082": {
+    "message": "Stor kuki tidak sepadan"
+  },
+  "m_101bd5ad093f5552": {
+    "message": "Tidak dapat membuang akses laman. Gunakan tetapan sambungan pelayar."
+  },
+  "m_4a8c2b313a136fa4": {
+    "message": "Tidak dapat menyambung muat turun pelayar. Gunakan Sambung dalam senarai Muat turun pelayar. "
+  },
+  "m_50746138b9d24c2b": {
+    "message": "Tidak dapat kembali ke pop timbul sambungan:"
+  },
+  "m_936628cc4a394ede": {
+    "message": "Lalai dipulihkan. Pilih Simpan peraturan untuk mengekalkannya."
+  },
+  "m_0690f959c9689317": {
+    "message": "Kesan media semasa melayari"
+  },
+  "m_4125b0325a1d9a1c": {
+    "message": "Media dikesan"
+  },
+  "m_ee71fa5ff80ee155": {
+    "message": "Pengesanan dihidupkan. Mainkan media untuk mengemas kini senarai."
+  },
+  "m_c46c657680c1fb6a": {
+    "message": "Log diagnostik"
+  },
+  "m_da1e00181e6edfc0": {
+    "message": "Log diagnostik tidak tersedia. Muat semula sambungan."
+  },
+  "m_97a6661033069fb1": {
+    "message": "Fail terus dan pratonton HLS / DASH tanpa penyulitan."
+  },
+  "m_d6bd8c0aeee80fed": {
+    "message": "Dokumen"
+  },
+  "m_b4e929d8bcfe0418": {
+    "message": "Dokumen"
+  },
+  "m_4b20f1e564f08418": {
+    "message": "Akses muat turun berubah. Aktifkan semula tangkapan automatik apabila sedia."
+  },
+  "m_de82471b8e92e8c9": {
+    "message": "Akses muat turun tidak diberikan. Tangkapan automatik kekal dimatikan."
+  },
+  "m_26e9086fb67e1171": {
+    "message": "Akses muat turun tidak diberikan. Anda masih boleh menampal pautan baharu dalam Download Engine."
+  },
+  "m_86237283243c5c06": {
+    "message": "Destinasi muat turun"
+  },
+  "m_4fe58a9f465df20b": {
+    "message": "Download Engine"
+  },
+  "m_67061b40bd1fc990": {
+    "message": "Download Engine mempunyai fail dalam gilirannya, tetapi salinan pelayar tidak dapat dihentikan. Semak kedua-dua senarai muat turun."
+  },
+  "m_ad28de051651de0a": {
+    "message": "Download Engine disambungkan."
+  },
+  "m_b5ee50a47681c17b": {
+    "message": "Download Engine mengemas kini muat turun sedia ada. Salinan pelayar juga kekal; semak kedua-dua senarai."
+  },
+  "m_55cff9fa827ef904": {
+    "message": "Download Engine menyalin kuki log masuk sepadan daripada tab laman asal, termasuk bekas Firefoxnya. Fail mesti berada pada pelayan yang sama."
+  },
+  "m_b732f149ac000cfe": {
+    "message": "Muat turun dikekalkan dalam pelayar: "
+  },
+  "m_4dfb918c17f5863a": {
+    "message": "Muat turun dikekalkan dalam pelayar."
+  },
+  "m_3a7a16064f324d88": {
+    "message": "Muat turun pautan dari halaman ini"
+  },
+  "m_182321e7f219bcc2": {
+    "message": "Muat turun dihantar ke Download Engine."
+  },
+  "m_d1db69fff45e2607": {
+    "message": "Muat turun menggunakan log masuk pelayar…"
+  },
+  "m_9e6a91c146c14996": {
+    "message": "Muat turun video"
+  },
+  "m_e1e91278b3b950c4": {
+    "message": "Muat turun video dengan Download Engine — semak dahulu"
+  },
+  "m_36886174177ac2af": {
+    "message": "Muat turun dengan Download Engine"
+  },
+  "m_cc5c7b4f90b18c40": {
+    "message": "Aktifkan pengesanan dengan akses laman. Tidak menggunakan log masuk anda."
+  },
+  "m_e2d9eaba91bf0037": {
+    "message": "Masukkan URL fail HTTP atau HTTPS yang lengkap."
+  },
+  "m_6e42641a11a1c04e": {
+    "message": "Masukkan saiz minimum antara 0 dan 1 TB."
+  },
+  "m_4eb6084d5e196685": {
+    "message": "Muat turun sedia ada dikemas kini dalam Download Engine."
+  },
+  "m_2eabb5731ec0a7f5": {
+    "message": "Bahasa sambungan"
+  },
+  "m_d8e40338c0625f5b": {
+    "message": "Fail / pautan"
+  },
+  "m_fb6219471a55d640": {
+    "message": "Muat turun fail ditangkap secara automatik. Sambungkan aplikasi desktop dalam Persediaan pelayar."
+  },
+  "m_95b44f14672ddf20": {
+    "message": "Nama fail, teks pautan atau URL"
+  },
+  "m_ea1df05210c29d1e": {
+    "message": "Jenis fail"
+  },
+  "m_6ebe2a3778d6510e": {
+    "message": "Jenis fail untuk ditangkap"
+  },
+  "m_4ac686f1fff7a0ce": {
+    "message": "URL fail"
+  },
+  "m_7cd46f2b72f2f96d": {
+    "message": "fail dan pautan"
+  },
+  "m_91c34f985f2ccf2e": {
+    "message": "Cari video pada halaman ini"
+  },
+  "m_abb03e243f8f426a": {
+    "message": "Cari video dengan Download Engine"
+  },
+  "m_c14ae1090e852370": {
+    "message": "Selesaikan permintaan kebenaran terbuka sebelum menukar tetapan lain."
+  },
+  "m_3b36902cb433c0af": {
+    "message": "Folder diurus dalam Tetapan Download Engine."
+  },
+  "m_fb1c8ed06249aced": {
+    "message": "{0} {1} ditemui. Semaknya dalam tab baharu."
+  },
+  "m_dac55102f2a6291b": {
+    "message": "Ditemui dalam"
+  },
+  "m_cf58b80fa579dabc": {
+    "message": "Pautan baharu ditemui. Semak pengesahan data tersimpan dalam Download Engine, kemudian sahkan sambungan semula."
+  },
+  "m_23b41d51987507df": {
+    "message": "HLS / DASH membuka pratonton desktop; strim langsung atau disulitkan tidak disokong. Dayakan pengesanan media sebelum main balik untuk mencari lebih banyak strim."
+  },
+  "m_1aa4cb0bcca76e92": {
+    "message": "Imej"
+  },
+  "m_be7e2f20129365c2": {
+    "message": "Imej"
+  },
+  "m_28d71345fcbdb6bc": {
+    "message": "Penyerahan terganggu dipulihkan; muat turun dikekalkan dalam pelayar."
+  },
+  "m_ddedfe53cbb11f79": {
+    "message": "Pemulihan terganggu dilepaskan kepada pelayar."
+  },
+  "m_7182c1f1f59286fa": {
+    "message": "Tetapan tangkapan automatik tidak sah."
+  },
+  "m_419be78ea9367d52": {
+    "message": "Permintaan log masuk pelayar tidak sah."
+  },
+  "m_615de39dbabcd451": {
+    "message": "Peraturan tangkapan tidak sah."
+  },
+  "m_4e6451d9c7a05b34": {
+    "message": "Tetapan diagnostik tidak sah."
+  },
+  "m_ebe2abb4cddb35fc": {
+    "message": "Pengecam pemilih pautan tidak sah."
+  },
+  "m_438fc9ceb0904b0d": {
+    "message": "Tetapan pengesanan media tidak sah."
+  },
+  "m_cfd2d68349b7432a": {
+    "message": "Mod imbasan halaman tidak sah."
+  },
+  "m_53621c0588be411a": {
+    "message": "Pengecam permintaan tidak sah."
+  },
+  "m_fd72d477bb65dc79": {
+    "message": "Tetapan butang video tidak sah."
+  },
+  "m_e20a4b411a818b8b": {
+    "message": "Laman butang video tidak sah."
+  },
+  "m_c2e9a31124f7d0f7": {
+    "message": "Biarkan tab laman asal yang sudah log masuk terbuka."
+  },
+  "m_019e66b1bd219970": {
+    "message": "Biarkan tab asal yang dilog masuk terbuka. Pelayaran peribadi tidak disokong."
+  },
+  "m_251452cbeaef4875": {
+    "message": "Terbesar dahulu"
+  },
+  "m_52296e73ceec6ce1": {
+    "message": "Pemulihan pautan"
+  },
+  "m_ccc96d8740521cb4": {
+    "message": "Memuatkan pautan halaman…"
+  },
+  "m_b9f867064b204410": {
+    "message": "Memuatkan laman…"
+  },
+  "m_6f1c11acccb3f806": {
+    "message": "Baris gilir utama"
+  },
+  "m_179b204ad2a7f5dc": {
+    "message": "Pengesanan media"
+  },
+  "m_d7b80c91cf6b7aa5": {
+    "message": "Akses pengesanan media berubah. Aktifkan semula apabila sedia."
+  },
+  "m_36fb507d0e7b32e8": {
+    "message": "Pengesanan media dimatikan. Senarainya dikosongkan."
+  },
+  "m_63cfe215acef08ce": {
+    "message": "Pengesanan media dihidupkan. Mulakan main balik atau muat semula halaman."
+  },
+  "m_05dc18f8ce93981b": {
+    "message": "Pengesanan media tidak tersedia. Muat semula sambungan untuk mencuba lagi."
+  },
+  "m_7a05c2c962505cdb": {
+    "message": "Penemuan media tidak dapat mengemas kini senarai. Matikan dan hidupkan pengesanan untuk mencuba lagi."
+  },
+  "m_667d5d5489d7fc17": {
+    "message": "item media"
+  },
+  "m_0c401d043fe13fb6": {
+    "message": "Senarai media dikosongkan. Permintaan main balik baharu boleh muncul lagi."
+  },
+  "m_d8851b3df6edf1d3": {
+    "message": "Media pada halaman ini"
+  },
+  "m_91a5e537e1bf2422": {
+    "message": "Saiz fail minimum"
+  },
+  "m_dcd1d5223f73b3a9": {
+    "message": "Nama"
+  },
+  "m_a8bc982bc423c5a7": {
+    "message": "Media rangkaian"
+  },
+  "m_0cffcc196fd87d17": {
+    "message": "Jangan tangkap daripada laman ini"
+  },
+  "m_1ff57a29d7c9d11b": {
+    "message": "Seterusnya"
+  },
+  "m_09f1c438851431f3": {
+    "message": "Belum ada aktiviti direkodkan."
+  },
+  "m_3f1536c1d3a3c78c": {
+    "message": "Tiada pautan dimuatkan"
+  },
+  "m_507f9ea8cb63e18e": {
+    "message": "Tiada pautan sepadan dengan penapis anda."
+  },
+  "m_7eaa329a40093924": {
+    "message": "Tiada fail sepadan"
+  },
+  "m_75d0a7642fe89d02": {
+    "message": "Tiada minimum"
+  },
+  "m_6dd1d3103295d8dc": {
+    "message": "Tiada respons daripada latar belakang sambungan."
+  },
+  "m_47788a2327f83840": {
+    "message": "Tiada log masuk pelayar disokong dapat dibaca. Log masuk ke laman ini dan cuba lagi. Sesi peribadi atau berpetak tidak disokong."
+  },
+  "m_1e9601e1e54c4d5a": {
+    "message": "Tiada kuki log masuk disokong sepadan dengan fail ini. Log masuk dahulu. Sesi peribadi, berpetak dan terasing pihak pertama tidak disokong."
+  },
+  "m_3e86480851090d8e": {
+    "message": "Dimatikan secara lalai. Aktifkan untuk mencari permintaan video dan audio semasa melayari."
+  },
+  "m_841fa2784ee46d5c": {
+    "message": "Dimatikan untuk laman ini. Pilihan anda disimpan."
+  },
+  "m_b6d42710b782d638": {
+    "message": "Dihidupkan secara lalai. Benarkan laman ini untuk menunjukkan butang video."
+  },
+  "m_48ff08561347ceb3": {
+    "message": "Dihidupkan secara lalai. Buka laman untuk menukar tetapannya."
+  },
+  "m_718a1c9b01954136": {
+    "message": "Dihidupkan secara lalai. Mainkan video untuk mengesannya, kemudian pilih perkara untuk dimuat turun."
+  },
+  "m_a5796db85ba454a2": {
+    "message": "Dihidupkan secara lalai. Matikan untuk menyembunyikan butang video pada laman ini."
+  },
+  "m_b7e24a07e6b998ce": {
+    "message": "Dihidupkan secara lalai. Pilihan anda disimpan untuk laman ini."
+  },
+  "m_18aa46ba0236a241": {
+    "message": "Satu laman setiap baris. Termasuk subdomainnya; * sepadan dengan mana-mana bahagian nama."
+  },
+  "m_4e918bc632379980": {
+    "message": "Hanya pautan HTTP/HTTPS tanpa butiran log masuk terbenam disokong."
+  },
+  "m_c474c658148d459d": {
+    "message": "Hanya pautan terpilih dihantar ke Download Engine. Pautan mungkin merujuk halaman web; jenis fail menggunakan nama dan metadata media tersedia."
+  },
+  "m_8bee84e594e99e34": {
+    "message": "Buka tab pelayar dan buka semula Download Engine."
+  },
+  "m_c66ff2b172c3b834": {
+    "message": "Buka halaman web biasa untuk menetapkan butang videonya."
+  },
+  "m_aa4c148abfa53385": {
+    "message": "Buka halaman web biasa untuk mencari medianya."
+  },
+  "m_215a54029c2b4b91": {
+    "message": "Buka halaman web biasa untuk menyemak medianya."
+  },
+  "m_a9a64a3ba1e37620": {
+    "message": "Buka halaman web HTTP atau HTTPS, kemudian klik sambungan pada halaman itu."
+  },
+  "m_5d404dc8daf23871": {
+    "message": "Buka sambungan Download Engine dan cuba lagi."
+  },
+  "m_1c911c28ea089770": {
+    "message": "Buka laman yang dilog masuk dalam tab biasa, kemudian pilih fail pada pelayan yang sama."
+  },
+  "m_b4c5fc73a947b6af": {
+    "message": "Dibuka dalam aplikasi"
+  },
+  "m_c751d726c402d9ab": {
+    "message": "Membuka semakan video dalam Download Engine"
+  },
+  "m_c926c2c50e65d5a5": {
+    "message": "Membuka…"
+  },
+  "m_1a0c32d68ceb4922": {
+    "message": "Destinasi asal"
+  },
+  "m_15a84d473a2dc5ef": {
+    "message": "Giliran asal"
+  },
+  "m_5e19e35a09649309": {
+    "message": "Lain-lain / tidak diketahui"
+  },
+  "m_57d2af91bc34f0b3": {
+    "message": "Aset halaman"
+  },
+  "m_2d327768547d6bfa": {
+    "message": "Aset halaman"
+  },
+  "m_58dc76ebf2ef2844": {
+    "message": "Pautan halaman"
+  },
+  "m_101737af4b45f970": {
+    "message": "Pautan halaman"
+  },
+  "m_aded8b818cfb9479": {
+    "message": "PAUTAN HALAMAN"
+  },
+  "m_c902c6b1e1a4c529": {
+    "message": "Pautan halaman · Download Engine"
+  },
+  "m_9a3faea57df5b5b3": {
+    "message": "Susunan halaman"
+  },
+  "m_445999cff1f693bb": {
+    "message": "Pengumpulan pautan halaman tidak tersedia dalam tetingkap peribadi."
+  },
+  "m_a7a9dc5bcf71adb2": {
+    "message": "dijeda"
+  },
+  "m_40d12c1cd050aea2": {
+    "message": "Semakan dan muat turun tertunda dipulihkan. Penyerahan pelayar disemak."
+  },
+  "m_d101686dfb461d7b": {
+    "message": "Kebenaran ditarik balik"
+  },
+  "m_fb44b7bd4a949eee": {
+    "message": "Pratonton DASH"
+  },
+  "m_a891a492d8d0c27e": {
+    "message": "Pratonton HLS"
+  },
+  "m_a57b08a480b822a0": {
+    "message": "Sebelumnya"
+  },
+  "m_6d4977e17532e718": {
+    "message": "Sesi peribadi, berpetak dan terasing pihak pertama tidak disokong. Tangkapan automatik kekal tanpa nama."
+  },
+  "m_90920d93e2c7e632": {
+    "message": "Program"
+  },
+  "m_b6747064b2a6dd95": {
+    "message": "Program"
+  },
+  "m_3b2fe03e36893916": {
+    "message": "Giliran"
+  },
+  "m_68b16a818cc085cf": {
+    "message": "Tetapan, semakan sambungan dan semakan video terkini, disimpan hanya dalam pelayar ini."
+  },
+  "m_98d7576ae1a9c3fc": {
+    "message": "Pulihkan muat turun sedia ada"
+  },
+  "m_da9f4135cbe4b48b": {
+    "message": "Pulihkan penyerahan"
+  },
+  "m_c73c9c73104c4316": {
+    "message": "Akses pemulihan diaktifkan. Klik fail yang sama pada laman, kemudian semak dalam Download Engine."
+  },
+  "m_acfeb89bc6c13696": {
+    "message": "Pemulihan dibatalkan. Muat turun kekal dalam pelayar."
+  },
+  "m_d662ba072dd18ac7": {
+    "message": "Pemulihan disemak. Lihat senarai Muat turun pelayar untuk fail dijeda."
+  },
+  "m_ad787fd387d7b9ad": {
+    "message": "Pemulihan tidak dapat dimulakan: "
+  },
+  "m_24cedb972410650c": {
+    "message": "Pemulihan memerlukan perhatian. Gunakan Sambung dalam senarai Muat turun pelayar jika perlu. "
+  },
+  "m_5273e2f102fe7c0d": {
+    "message": "Pemulihan dihentikan: "
+  },
+  "m_1d57f666d95264c7": {
+    "message": "Segarkan log"
+  },
+  "m_2e1d57637f97896b": {
+    "message": "Muat semula destinasi"
+  },
+  "m_9202490cb35dbda0": {
+    "message": "Muat semula sambungan Download Engine untuk melengkapkan kemas kini."
+  },
+  "m_b330cbc172cf1e68": {
+    "message": "Alih keluar akses log masuk pelayar"
+  },
+  "m_bf98564718ee4abb": {
+    "message": "Buang akses sambungan laman ini"
+  },
+  "m_45a4092662eb386c": {
+    "message": "Mengalih keluar akses log masuk menghentikan bacaan kuki pada semua laman. Pengesanan video kekal aktif. Padam petikan tersimpan dalam Download Engine → Pengesahan → Tiada."
+  },
+  "m_22799a32fabd0898": {
+    "message": "Membuang akses laman menghentikan bacaan kuki seterusnya. Untuk memadam snapshot sedia ada, buang muat turun dalam Download Engine atau pilih Pengesahan → Tiada."
+  },
+  "m_5923e8de81d8741b": {
+    "message": "Buka semula sambungan dan cuba lagi."
+  },
+  "m_20a3253602a7fcee": {
+    "message": "Saiz fail dilaporkan"
+  },
+  "m_3e536eb4562fe176": {
+    "message": "Selesaikan kelompok tertunda sebelum pratonton video."
+  },
+  "m_602f8e637002a585": {
+    "message": "Pulihkan lalai"
+  },
+  "m_913b0a77f27fc498": {
+    "message": "Cuba semula kelompok sama"
+  },
+  "m_60d03e7404e40486": {
+    "message": "Cuba semula kelompok tertunda sebelum menukar pilihannya."
+  },
+  "m_de8cfa0e6bb6d592": {
+    "message": "Cuba semula kelompok yang sama untuk menyemak pengesahannya."
+  },
+  "m_70786ccffcb091cd": {
+    "message": "Semak "
+  },
+  "m_ad8286257814524c": {
+    "message": "Semak ↗"
+  },
+  "m_8c76a4f01cdeec77": {
+    "message": "Semak pautan dan aset pada halaman ini, kemudian tambah fail yang dikehendaki ke giliran."
+  },
+  "m_3f21ed22e0fcea7e": {
+    "message": "Semak pautan pada halaman ini, kemudian tambah fail yang dikehendaki ke giliran."
+  },
+  "m_1ee0fc616e9e22a3": {
+    "message": "Semak video dalam Download Engine"
+  },
+  "m_3bc941f7f11d1ac7": {
+    "message": "Semak video dalam Download Engine. Belum ada apa-apa dimuat turun."
+  },
+  "m_41b3d85b43f47094": {
+    "message": "Semak log masuk pelayar laman ini dalam tab baharu."
+  },
+  "m_193df65a5f826122": {
+    "message": "Klik kanan → Muat turun dengan Download Engine sentiasa menghantar pautan, tanpa mengira peraturan ini."
+  },
+  "m_852bfbb688dd15da": {
+    "message": "Klik kanan pautan fail untuk menghantarnya ke aplikasi atau hidupkan tangkapan automatik."
+  },
+  "m_c071cf5f5ed6f884": {
+    "message": "berjalan"
+  },
+  "m_e5dbdffb88164817": {
+    "message": "Simpan peraturan"
+  },
+  "m_1daa7df740ac086c": {
+    "message": "Simpan ke"
+  },
+  "m_198a1c7a2183aefc": {
+    "message": "Menyimpan fail terpilih…"
+  },
+  "m_dd298e20fc073647": {
+    "message": "Cari pautan"
+  },
+  "m_2a78025de6aae5e7": {
+    "message": "Pilih"
+  },
+  "m_1f7133c21072a138": {
+    "message": "Pilih "
+  },
+  "m_e116a9b3a597ac1e": {
+    "message": "Pilih semua fail sepadan merentas setiap halaman"
+  },
+  "m_dea1a3e66e47d981": {
+    "message": "Pilih antara 1 hingga 1,000 pautan yang disenaraikan."
+  },
+  "m_b908effe1a7c133b": {
+    "message": "Pilih fail video terus atau pratonton strim HLS / DASH untuk memilih kualiti dan audio dalam Download Engine."
+  },
+  "m_ead5d68c99cc77a8": {
+    "message": "Pilih kurang pautan untuk kelompok ini."
+  },
+  "m_e1ce37067ddc2ab5": {
+    "message": "Pilih log"
+  },
+  "m_313175419d438c50": {
+    "message": "Pilih padanan"
+  },
+  "m_87a73c5380c6c916": {
+    "message": "Pilih fail untuk ditambah."
+  },
+  "m_12576160b98349a6": {
+    "message": "Pilih log, kemudian tekan Ctrl+C untuk menyalin."
+  },
+  "m_3ac5caf9518d7822": {
+    "message": "Hantar pautan fail atau pautan terpilih dari halaman ke Download Engine, dengan tangkapan muat turun automatik pilihan."
+  },
+  "m_b8ed5279e897be5d": {
+    "message": "Menghantar…"
+  },
+  "m_9fa4fffd6b2390aa": {
+    "message": "Pisahkan dengan ruang. * sepadan dengan sebarang aksara, contohnya r0*. Masukkan * sahaja untuk menangkap semua jenis."
+  },
+  "m_818cd8d91aea3a16": {
+    "message": "Tetapan"
+  },
+  "m_64d28781ada09e2e": {
+    "message": "Akses laman dibuang. Muat turun sedia ada mengekalkan snapshot disulitkan sehingga dibuang dalam Download Engine."
+  },
+  "m_b1dc42771ae048ea": {
+    "message": "Akses laman tidak diberikan. Benarkan laman ini untuk menunjukkan butang video."
+  },
+  "m_683653872b36eaa7": {
+    "message": "Akses laman tidak diberikan. Tiada log masuk dihantar."
+  },
+  "m_f09f3886349140ea": {
+    "message": "Kebenaran laman tidak dapat dibuang."
+  },
+  "m_1af851907331c0ed": {
+    "message": "Saiz"
+  },
+  "m_d94adb63dbcd8018": {
+    "message": "Saiz tidak tersedia daripada halaman ini"
+  },
+  "m_2a817d337803db0d": {
+    "message": "Unit saiz"
+  },
+  "m_873395540b2cfea9": {
+    "message": "Saiz tidak diketahui"
+  },
+  "m_80b858ffa465e189": {
+    "message": "Fail yang lebih kecil kekal dalam pelayar. Biarkan kosong untuk sebarang saiz."
+  },
+  "m_bec69036aa27e7fa": {
+    "message": "Susun"
+  },
+  "m_af45940023cd4d24": {
+    "message": "Halaman sumber"
+  },
+  "m_329c0763bd9ec092": {
+    "message": "Mulakan main balik dengan pengesanan aktif, atau gunakan Cari video untuk mengimbas halaman ini."
+  },
+  "m_febbea5fb07c20c8": {
+    "message": "Aplikasi tidak dapat mengesahkan pembatalan. Salinan pelayar dikekalkan; semak aplikasi sebelum mencuba lagi."
+  },
+  "m_fbb00942fda85125": {
+    "message": "Aplikasi tidak mengesahkan pautan baharu"
+  },
+  "m_ec379e9b433646d8": {
+    "message": "Aplikasi tidak mengesahkan penyerahan. Muat turun pelayar dikekalkan; semak Download Engine juga jika salinan muncul di sana."
+  },
+  "m_903e073f9cd11362": {
+    "message": "Salinan pelayar selesai atau diteruskan semasa pembatalan"
+  },
+  "m_1c9fd224194b7ee7": {
+    "message": "Pelayar tidak dapat menjeda muat turun ini"
+  },
+  "m_eed9387ac150e8fe": {
+    "message": "Pelayar tidak dapat membaca halaman ini. Cuba halaman web biasa."
+  },
+  "m_f3cfbd4cbe900742": {
+    "message": "Muat turun dikekalkan dalam pelayar dan Download Engine turut menerimanya. Semak kedua-dua senarai."
+  },
+  "m_d69c84ad2351aa26": {
+    "message": "Penyerahan log masuk pelayar belum disahkan. Semak sambungan desktop, kemudian cuba semula permintaan sama."
+  },
+  "m_55e44ceeae345baf": {
+    "message": "Aplikasi desktop tidak dapat menambah muat turun ini."
+  },
+  "m_6f841f3073957b4a": {
+    "message": "Aplikasi desktop tidak mengesahkan muat turun tersimpan."
+  },
+  "m_2b3a9305582ef2d1": {
+    "message": "Aplikasi desktop tidak mengesahkan pemulihan pelayar. Kemas kini Download Engine dan cuba lagi."
+  },
+  "m_e6c0313fd505b718": {
+    "message": "Aplikasi desktop tidak mengesahkan penyerahan pelayar."
+  },
+  "m_bedea1012885305a": {
+    "message": "Aplikasi desktop tidak mengesahkan keseluruhan kelompok tersimpan. Cuba semula kelompok yang sama."
+  },
+  "m_390e7750e59f2870": {
+    "message": "Aplikasi desktop tidak mengesahkan pratonton video. Kemas kini Download Engine atau cuba lagi."
+  },
+  "m_1947644923407952": {
+    "message": "Aplikasi desktop tidak mengesahkan semakan video. Kemas kini Download Engine, kemudian gunakan Pulihkan penyerahan."
+  },
+  "m_088826a3e5e4e204": {
+    "message": "Aplikasi desktop tidak memberikan respons dalam masa ditetapkan."
+  },
+  "m_bd3ccbbad5af2986": {
+    "message": "Aplikasi desktop memberikan respons tidak sah."
+  },
+  "m_535e3e6ab89880c5": {
+    "message": "Latar belakang sambungan tidak memberikan respons."
+  },
+  "m_988db6830a99c691": {
+    "message": "Sambungan tidak memberikan respons."
+  },
+  "m_306540f92d0513e3": {
+    "message": "Sambungan tidak memberikan respons. Muat semula tab ini untuk mencuba lagi."
+  },
+  "m_d122305531039ccd": {
+    "message": "Sambungan tidak memberikan respons. Cuba semula permintaan yang sama."
+  },
+  "m_30289712f9fad302": {
+    "message": "Kelompok terakhir belum disahkan. Cubaan semula menghantar kelompok sama tanpa pendua. Biarkan pelayar terbuka sehingga selesai."
+  },
+  "m_e72a03f673ade934": {
+    "message": "Tab laman asal ditutup. Buka laman dan cuba lagi."
+  },
+  "m_290b216afbebe4b2": {
+    "message": "Halaman berubah. Klik butang videonya semula."
+  },
+  "m_110b363e52b4a6d5": {
+    "message": "Halaman berubah. Buka semula sambungan dan cuba lagi."
+  },
+  "m_9ade37e9a32e749d": {
+    "message": "Halaman berubah. Buka semula sambungan."
+  },
+  "m_f314de530158f111": {
+    "message": "Halaman memberikan senarai pautan tidak sah."
+  },
+  "m_26af77d95664e615": {
+    "message": "Had laman butang video tersimpan telah dicapai."
+  },
+  "m_91947dba22da73b5": {
+    "message": "Tetapan berubah semasa kebenaran diminta."
+  },
+  "m_dbd704dc9a27d238": {
+    "message": "Tiada kelompok tertunda untuk dicuba semula."
+  },
+  "m_b418ac2881c78a7a": {
+    "message": "Kelompok ini sedang dihantar."
+  },
+  "m_604518b6a7b13e73": {
+    "message": "Pemilih pautan tamat tempoh. Kumpulkan pautan halaman semula melalui sambungan."
+  },
+  "m_68fd909eec66f301": {
+    "message": "Permintaan log masuk tamat tempoh. Semak giliran Download Engine sebelum menghantar semula fail."
+  },
+  "m_14204d3bb3d2fc5e": {
+    "message": "Item media ini tamat tempoh. Mainkan semula untuk dikesan."
+  },
+  "m_d5993dba7abddfa4": {
+    "message": "Halaman ini mengandungi terlalu banyak data pautan. Cuba halaman lebih kecil."
+  },
+  "m_359c18c81b3a8742": {
+    "message": "Halaman ini mengandungi terlalu banyak data video. Cuba halaman lebih kecil."
+  },
+  "m_601ed5513a7de1ff": {
+    "message": "Halaman ini besar. Set pautan terhad dipaparkan; buka halaman lebih kecil untuk mengumpulkan lebih banyak."
+  },
+  "m_f35a9682d7be0bd2": {
+    "message": "Log masuk pelayar laman ini terlalu besar. Muat turun fail dalam pelayar."
+  },
+  "m_a13331f2e442016c": {
+    "message": "Kuki laman ini tidak dapat dipindahkan dengan selamat. Muat turun fail dalam pelayar."
+  },
+  "m_d8b8392e2c542950": {
+    "message": "Cuba lagi"
+  },
+  "m_baaddf70fb5d432b": {
+    "message": "Jenis"
+  },
+  "m_b764cdc0eab71374": {
+    "message": "Tidak diketahui"
+  },
+  "m_b3744a5c9e3a8a5f": {
+    "message": "Tetapan kebenaran tidak diketahui."
+  },
+  "m_037c426c05970681": {
+    "message": "Halaman tanpa tajuk"
+  },
+  "m_24f3b0891ed85ed6": {
+    "message": "Kemas kini aplikasi desktop untuk menggunakan kelompok pautan halaman."
+  },
+  "m_239bbb679e8b5ed9": {
+    "message": "Kemas kini aplikasi desktop Download Engine sebelum mengaktifkan tangkapan automatik."
+  },
+  "m_edfcdbe6f4310523": {
+    "message": "Kemas kini aplikasi desktop Download Engine sebelum menggunakan log masuk pelayar."
+  },
+  "m_6ef631778917843c": {
+    "message": "Gunakan log masuk pelayar · Download Engine"
+  },
+  "m_a84b376c126bf400": {
+    "message": "Gunakan Cari video untuk mengimbas halaman ini atau aktifkan pengesanan dan mulakan main balik."
+  },
+  "m_a1426ad7784ebbbc": {
+    "message": "Gunakan Pratonton HLS atau Pratonton DASH untuk memilih kualiti sebelum menambah strim."
+  },
+  "m_244ef0cdc79df596": {
+    "message": "Gunakan Sambung dalam senarai Muat turun pelayar; pemulihan tidak dapat melepaskan salinan dijeda."
+  },
+  "m_acfe566ca2e566e7": {
+    "message": "Gunakan log masuk laman ini"
+  },
+  "m_69da05b04d99b754": {
+    "message": "Gunakan log masuk laman ini (semak dahulu)"
+  },
+  "m_d4aa36ffd2cc2537": {
+    "message": "Gunakan sehingga {0} jenis fail."
+  },
+  "m_850e8821a631dd82": {
+    "message": "Gunakan sehingga {0} laman."
+  },
+  "m_27eb9ee5a85d401e": {
+    "message": "Menggunakan peraturan folder automatik dalam Tetapan Download Engine."
+  },
+  "m_d534be829e32196b": {
+    "message": "Video"
+  },
+  "m_9e745d40aad9b039": {
+    "message": "Butang video"
+  },
+  "m_99f89003e6428eab": {
+    "message": "Butang video tidak dapat mengemas kini tab terbuka:"
+  },
+  "m_d0113821d8075479": {
+    "message": "Butang video pada laman ini"
+  },
+  "m_c1c069858f0e43e0": {
+    "message": "Butang video hanya tersedia pada halaman biasa peringkat atas."
+  },
+  "m_bf8f3f1e22b98e76": {
+    "message": "Butang video dimatikan untuk laman ini atau akses laman tiada."
+  },
+  "m_b6a9e2a18c985463": {
+    "message": "Butang video dimatikan untuk laman ini."
+  },
+  "m_4fcff88a23263c1d": {
+    "message": "Butang video dihidupkan untuk laman ini. Klik butang untuk menyemak video tersedia."
+  },
+  "m_33a6de083bd3b681": {
+    "message": "Muat turun video"
+  },
+  "m_1999f0d064cfbc7c": {
+    "message": "Muat turun video — Download Engine"
+  },
+  "m_74d5e1a5adca3103": {
+    "message": "Fail video"
+  },
+  "m_d007a137f798c162": {
+    "message": "FAIL VIDEO"
+  },
+  "m_cfe370de13214b8b": {
+    "message": "Semakan video"
+  },
+  "m_c08d78254e705099": {
+    "message": "Strim video"
+  },
+  "m_991cf9db508be663": {
+    "message": "Menunggu {0}. Klik pautan muat turunnya pada halaman asal, kemudian semak dalam Download Engine."
+  },
+  "m_487420533636d10c": {
+    "message": "Akses laman tidak diberikan. Pengesanan media kekal dimatikan."
+  },
+  "m_11fcf7333cfe5a60": {
+    "message": "Windows menyulitkan snapshot ini untuk akaun anda. Ia hanya untuk muat turun ini sehingga 24 jam, dan dibuang apabila muat turun selesai atau dibuang. Log keluar pelayar tidak memadam snapshot tersimpan."
+  },
+  "extensionName": {
+    "message": "Integrasi Download Engine"
+  },
+  "extensionDescription": {
+    "message": "Tangkap muat turun fail dan kesan video untuk aplikasi desktop Download Engine."
+  }
+}

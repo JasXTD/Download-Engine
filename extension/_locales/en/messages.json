@@ -1,0 +1,1028 @@
+{
+  "m_a9f74d4af5d7dd2d": {
+    "message": "{0} hidden by filters"
+  },
+  "m_b364264cdee56a63": {
+    "message": "{0} of {1} links · {2} selected{3}"
+  },
+  "m_3e9174b076fa6723": {
+    "message": "{0} unique HTTP/HTTPS links found. Nothing is selected automatically."
+  },
+  "m_4751f6a4b5d9bb30": {
+    "message": "{0}–{1} of {2}"
+  },
+  "m_2150dc95bcdb8850": {
+    "message": "A fresh link is already awaiting review in Download Engine."
+  },
+  "m_acca29cca3e064e3": {
+    "message": "A handoff needs attention. Use Resume in the browser Downloads list if it is paused. "
+  },
+  "m_da5cba54ff645402": {
+    "message": "A page scan is already in progress."
+  },
+  "m_93cbb4b9c437b588": {
+    "message": "A request from this picker is already being sent."
+  },
+  "m_8b60e5b9af092e22": {
+    "message": "A review is already opening."
+  },
+  "m_fbb9b1f9dcbfeae4": {
+    "message": "A video review is already opening in Download Engine."
+  },
+  "m_69dfd976b317260d": {
+    "message": "A video review is already opening."
+  },
+  "m_f2ca785fd206a095": {
+    "message": "A video review is awaiting confirmation. Use Browser options → Recover handoffs first."
+  },
+  "m_0e9839b644120fa4": {
+    "message": "Add {0} file{1}"
+  },
+  "m_264137ad4e188078": {
+    "message": "Add a file URL"
+  },
+  "m_d852059dca4ba30a": {
+    "message": "Add at least one file type, or enter * to capture every type."
+  },
+  "m_fba811a83d244b75": {
+    "message": "Add selected files"
+  },
+  "m_63889fe9a0f7922d": {
+    "message": "Added to Download Engine"
+  },
+  "m_b42ec7eef98969f5": {
+    "message": "Added to queue"
+  },
+  "m_035a4bf3220f575b": {
+    "message": "Added with browser login"
+  },
+  "m_1fec4c2ee0889acb": {
+    "message": "All links"
+  },
+  "m_08e774c5bacc362a": {
+    "message": "All sources"
+  },
+  "m_79c625de4b9fd500": {
+    "message": "Allow cookie access for this site to use its login."
+  },
+  "m_26f0b4e0ff1f898e": {
+    "message": "Allow download access to enable automatic capture."
+  },
+  "m_5b94fcf971c23dee": {
+    "message": "Allow download access to find a fresh link for {0}. Automatic capture can stay off."
+  },
+  "m_2e62efd7ab18a82d": {
+    "message": "Allow media detection and website access to watch media requests."
+  },
+  "m_48cc22965b91eff2": {
+    "message": "Allow recovery access"
+  },
+  "m_24e1772fedce2ed7": {
+    "message": "Allow site login & download"
+  },
+  "m_5864c132f9bc0926": {
+    "message": "Allow this site"
+  },
+  "m_9ee4b5b0cf00b360": {
+    "message": "Allow this site's access to show its video button."
+  },
+  "m_9f46b4f2f671c116": {
+    "message": "Any size"
+  },
+  "m_72c46a00422be09f": {
+    "message": "Approve one file download."
+  },
+  "m_66f4804ee23ddc09": {
+    "message": "Archive"
+  },
+  "m_e404aa80d8df4adb": {
+    "message": "Archives"
+  },
+  "m_bc1b88907d3b748a": {
+    "message": "Audio"
+  },
+  "m_571a9d4e6ae3e6e9": {
+    "message": "Automatic capture"
+  },
+  "m_551953291092c063": {
+    "message": "Automatic capture could not start: "
+  },
+  "m_4b0437f552a7f60f": {
+    "message": "Automatic capture is off."
+  },
+  "m_ca4588908fe682ee": {
+    "message": "Automatic capture is off. If a download is paused, use Resume in the browser Downloads list."
+  },
+  "m_dbcbd988532e58f3": {
+    "message": "Automatic capture is on for direct file downloads."
+  },
+  "m_a4885ab1c22dbeb0": {
+    "message": "Automatic capture stays off. Open Download Engine → Tools → Browser setup, select your browser, and choose Connect browser. Then retry here. "
+  },
+  "m_bdf26652484911a4": {
+    "message": "Automatic download capture"
+  },
+  "m_6259b8b41e217222": {
+    "message": "Automatic folders"
+  },
+  "m_6aa06201d769ad78": {
+    "message": "Available links"
+  },
+  "m_2cf57ca29785ac99": {
+    "message": "Browser copy continued"
+  },
+  "m_9ce0d857154f24e2": {
+    "message": "Browser language"
+  },
+  "m_9a06933b478415e9": {
+    "message": "Browser login access removed for all sites. Existing downloads keep their encrypted snapshot until you remove it in Download Engine."
+  },
+  "m_776802e7061330f7": {
+    "message": "Browser login could not be sent. Check site access and the desktop connection."
+  },
+  "m_31eb4316301f4815": {
+    "message": "Browser login requires HTTPS. Open a secure direct file link."
+  },
+  "m_0017e5fbb9fd5905": {
+    "message": "Browser options"
+  },
+  "m_f4a311ce61b95ad0": {
+    "message": "Capture file downloads and detect videos for the Download Engine desktop app."
+  },
+  "m_90948ad9dbb580df": {
+    "message": "Capture rules"
+  },
+  "m_720995cec7bccf29": {
+    "message": "Capture rules are unavailable. Reload the extension."
+  },
+  "m_8f326a402a36befc": {
+    "message": "Capture rules saved."
+  },
+  "m_be5dff52eeb0fd5b": {
+    "message": "Check connection"
+  },
+  "m_c29aa06c2ddb8076": {
+    "message": "Check these file types: {0}"
+  },
+  "m_8151d4ddeed81415": {
+    "message": "Check these sites: {0}"
+  },
+  "m_d6fdbb314af454a1": {
+    "message": "Checking the original batch…"
+  },
+  "m_ec963ffc911b8401": {
+    "message": "Checking…"
+  },
+  "m_ddec030e83b025f5": {
+    "message": "Choose a listed HLS or DASH video."
+  },
+  "m_a0f311dfdcbbc7c9": {
+    "message": "Choose a saved queue and destination folder."
+  },
+  "m_9b02ef3f495e64ef": {
+    "message": "Choose files from this page"
+  },
+  "m_cbe8a50b6762fd46": {
+    "message": "Choose quality in app"
+  },
+  "m_c945c62180fcab9a": {
+    "message": "Choose video files and stream quality in Download Engine"
+  },
+  "m_312bfa601066a8e4": {
+    "message": "Choose what to download"
+  },
+  "m_83b12c2216efb4fd": {
+    "message": "Clear"
+  },
+  "m_a8858ac749bc452b": {
+    "message": "Clear log"
+  },
+  "m_cea4d2e010b8fd52": {
+    "message": "Clear selection"
+  },
+  "m_652c67c42dba3909": {
+    "message": "Close another link picker first. Use Recover handoffs for any pending batch."
+  },
+  "m_b9ce2241762a7a45": {
+    "message": "Connecting to Download Engine…"
+  },
+  "m_83f23cdbeb423f39": {
+    "message": "Connection check"
+  },
+  "m_d45e5aae2ee31082": {
+    "message": "Cookie store mismatch"
+  },
+  "m_101bd5ad093f5552": {
+    "message": "Could not remove site access. Use the browser's extension settings."
+  },
+  "m_4a8c2b313a136fa4": {
+    "message": "Could not resume the browser download. Use Resume in the browser Downloads list. "
+  },
+  "m_50746138b9d24c2b": {
+    "message": "Could not return to the extension popup:"
+  },
+  "m_936628cc4a394ede": {
+    "message": "Defaults restored. Select Save rules to keep them."
+  },
+  "m_0690f959c9689317": {
+    "message": "Detect media while browsing"
+  },
+  "m_4125b0325a1d9a1c": {
+    "message": "Detected media"
+  },
+  "m_ee71fa5ff80ee155": {
+    "message": "Detection is on. Play media to update this list."
+  },
+  "m_c46c657680c1fb6a": {
+    "message": "Diagnostic log"
+  },
+  "m_da1e00181e6edfc0": {
+    "message": "Diagnostic log is unavailable. Reload the extension."
+  },
+  "m_97a6661033069fb1": {
+    "message": "Direct files and unencrypted HLS / DASH previews."
+  },
+  "m_d6bd8c0aeee80fed": {
+    "message": "Document"
+  },
+  "m_b4e929d8bcfe0418": {
+    "message": "Documents"
+  },
+  "m_4b20f1e564f08418": {
+    "message": "Download access changed. Enable automatic capture again when ready."
+  },
+  "m_de82471b8e92e8c9": {
+    "message": "Download access was not granted. Automatic capture stays off."
+  },
+  "m_26e9086fb67e1171": {
+    "message": "Download access was not granted. You can still paste a fresh link in Download Engine."
+  },
+  "m_86237283243c5c06": {
+    "message": "Download destination"
+  },
+  "m_4fe58a9f465df20b": {
+    "message": "Download Engine"
+  },
+  "m_67061b40bd1fc990": {
+    "message": "Download Engine has this file in its queue, but the browser copy could not be stopped. Check both download lists."
+  },
+  "m_ad28de051651de0a": {
+    "message": "Download Engine is connected."
+  },
+  "m_b5ee50a47681c17b": {
+    "message": "Download Engine updated the existing download. The browser copy also remains; check both download lists."
+  },
+  "m_55cff9fa827ef904": {
+    "message": "Download Engine will copy matching login cookies from the original site tab, including its Firefox container. The file must be on the same server."
+  },
+  "m_b732f149ac000cfe": {
+    "message": "Download kept in the browser: "
+  },
+  "m_4dfb918c17f5863a": {
+    "message": "Download kept in the browser."
+  },
+  "m_3a7a16064f324d88": {
+    "message": "Download links from this page"
+  },
+  "m_182321e7f219bcc2": {
+    "message": "Download sent to Download Engine."
+  },
+  "m_d1db69fff45e2607": {
+    "message": "Download using browser login…"
+  },
+  "m_9e6a91c146c14996": {
+    "message": "Download video"
+  },
+  "m_e1e91278b3b950c4": {
+    "message": "Download video with Download Engine — review first"
+  },
+  "m_36886174177ac2af": {
+    "message": "Download with Download Engine"
+  },
+  "m_cc5c7b4f90b18c40": {
+    "message": "Enable detection with website access. Does not use your login."
+  },
+  "m_e2d9eaba91bf0037": {
+    "message": "Enter a complete HTTP or HTTPS file URL."
+  },
+  "m_6e42641a11a1c04e": {
+    "message": "Enter a minimum size between 0 and 1 TB."
+  },
+  "m_4eb6084d5e196685": {
+    "message": "Existing download updated in Download Engine."
+  },
+  "m_2eabb5731ec0a7f5": {
+    "message": "Extension language"
+  },
+  "m_d8e40338c0625f5b": {
+    "message": "File / link"
+  },
+  "m_fb6219471a55d640": {
+    "message": "File downloads are captured automatically. Connect the desktop app in Browser setup."
+  },
+  "m_95b44f14672ddf20": {
+    "message": "File name, link text or URL"
+  },
+  "m_ea1df05210c29d1e": {
+    "message": "File type"
+  },
+  "m_6ebe2a3778d6510e": {
+    "message": "File types to capture"
+  },
+  "m_4ac686f1fff7a0ce": {
+    "message": "File URL"
+  },
+  "m_7cd46f2b72f2f96d": {
+    "message": "files and links"
+  },
+  "m_91c34f985f2ccf2e": {
+    "message": "Find videos on this page"
+  },
+  "m_abb03e243f8f426a": {
+    "message": "Find videos with Download Engine"
+  },
+  "m_c14ae1090e852370": {
+    "message": "Finish the open permission request before changing another setting."
+  },
+  "m_3b36902cb433c0af": {
+    "message": "Folders are managed in Download Engine Settings."
+  },
+  "m_fb1c8ed06249aced": {
+    "message": "Found {0} {1}. Review them in the new tab."
+  },
+  "m_dac55102f2a6291b": {
+    "message": "Found in"
+  },
+  "m_cf58b80fa579dabc": {
+    "message": "Fresh link found. Review the saved-data check in Download Engine, then confirm resuming."
+  },
+  "m_23b41d51987507df": {
+    "message": "HLS / DASH opens a desktop preview; live/encrypted streams are unsupported. Enable media detection before playback to find more streams."
+  },
+  "m_1aa4cb0bcca76e92": {
+    "message": "Image"
+  },
+  "m_be7e2f20129365c2": {
+    "message": "Images"
+  },
+  "m_28d71345fcbdb6bc": {
+    "message": "Interrupted handoff recovered; download kept in the browser."
+  },
+  "m_ddedfe53cbb11f79": {
+    "message": "Interrupted recovery released to the browser."
+  },
+  "m_7182c1f1f59286fa": {
+    "message": "Invalid automatic capture setting."
+  },
+  "m_419be78ea9367d52": {
+    "message": "Invalid browser login request."
+  },
+  "m_615de39dbabcd451": {
+    "message": "Invalid capture rules."
+  },
+  "m_4e6451d9c7a05b34": {
+    "message": "Invalid diagnostic setting."
+  },
+  "m_ebe2abb4cddb35fc": {
+    "message": "Invalid link picker identifier."
+  },
+  "m_438fc9ceb0904b0d": {
+    "message": "Invalid media detection setting."
+  },
+  "m_cfd2d68349b7432a": {
+    "message": "Invalid page scan mode."
+  },
+  "m_53621c0588be411a": {
+    "message": "Invalid request identifier."
+  },
+  "m_fd72d477bb65dc79": {
+    "message": "Invalid video button setting."
+  },
+  "m_e20a4b411a818b8b": {
+    "message": "Invalid video button site."
+  },
+  "m_c2e9a31124f7d0f7": {
+    "message": "Keep the original signed-in site tab open."
+  },
+  "m_019e66b1bd219970": {
+    "message": "Keep the original signed-in site tab open. Private browsing is not supported."
+  },
+  "m_251452cbeaef4875": {
+    "message": "Largest first"
+  },
+  "m_52296e73ceec6ce1": {
+    "message": "Link recovery"
+  },
+  "m_ccc96d8740521cb4": {
+    "message": "Loading page links…"
+  },
+  "m_b9f867064b204410": {
+    "message": "Loading site…"
+  },
+  "m_6f1c11acccb3f806": {
+    "message": "Main queue"
+  },
+  "m_179b204ad2a7f5dc": {
+    "message": "Media detection"
+  },
+  "m_d7b80c91cf6b7aa5": {
+    "message": "Media detection access changed. Enable it again when ready."
+  },
+  "m_36fb507d0e7b32e8": {
+    "message": "Media detection is off. Its list has been cleared."
+  },
+  "m_63cfe215acef08ce": {
+    "message": "Media detection is on. Start playback or reload the page."
+  },
+  "m_05dc18f8ce93981b": {
+    "message": "Media detection is unavailable. Reload the extension to retry."
+  },
+  "m_7a05c2c962505cdb": {
+    "message": "Media discovery could not update its list. Turn detection off and on to retry."
+  },
+  "m_667d5d5489d7fc17": {
+    "message": "media items"
+  },
+  "m_0c401d043fe13fb6": {
+    "message": "Media list cleared. New playback requests can appear again."
+  },
+  "m_d8851b3df6edf1d3": {
+    "message": "Media on this page"
+  },
+  "m_91a5e537e1bf2422": {
+    "message": "Minimum file size"
+  },
+  "m_dcd1d5223f73b3a9": {
+    "message": "Name"
+  },
+  "m_a8bc982bc423c5a7": {
+    "message": "Network media"
+  },
+  "m_0cffcc196fd87d17": {
+    "message": "Never capture from these sites"
+  },
+  "m_1ff57a29d7c9d11b": {
+    "message": "Next"
+  },
+  "m_09f1c438851431f3": {
+    "message": "No activity recorded yet."
+  },
+  "m_3f1536c1d3a3c78c": {
+    "message": "No links loaded"
+  },
+  "m_507f9ea8cb63e18e": {
+    "message": "No links match your filters."
+  },
+  "m_7eaa329a40093924": {
+    "message": "No matching files"
+  },
+  "m_75d0a7642fe89d02": {
+    "message": "No minimum"
+  },
+  "m_6dd1d3103295d8dc": {
+    "message": "No response from the extension background."
+  },
+  "m_47788a2327f83840": {
+    "message": "No supported browser login could be read. Sign in on this site and try again. Private or partitioned sessions are not supported."
+  },
+  "m_1e9601e1e54c4d5a": {
+    "message": "No supported login cookies match this file. Sign in on this site first. Private, partitioned and first-party-isolated sessions are not supported."
+  },
+  "m_3e86480851090d8e": {
+    "message": "Off by default. Enable to find video and audio requests as you browse."
+  },
+  "m_841fa2784ee46d5c": {
+    "message": "Off for this site. Your choice is saved."
+  },
+  "m_b6d42710b782d638": {
+    "message": "On by default. Allow this site to show video buttons."
+  },
+  "m_48ff08561347ceb3": {
+    "message": "On by default. Open a website to change its setting."
+  },
+  "m_718a1c9b01954136": {
+    "message": "On by default. Play a video to detect it, then choose what to download."
+  },
+  "m_a5796db85ba454a2": {
+    "message": "On by default. Turn off to hide video buttons on this site."
+  },
+  "m_b7e24a07e6b998ce": {
+    "message": "On by default. Your choice is saved for this site."
+  },
+  "m_18aa46ba0236a241": {
+    "message": "One site per line. Includes its subdomains; * matches any part of a name."
+  },
+  "m_4e918bc632379980": {
+    "message": "Only HTTP/HTTPS links without embedded login details are supported."
+  },
+  "m_c474c658148d459d": {
+    "message": "Only selected links are sent to Download Engine. Links may point to web pages; file types use names and available media metadata."
+  },
+  "m_8bee84e594e99e34": {
+    "message": "Open a browser tab and reopen Download Engine."
+  },
+  "m_c66ff2b172c3b834": {
+    "message": "Open a regular web page to configure its video button."
+  },
+  "m_aa4c148abfa53385": {
+    "message": "Open a regular web page to find its media."
+  },
+  "m_215a54029c2b4b91": {
+    "message": "Open a regular web page to review its media."
+  },
+  "m_a9a64a3ba1e37620": {
+    "message": "Open an HTTP or HTTPS web page, then click the extension on that page."
+  },
+  "m_5d404dc8daf23871": {
+    "message": "Open the Download Engine extension and try again."
+  },
+  "m_1c911c28ea089770": {
+    "message": "Open the signed-in site in a regular tab, then choose a file on that same server."
+  },
+  "m_b4c5fc73a947b6af": {
+    "message": "Opened in app"
+  },
+  "m_c751d726c402d9ab": {
+    "message": "Opening video review in Download Engine"
+  },
+  "m_c926c2c50e65d5a5": {
+    "message": "Opening…"
+  },
+  "m_1a0c32d68ceb4922": {
+    "message": "Original destination"
+  },
+  "m_15a84d473a2dc5ef": {
+    "message": "Original queue"
+  },
+  "m_5e19e35a09649309": {
+    "message": "Other / unknown"
+  },
+  "m_57d2af91bc34f0b3": {
+    "message": "Page asset"
+  },
+  "m_2d327768547d6bfa": {
+    "message": "Page assets"
+  },
+  "m_58dc76ebf2ef2844": {
+    "message": "Page link"
+  },
+  "m_101737af4b45f970": {
+    "message": "Page links"
+  },
+  "m_aded8b818cfb9479": {
+    "message": "PAGE LINKS"
+  },
+  "m_c902c6b1e1a4c529": {
+    "message": "Page links · Download Engine"
+  },
+  "m_9a3faea57df5b5b3": {
+    "message": "Page order"
+  },
+  "m_445999cff1f693bb": {
+    "message": "Page-link collection is not available in private windows."
+  },
+  "m_a7a9dc5bcf71adb2": {
+    "message": "paused"
+  },
+  "m_40d12c1cd050aea2": {
+    "message": "Pending reviews and downloads recovered. Browser handoffs checked."
+  },
+  "m_d101686dfb461d7b": {
+    "message": "Permission revoked"
+  },
+  "m_fb44b7bd4a949eee": {
+    "message": "Preview DASH"
+  },
+  "m_a891a492d8d0c27e": {
+    "message": "Preview HLS"
+  },
+  "m_a57b08a480b822a0": {
+    "message": "Previous"
+  },
+  "m_6d4977e17532e718": {
+    "message": "Private, partitioned and first-party-isolated sessions are not supported. Automatic capture stays anonymous."
+  },
+  "m_90920d93e2c7e632": {
+    "message": "Program"
+  },
+  "m_b6747064b2a6dd95": {
+    "message": "Programs"
+  },
+  "m_3b2fe03e36893916": {
+    "message": "Queue"
+  },
+  "m_68b16a818cc085cf": {
+    "message": "Recent settings, connection checks and video reviews, saved only in this browser."
+  },
+  "m_98d7576ae1a9c3fc": {
+    "message": "Recover existing download"
+  },
+  "m_da9f4135cbe4b48b": {
+    "message": "Recover handoffs"
+  },
+  "m_c73c9c73104c4316": {
+    "message": "Recovery access enabled. Click the same file on its webpage, then review it in Download Engine."
+  },
+  "m_acfeb89bc6c13696": {
+    "message": "Recovery cancelled. The download stays in the browser."
+  },
+  "m_d662ba072dd18ac7": {
+    "message": "Recovery checked. See the browser Downloads list for any paused files."
+  },
+  "m_ad787fd387d7b9ad": {
+    "message": "Recovery could not start: "
+  },
+  "m_24cedb972410650c": {
+    "message": "Recovery needs attention. Use Resume in the browser Downloads list if necessary. "
+  },
+  "m_5273e2f102fe7c0d": {
+    "message": "Recovery stopped: "
+  },
+  "m_1d57f666d95264c7": {
+    "message": "Refresh log"
+  },
+  "m_2e1d57637f97896b": {
+    "message": "Reload destinations"
+  },
+  "m_9202490cb35dbda0": {
+    "message": "Reload the Download Engine extension to finish updating it."
+  },
+  "m_b330cbc172cf1e68": {
+    "message": "Remove browser login access"
+  },
+  "m_bf98564718ee4abb": {
+    "message": "Remove this site's extension access"
+  },
+  "m_45a4092662eb386c": {
+    "message": "Removing login access stops cookie reads on all sites. Video detection keeps working. Delete saved snapshots in Download Engine → Authentication → None."
+  },
+  "m_22799a32fabd0898": {
+    "message": "Removing site access stops future cookie reads. To delete an existing snapshot, remove the download in Download Engine or choose Authentication → None."
+  },
+  "m_5923e8de81d8741b": {
+    "message": "Reopen the extension and try again."
+  },
+  "m_20a3253602a7fcee": {
+    "message": "Reported file size"
+  },
+  "m_3e536eb4562fe176": {
+    "message": "Resolve the pending batch before previewing a video."
+  },
+  "m_602f8e637002a585": {
+    "message": "Restore defaults"
+  },
+  "m_913b0a77f27fc498": {
+    "message": "Retry same batch"
+  },
+  "m_60d03e7404e40486": {
+    "message": "Retry the pending batch before changing its selection."
+  },
+  "m_de8cfa0e6bb6d592": {
+    "message": "Retry the same batch to check its receipt."
+  },
+  "m_70786ccffcb091cd": {
+    "message": "Review "
+  },
+  "m_ad8286257814524c": {
+    "message": "Review ↗"
+  },
+  "m_8c76a4f01cdeec77": {
+    "message": "Review the links and assets on this page, then add the files you want to your queue."
+  },
+  "m_3f21ed22e0fcea7e": {
+    "message": "Review the links on this page, then add the files you want to your queue."
+  },
+  "m_1ee0fc616e9e22a3": {
+    "message": "Review the video in Download Engine"
+  },
+  "m_3bc941f7f11d1ac7": {
+    "message": "Review the video in Download Engine. Nothing has been downloaded."
+  },
+  "m_41b3d85b43f47094": {
+    "message": "Review this site's browser login in the new tab."
+  },
+  "m_193df65a5f826122": {
+    "message": "Right-click → Download with Download Engine always sends the link, whatever these rules say."
+  },
+  "m_852bfbb688dd15da": {
+    "message": "Right-click a file link to send it to the app, or turn on automatic capture."
+  },
+  "m_c071cf5f5ed6f884": {
+    "message": "running"
+  },
+  "m_e5dbdffb88164817": {
+    "message": "Save rules"
+  },
+  "m_1daa7df740ac086c": {
+    "message": "Save to"
+  },
+  "m_198a1c7a2183aefc": {
+    "message": "Saving the selected files…"
+  },
+  "m_dd298e20fc073647": {
+    "message": "Search links"
+  },
+  "m_2a78025de6aae5e7": {
+    "message": "Select"
+  },
+  "m_1f7133c21072a138": {
+    "message": "Select "
+  },
+  "m_e116a9b3a597ac1e": {
+    "message": "Select all matching files across every page"
+  },
+  "m_dea1a3e66e47d981": {
+    "message": "Select between 1 and 1,000 listed links."
+  },
+  "m_b908effe1a7c133b": {
+    "message": "Select direct video files, or preview an HLS / DASH stream to choose quality and audio in Download Engine."
+  },
+  "m_ead5d68c99cc77a8": {
+    "message": "Select fewer links for this batch."
+  },
+  "m_e1ce37067ddc2ab5": {
+    "message": "Select log"
+  },
+  "m_313175419d438c50": {
+    "message": "Select matches"
+  },
+  "m_87a73c5380c6c916": {
+    "message": "Select the files you want to add."
+  },
+  "m_12576160b98349a6": {
+    "message": "Select the log, then press Ctrl+C to copy it."
+  },
+  "m_3ac5caf9518d7822": {
+    "message": "Send file links or selected links from a page to Download Engine, with optional automatic download capture."
+  },
+  "m_b8ed5279e897be5d": {
+    "message": "Sending…"
+  },
+  "m_9fa4fffd6b2390aa": {
+    "message": "Separate with spaces. * matches any characters, for example r0*. Enter * alone to capture every type."
+  },
+  "m_818cd8d91aea3a16": {
+    "message": "Setting"
+  },
+  "m_64d28781ada09e2e": {
+    "message": "Site access removed. Existing downloads keep their encrypted snapshot until you remove it in Download Engine."
+  },
+  "m_b1dc42771ae048ea": {
+    "message": "Site access was not granted. Allow this site to show video buttons."
+  },
+  "m_683653872b36eaa7": {
+    "message": "Site access was not granted. No login was sent."
+  },
+  "m_f09f3886349140ea": {
+    "message": "Site permission could not be removed."
+  },
+  "m_1af851907331c0ed": {
+    "message": "Size"
+  },
+  "m_d94adb63dbcd8018": {
+    "message": "Size not available from this page"
+  },
+  "m_2a817d337803db0d": {
+    "message": "Size unit"
+  },
+  "m_873395540b2cfea9": {
+    "message": "Size unknown"
+  },
+  "m_80b858ffa465e189": {
+    "message": "Smaller files stay in the browser. Leave empty for any size."
+  },
+  "m_bec69036aa27e7fa": {
+    "message": "Sort"
+  },
+  "m_af45940023cd4d24": {
+    "message": "Source page"
+  },
+  "m_329c0763bd9ec092": {
+    "message": "Start playback with detection on, or use Find videos to scan this page."
+  },
+  "m_febbea5fb07c20c8": {
+    "message": "The app could not confirm cancellation. The browser copy was kept; check the app before retrying."
+  },
+  "m_fbb00942fda85125": {
+    "message": "The app did not confirm the fresh link"
+  },
+  "m_ec379e9b433646d8": {
+    "message": "The app did not confirm the handoff. The browser download was kept; check Download Engine too if a copy appears there."
+  },
+  "m_903e073f9cd11362": {
+    "message": "The browser copy finished or continued during cancellation"
+  },
+  "m_1c9fd224194b7ee7": {
+    "message": "The browser could not pause this download"
+  },
+  "m_eed9387ac150e8fe": {
+    "message": "The browser could not read this page. Try an ordinary web page."
+  },
+  "m_f3cfbd4cbe900742": {
+    "message": "The browser download was kept, and Download Engine also received it. Check both download lists."
+  },
+  "m_d69c84ad2351aa26": {
+    "message": "The browser login handoff was not confirmed. Check the desktop connection, then retry this same request."
+  },
+  "m_55e44ceeae345baf": {
+    "message": "The desktop app could not add this download."
+  },
+  "m_6f841f3073957b4a": {
+    "message": "The desktop app did not confirm a saved download."
+  },
+  "m_2b3a9305582ef2d1": {
+    "message": "The desktop app did not confirm browser recovery. Update Download Engine and retry."
+  },
+  "m_e6c0313fd505b718": {
+    "message": "The desktop app did not confirm the browser handoff."
+  },
+  "m_bedea1012885305a": {
+    "message": "The desktop app did not confirm the complete saved batch. Retry this same batch."
+  },
+  "m_390e7750e59f2870": {
+    "message": "The desktop app did not confirm the video preview. Update Download Engine or retry."
+  },
+  "m_1947644923407952": {
+    "message": "The desktop app did not confirm the video review. Update Download Engine, then use Recover handoffs."
+  },
+  "m_088826a3e5e4e204": {
+    "message": "The desktop app did not respond in time."
+  },
+  "m_bd3ccbbad5af2986": {
+    "message": "The desktop app returned an invalid response."
+  },
+  "m_535e3e6ab89880c5": {
+    "message": "The extension background did not respond."
+  },
+  "m_988db6830a99c691": {
+    "message": "The extension did not respond."
+  },
+  "m_306540f92d0513e3": {
+    "message": "The extension did not respond. Reload this tab to try again."
+  },
+  "m_d122305531039ccd": {
+    "message": "The extension did not respond. Retry this same request."
+  },
+  "m_30289712f9fad302": {
+    "message": "The last batch has no confirmed reply. Retry sends the same batch and will not add it twice. Keep the browser open until resolved."
+  },
+  "m_e72a03f673ade934": {
+    "message": "The original site tab was closed. Open the site and try again."
+  },
+  "m_290b216afbebe4b2": {
+    "message": "The page changed. Click its video button again."
+  },
+  "m_110b363e52b4a6d5": {
+    "message": "The page changed. Reopen the extension and try again."
+  },
+  "m_9ade37e9a32e749d": {
+    "message": "The page changed. Reopen the extension."
+  },
+  "m_f314de530158f111": {
+    "message": "The page returned an invalid link list."
+  },
+  "m_26af77d95664e615": {
+    "message": "The saved video-button site limit has been reached."
+  },
+  "m_91947dba22da73b5": {
+    "message": "The setting changed while permission was being requested."
+  },
+  "m_dbd704dc9a27d238": {
+    "message": "There is no pending batch to retry."
+  },
+  "m_b418ac2881c78a7a": {
+    "message": "This batch is already being sent."
+  },
+  "m_604518b6a7b13e73": {
+    "message": "This link picker has expired. Collect the page links again from the extension."
+  },
+  "m_68fd909eec66f301": {
+    "message": "This login request expired. Check the Download Engine queue before sending the file again."
+  },
+  "m_14204d3bb3d2fc5e": {
+    "message": "This media item expired. Play it again to detect it."
+  },
+  "m_d5993dba7abddfa4": {
+    "message": "This page contains too much link data. Try a smaller page."
+  },
+  "m_359c18c81b3a8742": {
+    "message": "This page contains too much video data. Try a smaller page."
+  },
+  "m_601ed5513a7de1ff": {
+    "message": "This page is large. Showing a limited set of links; open a smaller page to collect more."
+  },
+  "m_f35a9682d7be0bd2": {
+    "message": "This site's browser login is too large. Download this file in the browser."
+  },
+  "m_a13331f2e442016c": {
+    "message": "This site's cookies cannot be transferred safely. Download this file in the browser."
+  },
+  "m_d8b8392e2c542950": {
+    "message": "Try again"
+  },
+  "m_baaddf70fb5d432b": {
+    "message": "Type"
+  },
+  "m_b764cdc0eab71374": {
+    "message": "Unknown"
+  },
+  "m_b3744a5c9e3a8a5f": {
+    "message": "Unknown permission setting."
+  },
+  "m_037c426c05970681": {
+    "message": "Untitled page"
+  },
+  "m_24f3b0891ed85ed6": {
+    "message": "Update the desktop app to use page-link batches."
+  },
+  "m_239bbb679e8b5ed9": {
+    "message": "Update the Download Engine desktop app before enabling automatic capture."
+  },
+  "m_edfcdbe6f4310523": {
+    "message": "Update the Download Engine desktop app before using browser login."
+  },
+  "m_6ef631778917843c": {
+    "message": "Use browser login · Download Engine"
+  },
+  "m_a84b376c126bf400": {
+    "message": "Use Find videos to scan this page, or enable detection and start playback."
+  },
+  "m_a1426ad7784ebbbc": {
+    "message": "Use Preview HLS or Preview DASH to choose a quality before adding a stream."
+  },
+  "m_244ef0cdc79df596": {
+    "message": "Use Resume in the browser Downloads list; recovery could not release its paused copy."
+  },
+  "m_acfe566ca2e566e7": {
+    "message": "Use this site's login"
+  },
+  "m_69da05b04d99b754": {
+    "message": "Use this site’s login (review first)"
+  },
+  "m_d4aa36ffd2cc2537": {
+    "message": "Use up to {0} file types."
+  },
+  "m_850e8821a631dd82": {
+    "message": "Use up to {0} sites."
+  },
+  "m_27eb9ee5a85d401e": {
+    "message": "Uses the automatic folder rules in Download Engine Settings."
+  },
+  "m_d534be829e32196b": {
+    "message": "Video"
+  },
+  "m_9e745d40aad9b039": {
+    "message": "Video button"
+  },
+  "m_99f89003e6428eab": {
+    "message": "Video button could not update an open tab:"
+  },
+  "m_d0113821d8075479": {
+    "message": "Video button on this site"
+  },
+  "m_c1c069858f0e43e0": {
+    "message": "Video buttons are available in regular top-level pages only."
+  },
+  "m_bf8f3f1e22b98e76": {
+    "message": "Video buttons are disabled for this site or website access is missing."
+  },
+  "m_b6a9e2a18c985463": {
+    "message": "Video buttons are off for this site."
+  },
+  "m_4fcff88a23263c1d": {
+    "message": "Video buttons are on for this site. Click a button to review available videos."
+  },
+  "m_33a6de083bd3b681": {
+    "message": "Video downloads"
+  },
+  "m_1999f0d064cfbc7c": {
+    "message": "Video downloads — Download Engine"
+  },
+  "m_74d5e1a5adca3103": {
+    "message": "Video file"
+  },
+  "m_d007a137f798c162": {
+    "message": "VIDEO FILES"
+  },
+  "m_cfe370de13214b8b": {
+    "message": "Video review"
+  },
+  "m_c08d78254e705099": {
+    "message": "Video stream"
+  },
+  "m_991cf9db508be663": {
+    "message": "Waiting for {0}. Click its download link on the original page, then review it in Download Engine."
+  },
+  "m_487420533636d10c": {
+    "message": "Website access was not granted. Media detection stays off."
+  },
+  "m_11fcf7333cfe5a60": {
+    "message": "Windows encrypts this snapshot for your account. It is used for this download only, for up to 24 hours, and removed when the download completes or you remove it. Signing out in the browser does not erase the saved snapshot."
+  },
+  "extensionName": {
+    "message": "Download Engine Integration"
+  },
+  "extensionDescription": {
+    "message": "Capture file downloads and detect videos for the Download Engine desktop app."
+  }
+}

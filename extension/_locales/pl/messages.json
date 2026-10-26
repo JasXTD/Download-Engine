@@ -1,0 +1,1028 @@
+{
+  "m_a9f74d4af5d7dd2d": {
+    "message": "Ukryte przez filtry: {0}"
+  },
+  "m_b364264cdee56a63": {
+    "message": "{0} z {1} linków · zaznaczono {2}{3}"
+  },
+  "m_3e9174b076fa6723": {
+    "message": "Znaleziono {0} unikalnych linków HTTP/HTTPS. Nic nie wybrano automatycznie."
+  },
+  "m_4751f6a4b5d9bb30": {
+    "message": "{0}–{1} z {2}"
+  },
+  "m_2150dc95bcdb8850": {
+    "message": "Nowy link już czeka na przegląd w Download Engine."
+  },
+  "m_acca29cca3e064e3": {
+    "message": "Przekazanie wymaga uwagi. Wstrzymane pobranie wznów na liście przeglądarki. "
+  },
+  "m_da5cba54ff645402": {
+    "message": "Skanowanie strony już trwa."
+  },
+  "m_93cbb4b9c437b588": {
+    "message": "Żądanie z tego okna jest już wysyłane."
+  },
+  "m_8b60e5b9af092e22": {
+    "message": "Przegląd już się otwiera."
+  },
+  "m_fbb9b1f9dcbfeae4": {
+    "message": "Przegląd wideo już otwiera się w Download Engine."
+  },
+  "m_69dfd976b317260d": {
+    "message": "Przegląd wideo już się otwiera."
+  },
+  "m_f2ca785fd206a095": {
+    "message": "Przegląd wideo czeka na potwierdzenie. Najpierw użyj Opcje przeglądarki → Odzyskaj przekazania."
+  },
+  "m_0e9839b644120fa4": {
+    "message": "Dodaj pliki: {0}{1}"
+  },
+  "m_264137ad4e188078": {
+    "message": "Dodaj URL pliku"
+  },
+  "m_d852059dca4ba30a": {
+    "message": "Dodaj co najmniej jeden typ pliku lub wpisz *, aby przechwytywać wszystkie typy."
+  },
+  "m_fba811a83d244b75": {
+    "message": "Dodaj wybrane pliki"
+  },
+  "m_63889fe9a0f7922d": {
+    "message": "Dodano do Download Engine"
+  },
+  "m_b42ec7eef98969f5": {
+    "message": "Dodano do kolejki"
+  },
+  "m_035a4bf3220f575b": {
+    "message": "Dodano z logowaniem przeglądarki"
+  },
+  "m_1fec4c2ee0889acb": {
+    "message": "Wszystkie linki"
+  },
+  "m_08e774c5bacc362a": {
+    "message": "Wszystkie źródła"
+  },
+  "m_79c625de4b9fd500": {
+    "message": "Zezwól na ciasteczka witryny, aby użyć logowania."
+  },
+  "m_26f0b4e0ff1f898e": {
+    "message": "Zezwól na dostęp do pobrań, aby włączyć przechwytywanie."
+  },
+  "m_5b94fcf971c23dee": {
+    "message": "Zezwól na dostęp do pobrań, aby znaleźć nowy link dla {0}. Przechwytywanie może pozostać wyłączone."
+  },
+  "m_2e62efd7ab18a82d": {
+    "message": "Zezwól na wykrywanie i dostęp do witryn, aby obserwować żądania multimediów."
+  },
+  "m_48cc22965b91eff2": {
+    "message": "Zezwól na dostęp do odzyskiwania"
+  },
+  "m_24e1772fedce2ed7": {
+    "message": "Zezwól na logowanie i pobranie"
+  },
+  "m_5864c132f9bc0926": {
+    "message": "Zezwól tej witrynie"
+  },
+  "m_9ee4b5b0cf00b360": {
+    "message": "Zezwól na dostęp do witryny, aby pokazać przycisk wideo."
+  },
+  "m_9f46b4f2f671c116": {
+    "message": "Dowolny rozmiar"
+  },
+  "m_72c46a00422be09f": {
+    "message": "Zatwierdź pobranie jednego pliku."
+  },
+  "m_66f4804ee23ddc09": {
+    "message": "Archiwum"
+  },
+  "m_e404aa80d8df4adb": {
+    "message": "Archiwa"
+  },
+  "m_bc1b88907d3b748a": {
+    "message": "Dźwięk"
+  },
+  "m_571a9d4e6ae3e6e9": {
+    "message": "Automatyczne przechwytywanie"
+  },
+  "m_551953291092c063": {
+    "message": "Nie można uruchomić przechwytywania: "
+  },
+  "m_4b0437f552a7f60f": {
+    "message": "Automatyczne przechwytywanie wyłączone."
+  },
+  "m_ca4588908fe682ee": {
+    "message": "Przechwytywanie wyłączone. Wstrzymane pobranie wznów na liście pobrań przeglądarki."
+  },
+  "m_dbcbd988532e58f3": {
+    "message": "Przechwytywanie bezpośrednich plików włączone."
+  },
+  "m_a4885ab1c22dbeb0": {
+    "message": "Przechwytywanie wyłączone. W Download Engine → Narzędzia → Konfiguracja przeglądarki wybierz przeglądarkę i połącz ją, potem ponów próbę. "
+  },
+  "m_bdf26652484911a4": {
+    "message": "Automatyczne przechwytywanie pobrań"
+  },
+  "m_6259b8b41e217222": {
+    "message": "Foldery automatyczne"
+  },
+  "m_6aa06201d769ad78": {
+    "message": "Dostępne linki"
+  },
+  "m_2cf57ca29785ac99": {
+    "message": "Kopia w przeglądarce kontynuowana"
+  },
+  "m_9ce0d857154f24e2": {
+    "message": "Język przeglądarki"
+  },
+  "m_9a06933b478415e9": {
+    "message": "Usunięto dostęp do logowania na wszystkich stronach. Istniejące pobrania zachowują zaszyfrowane dane do czasu ich usunięcia w Download Engine."
+  },
+  "m_776802e7061330f7": {
+    "message": "Nie można wysłać logowania. Sprawdź dostęp do witryny i połączenie z aplikacją."
+  },
+  "m_31eb4316301f4815": {
+    "message": "Logowanie przeglądarki wymaga HTTPS. Otwórz bezpieczny bezpośredni link do pliku."
+  },
+  "m_0017e5fbb9fd5905": {
+    "message": "Opcje przeglądarki"
+  },
+  "m_f4a311ce61b95ad0": {
+    "message": "Przechwytuj pobierane pliki i wykrywaj filmy dla aplikacji Download Engine."
+  },
+  "m_90948ad9dbb580df": {
+    "message": "Reguły przechwytywania"
+  },
+  "m_720995cec7bccf29": {
+    "message": "Reguły przechwytywania niedostępne. Przeładuj rozszerzenie."
+  },
+  "m_8f326a402a36befc": {
+    "message": "Reguły przechwytywania zapisane."
+  },
+  "m_be5dff52eeb0fd5b": {
+    "message": "Sprawdź połączenie"
+  },
+  "m_c29aa06c2ddb8076": {
+    "message": "Sprawdź te typy plików: {0}"
+  },
+  "m_8151d4ddeed81415": {
+    "message": "Sprawdź te witryny: {0}"
+  },
+  "m_d6fdbb314af454a1": {
+    "message": "Sprawdzanie pierwotnej grupy…"
+  },
+  "m_ec963ffc911b8401": {
+    "message": "Sprawdzanie…"
+  },
+  "m_ddec030e83b025f5": {
+    "message": "Wybierz wideo HLS lub DASH z listy."
+  },
+  "m_a0f311dfdcbbc7c9": {
+    "message": "Wybierz zapisaną kolejkę i folder docelowy."
+  },
+  "m_9b02ef3f495e64ef": {
+    "message": "Wybierz pliki z tej strony"
+  },
+  "m_cbe8a50b6762fd46": {
+    "message": "Wybierz jakość w aplikacji"
+  },
+  "m_c945c62180fcab9a": {
+    "message": "Wybierz pliki i jakość wideo w Download Engine"
+  },
+  "m_312bfa601066a8e4": {
+    "message": "Wybierz, co pobrać"
+  },
+  "m_83b12c2216efb4fd": {
+    "message": "Wyczyść"
+  },
+  "m_a8858ac749bc452b": {
+    "message": "Wyczyść dziennik"
+  },
+  "m_cea4d2e010b8fd52": {
+    "message": "Wyczyść zaznaczenie"
+  },
+  "m_652c67c42dba3909": {
+    "message": "Zamknij inny wybór linków. Dla oczekujących partii użyj odzyskiwania przekazań."
+  },
+  "m_b9ce2241762a7a45": {
+    "message": "Łączenie z Download Engine…"
+  },
+  "m_83f23cdbeb423f39": {
+    "message": "Sprawdzenie połączenia"
+  },
+  "m_d45e5aae2ee31082": {
+    "message": "Niezgodny magazyn ciasteczek"
+  },
+  "m_101bd5ad093f5552": {
+    "message": "Nie można usunąć dostępu. Użyj ustawień rozszerzeń przeglądarki."
+  },
+  "m_4a8c2b313a136fa4": {
+    "message": "Nie udało się wznowić pobrania. Użyj Wznów na liście pobrań przeglądarki. "
+  },
+  "m_50746138b9d24c2b": {
+    "message": "Nie można wrócić do okna rozszerzenia:"
+  },
+  "m_936628cc4a394ede": {
+    "message": "Przywrócono domyślne. Wybierz Zapisz reguły, aby je zachować."
+  },
+  "m_0690f959c9689317": {
+    "message": "Wykrywaj media podczas przeglądania"
+  },
+  "m_4125b0325a1d9a1c": {
+    "message": "Wykryte media"
+  },
+  "m_ee71fa5ff80ee155": {
+    "message": "Wykrywanie włączone. Odtwórz media, aby odświeżyć listę."
+  },
+  "m_c46c657680c1fb6a": {
+    "message": "Dziennik diagnostyczny"
+  },
+  "m_da1e00181e6edfc0": {
+    "message": "Dziennik diagnostyczny niedostępny. Przeładuj rozszerzenie."
+  },
+  "m_97a6661033069fb1": {
+    "message": "Pliki bezpośrednie i podgląd niezaszyfrowanego HLS / DASH."
+  },
+  "m_d6bd8c0aeee80fed": {
+    "message": "Dokument"
+  },
+  "m_b4e929d8bcfe0418": {
+    "message": "Dokumenty"
+  },
+  "m_4b20f1e564f08418": {
+    "message": "Dostęp do pobrań zmieniony. Włącz ponownie przechwytywanie, gdy będziesz gotowy."
+  },
+  "m_de82471b8e92e8c9": {
+    "message": "Brak dostępu do pobrań. Automatyczne przechwytywanie pozostaje wyłączone."
+  },
+  "m_26e9086fb67e1171": {
+    "message": "Brak dostępu do pobrań. Nadal możesz wkleić nowy link do Download Engine."
+  },
+  "m_86237283243c5c06": {
+    "message": "Miejsce pobierania"
+  },
+  "m_4fe58a9f465df20b": {
+    "message": "Download Engine"
+  },
+  "m_67061b40bd1fc990": {
+    "message": "Plik jest w kolejce Download Engine, ale nie udało się zatrzymać kopii w przeglądarce. Sprawdź obie listy."
+  },
+  "m_ad28de051651de0a": {
+    "message": "Download Engine jest połączony."
+  },
+  "m_b5ee50a47681c17b": {
+    "message": "Pobranie zaktualizowane, ale kopia w przeglądarce pozostała. Sprawdź obie listy."
+  },
+  "m_55cff9fa827ef904": {
+    "message": "Download Engine skopiuje pasujące ciasteczka logowania z oryginalnej karty, także kontenera Firefox. Plik musi być na tym samym serwerze."
+  },
+  "m_b732f149ac000cfe": {
+    "message": "Pobranie zachowane w przeglądarce: "
+  },
+  "m_4dfb918c17f5863a": {
+    "message": "Pobranie zachowane w przeglądarce."
+  },
+  "m_3a7a16064f324d88": {
+    "message": "Pobierz linki z tej strony"
+  },
+  "m_182321e7f219bcc2": {
+    "message": "Pobranie wysłane do Download Engine."
+  },
+  "m_d1db69fff45e2607": {
+    "message": "Pobierz z logowaniem przeglądarki…"
+  },
+  "m_9e6a91c146c14996": {
+    "message": "Pobierz film"
+  },
+  "m_e1e91278b3b950c4": {
+    "message": "Pobierz film z Download Engine — najpierw sprawdź"
+  },
+  "m_36886174177ac2af": {
+    "message": "Pobierz za pomocą Download Engine"
+  },
+  "m_cc5c7b4f90b18c40": {
+    "message": "Włącz wykrywanie z dostępem do witryn. Nie używa logowania."
+  },
+  "m_e2d9eaba91bf0037": {
+    "message": "Wpisz pełny adres HTTP lub HTTPS pliku."
+  },
+  "m_6e42641a11a1c04e": {
+    "message": "Podaj minimalny rozmiar od 0 do 1 TB."
+  },
+  "m_4eb6084d5e196685": {
+    "message": "Zaktualizowano istniejące pobranie w Download Engine."
+  },
+  "m_2eabb5731ec0a7f5": {
+    "message": "Język rozszerzenia"
+  },
+  "m_d8e40338c0625f5b": {
+    "message": "Plik / link"
+  },
+  "m_fb6219471a55d640": {
+    "message": "Pobieranie plików jest przechwytywane automatycznie. Połącz aplikację w konfiguracji przeglądarki."
+  },
+  "m_95b44f14672ddf20": {
+    "message": "Nazwa pliku, tekst linku lub URL"
+  },
+  "m_ea1df05210c29d1e": {
+    "message": "Typ pliku"
+  },
+  "m_6ebe2a3778d6510e": {
+    "message": "Typy plików do przechwytywania"
+  },
+  "m_4ac686f1fff7a0ce": {
+    "message": "Adres URL pliku"
+  },
+  "m_7cd46f2b72f2f96d": {
+    "message": "plików i linków"
+  },
+  "m_91c34f985f2ccf2e": {
+    "message": "Znajdź filmy na tej stronie"
+  },
+  "m_abb03e243f8f426a": {
+    "message": "Znajdź filmy z Download Engine"
+  },
+  "m_c14ae1090e852370": {
+    "message": "Zakończ otwarte żądanie uprawnień przed zmianą innego ustawienia."
+  },
+  "m_3b36902cb433c0af": {
+    "message": "Folderami zarządzasz w ustawieniach Download Engine."
+  },
+  "m_fb1c8ed06249aced": {
+    "message": "Znaleziono {0} {1}. Sprawdź w nowej karcie."
+  },
+  "m_dac55102f2a6291b": {
+    "message": "Znalezione w"
+  },
+  "m_cf58b80fa579dabc": {
+    "message": "Znaleziono nowy link. Sprawdź weryfikację zapisanych danych w Download Engine i potwierdź wznowienie."
+  },
+  "m_23b41d51987507df": {
+    "message": "HLS/DASH otwiera podgląd w aplikacji; transmisje na żywo i szyfrowane nie są obsługiwane. Włącz wykrywanie przed odtwarzaniem, aby znaleźć więcej."
+  },
+  "m_1aa4cb0bcca76e92": {
+    "message": "Obraz"
+  },
+  "m_be7e2f20129365c2": {
+    "message": "Obrazy"
+  },
+  "m_28d71345fcbdb6bc": {
+    "message": "Odzyskano przerwane przekazanie; pobranie pozostaje w przeglądarce."
+  },
+  "m_ddedfe53cbb11f79": {
+    "message": "Przerwane odzyskiwanie zwolnione do przeglądarki."
+  },
+  "m_7182c1f1f59286fa": {
+    "message": "Ustawienie przechwytywania — Nieprawidłowe"
+  },
+  "m_419be78ea9367d52": {
+    "message": "Żądanie logowania przeglądarki — Nieprawidłowe"
+  },
+  "m_615de39dbabcd451": {
+    "message": "Nieprawidłowe reguły przechwytywania."
+  },
+  "m_4e6451d9c7a05b34": {
+    "message": "Ustawienie diagnostyki — Nieprawidłowe"
+  },
+  "m_ebe2abb4cddb35fc": {
+    "message": "Identyfikator wyboru linków — Nieprawidłowe"
+  },
+  "m_438fc9ceb0904b0d": {
+    "message": "Ustawienie wykrywania mediów — Nieprawidłowe"
+  },
+  "m_cfd2d68349b7432a": {
+    "message": "Tryb skanowania strony — Nieprawidłowe"
+  },
+  "m_53621c0588be411a": {
+    "message": "Identyfikator żądania — Nieprawidłowe"
+  },
+  "m_fd72d477bb65dc79": {
+    "message": "Ustawienie przycisku wideo — Nieprawidłowe"
+  },
+  "m_e20a4b411a818b8b": {
+    "message": "Witryna przycisku wideo — Nieprawidłowe"
+  },
+  "m_c2e9a31124f7d0f7": {
+    "message": "Pozostaw otwartą oryginalną zalogowaną kartę."
+  },
+  "m_019e66b1bd219970": {
+    "message": "Pozostaw otwartą zalogowaną kartę. Tryb prywatny nie jest obsługiwany."
+  },
+  "m_251452cbeaef4875": {
+    "message": "Największe najpierw"
+  },
+  "m_52296e73ceec6ce1": {
+    "message": "Odzyskiwanie linku"
+  },
+  "m_ccc96d8740521cb4": {
+    "message": "Wczytywanie linków strony…"
+  },
+  "m_b9f867064b204410": {
+    "message": "Wczytywanie witryny…"
+  },
+  "m_6f1c11acccb3f806": {
+    "message": "Główna kolejka"
+  },
+  "m_179b204ad2a7f5dc": {
+    "message": "Wykrywanie mediów"
+  },
+  "m_d7b80c91cf6b7aa5": {
+    "message": "Uprawnienia wykrywania zmienione. Włącz ponownie, gdy będziesz gotowy."
+  },
+  "m_36fb507d0e7b32e8": {
+    "message": "Wykrywanie wyłączone. Lista wyczyszczona."
+  },
+  "m_63cfe215acef08ce": {
+    "message": "Wykrywanie włączone. Rozpocznij odtwarzanie lub przeładuj stronę."
+  },
+  "m_05dc18f8ce93981b": {
+    "message": "Wykrywanie multimediów niedostępne. Przeładuj rozszerzenie."
+  },
+  "m_7a05c2c962505cdb": {
+    "message": "Nie można odświeżyć multimediów. Wyłącz i włącz wykrywanie."
+  },
+  "m_667d5d5489d7fc17": {
+    "message": "elementów multimedialnych"
+  },
+  "m_0c401d043fe13fb6": {
+    "message": "Lista wyczyszczona. Nowe żądania odtwarzania mogą pojawić się ponownie."
+  },
+  "m_d8851b3df6edf1d3": {
+    "message": "Media na tej stronie"
+  },
+  "m_91a5e537e1bf2422": {
+    "message": "Minimalny rozmiar pliku"
+  },
+  "m_dcd1d5223f73b3a9": {
+    "message": "Nazwa"
+  },
+  "m_a8bc982bc423c5a7": {
+    "message": "Media sieciowe"
+  },
+  "m_0cffcc196fd87d17": {
+    "message": "Nigdy nie przechwytuj z tych witryn"
+  },
+  "m_1ff57a29d7c9d11b": {
+    "message": "Następne"
+  },
+  "m_09f1c438851431f3": {
+    "message": "Nie zarejestrowano jeszcze aktywności."
+  },
+  "m_3f1536c1d3a3c78c": {
+    "message": "Nie wczytano linków"
+  },
+  "m_507f9ea8cb63e18e": {
+    "message": "Brak linków pasujących do filtrów."
+  },
+  "m_7eaa329a40093924": {
+    "message": "Brak pasujących plików"
+  },
+  "m_75d0a7642fe89d02": {
+    "message": "Bez minimum"
+  },
+  "m_6dd1d3103295d8dc": {
+    "message": "Brak odpowiedzi procesu rozszerzenia."
+  },
+  "m_47788a2327f83840": {
+    "message": "Nie odczytano obsługiwanego logowania. Zaloguj się i ponów. Sesje prywatne lub partycjonowane nie są obsługiwane."
+  },
+  "m_1e9601e1e54c4d5a": {
+    "message": "Brak pasujących obsługiwanych ciasteczek logowania. Zaloguj się. Sesje prywatne, partycjonowane i izolowane względem pierwszej strony nie są obsługiwane."
+  },
+  "m_3e86480851090d8e": {
+    "message": "Domyślnie wyłączone. Włącz, aby wykrywać żądania wideo i dźwięku."
+  },
+  "m_841fa2784ee46d5c": {
+    "message": "Wyłączone dla tej witryny. Wybór zapisany."
+  },
+  "m_b6d42710b782d638": {
+    "message": "Domyślnie włączone. Zezwól witrynie na wyświetlanie przycisków wideo."
+  },
+  "m_48ff08561347ceb3": {
+    "message": "Domyślnie włączone. Otwórz witrynę, aby zmienić ustawienie."
+  },
+  "m_718a1c9b01954136": {
+    "message": "Domyślnie włączone. Odtwórz film, aby go wykryć, a następnie wybierz plik do pobrania."
+  },
+  "m_a5796db85ba454a2": {
+    "message": "Domyślnie włączone. Wyłącz, aby ukryć przyciski wideo na tej witrynie."
+  },
+  "m_b7e24a07e6b998ce": {
+    "message": "Domyślnie włączone. Wybór zapisuje się dla tej witryny."
+  },
+  "m_18aa46ba0236a241": {
+    "message": "Jedna witryna w wierszu. Obejmuje subdomeny; * zastępuje dowolną część nazwy."
+  },
+  "m_4e918bc632379980": {
+    "message": "Obsługiwane tylko linki HTTP/HTTPS bez danych logowania w adresie."
+  },
+  "m_c474c658148d459d": {
+    "message": "Wysyłane są tylko wybrane linki. Mogą prowadzić do stron; typy wynikają z nazw i metadanych."
+  },
+  "m_8bee84e594e99e34": {
+    "message": "Otwórz kartę przeglądarki i ponownie Download Engine."
+  },
+  "m_c66ff2b172c3b834": {
+    "message": "Otwórz zwykłą stronę, aby skonfigurować przycisk wideo."
+  },
+  "m_aa4c148abfa53385": {
+    "message": "Otwórz zwykłą stronę, aby znaleźć multimedia."
+  },
+  "m_215a54029c2b4b91": {
+    "message": "Otwórz zwykłą stronę, aby przejrzeć multimedia."
+  },
+  "m_a9a64a3ba1e37620": {
+    "message": "Otwórz stronę HTTP/HTTPS i kliknij na niej rozszerzenie."
+  },
+  "m_5d404dc8daf23871": {
+    "message": "Otwórz rozszerzenie Download Engine i spróbuj ponownie."
+  },
+  "m_1c911c28ea089770": {
+    "message": "Otwórz zalogowaną witrynę w zwykłej karcie, potem wybierz plik z tego samego serwera."
+  },
+  "m_b4c5fc73a947b6af": {
+    "message": "Otwarto w aplikacji"
+  },
+  "m_c751d726c402d9ab": {
+    "message": "Otwieranie podglądu filmu w Download Engine"
+  },
+  "m_c926c2c50e65d5a5": {
+    "message": "Otwieranie…"
+  },
+  "m_1a0c32d68ceb4922": {
+    "message": "Oryginalne miejsce docelowe"
+  },
+  "m_15a84d473a2dc5ef": {
+    "message": "Oryginalna kolejka"
+  },
+  "m_5e19e35a09649309": {
+    "message": "Inne / nieznane"
+  },
+  "m_57d2af91bc34f0b3": {
+    "message": "Zasób strony"
+  },
+  "m_2d327768547d6bfa": {
+    "message": "Zasoby strony"
+  },
+  "m_58dc76ebf2ef2844": {
+    "message": "Link strony"
+  },
+  "m_101737af4b45f970": {
+    "message": "Linki strony"
+  },
+  "m_aded8b818cfb9479": {
+    "message": "Linki strony"
+  },
+  "m_c902c6b1e1a4c529": {
+    "message": "Linki strony · Download Engine"
+  },
+  "m_9a3faea57df5b5b3": {
+    "message": "Kolejność strony"
+  },
+  "m_445999cff1f693bb": {
+    "message": "Zbieranie linków niedostępne w oknach prywatnych."
+  },
+  "m_a7a9dc5bcf71adb2": {
+    "message": "Wstrzymane"
+  },
+  "m_40d12c1cd050aea2": {
+    "message": "Odzyskano oczekujące przeglądy i pobrania. Sprawdzono przekazania przeglądarki."
+  },
+  "m_d101686dfb461d7b": {
+    "message": "Uprawnienie cofnięte"
+  },
+  "m_fb44b7bd4a949eee": {
+    "message": "Podgląd DASH"
+  },
+  "m_a891a492d8d0c27e": {
+    "message": "Podgląd HLS"
+  },
+  "m_a57b08a480b822a0": {
+    "message": "Poprzednie"
+  },
+  "m_6d4977e17532e718": {
+    "message": "Sesje prywatne, partycjonowane i izolowane według witryny nie są obsługiwane. Przechwytywanie pozostaje anonimowe."
+  },
+  "m_90920d93e2c7e632": {
+    "message": "Program"
+  },
+  "m_b6747064b2a6dd95": {
+    "message": "Programy"
+  },
+  "m_3b2fe03e36893916": {
+    "message": "Kolejka"
+  },
+  "m_68b16a818cc085cf": {
+    "message": "Ostatnie ustawienia, sprawdzenia połączenia i podglądy zapisane tylko w tej przeglądarce."
+  },
+  "m_98d7576ae1a9c3fc": {
+    "message": "Odzyskaj istniejące pobieranie"
+  },
+  "m_da9f4135cbe4b48b": {
+    "message": "Odzyskaj przekazania"
+  },
+  "m_c73c9c73104c4316": {
+    "message": "Dostęp do odzyskiwania włączony. Kliknij ten sam plik na stronie i sprawdź w Download Engine."
+  },
+  "m_acfeb89bc6c13696": {
+    "message": "Odzyskiwanie anulowane. Pobranie pozostaje w przeglądarce."
+  },
+  "m_d662ba072dd18ac7": {
+    "message": "Odzyskiwanie sprawdzone. Sprawdź wstrzymane pliki na liście pobrań przeglądarki."
+  },
+  "m_ad787fd387d7b9ad": {
+    "message": "Nie można rozpocząć odzyskiwania: "
+  },
+  "m_24cedb972410650c": {
+    "message": "Odzyskiwanie wymaga uwagi. W razie potrzeby wznów na liście pobrań przeglądarki. "
+  },
+  "m_5273e2f102fe7c0d": {
+    "message": "Odzyskiwanie zatrzymane: "
+  },
+  "m_1d57f666d95264c7": {
+    "message": "Odśwież dziennik"
+  },
+  "m_2e1d57637f97896b": {
+    "message": "Odśwież miejsca docelowe"
+  },
+  "m_9202490cb35dbda0": {
+    "message": "Przeładuj rozszerzenie Download Engine, aby zakończyć aktualizację."
+  },
+  "m_b330cbc172cf1e68": {
+    "message": "Usuń dostęp do logowania przeglądarki"
+  },
+  "m_bf98564718ee4abb": {
+    "message": "Usuń dostęp rozszerzenia do tej witryny"
+  },
+  "m_45a4092662eb386c": {
+    "message": "Usunięcie dostępu zatrzymuje odczyt ciasteczek ze wszystkich stron. Wykrywanie filmów nadal działa. Usuń zapisane dane w Download Engine → Uwierzytelnianie → Brak."
+  },
+  "m_22799a32fabd0898": {
+    "message": "Usunięcie dostępu zatrzymuje przyszły odczyt cookie. Aby usunąć kopię, usuń pobranie lub wybierz Uwierzytelnianie → Brak."
+  },
+  "m_5923e8de81d8741b": {
+    "message": "Otwórz ponownie rozszerzenie i spróbuj jeszcze raz."
+  },
+  "m_20a3253602a7fcee": {
+    "message": "Zgłoszony rozmiar pliku"
+  },
+  "m_3e536eb4562fe176": {
+    "message": "Rozwiąż oczekującą partię przed podglądem wideo."
+  },
+  "m_602f8e637002a585": {
+    "message": "Przywróć domyślne"
+  },
+  "m_913b0a77f27fc498": {
+    "message": "Ponów tę samą grupę"
+  },
+  "m_60d03e7404e40486": {
+    "message": "Ponów oczekującą partię przed zmianą wyboru."
+  },
+  "m_de8cfa0e6bb6d592": {
+    "message": "Ponów tę samą partię, aby sprawdzić odbiór."
+  },
+  "m_70786ccffcb091cd": {
+    "message": "Sprawdź"
+  },
+  "m_ad8286257814524c": {
+    "message": "Sprawdź ↗"
+  },
+  "m_8c76a4f01cdeec77": {
+    "message": "Sprawdź linki i zasoby strony, a następnie dodaj wybrane pliki do kolejki."
+  },
+  "m_3f21ed22e0fcea7e": {
+    "message": "Sprawdź linki strony i dodaj wybrane pliki do kolejki."
+  },
+  "m_1ee0fc616e9e22a3": {
+    "message": "Sprawdź film w Download Engine"
+  },
+  "m_3bc941f7f11d1ac7": {
+    "message": "Sprawdź wideo w Download Engine. Nic jeszcze nie pobrano."
+  },
+  "m_41b3d85b43f47094": {
+    "message": "Sprawdź logowanie witryny w nowej karcie."
+  },
+  "m_193df65a5f826122": {
+    "message": "Prawy przycisk → Pobierz za pomocą Download Engine zawsze wysyła link, niezależnie od tych reguł."
+  },
+  "m_852bfbb688dd15da": {
+    "message": "Kliknij link prawym przyciskiem, aby wysłać go do aplikacji, lub włącz przechwytywanie."
+  },
+  "m_c071cf5f5ed6f884": {
+    "message": "Uruchomione"
+  },
+  "m_e5dbdffb88164817": {
+    "message": "Zapisz reguły"
+  },
+  "m_1daa7df740ac086c": {
+    "message": "Zapisz w"
+  },
+  "m_198a1c7a2183aefc": {
+    "message": "Zapisywanie wybranych plików…"
+  },
+  "m_dd298e20fc073647": {
+    "message": "Szukaj linków"
+  },
+  "m_2a78025de6aae5e7": {
+    "message": "Wybierz"
+  },
+  "m_1f7133c21072a138": {
+    "message": "Wybierz"
+  },
+  "m_e116a9b3a597ac1e": {
+    "message": "Zaznacz pasujące pliki na wszystkich stronach"
+  },
+  "m_dea1a3e66e47d981": {
+    "message": "Wybierz od 1 do 1000 linków z listy."
+  },
+  "m_b908effe1a7c133b": {
+    "message": "Wybierz pliki wideo lub podgląd HLS / DASH, aby wybrać jakość i dźwięk w Download Engine."
+  },
+  "m_ead5d68c99cc77a8": {
+    "message": "Wybierz mniej linków do tej partii."
+  },
+  "m_e1ce37067ddc2ab5": {
+    "message": "Zaznacz dziennik"
+  },
+  "m_313175419d438c50": {
+    "message": "Zaznacz pasujące"
+  },
+  "m_87a73c5380c6c916": {
+    "message": "Wybierz pliki do dodania."
+  },
+  "m_12576160b98349a6": {
+    "message": "Zaznacz dziennik i naciśnij Ctrl+C."
+  },
+  "m_3ac5caf9518d7822": {
+    "message": "Wysyłaj linki plików lub wybrane linki strony do Download Engine, opcjonalnie z automatycznym przechwytywaniem pobrań."
+  },
+  "m_b8ed5279e897be5d": {
+    "message": "Wysyłanie…"
+  },
+  "m_9fa4fffd6b2390aa": {
+    "message": "Oddziel spacjami. * oznacza dowolne znaki, np. r0*. Wpisz samo *, aby przechwytywać wszystkie typy."
+  },
+  "m_818cd8d91aea3a16": {
+    "message": "Ustawienie"
+  },
+  "m_64d28781ada09e2e": {
+    "message": "Dostęp usunięty. Istniejące pobrania zachowają zaszyfrowany zapis, dopóki nie usuniesz go w Download Engine."
+  },
+  "m_b1dc42771ae048ea": {
+    "message": "Brak dostępu do witryny. Zezwól, aby wyświetlać przyciski wideo."
+  },
+  "m_683653872b36eaa7": {
+    "message": "Brak dostępu do witryny. Nie wysłano danych logowania."
+  },
+  "m_f09f3886349140ea": {
+    "message": "Nie można usunąć uprawnień witryny."
+  },
+  "m_1af851907331c0ed": {
+    "message": "Rozmiar"
+  },
+  "m_d94adb63dbcd8018": {
+    "message": "Strona nie podaje rozmiaru"
+  },
+  "m_2a817d337803db0d": {
+    "message": "Jednostka rozmiaru"
+  },
+  "m_873395540b2cfea9": {
+    "message": "Nieznany rozmiar"
+  },
+  "m_80b858ffa465e189": {
+    "message": "Mniejsze pliki zostają w przeglądarce. Pozostaw puste, aby przyjmować każdy rozmiar."
+  },
+  "m_bec69036aa27e7fa": {
+    "message": "Sortuj"
+  },
+  "m_af45940023cd4d24": {
+    "message": "Strona źródłowa"
+  },
+  "m_329c0763bd9ec092": {
+    "message": "Odtwórz z włączonym wykrywaniem lub użyj Znajdź wideo."
+  },
+  "m_febbea5fb07c20c8": {
+    "message": "Nie potwierdzono anulowania. Kopia w przeglądarce zachowana; sprawdź aplikację przed ponowieniem."
+  },
+  "m_fbb00942fda85125": {
+    "message": "Aplikacja nie potwierdziła nowego linku"
+  },
+  "m_ec379e9b433646d8": {
+    "message": "Aplikacja nie potwierdziła przekazania. Pobranie w przeglądarce zachowane; sprawdź też Download Engine."
+  },
+  "m_903e073f9cd11362": {
+    "message": "Kopia w przeglądarce zakończyła się lub była kontynuowana podczas anulowania"
+  },
+  "m_1c9fd224194b7ee7": {
+    "message": "Przeglądarka nie mogła wstrzymać pobrania"
+  },
+  "m_eed9387ac150e8fe": {
+    "message": "Przeglądarka nie odczytała strony. Spróbuj zwykłej strony."
+  },
+  "m_f3cfbd4cbe900742": {
+    "message": "Pobranie pozostało w przeglądarce i trafiło do Download Engine. Sprawdź obie listy."
+  },
+  "m_d69c84ad2351aa26": {
+    "message": "Logowanie nie zostało potwierdzone. Sprawdź połączenie i ponów to samo żądanie."
+  },
+  "m_55e44ceeae345baf": {
+    "message": "Aplikacja nie mogła dodać pobrania."
+  },
+  "m_6f841f3073957b4a": {
+    "message": "Aplikacja nie potwierdziła zapisanego pobrania."
+  },
+  "m_2b3a9305582ef2d1": {
+    "message": "Nie potwierdzono odzyskiwania. Zaktualizuj Download Engine i spróbuj ponownie."
+  },
+  "m_e6c0313fd505b718": {
+    "message": "Aplikacja nie potwierdziła przekazania przeglądarki."
+  },
+  "m_bedea1012885305a": {
+    "message": "Nie potwierdzono zapisania całej partii. Ponów tę samą partię."
+  },
+  "m_390e7750e59f2870": {
+    "message": "Nie potwierdzono podglądu wideo. Zaktualizuj Download Engine lub spróbuj ponownie."
+  },
+  "m_1947644923407952": {
+    "message": "Nie potwierdzono przeglądu wideo. Zaktualizuj Download Engine i użyj odzyskiwania przekazań."
+  },
+  "m_088826a3e5e4e204": {
+    "message": "Aplikacja nie odpowiedziała na czas."
+  },
+  "m_bd3ccbbad5af2986": {
+    "message": "Aplikacja zwróciła niepoprawną odpowiedź."
+  },
+  "m_535e3e6ab89880c5": {
+    "message": "Proces rozszerzenia nie odpowiedział."
+  },
+  "m_988db6830a99c691": {
+    "message": "Rozszerzenie nie odpowiedziało."
+  },
+  "m_306540f92d0513e3": {
+    "message": "Rozszerzenie nie odpowiada. Przeładuj kartę."
+  },
+  "m_d122305531039ccd": {
+    "message": "Rozszerzenie nie odpowiedziało. Ponów to samo żądanie."
+  },
+  "m_30289712f9fad302": {
+    "message": "Brak potwierdzenia ostatniej partii. Ponowienie wysyła tę samą partię bez duplikatów. Nie zamykaj przeglądarki do rozwiązania."
+  },
+  "m_e72a03f673ade934": {
+    "message": "Oryginalna karta została zamknięta. Otwórz witrynę i spróbuj ponownie."
+  },
+  "m_290b216afbebe4b2": {
+    "message": "Strona się zmieniła. Kliknij ponownie przycisk wideo."
+  },
+  "m_110b363e52b4a6d5": {
+    "message": "Strona się zmieniła. Otwórz ponownie rozszerzenie i spróbuj jeszcze raz."
+  },
+  "m_9ade37e9a32e749d": {
+    "message": "Strona się zmieniła. Otwórz ponownie rozszerzenie."
+  },
+  "m_f314de530158f111": {
+    "message": "Strona zwróciła niepoprawną listę linków."
+  },
+  "m_26af77d95664e615": {
+    "message": "Osiągnięto limit zapisanych witryn przycisku wideo."
+  },
+  "m_91947dba22da73b5": {
+    "message": "Ustawienie zmieniło się podczas prośby o uprawnienia."
+  },
+  "m_dbd704dc9a27d238": {
+    "message": "Brak oczekującej partii do ponowienia."
+  },
+  "m_b418ac2881c78a7a": {
+    "message": "Ta partia jest już wysyłana."
+  },
+  "m_604518b6a7b13e73": {
+    "message": "Wybór linków wygasł. Zbierz je ponownie przez rozszerzenie."
+  },
+  "m_68fd909eec66f301": {
+    "message": "Żądanie logowania wygasło. Sprawdź kolejkę Download Engine przed ponownym wysłaniem."
+  },
+  "m_14204d3bb3d2fc5e": {
+    "message": "Multimedia wygasły. Odtwórz ponownie, aby je wykryć."
+  },
+  "m_d5993dba7abddfa4": {
+    "message": "Za dużo danych linków. Spróbuj mniejszej strony."
+  },
+  "m_359c18c81b3a8742": {
+    "message": "Za dużo danych wideo. Spróbuj mniejszej strony."
+  },
+  "m_601ed5513a7de1ff": {
+    "message": "Duża strona: pokazano ograniczoną liczbę linków. Otwórz mniejszą stronę, aby zebrać więcej."
+  },
+  "m_f35a9682d7be0bd2": {
+    "message": "Dane logowania witryny są za duże. Pobierz plik w przeglądarce."
+  },
+  "m_a13331f2e442016c": {
+    "message": "Nie można bezpiecznie przesłać ciasteczek. Pobierz plik w przeglądarce."
+  },
+  "m_d8b8392e2c542950": {
+    "message": "Spróbuj ponownie"
+  },
+  "m_baaddf70fb5d432b": {
+    "message": "Typ"
+  },
+  "m_b764cdc0eab71374": {
+    "message": "Nieznane"
+  },
+  "m_b3744a5c9e3a8a5f": {
+    "message": "Nieznane ustawienie uprawnień."
+  },
+  "m_037c426c05970681": {
+    "message": "Strona bez tytułu"
+  },
+  "m_24f3b0891ed85ed6": {
+    "message": "Zaktualizuj aplikację, aby korzystać z partii linków strony."
+  },
+  "m_239bbb679e8b5ed9": {
+    "message": "Zaktualizuj Download Engine przed włączeniem przechwytywania."
+  },
+  "m_edfcdbe6f4310523": {
+    "message": "Zaktualizuj Download Engine przed użyciem logowania przeglądarki."
+  },
+  "m_6ef631778917843c": {
+    "message": "Logowanie przeglądarki · Download Engine"
+  },
+  "m_a84b376c126bf400": {
+    "message": "Użyj wyszukiwania filmów albo włącz wykrywanie i odtwarzanie."
+  },
+  "m_a1426ad7784ebbbc": {
+    "message": "Przed dodaniem strumienia wybierz jakość w podglądzie HLS lub DASH."
+  },
+  "m_244ef0cdc79df596": {
+    "message": "Nie udało się zwolnić wstrzymanej kopii. Wznów ją na liście pobrań przeglądarki."
+  },
+  "m_acfe566ca2e566e7": {
+    "message": "Użyj logowania witryny"
+  },
+  "m_69da05b04d99b754": {
+    "message": "Użyj logowania witryny (najpierw sprawdź)"
+  },
+  "m_d4aa36ffd2cc2537": {
+    "message": "Użyj maksymalnie {0} typów plików."
+  },
+  "m_850e8821a631dd82": {
+    "message": "Użyj maksymalnie {0} witryn."
+  },
+  "m_27eb9ee5a85d401e": {
+    "message": "Używa automatycznych reguł folderów w ustawieniach Download Engine."
+  },
+  "m_d534be829e32196b": {
+    "message": "Wideo"
+  },
+  "m_9e745d40aad9b039": {
+    "message": "Przycisk wideo"
+  },
+  "m_99f89003e6428eab": {
+    "message": "Nie można zaktualizować przycisku w otwartej karcie:"
+  },
+  "m_d0113821d8075479": {
+    "message": "Przycisk wideo na tej witrynie"
+  },
+  "m_c1c069858f0e43e0": {
+    "message": "Przyciski wideo dostępne tylko na zwykłych stronach głównych, poza ramkami."
+  },
+  "m_bf8f3f1e22b98e76": {
+    "message": "Przyciski wyłączone lub brak dostępu do witryny."
+  },
+  "m_b6a9e2a18c985463": {
+    "message": "Przyciski wideo wyłączone dla tej witryny."
+  },
+  "m_4fcff88a23263c1d": {
+    "message": "Przyciski wideo włączone dla tej witryny. Kliknij przycisk, aby przejrzeć filmy."
+  },
+  "m_33a6de083bd3b681": {
+    "message": "Pobieranie filmów"
+  },
+  "m_1999f0d064cfbc7c": {
+    "message": "Pobieranie filmów — Download Engine"
+  },
+  "m_74d5e1a5adca3103": {
+    "message": "Plik wideo"
+  },
+  "m_d007a137f798c162": {
+    "message": "PLIKI WIDEO"
+  },
+  "m_cfe370de13214b8b": {
+    "message": "Podgląd filmu"
+  },
+  "m_c08d78254e705099": {
+    "message": "Strumień wideo"
+  },
+  "m_991cf9db508be663": {
+    "message": "Oczekiwanie na {0}. Kliknij link pobierania na oryginalnej stronie i sprawdź w Download Engine."
+  },
+  "m_487420533636d10c": {
+    "message": "Brak dostępu do witryn. Wykrywanie multimediów pozostaje wyłączone."
+  },
+  "m_11fcf7333cfe5a60": {
+    "message": "Windows szyfruje kopię dla Twojego konta. Służy tylko temu pobraniu, maksymalnie 24 godziny; znika po ukończeniu lub usunięciu pobrania. Wylogowanie z przeglądarki jej nie usuwa."
+  },
+  "extensionName": {
+    "message": "Integracja Download Engine"
+  },
+  "extensionDescription": {
+    "message": "Przechwytuj pobierane pliki i wykrywaj filmy dla aplikacji Download Engine."
+  }
+}

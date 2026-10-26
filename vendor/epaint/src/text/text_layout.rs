@@ -1,7 +1,7 @@
 #![expect(clippy::unwrap_used)] // TODO(emilk): remove unwraps
 
-// Modified by XDownloader: bidirectional layout of right-to-left text. Changes are
-// marked "XDownloader patch"; see XDOWNLOADER-PATCH.md.
+// Modified by Download Engine: bidirectional layout of right-to-left text. Changes are
+// marked "Download Engine patch"; see patch.md.
 
 use core::{iter, ops::Range};
 use std::sync::Arc;
@@ -85,7 +85,7 @@ struct Paragraph {
     /// In case of an empty paragraph ("\n"), use this as height.
     pub empty_paragraph_height: f32,
 
-    /// XDownloader patch: set for a paragraph with right-to-left text. Its `glyphs`
+    /// Download Engine patch: set for a paragraph with right-to-left text. Its `glyphs`
     /// are then in logical order for line breaking; each row is reordered afterwards.
     pub bidi: Option<ParagraphBidi>,
 }
@@ -102,7 +102,7 @@ impl Paragraph {
     }
 }
 
-/// XDownloader patch: bidirectional layout of one paragraph.
+/// Download Engine patch: bidirectional layout of one paragraph.
 #[derive(Clone)]
 struct ParagraphBidi {
     /// Paragraph embedding level: 0 is left to right, 1 is right to left.
@@ -115,7 +115,7 @@ struct ParagraphBidi {
     glyphs: Vec<BidiGlyph>,
 }
 
-/// XDownloader patch: a shaping cluster, the smallest piece that is reordered.
+/// Download Engine patch: a shaping cluster, the smallest piece that is reordered.
 #[derive(Clone, Copy)]
 struct BidiUnit {
     /// Resolved embedding level.
@@ -131,7 +131,7 @@ struct BidiUnit {
     first_glyph: u32,
 }
 
-/// XDownloader patch: where a glyph came from.
+/// Download Engine patch: where a glyph came from.
 #[derive(Clone, Copy)]
 struct BidiGlyph {
     /// Index into [`ParagraphBidi::units`].
@@ -141,7 +141,7 @@ struct BidiGlyph {
     shaped_x: f32,
 }
 
-/// XDownloader patch: what [`reorder_bidi_row`] needs to know about one row.
+/// Download Engine patch: what [`reorder_bidi_row`] needs to know about one row.
 struct RowBidi {
     base_level: u8,
     units: Arc<[BidiUnit]>,
@@ -153,13 +153,13 @@ struct RowBidi {
     first_glyph: usize,
 }
 
-/// XDownloader patch: one shaping run of a right-to-left paragraph.
+/// Download Engine patch: one shaping run of a right-to-left paragraph.
 struct BidiRun {
     run: TextRun,
     level: u8,
 }
 
-/// XDownloader patch: where [`layout_shaped_run`] started a cluster.
+/// Download Engine patch: where [`layout_shaped_run`] started a cluster.
 struct ClusterStart {
     glyph: usize,
     x_px: f32,
@@ -232,7 +232,7 @@ pub fn layout(fonts: &mut FontsImpl, pixels_per_point: f32, job: Arc<LayoutJob>)
         }
     }
 
-    // XDownloader patch: rows were broken in logical order; show them in visual order.
+    // Download Engine patch: rows were broken in logical order; show them in visual order.
     let has_overflow_glyph = elided && job.wrap.overflow_character.is_some();
     let num_rows = rows.len();
     for (i, (placed_row, bidi)) in iter::zip(&mut rows, bidi_rows).enumerate() {
@@ -318,7 +318,7 @@ struct TextRun {
 /// characters so that `glyphs.len() == char_count` — an invariant that all
 /// cursor and selection code relies on.
 ///
-/// XDownloader patch: `rtl` marks a right-to-left run, whose clusters arrive in
+/// Download Engine patch: `rtl` marks a right-to-left run, whose clusters arrive in
 /// decreasing byte order. `clusters` records where each cluster starts.
 #[expect(clippy::too_many_arguments)]
 fn layout_shaped_run(
@@ -541,7 +541,7 @@ fn emit_continuation_glyphs(
 
 // Ignores the Y coordinate.
 //
-// XDownloader patch: `bidi_levels` holds the paragraph level of each paragraph that
+// Download Engine patch: `bidi_levels` holds the paragraph level of each paragraph that
 // needs bidirectional layout (see `bidi_paragraph_levels`).
 #[must_use]
 #[expect(clippy::too_many_arguments)]
@@ -664,7 +664,7 @@ fn layout_section(
     shape_buffer
 }
 
-/// XDownloader patch: the paragraph level of each paragraph, in the order
+/// Download Engine patch: the paragraph level of each paragraph, in the order
 /// [`layout_section`] creates paragraphs, or `None` where upstream layout is kept.
 ///
 /// A paragraph that contains a right-to-left letter is right to left (level 1).
@@ -692,7 +692,7 @@ fn bidi_paragraph_levels(job: &LayoutJob) -> Vec<Option<u8>> {
     levels
 }
 
-/// XDownloader patch: shape one newline-free segment of a bidirectional paragraph.
+/// Download Engine patch: shape one newline-free segment of a bidirectional paragraph.
 ///
 /// Runs split where the font or the embedding level changes, and each run is shaped
 /// in its own direction, so Latin words and numbers inside right-to-left text keep
@@ -772,7 +772,7 @@ fn layout_bidi_segment(
     shape_buffer
 }
 
-/// XDownloader patch: record the clusters of a run that was just shaped.
+/// Download Engine patch: record the clusters of a run that was just shaped.
 ///
 /// The shaper returns a right-to-left run in visual order. Its clusters are moved
 /// into logical order here, with pen positions that line breaking can measure; the
@@ -909,7 +909,7 @@ fn calculate_intrinsic_size(
 
 // Ignores the Y coordinate.
 //
-// XDownloader patch: `bidi_rows` gets one entry per row, `Some` for a row of a
+// Download Engine patch: `bidi_rows` gets one entry per row, `Some` for a row of a
 // bidirectional paragraph, which [`reorder_bidi_row`] reorders.
 fn rows_from_paragraphs(
     paragraphs: Vec<Paragraph>,
@@ -989,7 +989,7 @@ fn rows_from_paragraphs(
     rows
 }
 
-/// XDownloader patch: put the clusters of a row that was broken in logical order
+/// Download Engine patch: put the clusters of a row that was broken in logical order
 /// into visual order (UAX #9 L1 and L2), returning glyphs to their shaped positions.
 ///
 /// `overflow` says that the row ends with an added overflow character (`…`).
@@ -1880,7 +1880,7 @@ fn segment_into_runs(font: &mut Font<'_>, text: &str, out: &mut Vec<TextRun>) {
     }
 }
 
-/// XDownloader patch: like [`segment_into_runs`], but a run also ends where the
+/// Download Engine patch: like [`segment_into_runs`], but a run also ends where the
 /// embedding level changes. `levels` holds the level of every byte of `text`.
 fn segment_into_bidi_runs(font: &mut Font<'_>, text: &str, levels: &[u8], out: &mut Vec<BidiRun>) {
     use unicode_segmentation::UnicodeSegmentation as _;
@@ -1916,7 +1916,7 @@ fn segment_into_bidi_runs(font: &mut Font<'_>, text: &str, levels: &[u8], out: &
 /// `Copy` slices) and convert font units to pixels using `metrics.px_scale_factor`.
 /// After iteration, recycle the buffer via `glyph_buffer.clear()`.
 ///
-/// XDownloader patch: `direction` overrides harfrust's guess from the script.
+/// Download Engine patch: `direction` overrides harfrust's guess from the script.
 fn shape_text(
     font_face: &FontFace,
     text: &str,

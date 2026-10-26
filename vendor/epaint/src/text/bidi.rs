@@ -1,6 +1,6 @@
 //! Bidirectional text levels.
 //!
-//! XDownloader patch to epaint 0.36.2 (see `XDOWNLOADER-PATCH.md`). Upstream epaint
+//! Download Engine patch to epaint 0.36.2 (see `patch.md`). Upstream epaint
 //! shapes each font run in one direction, so Latin words and digits inside Arabic
 //! text were drawn reversed. This module resolves embedding levels with the parts of
 //! the Unicode Bidirectional Algorithm (UAX #9) that plain interface text needs:

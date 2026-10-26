@@ -1,8 +1,8 @@
 //! Everything related to text, fonts, text layout, cursors etc.
 
-// Modified by XDownloader: adds the `bidi` module. See XDOWNLOADER-PATCH.md.
+// Modified by Download Engine: adds the `bidi` module. See patch.md.
 
-mod bidi; // XDownloader patch
+mod bidi; // Download Engine patch
 pub mod cursor;
 mod font;
 mod fonts;

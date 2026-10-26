@@ -1,10 +1,10 @@
-# epaint 0.36.2, modified for XDownloader
+# epaint 0.36.2, modified for Download Engine
 
 This directory is the published crate [epaint 0.36.2](https://crates.io/crates/epaint/0.36.2)
 (crates.io SHA-256 `a0ec0308dc23130fc1a7d4623a8534c2ed069c6dc84e258ee4f3de99615aa1a3`,
 upstream commit in `.cargo_vcs_info.json`), used through `[patch.crates-io]` in the
-XDownloader `Cargo.toml`. epaint is licensed under MIT OR Apache-2.0; XDownloader uses it
-under Apache-2.0 (`docs/licenses/common/Apache-2.0`). The changes below are XDownloader's
+Download Engine `Cargo.toml`. epaint is licensed under MIT OR Apache-2.0; Download Engine uses it
+under Apache-2.0 (`docs/licenses/common/Apache-2.0`). The changes below are Download Engine's
 and are released under the same terms.
 
 ## Why

@@ -30,7 +30,7 @@ See the [complete dependency index](docs/licenses/RUST-DEPENDENCIES.md) and
 checksums. The index includes build/test dependencies as well as runtime crates.
 The dependencies are unmodified except epaint 0.36.2, which Download Engine builds from
 a modified copy in `vendor/epaint` that adds bidirectional text layout. It remains
-Apache-2.0 licensed; `vendor/epaint/XDOWNLOADER-PATCH.md` describes the changes, and
+Apache-2.0 licensed; `vendor/epaint/patch.md` describes the changes, and
 the index includes the original crate. Where `self_cell` offers Apache-2.0 or
 GPL-2.0, the Apache-2.0 option is used.
 

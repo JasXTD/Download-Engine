@@ -9,8 +9,8 @@
 # will likely look very different (and much more reasonable).
 # See Cargo.toml.orig for the original contents.
 #
-# Modified by XDownloader: adds the icu_properties dependency for bidirectional
-# text layout. See XDOWNLOADER-PATCH.md.
+# Modified by Download Engine: adds the icu_properties dependency for bidirectional
+# text layout. See patch.md.
 
 [package]
 edition = "2024"

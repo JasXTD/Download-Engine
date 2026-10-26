@@ -4,7 +4,7 @@ These are locked Cargo dependencies, unmodified except epaint (see below). Downl
 
 MPL-covered source and published crates that omit workspace license files are included in `sources/`. A `.crate` file is a gzip-compressed tar archive; extract it with `tar -xzf filename.crate`. The included source is the unmodified upstream crate; its SHA-256 is checked against Cargo.lock, or for a modified crate against the published crates.io checksum. Other source links identify the exact published versions.
 
-Download Engine builds a modified copy of epaint 0.36.2 (bidirectional text layout, so Latin text and numbers keep their order inside right-to-left text). The modified source is `vendor/epaint` in the Download Engine source release; `vendor/epaint/XDOWNLOADER-PATCH.md` lists the changed files.
+Download Engine builds a modified copy of epaint 0.36.2 (bidirectional text layout, so Latin text and numbers keep their order inside right-to-left text). The modified source is `vendor/epaint` in the Download Engine source release; `vendor/epaint/patch.md` lists the changed files.
 
 - **accesskit 0.24.1** — Apache-2.0. [LICENSE-Apache-2.0](rust/accesskit-0.24.1/LICENSE-Apache-2.0); [included source](sources/accesskit-0.24.1.crate).
 - **adler2 2.0.1** — 0BSD OR MIT OR Apache-2.0. [LICENSE-0BSD](rust/adler2-2.0.1/LICENSE-0BSD), [LICENSE-APACHE](rust/adler2-2.0.1/LICENSE-APACHE), [LICENSE-MIT](rust/adler2-2.0.1/LICENSE-MIT).

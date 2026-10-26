@@ -124,7 +124,7 @@ dependency update. Review newly encountered licenses and missing notice files.
 a source root and its files are in the inventory. The license script accepts no other
 local dependency, takes epaint's notices and included source from the original crate
 (checked against the crates.io checksum recorded in `patchedCrates`) and marks it as
-modified. Update both when egui is upgraded; see `vendor/epaint/XDOWNLOADER-PATCH.md`.
+modified. Update both when egui is upgraded; see `vendor/epaint/patch.md`.
 
 To rebuild FFmpeg, follow `tools/ffmpeg/source/README.md`. Its source archives are
 pinned by SHA-256. Review changed source, build the helper, test HLS/DASH and

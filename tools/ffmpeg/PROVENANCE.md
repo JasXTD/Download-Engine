@@ -1,6 +1,6 @@
 # Bundled media merger
 
-FFmpeg 9.0.2-xdownloader-security2, Windows x64, built by the XDownloader project on
+FFmpeg 9.0.2, Windows x64, built by the Download Engine project on
 2026-10-22 from the upstream archives and downstream security edits in `source/`.
 It is a separate executable used to remux downloaded, local HLS/DASH tracks
 without re-encoding. The application never passes it a network URL. Network
@@ -17,7 +17,7 @@ support and automatic external-library detection are disabled in this build.
 - Combined helper license: **GPL-3.0-or-later**, configured with `--enable-gpl`
   and `--enable-version3`. x264 permits GPL version 2 or later. Full license and
   copyright notices, including compiler/runtime notices, are in `LICENSE` and
-  `licenses/`. XDownloader's MIT license does not replace these terms.
+  `licenses/`. Download Engine's MIT license does not replace these terms.
 
 `source/SHA256SUMS` pins both source archives. `source/Dockerfile` and
 `source/build.sh` provide the complete build recipe. `source/build-record/`

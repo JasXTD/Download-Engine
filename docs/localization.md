@@ -20,7 +20,7 @@ The desktop uses installed Windows fonts, including Microsoft YaHei, Microsoft J
 
 Arabic extension pages and Setup use right-to-left layout. The native desktop keeps its left-to-right layout, but its text follows the Unicode Bidirectional Algorithm: a label that contains Arabic letters reads right to left, and Latin words, numbers and paths inside it keep their reading order. For example, "Windows", "powercfg /hibernate on" and queue names read normally, a percentage reads "62.4" then "%", and wrapped Arabic lines read from top to bottom. Full interface mirroring and caret movement in mixed-direction text fields are not supported. Language changes do not modify the web page hosting an extension video button.
 
-The bidirectional layout is a patch to egui's text renderer in `vendor/epaint` (see its `XDOWNLOADER-PATCH.md`). Text without right-to-left characters is laid out exactly as before. `src/desktop/theme/tests.rs` checks rendered Arabic layouts.
+The bidirectional layout is a patch to egui's text renderer in `vendor/epaint` (see its `patch.md`). Text without right-to-left characters is laid out exactly as before. `src/desktop/theme/tests.rs` checks rendered Arabic layouts.
 
 ## Maintain translations
 

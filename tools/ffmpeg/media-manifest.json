@@ -47,11 +47,11 @@
     },
     {
       "path": "PROVENANCE.md",
-      "sha256": "0ccfa30b1786a4f721fabe4c2e4b13a0a870da50c53ce19195c1a4c63f057c83"
+      "sha256": "4cb67a28877f8016d3f6bb8499b1f5685c37353e38f0c93c9c0a65418ef9f4bc"
     },
     {
       "path": "README.txt",
-      "sha256": "d1654c6f59098998c7063acb31690c82dddb1ead4c695f580ecc01da6a7f7842"
+      "sha256": "5344d59e38a73789350457dd541e0f2c6614aaba56836d7d8771dd2364535454"
     },
     {
       "path": "source/apply-security-fixes.sh",

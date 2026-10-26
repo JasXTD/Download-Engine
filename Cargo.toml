@@ -60,7 +60,7 @@ tokio = { version = "1.53.3", features = ["test-util"] }
 strip = true
 lto = "thin"
 
-# epaint 0.36.2 with bidirectional text layout; see vendor/epaint/XDOWNLOADER-PATCH.md.
+# epaint 0.36.2 with bidirectional text layout; see vendor/epaint/patch.md.
 [patch.crates-io]
 epaint = { path = "vendor/epaint" }
 

@@ -1,6 +1,6 @@
 [package]
 name = "download-engine"
-version = "3.0.1"
+version = "3.0.2"
 license = "MIT"
 edition = "2024"
 default-run = "de"

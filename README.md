@@ -14,6 +14,7 @@
   <a href="#supported-video-sites-and-formats">Video support</a> ·
   <a href="#quick-start">Quick start</a> ·
   <a href="docs/user-guide.md">User guide</a> ·
+  <a href="PRIVACY.md">Privacy</a> ·
   <a href="SECURITY.md">Security</a> ·
   <a href="CHANGELOG.md">Changelog</a>
 </p>
@@ -247,6 +248,7 @@ permissions, data protection, and the limits of these controls.
 | Language settings | [Languages](docs/localization.md) |
 | Detailed behavior, limits, and development checks | [Reference](docs/reference.md) |
 | Report a vulnerability and understand security boundaries | [Security policy](SECURITY.md) |
+| Data handling, retention and deletion controls | [Privacy policy](PRIVACY.md) |
 | Release history | [Changelog](CHANGELOG.md) |
 | Version, build, and package a release | [Release workflow](docs/releases.md) · [GitHub release guide](docs/github-release.md) |
 | Prepare extensions for browser stores | [Browser release guide](docs/browser-release.md) |
@@ -264,8 +266,10 @@ This builds `de.exe`, `de-cli.exe`, and `de-host.exe` under `target/release`.
 Node.js is needed for JavaScript tests and packaging tools; Inno Setup is needed
 for the installer. Neither is required to run the packaged app.
 
-Video merging needs the pinned FFmpeg helper. Source ZIP users can copy it
-from the matching binary release or follow the [FFmpeg build instructions](tools/ffmpeg/source/README.md).
+Video merging needs the pinned FFmpeg helper. Git checkouts and source ZIPs omit
+`tools/ffmpeg/ffmpeg.exe`; copy it from the matching portable release or follow the
+[FFmpeg build instructions](tools/ffmpeg/source/README.md). The installer and portable
+release include the executable, its corresponding sources, and license notices.
 See [build and verification details](docs/reference.md#build-and-verify) and the
 [release workflow](docs/releases.md) for the full check and packaging sequence.
 

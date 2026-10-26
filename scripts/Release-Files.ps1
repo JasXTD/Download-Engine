@@ -52,7 +52,7 @@ function Get-ReleaseSourceFiles {
     $inventory = Get-Content -LiteralPath $inventoryPath -Raw -Encoding UTF8 | ConvertFrom-Json
     if ($inventory.schema -ne 1 -or @($inventory.files).Count -eq 0) { throw 'Invalid source release inventory.' }
     $roots = @('assets','docs','examples','extension','installer','locales','scripts','src','tests','tools/ffmpeg','vendor')
-    $topFiles = @('Cargo.toml','Cargo.lock','build.rs','README.md','SECURITY.md','CHANGELOG.md','LICENSE','THIRD-PARTY-NOTICES.md','.gitattributes','.gitignore')
+    $topFiles = @('Cargo.toml','Cargo.lock','build.rs','README.md','SECURITY.md','PRIVACY.md','CHANGELOG.md','LICENSE','THIRD-PARTY-NOTICES.md','.gitattributes','.gitignore')
     $listed = [Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
     foreach ($relative in $inventory.files) {
         $null = Resolve-ReleasePath -Root $Root -Relative $relative

@@ -1,9 +1,9 @@
-## 3.0.1 — 2026-10-27
+## 3.0.2 — 2026-10-27
 
-### Ikoner för webbläsartillägg
+### Integritetspolicy
 
-Webbläsartilläggen innehåller nu Download Engine-logotypen i storlekar för verktygsfält och tilläggsbutik. Paketen för Chrome, Edge, Brave och Firefox, Windows-installationsprogrammet och de portabla versionerna innehåller samma ikonfiler.
+En offentlig policy beskriver webbläsarintegration, lokal lagring, valfria inloggningskakor, lagring och radering av data, externa integrationer och Chrome Web Stores krav på begränsad användning. README och publiceringsguiden länkar till policyn; källkods-, tilläggs-, portabla och installationspaket innehåller en kopia. Nedladdningsbeteende och behörigheter är oförändrade.
 
-### Installationsguide för webbläsartillägg
+### Källkodsarkiv och utgivningspaket
 
-README förtydligar nu att godkännande i tilläggsbutikerna inväntas. Chrome, Edge och Brave kräver utvecklarläge och inläsning av ett uppackat tillägg. Firefox använder ett tillfälligt tillägg som måste läsas in igen efter varje omstart av webbläsaren. Installationsavsnittet länkar till inläsnings- och anslutningsstegen för varje webbläsare.
+Den körbara FFmpeg-filen versionshanteras inte längre i källkodsarkivet. Installationsprogrammet och den portabla versionen innehåller den fortfarande tillsammans med motsvarande källkod och licensinformation. FFmpeg-källkoden finns kvar i Git; bygginstruktionerna beskriver hur rätt körbar fil hämtas.

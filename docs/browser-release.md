@@ -44,6 +44,12 @@ proof of browser-store approval or Firefox signing.
 
 ## Data handling for the publisher's privacy declaration
 
+The published [privacy policy](../PRIVACY.md) covers the extension's data handling,
+local desktop integration, retention and user controls. Use
+`https://github.com/JasXTD/Download-Engine/blob/main/PRIVACY.md` for the browser
+store's privacy-policy URL. Keep store declarations consistent with that policy
+and the released extension's behaviour.
+
 The extension sends URLs and optional filenames to the local native host when
 requested. File capture and passive media detection default on; explicit saved
 off choices are preserved. Downloads, webRequest and HTTP/HTTPS website access

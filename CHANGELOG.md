@@ -2,6 +2,16 @@
 
 Release notes are available offline in Help → Changelog. Newest releases appear first.
 
+## 3.0.2 — 2026-10-27
+
+### Privacy policy
+
+Added a public privacy policy covering browser integration, local storage, optional browser-login cookies, retention and deletion controls, third-party integrations, and Chrome Web Store Limited Use. The README and browser release guide link to it, and source, browser, portable and installer packages include a copy. Download behaviour and permissions are unchanged.
+
+### Source repository and release packages
+
+The FFmpeg executable is no longer tracked in the source repository. Installers and portable releases continue to bundle it with its corresponding sources and license notices. FFmpeg sources remain in Git; source-build instructions explain how to obtain the matching executable.
+
 ## 3.0.1 — 2026-10-27
 
 ### Browser extension icons

@@ -1,9 +1,9 @@
-## 3.0.1 — 2026-10-27
+## 3.0.2 — 2026-10-27
 
-### Iconas da las extensiuns dal navigatur
+### Decleraziun davart la protecziun da datas
 
-Las extensiuns cuntegnan ussa il logo da Download Engine en grondezzas adattadas a la trav d’utensils ed a la butia. Ils pachets per Chrome, Edge, Brave e Firefox, il program d’installaziun per Windows e las versiuns portablas cuntegnan las medemas datotecas d’iconas.
+Ina decleraziun publica descriva l’integraziun dal navigatur, la memorisaziun locala, ils cookies d’annunzia facultativs, la conservaziun e stizzada da datas, las integraziuns externas e las pretensiuns Limited Use dal Chrome Web Store. README e la guida da publicaziun cuntegnan colliaziuns; ils pachets da code, extensiuns, versiuns portablas ed installaziun cuntegnan ina copia. Il cumportament da telechargiar e las permissiuns restan senza midadas.
 
-### Instrucziuns per installar las extensiuns
+### Repository dal code da funtauna e pachets da publicaziun
 
-Il README infurmescha ussa cleramain che l’approvaziun da las butias è anc pendenta. Chrome, Edge e Brave dovran il modus da sviluppader e Load unpacked. Firefox dovra Load Temporary Add-on; l’extensiun sto vegnir chargiada danovamain suenter mintga reaviertura dal navigatur. La secziun da configuraziun cuntegna colliaziuns a las instrucziuns da chargiar e colliar per mintga navigatur.
+La datoteca executabla da FFmpeg na vegn betg pli registrada en il repository dal code da funtauna. Il program d’installaziun e la versiun portabla la cuntegnan vinavant ensemen cun il code da funtauna correspundent e las infurmaziuns da licenza. Il code da funtauna da FFmpeg resta en Git; las instrucziuns da compilaziun decleran co obtegnair la datoteca executabla correspundenta.

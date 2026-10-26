@@ -1,9 +1,9 @@
-## 3.0.1 — 2026-10-27
+## 3.0.2 — 2026-10-27
 
-### Biểu tượng tiện ích trình duyệt
+### Chính sách quyền riêng tư
 
-Tiện ích trình duyệt hiện có logo Download Engine với kích thước dành cho thanh công cụ và cửa hàng. Các gói Chrome, Edge, Brave và Firefox, bộ cài Windows và bản di động đều chứa cùng các tệp biểu tượng.
+Thêm chính sách công khai về tích hợp trình duyệt, lưu trữ cục bộ, cookie đăng nhập tùy chọn, lưu giữ và xóa dữ liệu, tích hợp bên thứ ba và yêu cầu Sử dụng có giới hạn của Chrome Web Store. README và hướng dẫn phát hành trình duyệt có liên kết đến chính sách; các gói mã nguồn, tiện ích, bản di động và bộ cài đều chứa bản sao. Hành vi tải xuống và quyền truy cập không thay đổi.
 
-### Hướng dẫn cài tiện ích trình duyệt
+### Kho mã nguồn và gói phát hành
 
-README hiện nêu rõ rằng tiện ích đang chờ cửa hàng trình duyệt phê duyệt. Chrome, Edge và Brave cần bật chế độ nhà phát triển và tải tiện ích đã giải nén; Firefox sử dụng tiện ích tạm thời và cần tải lại sau mỗi lần khởi động lại trình duyệt. Phần thiết lập có liên kết tới hướng dẫn tải và kết nối cho từng trình duyệt.
+Tệp thực thi FFmpeg không còn được theo dõi trong kho mã nguồn. Bộ cài đặt và bản di động vẫn kèm tệp này cùng mã nguồn tương ứng và thông báo giấy phép. Mã nguồn FFmpeg vẫn được giữ trong Git; hướng dẫn biên dịch giải thích cách lấy tệp thực thi phù hợp.

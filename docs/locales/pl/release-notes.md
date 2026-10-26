@@ -1,9 +1,9 @@
-## 3.0.1 — 2026-10-27
+## 3.0.2 — 2026-10-27
 
-### Ikony rozszerzeń przeglądarek
+### Polityka prywatności
 
-Rozszerzenia zawierają teraz logo Download Engine w rozmiarach dla paska narzędzi i sklepu. Pakiety Chrome, Edge, Brave i Firefox, instalator Windows oraz wersje przenośne zawierają te same pliki ikon.
+Dodano publiczną politykę opisującą integrację z przeglądarką, lokalne przechowywanie, opcjonalne pliki cookie logowania, przechowywanie i usuwanie danych, integracje zewnętrzne oraz zasady ograniczonego wykorzystania Chrome Web Store. README i instrukcja publikowania rozszerzeń zawierają odnośniki, a pakiety źródłowe, rozszerzenia, wersje przenośne i instalator zawierają kopię polityki. Działanie pobierania i uprawnienia pozostają bez zmian.
 
-### Instrukcje instalacji rozszerzeń
+### Repozytorium źródeł i pakiety wydań
 
-README wyraźnie informuje, że rozszerzenia czekają na zatwierdzenie w sklepach. Chrome, Edge i Brave wymagają trybu programisty i wczytania rozpakowanego rozszerzenia. Firefox wymaga wczytania tymczasowego dodatku po każdym ponownym uruchomieniu przeglądarki. Sekcja konfiguracji zawiera odnośniki do instrukcji wczytywania i łączenia dla każdej przeglądarki.
+Plik wykonywalny FFmpeg nie jest już śledzony w repozytorium źródeł. Instalator i wersja przenośna nadal zawierają go wraz z odpowiadającymi mu źródłami i informacjami licencyjnymi. Źródła FFmpeg pozostają w Git; instrukcja budowania opisuje, jak uzyskać zgodny plik wykonywalny.

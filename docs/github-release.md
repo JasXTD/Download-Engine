@@ -21,10 +21,17 @@ portable app, installer and source archive.
 
 Install the prerequisites described in the README (Rust/MSVC build tools, Node.js
 and Inno Setup). For a fresh Cargo cache, run `cargo fetch --locked` before the
-offline checks below. The source-only ZIP excludes executable files: copy the
-matching `tools/ffmpeg/ffmpeg.exe` from the binary release, or rebuild it using
+offline checks below. Git checkouts and the source-only ZIP exclude executable
+files: copy the matching `tools/ffmpeg/ffmpeg.exe` from the portable release, or rebuild it using
 `tools/ffmpeg/source/README.md` and update the documented hash pins. Then run
 `scripts/Prepare-MediaTools.ps1` to verify the complete media bundle.
+
+Keep `tools/ffmpeg/ffmpeg.exe` locally as an ignored packaging input. Publish it
+inside the installer and portable release assets, not as a tracked source file.
+FFmpeg's corresponding source archives, build recipe and license notices remain
+tracked and are included in the release packages. The packagers copy the verified
+local executable explicitly; Git ignore rules do not exclude it from those assets.
+The removal from the current source tree does not rewrite earlier commits or tags.
 
 Use the current version in Cargo.toml, Cargo.lock, both extension manifests and
 the newest changelog heading. From the project root:

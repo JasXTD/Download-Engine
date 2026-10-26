@@ -69,6 +69,9 @@ id_ed25519
 *.log.*
 !/tools/ffmpeg/source/build-record/*.log
 /tools/ffmpeg/source/rebuilt/
+# The pinned helper is local build input and ships in binary release assets.
+# Keep its corresponding source archives, notices and build recipe in Git.
+/tools/ffmpeg/ffmpeg.exe
 
 # Python/Node tooling caches and virtual environments
 __pycache__/
@@ -98,5 +101,5 @@ node_modules/
 Thumbs.db
 Desktop.ini
 
-# Keep Cargo.lock, bundled FFmpeg, source archives, licenses and test ZIPs.
+# Keep Cargo.lock, FFmpeg sources, licenses and test ZIPs.
 # Do not add blanket rules for *.exe, *.zip, *.tar.gz or *.crate.

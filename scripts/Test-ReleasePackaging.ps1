@@ -28,7 +28,7 @@ try {
         # Each root needs a real file so it also exists in the staged source tree.
         Put-FixtureFile "$name/README.md" 'Isolated public source fixture.'
     }
-    foreach ($name in @('Cargo.toml','Cargo.lock','build.rs','README.md','SECURITY.md','CHANGELOG.md','LICENSE','THIRD-PARTY-NOTICES.md','.gitattributes','.gitignore')) {
+    foreach ($name in @('Cargo.toml','Cargo.lock','build.rs','README.md','SECURITY.md','PRIVACY.md','CHANGELOG.md','LICENSE','THIRD-PARTY-NOTICES.md','.gitattributes','.gitignore')) {
         Put-FixtureFile $name 'Isolated public source fixture.'
     }
     foreach ($name in @('Release-Files.ps1','Package-ReleaseSources.ps1','Write-ReleaseChecksums.ps1')) {

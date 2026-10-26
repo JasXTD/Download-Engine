@@ -1,9 +1,9 @@
-## 3.0.1 — 2026-10-27
+## 3.0.2 — 2026-10-27
 
-### Icônes des extensions de navigateur
+### Politique de confidentialité
 
-Les extensions incluent désormais le logo Download Engine aux tailles adaptées à la barre d’outils et à la boutique. Les paquets Chrome, Edge, Brave et Firefox, le programme d’installation Windows et les versions portables incluent les mêmes fichiers d’icônes.
+Ajout d’une politique publique décrivant l’intégration du navigateur, le stockage local, les cookies de connexion facultatifs, la conservation et la suppression des données, les intégrations tierces et les exigences d’utilisation limitée du Chrome Web Store. Le README et le guide de publication proposent un lien ; les paquets source, extensions, portables et d’installation en incluent une copie. Le fonctionnement des téléchargements et les autorisations restent inchangés.
 
-### Instructions d’installation des extensions
+### Dépôt source et paquets de distribution
 
-Le README précise désormais que la validation par les boutiques est en attente. Chrome, Edge et Brave nécessitent le mode développeur et le chargement d’une extension non empaquetée. Firefox utilise un module temporaire, à recharger après chaque redémarrage du navigateur. La section de configuration renvoie aux étapes de chargement et de connexion pour chaque navigateur.
+L’exécutable FFmpeg n’est plus suivi dans le dépôt source. Le programme d’installation et la version portable continuent de l’inclure avec ses sources correspondantes et les mentions de licence. Les sources FFmpeg restent dans Git ; les instructions de compilation expliquent comment obtenir l’exécutable correspondant.

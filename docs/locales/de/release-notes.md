@@ -1,9 +1,9 @@
-## 3.0.1 — 2026-10-27
+## 3.0.2 — 2026-10-27
 
-### Symbole für Browser-Erweiterungen
+### Datenschutzerklärung
 
-Die Browser-Erweiterungen enthalten jetzt das Download Engine-Logo in passenden Größen für Symbolleiste und Store. Die Pakete für Chrome, Edge, Brave und Firefox, das Windows-Installationsprogramm und die portablen Versionen enthalten dieselben Symboldateien.
+Eine öffentliche Datenschutzerklärung beschreibt Browser-Integration, lokale Speicherung, optionale Anmelde-Cookies, Aufbewahrung und Löschung, externe Integrationen und die Limited-Use-Anforderungen des Chrome Web Store. README und Veröffentlichungsanleitung verlinken sie; Quellcode-, Erweiterungs-, portable und Installationspakete enthalten eine Kopie. Download-Verhalten und Berechtigungen bleiben unverändert.
 
-### Anleitung zur Einrichtung der Browser-Erweiterungen
+### Quellcode-Repository und Veröffentlichungspakete
 
-Die README weist nun deutlich auf die ausstehende Store-Freigabe hin. Chrome, Edge und Brave benötigen den Entwicklermodus und „Entpackte Erweiterung laden“. Firefox verwendet ein temporäres Add-on, das nach jedem Browser-Neustart erneut geladen werden muss. Der Einrichtungsabschnitt verlinkt die Lade- und Verbindungsschritte für jeden Browser.
+Die ausführbare FFmpeg-Datei wird nicht mehr im Quellcode-Repository versioniert. Installationsprogramm und portable Version enthalten sie weiterhin zusammen mit dem zugehörigen Quellcode und den Lizenzhinweisen. Die FFmpeg-Quellen bleiben in Git; die Build-Anleitung erklärt, wie die passende ausführbare Datei bezogen wird.

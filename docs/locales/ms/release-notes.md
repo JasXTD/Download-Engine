@@ -1,9 +1,9 @@
-## 3.0.1 — 2026-10-27
+## 3.0.2 — 2026-10-27
 
-### Ikon sambungan pelayar
+### Dasar privasi
 
-Sambungan pelayar kini menyertakan logo Download Engine dalam saiz bar alat dan kedai. Pakej Chrome, Edge, Brave dan Firefox, pemasang Windows serta versi mudah alih menyertakan fail ikon yang sama.
+Menambah dasar privasi awam yang menerangkan integrasi pelayar, storan setempat, kuki log masuk pilihan, pengekalan dan pemadaman data, integrasi pihak ketiga serta syarat Penggunaan Terhad Chrome Web Store. README dan panduan keluaran pelayar memautkan dasar ini; pakej sumber, sambungan, mudah alih dan pemasang menyertakan salinannya. Tingkah laku muat turun dan kebenaran tidak berubah.
 
-### Panduan pemasangan sambungan pelayar
+### Repositori sumber dan pakej keluaran
 
-README kini menjelaskan bahawa kelulusan kedai pelayar masih belum diterima. Chrome, Edge dan Brave memerlukan mod pembangun dan Load unpacked; Firefox menggunakan Load Temporary Add-on dan perlu dimuatkan semula selepas setiap mula semula pelayar. Bahagian persediaan memautkan langkah pemuatan dan sambungan bagi setiap pelayar.
+Fail boleh laksana FFmpeg tidak lagi dijejaki dalam repositori sumber. Pemasang dan keluaran mudah alih masih menyertakannya bersama kod sumber yang sepadan dan notis lesen. Kod sumber FFmpeg kekal dalam Git; arahan binaan menerangkan cara mendapatkan fail boleh laksana yang sepadan.

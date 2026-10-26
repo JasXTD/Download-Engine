@@ -1,9 +1,9 @@
-## 3.0.1 — 2026-10-27
+## 3.0.2 — 2026-10-27
 
-### Ikoner for nettleserutvidelser
+### Personvernerklæring
 
-Nettleserutvidelsene inneholder nå Download Engine-logoen i størrelser for verktøylinjen og utvidelsesbutikken. Pakkene for Chrome, Edge, Brave og Firefox, Windows-installasjonsprogrammet og de portable versjonene inneholder de samme ikonfilene.
+En offentlig erklæring beskriver nettleserintegrasjon, lokal lagring, valgfrie innloggingskapsler, oppbevaring og sletting av data, eksterne integrasjoner og Chrome Web Stores krav til begrenset bruk. README og publiseringsveiledningen lenker til erklæringen; kildekode-, utvidelses-, portable og installasjonspakker inneholder en kopi. Nedlastingsatferd og tillatelser er uendret.
 
-### Veiledning for nettleserutvidelser
+### Kildekodelager og utgivelsespakker
 
-README presiserer nå at godkjenning i utvidelsesbutikkene avventes. Chrome, Edge og Brave krever utviklermodus og innlasting av en utpakket utvidelse. Firefox bruker et midlertidig tillegg som må lastes inn igjen etter hver omstart av nettleseren. Oppsettsdelen lenker til innlastings- og tilkoblingstrinnene for hver nettleser.
+Den kjørbare FFmpeg-filen spores ikke lenger i kildekodelageret. Installasjonsprogrammet og den portable utgaven inneholder den fortsatt sammen med tilhørende kildekode og lisensinformasjon. FFmpeg-kildekoden beholdes i Git; byggeinstruksjonene forklarer hvordan du får tak i riktig kjørbar fil.

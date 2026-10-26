@@ -238,6 +238,7 @@ Source: "{#SourceRoot}\installer\languages\uk.json"; DestDir: "{app}"; DestName:
 Source: "{#SourceRoot}\installer\languages\ar.json"; DestDir: "{app}"; DestName: "installer-language.json"; Languages: ar; Flags: ignoreversion
 Source: "{#SourceRoot}\README.md"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#SourceRoot}\SECURITY.md"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#SourceRoot}\PRIVACY.md"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#SourceRoot}\CHANGELOG.md"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#SourceRoot}\LICENSE"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#SourceRoot}\THIRD-PARTY-NOTICES.md"; DestDir: "{app}"; Flags: ignoreversion
@@ -251,6 +252,10 @@ Source: "{#SourceRoot}\LICENSE"; DestDir: "{app}\extensions\chrome"; Flags: igno
 Source: "{#SourceRoot}\LICENSE"; DestDir: "{app}\extensions\edge"; Flags: ignoreversion
 Source: "{#SourceRoot}\LICENSE"; DestDir: "{app}\extensions\brave"; Flags: ignoreversion
 Source: "{#SourceRoot}\LICENSE"; DestDir: "{app}\extensions\firefox"; Flags: ignoreversion
+Source: "{#SourceRoot}\PRIVACY.md"; DestDir: "{app}\extensions\chrome"; Flags: ignoreversion
+Source: "{#SourceRoot}\PRIVACY.md"; DestDir: "{app}\extensions\edge"; Flags: ignoreversion
+Source: "{#SourceRoot}\PRIVACY.md"; DestDir: "{app}\extensions\brave"; Flags: ignoreversion
+Source: "{#SourceRoot}\PRIVACY.md"; DestDir: "{app}\extensions\firefox"; Flags: ignoreversion
 Source: "{#SourceRoot}\tools\ffmpeg\ffmpeg.exe"; DestDir: "{app}\tools\ffmpeg"; Flags: ignoreversion
 Source: "{#SourceRoot}\tools\ffmpeg\LICENSE"; DestDir: "{app}\tools\ffmpeg"; Flags: ignoreversion
 Source: "{#SourceRoot}\tools\ffmpeg\README.txt"; DestDir: "{app}\tools\ffmpeg"; Flags: ignoreversion

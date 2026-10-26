@@ -1,9 +1,9 @@
-## 3.0.1 — 2026-10-27
+## 3.0.2 — 2026-10-27
 
-### Icone delle estensioni del browser
+### Informativa sulla privacy
 
-Le estensioni includono ora il logo Download Engine nelle dimensioni adatte alla barra degli strumenti e allo store. I pacchetti Chrome, Edge, Brave e Firefox, il programma di installazione Windows e le versioni portatili includono gli stessi file delle icone.
+Aggiunta un’informativa pubblica su integrazione del browser, archiviazione locale, cookie di accesso facoltativi, conservazione ed eliminazione dei dati, integrazioni esterne e requisiti di utilizzo limitato del Chrome Web Store. README e guida alla pubblicazione includono un collegamento; i pacchetti sorgente, estensioni, portatili e di installazione ne contengono una copia. Il comportamento dei download e le autorizzazioni restano invariati.
 
-### Guida all’installazione delle estensioni
+### Repository sorgente e pacchetti di rilascio
 
-Il README chiarisce ora che l’approvazione degli store è ancora in attesa. Chrome, Edge e Brave richiedono la modalità sviluppatore e il caricamento di un’estensione non pacchettizzata. Firefox usa un componente aggiuntivo temporaneo, da ricaricare dopo ogni riavvio del browser. La sezione di configurazione contiene i collegamenti ai passaggi di caricamento e connessione per ogni browser.
+L’eseguibile FFmpeg non è più tracciato nel repository sorgente. Il programma di installazione e la versione portatile continuano a includerlo insieme ai sorgenti corrispondenti e alle note di licenza. I sorgenti FFmpeg restano in Git; le istruzioni di compilazione spiegano come ottenere l’eseguibile corrispondente.

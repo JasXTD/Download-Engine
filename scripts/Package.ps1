@@ -64,6 +64,7 @@ try {
         Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'Register-Browsers.ps1') -Destination $stage
         Copy-Item -LiteralPath (Join-Path $workspaceRoot 'README.md') -Destination $stage
         Copy-Item -LiteralPath (Join-Path $workspaceRoot 'SECURITY.md') -Destination $stage
+        Copy-Item -LiteralPath (Join-Path $workspaceRoot 'PRIVACY.md') -Destination $stage
         Copy-Item -LiteralPath (Join-Path $workspaceRoot 'CHANGELOG.md') -Destination $stage
         Copy-Item -LiteralPath (Join-Path $workspaceRoot 'LICENSE') -Destination $stage
         Copy-Item -LiteralPath (Join-Path $workspaceRoot 'THIRD-PARTY-NOTICES.md') -Destination $stage
@@ -99,6 +100,7 @@ try {
             Copy-Item -LiteralPath (Join-Path $workspaceRoot 'extension\_locales') -Destination $extensionRoot -Recurse
             Copy-Item -LiteralPath (Join-Path $workspaceRoot 'extension\icons') -Destination $extensionRoot -Recurse
             Copy-Item -LiteralPath (Join-Path $workspaceRoot 'LICENSE') -Destination $extensionRoot
+            Copy-Item -LiteralPath (Join-Path $workspaceRoot 'PRIVACY.md') -Destination $extensionRoot
             $variant = if ($browserName -eq 'firefox') { 'firefox' } else { 'chromium' }
             $manifestSource = Join-Path $workspaceRoot "extension\manifest.$variant.json"
             Copy-Item -LiteralPath $manifestSource -Destination (Join-Path $extensionRoot 'manifest.json')
@@ -107,7 +109,7 @@ try {
                 Compress-Archive -Path (Join-Path $extensionRoot '*') -DestinationPath (Join-Path $outputDirectory "download-engine-$browserName-$extensionVersion.zip") -Force
             }
         }
-        $payload = @('de.exe','de-host.exe','de-cli.exe','portable.json','Register-Browsers.ps1','README.md','SECURITY.md','CHANGELOG.md','LICENSE','THIRD-PARTY-NOTICES.md','extensions','docs','tools') |
+        $payload = @('de.exe','de-host.exe','de-cli.exe','portable.json','Register-Browsers.ps1','README.md','SECURITY.md','PRIVACY.md','CHANGELOG.md','LICENSE','THIRD-PARTY-NOTICES.md','extensions','docs','tools') |
             ForEach-Object { Join-Path $stage $_ }
         $portableArchive = Join-Path $outputDirectory "DownloadEngine-$artifactVersion-windows-x64.zip"
         Compress-Archive -LiteralPath $payload -DestinationPath $portableArchive -Force

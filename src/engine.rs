@@ -1,3 +1,4 @@
+mod finalization;
 mod segmented;
 
 use crate::transfer_activity::Phase;
@@ -12,12 +13,13 @@ use crate::{
 };
 use anyhow::{Context, Result, bail, ensure};
 use reqwest::{Client, Response, header};
-use sha2::{Digest, Sha256};
 use std::{
     path::{Path, PathBuf},
     time::Duration,
 };
-use tokio::io::{AsyncReadExt, AsyncWriteExt};
+#[cfg(test)]
+use tokio::io::AsyncReadExt;
+use tokio::io::AsyncWriteExt;
 use tokio_util::sync::CancellationToken;
 
 const MIN_SEGMENT: u64 = 2 * 1024 * 1024;
@@ -280,29 +282,8 @@ async fn transfer(
         return Ok(Some(file));
     }
     let root = store.paths.parts(&job.id)?;
-    // A crash can occur after atomic publication but before the completion
-    // transaction. Recover the same file by identity before touching staging.
-    if let Some(path) = &job.saved_path {
-        let staging = job.directory.join(format!(".idm-ex-{}.assembling", job.id));
-        if staging.exists() && path.exists() && same_file::is_same_file(&staging, path)? {
-            let size = tokio::fs::metadata(path).await?.len();
-            ensure!(
-                Some(size) == job.total && size == job.downloaded,
-                "Published file size changed"
-            );
-            let hash_path = staging.clone();
-            store.activity.set(&job.id, Phase::Verifying);
-            let token = cancel.clone();
-            let (actual, guard) = tokio::task::spawn_blocking(move || {
-                crate::integrity::hash_file(&hash_path, &token)
-            })
-            .await??;
-            job.integrity.actual = Some(actual);
-            job.integrity.check()?;
-            drop(guard);
-            download_file::mark_recovered(&staging).await?;
-            return Ok(Some(FinishedFile::published(path.clone())));
-        }
+    if let Some(file) = finalization::recover(store, job, &root, cancel).await? {
+        return Ok(Some(file));
     }
     job.integrity.actual = None;
     let _cache_guards =
@@ -512,61 +493,7 @@ pub(crate) async fn finalize_sources(
     cancel: &CancellationToken,
     sources: Vec<PathBuf>,
 ) -> Result<Option<FinishedFile>> {
-    let assembling = job.directory.join(format!(".idm-ex-{}.assembling", job.id));
-    store.activity.set(&job.id, Phase::Assembling);
-    store.save(job)?;
-    let mut output = download_file::fresh(&assembling).await?;
-    let mut buffer = vec![0; 256 * 1024];
-    let mut hasher = Sha256::new();
-    for (index, path) in sources.into_iter().enumerate() {
-        let mut input = download_file::read_part(&path).await?;
-        let mut part_hash = Sha256::new();
-        let mut part_size = 0;
-        loop {
-            if cancel.is_cancelled() {
-                drop(output);
-                tokio::fs::remove_file(&assembling).await?;
-                return Ok(None);
-            }
-            let n = input.read(&mut buffer).await?;
-            if n == 0 {
-                break;
-            }
-            #[cfg(test)]
-            storage_tests::before_write(&assembling, n)?;
-            output.write_all(&buffer[..n]).await?;
-            hasher.update(&buffer[..n]);
-            if job.hls.is_some() {
-                part_hash.update(&buffer[..n]);
-                part_size += n as u64;
-            }
-        }
-        if let Some(hls) = &job.hls {
-            let saved = hls
-                .completed
-                .get(index)
-                .context("Incomplete HLS download")?;
-            ensure!(
-                part_size == saved.size && format!("{:x}", part_hash.finalize()) == saved.sha256,
-                "Saved HLS segment changed before assembly. Restart this download."
-            );
-        }
-    }
-    output.sync_all().await?;
-    ensure!(
-        output.metadata().await?.len() == job.downloaded,
-        "Assembled size mismatch"
-    );
-    job.integrity.actual = Some(format!("{:x}", hasher.finalize()));
-    job.integrity.check()?;
-    drop(output);
-    if let Some(file) = synchronization::reuse_unchanged(job, cancel).await? {
-        return Ok(Some(file));
-    }
-    // Hard-link publication is atomic and fails if the destination already exists.
-    // Both paths are in the selected folder, so they are on the same volume.
-    let path = publish_without_overwrite(store, job, &assembling).await?;
-    Ok(Some(FinishedFile::published(path)))
+    finalization::finish(store, job, cancel, sources).await
 }
 pub(crate) async fn publish_without_overwrite(
     store: &Store,
@@ -607,6 +534,9 @@ pub(crate) async fn publish_without_overwrite(
 
 #[cfg(test)]
 mod storage_tests;
+
+#[cfg(test)]
+mod finalization_tests;
 
 #[cfg(test)]
 mod timeout_tests {

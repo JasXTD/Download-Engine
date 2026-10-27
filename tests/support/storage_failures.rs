@@ -75,7 +75,7 @@ async fn readonly_partial_file_is_not_deleted_and_recovers_after_permission_rest
 
 #[tokio::test]
 async fn locked_assembly_file_keeps_complete_parts_and_never_overwrites_existing_download() {
-    let fixture = Fixture::new(2 * 1024 * 1024, 0, false).await;
+    let fixture = Fixture::new(8 * 1024 * 1024, 0, false).await;
     let (_temp, store) = setup();
     let job = enqueue(&store, &fixture.url);
     let destination = job.directory.join(&job.name);

@@ -1,9 +1,5 @@
-## 3.1.0 — 2026-10-27
+## 3.1.1 — 2026-10-27
 
-### Telechargiadas da video pli spertas e main chargia
+### Finir pli svelt datotecas grondas
 
-Videos telechargian fin a 4 segments parallelamain e respectan limits da connexiun pli bass, globals u per website. Pausa, novas emprovas e novs starts mantegnan tut ils segments cumplets verifitgads, er sch’els èn vegnids terminads en in’autra successiun; segments nunfinids vegnan telechargiads danovamain. La fanestra da status mussa ils segments e las connexiuns activas. Scritturas cun puffer, actualisaziuns da progress main frequentas e connexiuns a la banca da datas reutilisadas reduceschan la chargia. La pausa spetga anc adina la fin da las scritturas e mintga bloc retschavì vegn registrà permanentamain en la quota.
-
-### Status d’errur pli cler
-
-Il status d’errur sa numna ussa «Betg reussì»; detagls ed emprovas automaticas restan invariads.
+Telechargiadas HTTP/HTTPS e FTP cun ina suletta part sin il medem disc vegnan ussa verifitgadas e memorisadas senza scriver ina segunda copia cumpletta. Telechargiadas cun pliras parts mantegnan il process asincron existent che unescha las parts en la dretga successiun. Memorisar sin in auter disc dovra vinavant ina copia segira. La verificaziun da la summa da controlla, l’interrupziun, la protecziun dals nums existents e la marcaziun da l’origin d’Internet restan activas. Ina memorisaziun interrutta vegn restabilida a partir da la part memorisada u da la datoteca unida senza telechargiar danovamain u crear duplicats.

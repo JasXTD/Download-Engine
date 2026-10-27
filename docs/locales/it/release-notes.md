@@ -1,9 +1,5 @@
-## 3.1.0 — 2026-10-27
+## 3.1.1 — 2026-10-27
 
-### Video più veloci e minore carico di trasferimento
+### Completamento più rapido dei file grandi
 
-I video scaricano fino a 4 segmenti in parallelo rispettando limiti globali o per sito inferiori. Pausa, nuovi tentativi e riavvio conservano tutti i segmenti completi verificati, anche terminati fuori ordine; quelli incompleti vengono riscaricati. La finestra di stato mostra segmenti e connessioni attivi. Scritture bufferizzate, aggiornamenti di avanzamento meno frequenti e riuso delle connessioni al database riducono il carico. La pausa attende ancora la fine delle scritture e ogni blocco ricevuto viene registrato in modo durevole nella quota.
-
-### Stato di errore più chiaro
-
-Lo stato di errore diventa “Non riusciti”; dettagli e tentativi automatici restano invariati.
+I download HTTP/HTTPS e FTP in una sola parte sulla stessa unità vengono verificati e salvati senza scrivere una seconda copia completa. I download in più parti mantengono il precedente assemblaggio asincrono nell’ordine corretto. Il salvataggio su un’altra unità mantiene la copia sicura. Restano attivi verifica del checksum, annullamento, protezione dei nomi esistenti e indicazione della provenienza da Internet. Un salvataggio interrotto viene recuperato dalla parte salvata o dal file di assemblaggio, senza scaricare di nuovo o creare duplicati.

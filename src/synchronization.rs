@@ -121,12 +121,6 @@ pub(crate) struct FinishedFile {
     pub path: PathBuf,
     pub guard: Option<File>,
 }
-impl FinishedFile {
-    pub(crate) fn published(path: PathBuf) -> Self {
-        Self { path, guard: None }
-    }
-}
-
 async fn local_hash(
     copy: &CompletedCopy,
     cancel: &CancellationToken,

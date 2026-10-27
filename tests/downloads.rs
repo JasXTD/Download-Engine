@@ -571,11 +571,25 @@ async fn changed_file_is_rejected_on_resume() {
 }
 #[tokio::test]
 async fn non_resumable_pause_starts_over_without_appending() {
-    let fixture = Fixture::pausable_range(1024 * 1024, 1).await;
+    // Leave enough received bytes to flush the 256 KiB write buffer. With a
+    // 128 KiB gate, a fast response reaches neither a disk flush nor the 500 ms
+    // progress checkpoint, so a disk-based pause observer would wait forever.
+    let fixture = Fixture::with_gate_after(
+        1024 * 1024,
+        1,
+        false,
+        Some((512 * 1024, Arc::new(tokio::sync::Semaphore::new(0)))),
+    )
+    .await;
     let (_temp, store) = setup();
     let paused = pause_midway(&store, enqueue(&store, &fixture.url), &fixture).await;
-    assert_eq!(paused.downloaded, 128 * 1024);
+    assert!((256 * 1024..=512 * 1024).contains(&paused.downloaded));
     assert!(paused.plan.is_none());
+    let part = store.paths.parts(&paused.id).unwrap().join("whole.part");
+    assert_eq!(
+        std::fs::read(part).unwrap(),
+        fixture.data[..paused.downloaded as usize]
+    );
     let complete = run(&store, paused).await;
     assert_eq!(complete.status, Status::Complete);
     assert_eq!(

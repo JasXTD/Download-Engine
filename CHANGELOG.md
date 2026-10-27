@@ -2,6 +2,14 @@
 
 Release notes are available offline in Help → Changelog. Newest releases appear first.
 
+## 3.1.1 — 2026-10-27
+
+### Faster large-file completion
+
+Single-part HTTP/HTTPS and FTP downloads on the same drive now verify and publish the saved file without writing a second complete copy. Multi-part downloads retain their asynchronous assembly path and playlist/range order. Copies between drives retain the safe assembly path.
+
+Checksum verification, cancellation, filename collision protection and Mark of the Web remain enforced. Interrupted publication is recovered from the saved part or assembly file without downloading again or creating a duplicate.
+
 ## 3.1.0 — 2026-10-27
 
 ### Faster video downloads and lower transfer overhead

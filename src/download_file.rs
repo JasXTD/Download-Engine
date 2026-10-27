@@ -69,7 +69,7 @@ fn check_file(file: &File, allow_hard_links: bool) -> Result<()> {
     Ok(())
 }
 
-fn mark_internet(path: &Path) -> Result<()> {
+pub(crate) fn mark_internet(path: &Path) -> Result<()> {
     #[cfg(windows)]
     {
         use std::io::Write;
@@ -105,23 +105,24 @@ pub(crate) async fn fresh_read_write(path: &Path) -> Result<AsyncFile> {
 
 async fn create_fresh(path: &Path, readable: bool) -> Result<AsyncFile> {
     let path = path.to_owned();
-    let file = tokio::task::spawn_blocking(move || -> Result<File> {
-        match std::fs::remove_file(&path) {
-            Ok(()) => {}
-            Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
-            Err(error) => return Err(error).context("Cannot replace a temporary download file"),
-        }
-        let file = options()
-            .read(readable)
-            .write(true)
-            .create_new(true)
-            .open(&path)?;
-        check_file(&file, false)?;
-        mark_internet(&path)?;
-        Ok(file)
-    })
-    .await??;
+    let file = tokio::task::spawn_blocking(move || fresh_sync(&path, readable)).await??;
     Ok(AsyncFile::from_std(file))
+}
+
+fn fresh_sync(path: &Path, readable: bool) -> Result<File> {
+    match std::fs::remove_file(path) {
+        Ok(()) => {}
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+        Err(error) => return Err(error).context("Cannot replace a temporary download file"),
+    }
+    let file = options()
+        .read(readable)
+        .write(true)
+        .create_new(true)
+        .open(path)?;
+    check_file(&file, false)?;
+    mark_internet(path)?;
+    Ok(file)
 }
 
 pub async fn append_part(path: &Path) -> Result<AsyncFile> {
@@ -138,13 +139,69 @@ pub async fn append_part(path: &Path) -> Result<AsyncFile> {
 
 pub async fn read_part(path: &Path) -> Result<AsyncFile> {
     let path = path.to_owned();
-    let file = tokio::task::spawn_blocking(move || -> Result<File> {
-        let file = options().read(true).open(path)?;
-        check_file(&file, false)?;
-        Ok(file)
-    })
-    .await??;
+    let file = tokio::task::spawn_blocking(move || read_part_sync(&path)).await??;
     Ok(AsyncFile::from_std(file))
+}
+
+pub(crate) fn read_part_sync(path: &Path) -> Result<File> {
+    let file = options().read(true).open(path)?;
+    check_file(&file, false)?;
+    Ok(file)
+}
+
+/// Compare the opened objects, not drive letters (which can alias volumes).
+pub(crate) fn same_volume(first: &File, second: &File) -> Result<bool> {
+    #[cfg(windows)]
+    {
+        use std::os::windows::io::AsRawHandle;
+        use windows_sys::Win32::Storage::FileSystem::{
+            BY_HANDLE_FILE_INFORMATION, GetFileInformationByHandle,
+        };
+        fn volume(file: &File) -> Result<u32> {
+            let mut info = BY_HANDLE_FILE_INFORMATION::default();
+            // Each borrowed handle remains owned; info is a valid output buffer.
+            if unsafe { GetFileInformationByHandle(file.as_raw_handle(), &mut info) } == 0 {
+                return Err(std::io::Error::last_os_error())
+                    .context("Cannot verify the download volume");
+            }
+            Ok(info.dwVolumeSerialNumber)
+        }
+        Ok(volume(first)? == volume(second)?)
+    }
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::MetadataExt;
+        Ok(first.metadata()?.dev() == second.metadata()?.dev())
+    }
+    #[cfg(not(any(windows, unix)))]
+    {
+        let _ = (first, second);
+        Ok(false)
+    }
+}
+
+/// Keep the selected download folder open during finalization. Unlike explicit
+/// saved-file move/delete operations, downloads already allow redirected folders
+/// and network paths; open the selected directory target without widening access.
+pub(crate) fn guard_download_parent(path: &Path) -> Result<File> {
+    let parent = path.parent().context("Missing download folder")?;
+    let mut options = OpenOptions::new();
+    options.read(true);
+    #[cfg(windows)]
+    {
+        use std::os::windows::fs::OpenOptionsExt;
+        use windows_sys::Win32::Storage::FileSystem::{
+            FILE_FLAG_BACKUP_SEMANTICS, FILE_SHARE_READ, FILE_SHARE_WRITE,
+        };
+        options
+            .custom_flags(FILE_FLAG_BACKUP_SEMANTICS)
+            .share_mode(FILE_SHARE_READ | FILE_SHARE_WRITE);
+    }
+    let file = options
+        .open(parent)
+        .context("Cannot protect the download folder")?;
+    ensure!(file.metadata()?.is_dir(), "The download folder changed");
+    Ok(file)
 }
 
 /// One guarded handle owns both prefix verification and appending resumed FTP
@@ -159,18 +216,6 @@ pub(crate) async fn read_write_part(path: &Path) -> Result<AsyncFile> {
     })
     .await??;
     Ok(AsyncFile::from_std(file))
-}
-
-/// Crash recovery may find two names for the already-published file. Retain its
-/// bytes, but ensure that even a download created by an older build is marked.
-pub async fn mark_recovered(path: &Path) -> Result<()> {
-    let path = path.to_owned();
-    tokio::task::spawn_blocking(move || {
-        let file = options().read(true).open(&path)?;
-        check_file(&file, true)?;
-        mark_internet(&path)
-    })
-    .await?
 }
 
 /// Keep the cache directories open without delete sharing during a transfer.

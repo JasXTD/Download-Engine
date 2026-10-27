@@ -59,10 +59,14 @@ async fn check_disk_full(stage: &str) {
     .unwrap();
     let original = store.connection_settings().unwrap();
     let mut changed = original.clone();
-    changed.default_connections = 1;
+    changed.default_connections = if stage == "assembly" { 4 } else { 1 };
     store.save_connection_settings(&original, changed).unwrap();
     let payload = std::sync::Arc::new(
-        (0..2 * 1024 * 1024)
+        (0..if stage == "assembly" {
+            8 * 1024 * 1024
+        } else {
+            2 * 1024 * 1024
+        })
             .map(|i| (i % 251) as u8)
             .collect::<Vec<_>>(),
     );

@@ -1,9 +1,5 @@
-## 3.1.0 — 2026-10-27
+## 3.1.1 — 2026-10-27
 
-### Snabbare videohämtningar och mindre belastning
+### Snabbare slutförande av stora filer
 
-Videor hämtar upp till 4 segment parallellt och följer lägre globala eller webbplatsspecifika anslutningsgränser. Paus, nytt försök och omstart behåller alla verifierade färdiga segment, även de som slutförts i annan ordning; ofärdiga segment hämtas på nytt. Statusfönstret visar aktiva segment och anslutningar. Buffrade skrivningar, färre uppdateringar av förloppet och återanvända databasanslutningar minskar belastningen. Paus väntar fortfarande på att skrivningar slutförs och varje mottaget datablock bokförs beständigt mot kvoten.
-
-### Tydligare felstatus
-
-Felstatusen heter nu ”Misslyckades”; detaljer och automatiska försök är oförändrade.
+HTTP/HTTPS- och FTP-hämtningar med en enda del på samma enhet verifieras och sparas nu utan att en andra fullständig kopia skrivs. Hämtningar med flera delar behåller den tidigare asynkrona sammansättningen i rätt ordning. Sparande på en annan enhet använder fortfarande säker kopiering. Kontrollsummor, avbrytande, skydd för befintliga filnamn och markeringen för Internetursprung finns kvar. Avbrutet sparande återställs från den sparade delen eller sammansättningsfilen utan ny hämtning eller dubbletter.

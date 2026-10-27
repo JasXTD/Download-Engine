@@ -600,6 +600,7 @@ async fn scheduler_pauses_an_update_and_resumes_after_restart_without_touching_t
 
 #[tokio::test]
 async fn crash_after_atomic_publication_recovers_the_new_copy_without_rechecking_or_overwriting() {
+    use sha2::Digest;
     let server = Server::new().await;
     let (_temp, store, queue) = setup();
     let old = first(&store, &queue, &server).await;
@@ -610,6 +611,9 @@ async fn crash_after_atomic_publication_recovers_the_new_copy_without_rechecking
     pending.downloaded = 9;
     pending.total = Some(9);
     pending.saved_path = Some(store.paths.downloads.join("file (1).bin"));
+    // Publication intent is saved after verifying the new bytes; the previous
+    // version's checksum belongs only in synchronization.previous.
+    pending.integrity.actual = Some(format!("{:x}", sha2::Sha256::digest(b"new bytes")));
     let staging = pending
         .directory
         .join(format!(".idm-ex-{}.assembling", pending.id));

@@ -1,9 +1,5 @@
-## 3.1.0 — 2026-10-27
+## 3.1.1 — 2026-10-27
 
-### Szybsze pobieranie filmów i mniejszy narzut
+### Szybsze kończenie dużych plików
 
-Filmy pobierają do 4 segmentów równolegle, z uwzględnieniem niższych limitów globalnych i dla witryny. Wstrzymanie, ponowienie i restart aplikacji zachowują wszystkie zweryfikowane segmenty, również ukończone poza kolejnością; nieukończone są pobierane od nowa. Okno stanu pokazuje aktywne segmenty i połączenia. Buforowanie zapisu, rzadsze odświeżanie postępu i ponowne użycie połączenia z bazą ograniczają narzut. Wstrzymanie nadal czeka na zapis, a każdy odebrany blok jest trwale rozliczany w limicie danych.
-
-### Czytelniejszy stan błędu
-
-Etykieta błędu to teraz „Nieudane”; szczegóły błędu i automatyczne ponawianie nie zmieniły się.
+Jednoczęściowe pobrania HTTP/HTTPS i FTP na tym samym dysku są teraz weryfikowane i zapisywane bez tworzenia drugiej pełnej kopii. Pliki wieloczęściowe zachowują dotychczasowe asynchroniczne scalanie we właściwej kolejności. Zapis na innym dysku nadal korzysta z bezpiecznego kopiowania. Zachowano weryfikację sum kontrolnych, anulowanie, ochronę istniejących nazw i oznaczenie pochodzenia z Internetu. Przerwany zapis jest odzyskiwany z zapisanej części lub pliku scalania bez ponownego pobierania i duplikatów.

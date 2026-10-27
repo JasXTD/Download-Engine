@@ -1,0 +1,451 @@
+{
+  "date": "2026-10-27",
+  "baseline": "3.1.0",
+  "candidate": "Experimental synchronous assembly (not shipped)",
+  "baselineCommit": "3c09dd8f289b10489ebc36cbacf33a0c42c4c6cd",
+  "cpu": "AMD Ryzen 7 3800X",
+  "platform": "x86_64-pc-windows-msvc",
+  "compiler": "rustc 1.99.0 (b940084d7 2026-09-28)",
+  "scope": "Release-mode finishing of already-saved 512 MiB files on the same volume. Warm filesystem cache after creating each fixture. Shared workstation; other Cargo process counts recorded. Process I/O bytes include metadata/database traffic and are not physical device-write counters. No Internet transfer timing.",
+  "blocks": [
+    {
+      "block": "before-2",
+      "variant": "before",
+      "started": "2026-10-27T01:41:38.7465020Z",
+      "seconds": 64.701662,
+      "otherCargoAtStart": 0,
+      "otherCargoAtEnd": 2,
+      "exitCode": 0,
+      "samples": [
+        {
+          "bytes": 536870912,
+          "milliseconds": 2236.9739,
+          "parts": 1,
+          "process_read_bytes": 536887296,
+          "process_write_bytes": 536879178,
+          "sample": 0,
+          "sha256_verified": true
+        },
+        {
+          "bytes": 536870912,
+          "milliseconds": 2291.3028,
+          "parts": 1,
+          "process_read_bytes": 536887296,
+          "process_write_bytes": 536879178,
+          "sample": 1,
+          "sha256_verified": true
+        },
+        {
+          "bytes": 536870912,
+          "milliseconds": 3920.8675,
+          "parts": 1,
+          "process_read_bytes": 536887296,
+          "process_write_bytes": 536879178,
+          "sample": 2,
+          "sha256_verified": true
+        },
+        {
+          "bytes": 536870912,
+          "milliseconds": 2652.1396,
+          "parts": 4,
+          "process_read_bytes": 536887296,
+          "process_write_bytes": 536879178,
+          "sample": 0,
+          "sha256_verified": true
+        },
+        {
+          "bytes": 536870912,
+          "milliseconds": 2703.6308999999997,
+          "parts": 4,
+          "process_read_bytes": 536887296,
+          "process_write_bytes": 536879178,
+          "sample": 1,
+          "sha256_verified": true
+        },
+        {
+          "bytes": 536870912,
+          "milliseconds": 1840.1511,
+          "parts": 4,
+          "process_read_bytes": 536887296,
+          "process_write_bytes": 536879178,
+          "sample": 2,
+          "sha256_verified": true
+        }
+      ]
+    },
+    {
+      "block": "after-1",
+      "variant": "after",
+      "started": "2026-10-27T01:43:08.4770174Z",
+      "seconds": 68.9926675,
+      "otherCargoAtStart": 2,
+      "otherCargoAtEnd": 2,
+      "exitCode": 0,
+      "samples": [
+        {
+          "bytes": 536870912,
+          "milliseconds": 1171.6508999999999,
+          "parts": 1,
+          "process_read_bytes": 536887296,
+          "process_write_bytes": 8266,
+          "sample": 0,
+          "sha256_verified": true
+        },
+        {
+          "bytes": 536870912,
+          "milliseconds": 822.7373,
+          "parts": 1,
+          "process_read_bytes": 536887296,
+          "process_write_bytes": 8266,
+          "sample": 1,
+          "sha256_verified": true
+        },
+        {
+          "bytes": 536870912,
+          "milliseconds": 427.7246,
+          "parts": 1,
+          "process_read_bytes": 536887296,
+          "process_write_bytes": 8266,
+          "sample": 2,
+          "sha256_verified": true
+        },
+        {
+          "bytes": 536870912,
+          "milliseconds": 4112.2164,
+          "parts": 4,
+          "process_read_bytes": 536887296,
+          "process_write_bytes": 536879178,
+          "sample": 0,
+          "sha256_verified": true
+        },
+        {
+          "bytes": 536870912,
+          "milliseconds": 2378.3039000000003,
+          "parts": 4,
+          "process_read_bytes": 536887296,
+          "process_write_bytes": 536879178,
+          "sample": 1,
+          "sha256_verified": true
+        },
+        {
+          "bytes": 536870912,
+          "milliseconds": 7963.2138,
+          "parts": 4,
+          "process_read_bytes": 536887296,
+          "process_write_bytes": 536879178,
+          "sample": 2,
+          "sha256_verified": true
+        }
+      ]
+    },
+    {
+      "block": "after-2",
+      "variant": "after",
+      "started": "2026-10-27T01:45:18.9296760Z",
+      "seconds": 38.0649883,
+      "otherCargoAtStart": 0,
+      "otherCargoAtEnd": 0,
+      "exitCode": 0,
+      "samples": [
+        {
+          "bytes": 536870912,
+          "milliseconds": 1472.5956,
+          "parts": 1,
+          "process_read_bytes": 536887296,
+          "process_write_bytes": 8266,
+          "sample": 0,
+          "sha256_verified": true
+        },
+        {
+          "bytes": 536870912,
+          "milliseconds": 378.9254,
+          "parts": 1,
+          "process_read_bytes": 536887296,
+          "process_write_bytes": 8266,
+          "sample": 1,
+          "sha256_verified": true
+        },
+        {
+          "bytes": 536870912,
+          "milliseconds": 382.5929,
+          "parts": 1,
+          "process_read_bytes": 536887296,
+          "process_write_bytes": 8266,
+          "sample": 2,
+          "sha256_verified": true
+        },
+        {
+          "bytes": 536870912,
+          "milliseconds": 1879.4545999999998,
+          "parts": 4,
+          "process_read_bytes": 536887296,
+          "process_write_bytes": 536879178,
+          "sample": 0,
+          "sha256_verified": true
+        },
+        {
+          "bytes": 536870912,
+          "milliseconds": 2544.7615,
+          "parts": 4,
+          "process_read_bytes": 536887296,
+          "process_write_bytes": 536879178,
+          "sample": 1,
+          "sha256_verified": true
+        },
+        {
+          "bytes": 536870912,
+          "milliseconds": 1852.2537,
+          "parts": 4,
+          "process_read_bytes": 536887296,
+          "process_write_bytes": 536879178,
+          "sample": 2,
+          "sha256_verified": true
+        }
+      ]
+    },
+    {
+      "block": "before-3",
+      "variant": "before",
+      "started": "2026-10-27T01:47:25.3878702Z",
+      "seconds": 37.6433089,
+      "otherCargoAtStart": 0,
+      "otherCargoAtEnd": 0,
+      "exitCode": 0,
+      "samples": [
+        {
+          "bytes": 536870912,
+          "milliseconds": 1725.8736,
+          "parts": 1,
+          "process_read_bytes": 536887296,
+          "process_write_bytes": 536879178,
+          "sample": 0,
+          "sha256_verified": true
+        },
+        {
+          "bytes": 536870912,
+          "milliseconds": 1715.9179,
+          "parts": 1,
+          "process_read_bytes": 536887296,
+          "process_write_bytes": 536879178,
+          "sample": 1,
+          "sha256_verified": true
+        },
+        {
+          "bytes": 536870912,
+          "milliseconds": 12903.5186,
+          "parts": 1,
+          "process_read_bytes": 536887296,
+          "process_write_bytes": 536879178,
+          "sample": 2,
+          "sha256_verified": true
+        },
+        {
+          "bytes": 536870912,
+          "milliseconds": 1654.6684,
+          "parts": 4,
+          "process_read_bytes": 536887296,
+          "process_write_bytes": 536879178,
+          "sample": 0,
+          "sha256_verified": true
+        },
+        {
+          "bytes": 536870912,
+          "milliseconds": 1777.6917999999998,
+          "parts": 4,
+          "process_read_bytes": 536887296,
+          "process_write_bytes": 536879178,
+          "sample": 1,
+          "sha256_verified": true
+        },
+        {
+          "bytes": 536870912,
+          "milliseconds": 1808.2789,
+          "parts": 4,
+          "process_read_bytes": 536887296,
+          "process_write_bytes": 536879178,
+          "sample": 2,
+          "sha256_verified": true
+        }
+      ]
+    },
+    {
+      "block": "before-4",
+      "variant": "before",
+      "started": "2026-10-27T01:49:28.8268698Z",
+      "seconds": 37.8658546,
+      "otherCargoAtStart": 0,
+      "otherCargoAtEnd": 0,
+      "exitCode": 0,
+      "samples": [
+        {
+          "bytes": 536870912,
+          "milliseconds": 1858.8056,
+          "parts": 1,
+          "process_read_bytes": 536887296,
+          "process_write_bytes": 536879178,
+          "sample": 0,
+          "sha256_verified": true
+        },
+        {
+          "bytes": 536870912,
+          "milliseconds": 1855.0682,
+          "parts": 1,
+          "process_read_bytes": 536887296,
+          "process_write_bytes": 536879178,
+          "sample": 1,
+          "sha256_verified": true
+        },
+        {
+          "bytes": 536870912,
+          "milliseconds": 1925.054,
+          "parts": 1,
+          "process_read_bytes": 536887296,
+          "process_write_bytes": 536879178,
+          "sample": 2,
+          "sha256_verified": true
+        },
+        {
+          "bytes": 536870912,
+          "milliseconds": 2492.6214,
+          "parts": 4,
+          "process_read_bytes": 536887296,
+          "process_write_bytes": 536879178,
+          "sample": 0,
+          "sha256_verified": true
+        },
+        {
+          "bytes": 536870912,
+          "milliseconds": 5875.935799999999,
+          "parts": 4,
+          "process_read_bytes": 536887296,
+          "process_write_bytes": 536879178,
+          "sample": 1,
+          "sha256_verified": true
+        },
+        {
+          "bytes": 536870912,
+          "milliseconds": 1630.6988,
+          "parts": 4,
+          "process_read_bytes": 536887296,
+          "process_write_bytes": 536879178,
+          "sample": 2,
+          "sha256_verified": true
+        }
+      ]
+    },
+    {
+      "block": "after-3",
+      "variant": "after",
+      "started": "2026-10-27T01:51:01.2608831Z",
+      "seconds": 28.6892351,
+      "otherCargoAtStart": 0,
+      "otherCargoAtEnd": 0,
+      "exitCode": 0,
+      "samples": [
+        {
+          "bytes": 536870912,
+          "milliseconds": 394.7405,
+          "parts": 1,
+          "process_read_bytes": 536887296,
+          "process_write_bytes": 8266,
+          "sample": 0,
+          "sha256_verified": true
+        },
+        {
+          "bytes": 536870912,
+          "milliseconds": 399.3444,
+          "parts": 1,
+          "process_read_bytes": 536887296,
+          "process_write_bytes": 8266,
+          "sample": 1,
+          "sha256_verified": true
+        },
+        {
+          "bytes": 536870912,
+          "milliseconds": 403.78950000000003,
+          "parts": 1,
+          "process_read_bytes": 536887296,
+          "process_write_bytes": 8266,
+          "sample": 2,
+          "sha256_verified": true
+        },
+        {
+          "bytes": 536870912,
+          "milliseconds": 1985.6695,
+          "parts": 4,
+          "process_read_bytes": 536887296,
+          "process_write_bytes": 536879178,
+          "sample": 0,
+          "sha256_verified": true
+        },
+        {
+          "bytes": 536870912,
+          "milliseconds": 1922.8931999999998,
+          "parts": 4,
+          "process_read_bytes": 536887296,
+          "process_write_bytes": 536879178,
+          "sample": 1,
+          "sha256_verified": true
+        },
+        {
+          "bytes": 536870912,
+          "milliseconds": 1869.1941000000002,
+          "parts": 4,
+          "process_read_bytes": 536887296,
+          "process_write_bytes": 536879178,
+          "sample": 2,
+          "sha256_verified": true
+        }
+      ]
+    }
+  ],
+  "summary": [
+    {
+      "parts": 1,
+      "before": {
+        "median": 1925.054,
+        "min": 1715.9179,
+        "max": 12903.5186
+      },
+      "after": {
+        "median": 403.78950000000003,
+        "min": 378.9254,
+        "max": 1472.5956
+      },
+      "writeBytesBefore": {
+        "median": 536879178,
+        "min": 536879178,
+        "max": 536879178
+      },
+      "writeBytesAfter": {
+        "median": 8266,
+        "min": 8266,
+        "max": 8266
+      }
+    },
+    {
+      "parts": 4,
+      "before": {
+        "median": 1840.1511,
+        "min": 1630.6988,
+        "max": 5875.935799999999
+      },
+      "after": {
+        "median": 1985.6695,
+        "min": 1852.2537,
+        "max": 7963.2138
+      },
+      "writeBytesBefore": {
+        "median": 536879178,
+        "min": 536879178,
+        "max": 536879178
+      },
+      "writeBytesAfter": {
+        "median": 536879178,
+        "min": 536879178,
+        "max": 536879178
+      }
+    }
+  ],
+  "decision": "Retain the original asynchronous multipart copy path; no reliable multipart speedup was measured. Keep single-part direct publication."
+}

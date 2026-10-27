@@ -1,9 +1,5 @@
-## 3.1.0 — 2026-10-27
+## 3.1.1 — 2026-10-27
 
-### Vidéos plus rapides et charge de transfert réduite
+### Finalisation plus rapide des gros fichiers
 
-Les vidéos téléchargent jusqu’à 4 segments en parallèle en respectant les limites globales ou par site plus basses. La pause, les nouvelles tentatives et le redémarrage conservent tous les segments complets vérifiés, même terminés dans le désordre ; les segments incomplets sont retéléchargés. La fenêtre d’état affiche les segments et connexions actifs. Les écritures en tampon, les mises à jour de progression moins fréquentes et la réutilisation des connexions à la base réduisent la charge. La pause attend toujours la fin des écritures et chaque bloc reçu reste comptabilisé durablement dans le quota.
-
-### État d’échec plus clair
-
-L’état d’erreur devient « Échec » ; les détails et tentatives automatiques restent inchangés.
+Les téléchargements HTTP/HTTPS et FTP en une seule partie sur le même lecteur sont désormais vérifiés et enregistrés sans écrire une seconde copie complète. Les téléchargements en plusieurs parties conservent leur assemblage asynchrone dans le bon ordre. L’enregistrement sur un autre lecteur conserve la copie sécurisée. La vérification des sommes de contrôle, l’annulation, la protection des noms existants et la marque de provenance Internet sont maintenues. Un enregistrement interrompu est récupéré depuis la partie enregistrée ou le fichier d’assemblage, sans téléchargement supplémentaire ni doublon.

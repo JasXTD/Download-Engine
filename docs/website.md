@@ -8,13 +8,17 @@ It is a static GitHub Pages site published from `main`, folder `/docs`.
 - `docs/index.html`: page content, download links, canonical URL, social metadata
   and SoftwareApplication structured data.
 - `docs/site.css`: responsive styling, focus states and reduced-motion support.
+- `docs/slideshow.js`: local screenshot rotation and playback controls.
 - `docs/images/`: existing app logo and reviewed screenshots with example data.
 - `docs/.nojekyll`: publish the HTML and assets directly, without Jekyll processing.
 - `docs/sitemap.xml`: the canonical public homepage.
 
-No package installation, JavaScript application build, external font, analytics
-script or browser storage is needed. Native HTML handles navigation and the FAQ.
-The page remains usable with JavaScript disabled.
+No package installation, application build, external font, analytics script or
+browser storage is needed. Native HTML handles navigation and the FAQ. The small
+local slideshow script rotates the browser screenshots every two seconds while
+visible. Hover and hidden tabs suspend rotation; keyboard focus or manual image
+selection pauses it until Play is chosen. Reduced-motion users start paused.
+The first screenshot and the rest of the page remain usable without JavaScript.
 
 The hero and video section explicitly name YouTube, Bilibili, TikTok and Twitch.
 HLS and DASH describe compatible stream formats from other sites, not universal
@@ -50,7 +54,9 @@ automatically.
 
 For design changes, check narrow and wide layouts, both grabber-preview modes,
 keyboard navigation, FAQ controls, reduced motion and operation without
-JavaScript. Verify all seven release assets and the documentation anchors.
+JavaScript. Check slideshow timing, wraparound, pause/play, image selection,
+visibility, loading failure and stable panel height. Verify all seven release
+assets and the documentation anchors.
 
 Review new files explicitly and add their paths to
 `scripts/release-source-inventory.json`. Website-only updates do not replace

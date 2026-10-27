@@ -22,6 +22,7 @@
   <meta name="twitter:description" content="Download supported YouTube, Bilibili, TikTok and Twitch videos, HLS and DASH streams, and files. Free and open source for Windows.">
   <meta name="twitter:image" content="https://jasxtd.github.io/Download-Engine/images/downloads-dark.png">
   <link rel="stylesheet" href="site.css">
+  <script src="slideshow.js" defer></script>
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
@@ -138,7 +139,28 @@
     </section>
 
     <section class="browser-section shell section-space" id="browser" aria-labelledby="browser-title">
-      <figure class="browser-preview"><a href="images/browser-links.png" target="_blank" rel="noopener" aria-label="Open the browser link selection example at full size in a new tab"><img src="images/browser-links.png" width="1280" height="800" loading="lazy" decoding="async" alt="Download Engine browser extension selecting example files from a page to add to a queue"></a><figcaption>Browser link selection · example files <span aria-hidden="true">↗</span></figcaption></figure>
+      <div class="browser-preview screenshot-carousel" role="region" aria-roledescription="carousel" aria-label="Browser integration screenshots" data-slideshow>
+        <div class="slideshow-track" aria-live="off">
+          <figure class="screenshot-slide" role="group" aria-roledescription="slide" aria-label="1 of 3: Browser link selection">
+            <a href="images/browser-links.png" target="_blank" rel="noopener" aria-label="Open the browser link selection example at full size in a new tab"><img src="images/browser-links.png" width="1280" height="800" loading="lazy" decoding="async" alt="Download Engine browser extension selecting example files from a page to add to a queue"></a>
+            <figcaption>Browser link selection · example files <span aria-hidden="true">↗</span></figcaption>
+          </figure>
+          <figure class="screenshot-slide" role="group" aria-roledescription="slide" aria-label="2 of 3: Browser capture and media detection" hidden>
+            <a href="images/browser-integration.png" target="_blank" rel="noopener" aria-label="Open the browser capture and media detection example at full size in a new tab"><img src="images/browser-integration.png" width="1280" height="800" loading="lazy" decoding="async" alt="Download Engine browser integration overview showing automatic download capture and detected example videos"></a>
+            <figcaption>Capture &amp; video detection · example media <span aria-hidden="true">↗</span></figcaption>
+          </figure>
+          <figure class="screenshot-slide" role="group" aria-roledescription="slide" aria-label="3 of 3: Desktop download queue" hidden>
+            <a href="images/downloads-dark.png" target="_blank" rel="noopener" aria-label="Open the desktop download queue example at full size in a new tab"><img src="images/downloads-dark.png" width="1280" height="800" loading="lazy" decoding="async" alt="Download Engine desktop queue with example file downloads, progress, pause and resume controls"></a>
+            <figcaption>Desktop download queue · example files <span aria-hidden="true">↗</span></figcaption>
+          </figure>
+        </div>
+        <div class="slideshow-controls" hidden>
+          <button class="slideshow-toggle" type="button" aria-label="Pause slideshow"><span data-slideshow-toggle-label>Pause</span></button>
+          <div class="slideshow-dots" role="group" aria-label="Choose a screenshot"><button type="button" aria-label="Show browser link selection" aria-pressed="true"></button><button type="button" aria-label="Show browser capture and media detection" aria-pressed="false"></button><button type="button" aria-label="Show desktop download queue" aria-pressed="false"></button></div>
+          <div class="slideshow-navigation"><span class="slideshow-count" aria-hidden="true">1 / 3</span><button class="slideshow-previous" type="button" aria-label="Previous screenshot"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14 6-6 6 6 6"/></svg></button><button class="slideshow-next" type="button" aria-label="Next screenshot"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m10 6 6 6-6 6"/></svg></button></div>
+        </div>
+        <p class="slideshow-message" role="status" hidden></p>
+      </div>
       <div class="browser-copy"><p class="eyebrow">From your browser to your queue</p><h2 id="browser-title">See it.<br>Send it. Save it.</h2><p class="section-intro">Capture clicked file downloads, detect supported media and select multiple links from a page. Let the desktop app handle the transfer.</p><p class="browser-names">Chrome <span>·</span> Edge <span>·</span> Brave <span>·</span> Firefox</p><a class="button button-secondary" href="https://github.com/JasXTD/Download-Engine/blob/main/docs/reference.md#connect-a-browser">Connect your browser <span aria-hidden="true">↗</span></a><p class="fine-print">Requires the Windows app. Current packages use manual installation. Firefox’s temporary add-on must be reloaded after a browser restart. Screenshot details may vary by release.</p></div>
     </section>
 

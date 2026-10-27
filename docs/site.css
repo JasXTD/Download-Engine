@@ -25,7 +25,7 @@ strong { color: var(--text); font-weight: 600; }
 code { font-family: Consolas, monospace; font-size: .94em; color: var(--text); overflow-wrap: anywhere; }
 svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
 a, summary, label { -webkit-tap-highlight-color: transparent; }
-a:focus-visible, summary:focus-visible { outline: 3px solid var(--blue); outline-offset: 5px; border-radius: 4px; }
+a:focus-visible, summary:focus-visible, button:focus-visible { outline: 3px solid var(--blue); outline-offset: 5px; border-radius: 4px; }
 ::selection { background: var(--accent); color: #0b211b; }
 .shell { width: min(1280px, calc(100% - 80px)); margin-inline: auto; }
 .section-space { padding-block: 108px; }
@@ -180,6 +180,23 @@ figcaption { padding: 12px 16px; color: #b3c0cf; font-size: 11px; line-height: 1
 .browser-preview { min-width: 0; border: 1px solid #3a4f63; border-radius: 10px; overflow: hidden; background: #14212d; }
 .browser-preview img { width: 100%; }
 .browser-preview figcaption { display: flex; justify-content: space-between; }
+.screenshot-slide[hidden], .slideshow-controls[hidden], .slideshow-message[hidden] { display: none; }
+.screenshot-slide > a { display: block; aspect-ratio: 8 / 5; background: #1d272c; }
+.screenshot-slide img { width: 100%; height: 100%; object-fit: contain; }
+.screenshot-slide figcaption { height: 64px; align-items: center; gap: 12px; }
+.screenshot-slide figcaption > span { flex-shrink: 0; }
+.slideshow-controls { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 14px; border-top: 1px solid #314251; background: #111e29; }
+.slideshow-controls button { display: inline-flex; align-items: center; justify-content: center; height: 32px; min-width: 32px; padding: 0 8px; border: 1px solid #40586c; border-radius: 5px; color: #d7e8f6; background: #1b3041; cursor: pointer; font: 11px/1.4 "Segoe UI", Arial, sans-serif; transition: background .18s, border-color .18s; }
+.slideshow-controls button:hover { background: #2a455b; border-color: #78a6c8; }
+.slideshow-controls .slideshow-toggle { min-width: 51px; }
+.slideshow-controls button:focus-visible { outline-offset: 2px; }
+.slideshow-controls svg { width: 17px; height: 17px; }
+.slideshow-dots, .slideshow-navigation { display: flex; align-items: center; gap: 5px; }
+.slideshow-dots button { border-color: transparent; background: transparent; min-width: 25px; padding: 0; }
+.slideshow-dots button::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: #7792a9; }
+.slideshow-dots button[aria-pressed="true"]::before { background: var(--accent); box-shadow: 0 0 0 3px #79e0bf24; }
+.slideshow-count { font-size: 10px; color: #b5c9d9; min-width: 32px; margin-right: 4px; white-space: nowrap; }
+.slideshow-message { font-size: 12px; padding: 10px 14px; color: #f4c2a3; border-top: 1px solid #40536a; }
 .browser-names { font-size: 14px; font-weight: 550; color: #d2e0ef; margin-block: 24px; }
 .browser-names > span { margin-inline: 8px; color: #65839c; }
 .browser-copy > .fine-print { margin-top: 20px; max-width: 420px; }
@@ -346,6 +363,7 @@ figcaption { padding: 12px 16px; color: #b3c0cf; font-size: 11px; line-height: 1
   .feature-grid h3 { min-height: 34px; padding-top: 3px; font-size: 18px; }
   .feature-grid p { clear: both; }
   .browser-names { font-size: 13px; }
+  .slideshow-controls { gap: 6px; padding-inline: 8px; }
   .browser-names > span { margin-inline: 5px; }
   .automation { padding: 28px 22px; align-items: flex-start; flex-direction: column; gap: 22px; }
   .automation-symbol { width: 62px; height: 58px; font-size: 27px; border-radius: 10px; }

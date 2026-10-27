@@ -16,6 +16,18 @@ No package installation, JavaScript application build, external font, analytics
 script or browser storage is needed. Native HTML handles navigation and the FAQ.
 The page remains usable with JavaScript disabled.
 
+The Web Grabber illustration uses native radio controls to preview file discovery
+and offline website capture. Its filenames, sizes and site tree are example
+content, not a live scan or a desktop screenshot. Keep that label visible.
+
+The hosting section documents MEGA public files, public WeTransfer transfers and
+exposed-link discovery, including GitHub raw-file handling. It clearly marks these
+as **development-source features not included in v3.1.1**. Keep the availability
+notice, FAQ, download-section note and README consistent until a release contains
+them. Do not imply universal hosting support or full offline functionality for
+interactive websites. Service-specific limitations are in `mega.md`,
+`wetransfer.md` and `user-guide.md`.
+
 ## Updating the website
 
 Edit the files, review the desktop and mobile layouts, and push to `main`.
@@ -29,6 +41,10 @@ SoftwareApplication version/download URL together. Verify each asset exists in
 that release. The separate **Latest GitHub release** link always opens GitHub's
 current latest release. The website never downloads or runs an installer
 automatically.
+
+For design changes, check narrow and wide layouts, both grabber-preview modes,
+keyboard navigation, FAQ controls, reduced motion and operation without
+JavaScript. Verify all seven release assets and the documentation anchors.
 
 Review new files explicitly and add their paths to
 `scripts/release-source-inventory.json`. Website-only updates do not replace

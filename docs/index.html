@@ -6,20 +6,20 @@
   <meta name="color-scheme" content="dark">
   <meta name="referrer" content="strict-origin-when-cross-origin">
   <title>Download Engine — Free Windows Download Manager</title>
-  <meta name="description" content="Download Engine is a free, open-source Windows download manager with parallel downloads, pause and resume, video support, browser integration and automation.">
+  <meta name="description" content="A free, open-source Windows download manager for files, supported videos and offline websites. Explore Web Grabber, browser integration and new MEGA and WeTransfer support in the latest source.">
   <link rel="canonical" href="https://jasxtd.github.io/Download-Engine/">
   <link rel="icon" type="image/png" href="images/download-engine-logo.png">
   <meta property="og:type" content="website">
   <meta property="og:locale" content="en_US">
   <meta property="og:site_name" content="Download Engine">
-  <meta property="og:title" content="Download Engine — Free Windows Download Manager">
-  <meta property="og:description" content="Your downloads. Under control. A native Windows app for files, supported videos, queues and automation.">
+  <meta property="og:title" content="Download Engine — Download more. Keep control.">
+  <meta property="og:description" content="Files, supported videos and offline websites. One free, open-source Windows app. Discover Web Grabber and the latest hosting integrations.">
   <meta property="og:url" content="https://jasxtd.github.io/Download-Engine/">
   <meta property="og:image" content="https://jasxtd.github.io/Download-Engine/images/downloads-dark.png">
   <meta property="og:image:alt" content="Download Engine desktop interface with example downloads">
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="Download Engine — Free Windows Download Manager">
-  <meta name="twitter:description" content="Files, supported videos, queues and automation. Free and open source for Windows.">
+  <meta name="twitter:title" content="Download Engine — Download more. Keep control.">
+  <meta name="twitter:description" content="A free Windows download manager with Web Grabber, supported video downloads, browser integration and automation.">
   <meta name="twitter:image" content="https://jasxtd.github.io/Download-Engine/images/downloads-dark.png">
   <link rel="stylesheet" href="site.css">
   <script type="application/ld+json">
@@ -28,7 +28,7 @@
     "@type": "SoftwareApplication",
     "name": "Download Engine",
     "url": "https://jasxtd.github.io/Download-Engine/",
-    "description": "Free, open-source Windows download manager with parallel downloads, pause and resume, video support, browser integration and automation.",
+    "description": "Free, open-source Windows download manager with parallel transfers, pause and resume, supported videos, a website grabber, browser integration and automation.",
     "operatingSystem": "Windows x64",
     "applicationCategory": "UtilitiesApplication",
     "softwareVersion": "3.1.1",
@@ -43,79 +43,114 @@
 <body>
   <a class="skip-link" href="#main">Skip to content</a>
   <header class="site-header shell">
-    <a class="brand" href="./" aria-label="Download Engine home">
-      <img src="images/download-engine-logo.png" width="40" height="40" alt="">
-      <span>Download Engine</span>
-    </a>
+    <a class="brand" href="./" aria-label="Download Engine home"><img src="images/download-engine-logo.png" width="36" height="36" alt=""><span>Download Engine</span></a>
     <nav aria-label="Main navigation">
-      <a href="#features">Features</a>
-      <a href="#browser">Browser integration</a>
-      <a href="https://github.com/JasXTD/Download-Engine">GitHub <span aria-hidden="true">↗</span></a>
+      <a href="#grabber">Web Grabber</a><a href="#hosting">Hosting support</a><a href="#features">Features</a><a href="https://github.com/JasXTD/Download-Engine">GitHub <span aria-hidden="true">↗</span></a>
       <a class="nav-download" href="#download">Download <span aria-hidden="true">↓</span></a>
     </nav>
   </header>
 
   <main id="main" tabindex="-1">
     <section class="hero shell" aria-labelledby="hero-title">
-      <p class="eyebrow"><span class="status-dot" aria-hidden="true"></span> Free &amp; open source <span class="eyebrow-divider" aria-hidden="true">/</span> Windows x64</p>
-      <h1 id="hero-title">Your downloads.<br><span>Under control.</span></h1>
-      <p class="hero-copy">Meet <strong>Download Engine</strong>, a native Windows download manager for files, supported videos and everything in your queue.</p>
-      <div class="hero-actions">
-        <a class="button button-primary" href="https://github.com/JasXTD/Download-Engine/releases/download/v3.1.1/DownloadEngine-3.1.1-UnsignedSetup.exe"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M4 16v4h16v-4"/></svg>Download for Windows</a>
-        <a class="button button-secondary" href="https://github.com/JasXTD/Download-Engine/releases/download/v3.1.1/DownloadEngine-3.1.1-Unsigned-windows-x64.zip">Get the portable ZIP <span aria-hidden="true">↗</span></a>
+      <div class="hero-copy">
+        <p class="eyebrow"><span class="status-dot" aria-hidden="true"></span> Open source. Made for Windows.</p>
+        <h1 id="hero-title">Download more.<br><span>Keep control.</span></h1>
+        <p class="hero-description">Files, supported videos and offline websites.<br class="desktop-break"> Bring them together in one download manager that puts you in charge.</p>
+        <div class="hero-actions"><a class="button button-primary" href="https://github.com/JasXTD/Download-Engine/releases/download/v3.1.1/DownloadEngine-3.1.1-UnsignedSetup.exe"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M4 15v6h16v-6"/></svg>Download for Windows</a><a class="button button-secondary" href="https://github.com/JasXTD/Download-Engine/releases/download/v3.1.1/DownloadEngine-3.1.1-Unsigned-windows-x64.zip">Get the portable ZIP <span aria-hidden="true">↗</span></a></div>
+        <p class="hero-version">Stable v3.1.1 <span aria-hidden="true">·</span> Windows x64 <span aria-hidden="true">·</span> Free under MIT</p>
+        <a class="source-notice" href="#hosting"><span class="source-label">Latest source</span><span>MEGA, WeTransfer &amp; smarter link discovery</span><span aria-hidden="true">↗</span></a>
       </div>
-      <p class="release-note">Version 3.1.1 <span aria-hidden="true">·</span> Unsigned Windows packages <span aria-hidden="true">·</span> <a href="#download">Package details</a></p>
-
       <figure class="app-preview">
-        <div class="preview-chrome" aria-hidden="true"><span class="window-dots"><i></i><i></i><i></i></span><span>Download Engine</span><span>WINDOWS</span></div>
-        <a href="images/downloads-dark.png" target="_blank" rel="noopener" aria-label="Open the desktop example screenshot at full size in a new tab"><img src="images/downloads-dark.png" width="1280" height="800" fetchpriority="high" alt="Download Engine dark interface showing file downloads, queues, progress, pause and resume controls"></a>
-        <figcaption>Desktop layout with example downloads. Interface details may vary by release. <span>Click to enlarge <span aria-hidden="true">↗</span></span></figcaption>
+        <div class="preview-chrome" aria-hidden="true"><span class="window-dots"><i></i><i></i><i></i></span><span>YOUR DOWNLOADS, ORGANIZED</span><span>↙</span></div>
+        <a href="images/downloads-dark.png" target="_blank" rel="noopener" aria-label="Open the desktop example screenshot at full size in a new tab"><img src="images/downloads-dark.png" width="1280" height="800" fetchpriority="high" alt="Download Engine dark interface with file downloads, progress, queues and pause and resume controls"></a>
+        <figcaption><span>Real desktop UI · example downloads</span><span>View full size <span aria-hidden="true">↗</span></span></figcaption>
       </figure>
     </section>
 
-    <section class="features shell section-space" id="features" aria-labelledby="features-title">
-      <div class="section-heading"><p class="eyebrow">A little more control</p><h2 id="features-title">From the first byte<br>to the finished file.</h2><p>Keep everyday transfers simple, with the controls ready when you need them.</p></div>
-      <div class="feature-list">
-        <article><span class="feature-number">01</span><div><h3>Download. Pause. Pick up again.</h3><p>Parallel connections for supported HTTP, HTTPS, FTP and FTPS downloads. Pause a transfer or recover unfinished work after restarting the app.</p><p class="fine-print">Resume depends on the server and the file remaining compatible.</p></div></article>
-        <article><span class="feature-number">02</span><div><h3>Give every download its place.</h3><p>Organize files into queues, add links in batches and set schedules. Control connections, download speed and destinations from one app.</p></div></article>
-        <article><span class="feature-number">03</span><div><h3>Save supported video, your way.</h3><p>Review available quality and audio options for supported public videos and finished, unencrypted HLS or DASH streams. FFmpeg is included.</p><a class="text-link" href="https://github.com/JasXTD/Download-Engine#supported-video-sites-and-formats">See supported sites and limits <span aria-hidden="true">↗</span></a></div></article>
+    <div class="capability-strip shell" aria-label="Core capabilities"><span>Parallel downloads</span><span>Pause &amp; recovery</span><span>Web Grabber</span><span>Browser integration</span><span>Lua &amp; PowerShell</span></div>
+
+    <section class="grabber shell section-space" id="grabber" aria-labelledby="grabber-title">
+      <div class="grabber-copy"><p class="eyebrow">Built-in Web Grabber</p><h2 id="grabber-title">Collect the files.<br>Keep the website.</h2><p class="section-intro">Skip copying links one by one. Discover the files you need, or take a supported static website with you.</p>
+        <div class="workflow-description"><span class="step-number">01</span><div><h3>Find downloadable files</h3><p>Scan a page, filter by file type and review the results. Select the files you want, then add them to a queue.</p></div></div>
+        <div class="workflow-description"><span class="step-number">02</span><div><h3>Save a website offline</h3><p>Capture supported pages, images and styles with local links. Open the saved site in your browser, without a connection.</p></div></div>
+        <p class="fine-print">Choose scan depth and limits, save projects and schedule scans. Offline copies are static; scripts, sign-in flows and interactive apps do not keep working.</p>
+        <a class="text-link" href="https://github.com/JasXTD/Download-Engine/blob/main/docs/user-guide.md#find-files-on-a-website">Explore the grabber guide <span aria-hidden="true">↗</span></a>
+      </div>
+      <div class="grabber-visual">
+        <fieldset class="grabber-demo">
+          <legend class="visually-hidden">Preview the two Web Grabber workflows</legend>
+          <input class="demo-radio visually-hidden" type="radio" name="grabber-preview" id="demo-files" checked>
+          <input class="demo-radio visually-hidden" type="radio" name="grabber-preview" id="demo-offline">
+          <div class="demo-heading"><span class="demo-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c5 5 5 13 0 18-5-5-5-13 0-18Z"/></svg></span><div><strong>Web Grabber</strong><span>Choose a workflow to preview</span></div></div>
+          <div class="demo-modes"><label for="demo-files">Find files</label><label for="demo-offline">Save website</label></div>
+          <div class="demo-url"><span aria-hidden="true">↗</span><span>https://example.com/resources</span><span class="example-label">Example</span></div>
+          <div class="demo-panel files-panel">
+            <div class="demo-summary"><strong>3 files discovered</strong><span>PDF, ZIP, images</span></div>
+            <div class="demo-file"><span class="sample-check" aria-hidden="true">✓</span><span class="file-type pdf">PDF</span><div><strong>Getting-started.pdf</strong><span>/resources/documents/</span></div><span class="file-size">2.4 MB</span></div>
+            <div class="demo-file"><span class="sample-check" aria-hidden="true">✓</span><span class="file-type zip">ZIP</span><div><strong>Design-assets.zip</strong><span>/resources/downloads/</span></div><span class="file-size">18 MB</span></div>
+            <div class="demo-file"><span class="sample-check" aria-hidden="true">✓</span><span class="file-type png">PNG</span><div><strong>Cover-image.png</strong><span>/resources/images/</span></div><span class="file-size">860 KB</span></div>
+            <div class="demo-result"><span class="status-dot" aria-hidden="true"></span>Review your selection, then add it to a queue.</div>
+          </div>
+          <div class="demo-panel offline-panel">
+            <div class="demo-summary"><strong>A site you can open offline</strong><span>Local links</span></div>
+            <div class="site-tree"><div><span aria-hidden="true">▾</span><strong>Saved website</strong></div><div class="tree-child"><span class="file-type html">HTML</span><span>index.html</span><span class="tree-note">Start here</span></div><div class="tree-child"><span class="file-type html">HTML</span><span>guide/index.html</span></div><div class="tree-child"><span class="file-type zip">CSS</span><span>assets/styles.css</span></div><div class="tree-child"><span class="file-type png">PNG</span><span>images/cover.png</span></div></div>
+            <div class="demo-result"><span class="status-dot" aria-hidden="true"></span>Pages and assets, connected with local links.</div>
+          </div>
+        </fieldset>
+        <p class="visual-caption">Interactive illustration with example content, not a live scan.</p>
       </div>
     </section>
 
-    <section class="browser-section section-space" id="browser" aria-labelledby="browser-title">
+    <section class="hosting-section section-space" id="hosting" aria-labelledby="hosting-title">
       <div class="shell">
-        <div class="browser-heading"><div><p class="eyebrow">From browser to desktop</p><h2 id="browser-title">Find it. Choose it.<br>Send it to your queue.</h2></div><p>Capture clicked file downloads, detect supported media and choose multiple links from a page. The Windows app handles the rest.</p></div>
-        <figure class="browser-preview"><a href="images/browser-links.png" target="_blank" rel="noopener" aria-label="Open the browser link selection example at full size in a new tab"><img src="images/browser-links.png" width="1280" height="800" loading="lazy" decoding="async" alt="Download Engine browser extension selecting two example files from a page to add to the main queue"></a><figcaption>Browser link selection, shown with example files. Click to enlarge <span aria-hidden="true">↗</span></figcaption></figure>
-        <div class="browser-bottom"><p><strong>Chrome, Edge, Brave &amp; Firefox</strong><br>Requires the desktop app. Extensions currently use manual installation; Firefox’s temporary add-on must be reloaded after a browser restart.</p><a class="button button-secondary" href="https://github.com/JasXTD/Download-Engine/blob/main/docs/reference.md#connect-a-browser">Browser setup guide <span aria-hidden="true">↗</span></a></div>
+        <div class="section-heading split-heading"><div><p class="eyebrow">Beyond direct file links</p><h2 id="hosting-title">More links.<br>One download queue.</h2></div><div class="hosting-intro"><span class="development-tag">New in the development source</span><p>Dedicated support for MEGA and WeTransfer, plus discovery for pages that expose downloadable files.</p></div></div>
+        <p class="availability-note"><strong>Availability:</strong> these hosting integrations and the new GitHub capture changes are in the latest GitHub source. They are <strong>not included in the v3.1.1 installer, portable ZIP or extension ZIPs</strong> linked below.</p>
+        <div class="hosting-grid">
+          <article class="hosting-card"><div class="hosting-brand"><span class="host-monogram mega-mark" aria-hidden="true">M</span><div><h3>MEGA</h3><span>Public file links</span></div></div><p>Paste the complete file link, including its <code>#</code> key. Download Engine decrypts locally and verifies the file before completing it.</p><ul><li>Parallel transfers and pause/resume</li><li>Local decryption and integrity verification</li><li>Individual public files; no folder or account downloads</li></ul><a class="text-link" href="https://github.com/JasXTD/Download-Engine/blob/main/docs/mega.md">MEGA support &amp; limits <span aria-hidden="true">↗</span></a></article>
+          <article class="hosting-card"><div class="hosting-brand"><span class="host-monogram transfer-mark" aria-hidden="true">we</span><div><h3>WeTransfer</h3><span>Public transfers</span></div></div><p>Use a <code>we.tl</code> short link or a full transfer link. Save the file or whole bundle supplied by WeTransfer.</p><ul><li>Single files or a complete transfer archive</li><li>Resume when the file server supports it</li><li>No password or identity-verification transfers</li></ul><a class="text-link" href="https://github.com/JasXTD/Download-Engine/blob/main/docs/wetransfer.md">WeTransfer support &amp; limits <span aria-hidden="true">↗</span></a></article>
+          <article class="hosting-card"><div class="hosting-brand"><span class="host-monogram page-mark" aria-hidden="true">↗</span><div><h3>Other download pages</h3><span>File-link discovery</span></div></div><p>If a link opens an HTML page, the app can look for exposed file links and let you choose what to download.</p><ul><li>One explicit same-site link can continue automatically</li><li>Review ambiguous or external file links</li><li>GitHub raw-file discovery and browser capture</li></ul><a class="text-link" href="https://github.com/JasXTD/Download-Engine/blob/main/docs/user-guide.md#find-files-on-a-website">How link discovery works <span aria-hidden="true">↗</span></a></article>
+        </div>
+        <div class="hosting-bottom"><p>Support depends on what a site exposes. Login pages, JavaScript challenges and protected links may need the browser; this is not universal hosting support.</p><a class="text-link" href="https://github.com/JasXTD/Download-Engine">Explore the latest source <span aria-hidden="true">↗</span></a></div>
       </div>
     </section>
 
-    <section class="automation shell section-space" aria-labelledby="automation-title">
-      <div class="automation-symbol" aria-hidden="true">&gt;_</div><div><p class="eyebrow">Built for your routine</p><h2 id="automation-title">Set it up.<br>Let it take the next step.</h2><p>Start with routing rules. Go further with Lua, PowerShell and the CLI, or connect a compatible AI client through the optional local MCP server.</p><div class="inline-links"><a class="text-link" href="https://github.com/JasXTD/Download-Engine/blob/main/docs/automation.md">Explore automation <span aria-hidden="true">↗</span></a><a class="text-link" href="https://github.com/JasXTD/Download-Engine/blob/main/docs/mcp.md">MCP guide <span aria-hidden="true">↗</span></a></div></div>
+    <section class="features shell section-space" id="features" aria-labelledby="features-title">
+      <div class="section-heading"><p class="eyebrow">The everyday essentials, too</p><h2 id="features-title">Built around the way<br>you download.</h2></div>
+      <div class="feature-grid">
+        <article><span class="feature-symbol" aria-hidden="true">↓</span><h3>Faster transfers. Less starting over.</h3><p>Parallel connections for supported HTTP, HTTPS, FTP and FTPS files. Pause, resume and recover unfinished downloads after restarting the app.</p><p class="fine-print">Resume depends on the server and the file remaining compatible.</p></article>
+        <article><span class="feature-symbol" aria-hidden="true">▷</span><h3>Video, with a choice.</h3><p>Review quality and audio for supported public videos and finished, unencrypted HLS or DASH streams. FFmpeg is included.</p><a class="text-link" href="https://github.com/JasXTD/Download-Engine#supported-video-sites-and-formats">Supported sites &amp; formats <span aria-hidden="true">↗</span></a></article>
+        <article><span class="feature-symbol" aria-hidden="true">≡</span><h3>A queue for every plan.</h3><p>Add links in batches, organize downloads and schedule when they run. Set connection counts, speed limits, quotas and folders.</p><a class="text-link" href="https://github.com/JasXTD/Download-Engine/blob/main/docs/user-guide.md">Explore download controls <span aria-hidden="true">↗</span></a></article>
+        <article><span class="feature-symbol" aria-hidden="true">✓</span><h3>Check what you save.</h3><p>Verify a publisher’s SHA-256 checksum, use your configured antivirus for single or batch scans, and inspect progress in a download status window.</p><p class="fine-print">Antivirus scanning requires a supported scanner installed on your PC.</p></article>
+      </div>
     </section>
+
+    <section class="browser-section shell section-space" id="browser" aria-labelledby="browser-title">
+      <figure class="browser-preview"><a href="images/browser-links.png" target="_blank" rel="noopener" aria-label="Open the browser link selection example at full size in a new tab"><img src="images/browser-links.png" width="1280" height="800" loading="lazy" decoding="async" alt="Download Engine browser extension selecting example files from a page to add to a queue"></a><figcaption>Browser link selection · example files <span aria-hidden="true">↗</span></figcaption></figure>
+      <div class="browser-copy"><p class="eyebrow">From your browser to your queue</p><h2 id="browser-title">See it.<br>Send it. Save it.</h2><p class="section-intro">Capture clicked file downloads, detect supported media and select multiple links from a page. Let the desktop app handle the transfer.</p><p class="browser-names">Chrome <span>·</span> Edge <span>·</span> Brave <span>·</span> Firefox</p><a class="button button-secondary" href="https://github.com/JasXTD/Download-Engine/blob/main/docs/reference.md#connect-a-browser">Connect your browser <span aria-hidden="true">↗</span></a><p class="fine-print">Requires the Windows app. Current packages use manual installation. Firefox’s temporary add-on must be reloaded after a browser restart. Screenshot details may vary by release.</p></div>
+    </section>
+
+    <section class="automation shell" aria-labelledby="automation-title"><div class="automation-symbol" aria-hidden="true">&gt;_</div><div><p class="eyebrow">Less repetition. More possibility.</p><h2 id="automation-title">Make it part of your workflow.</h2><p>Route files with rules. Write Lua or PowerShell scripts. Use the CLI, or connect a compatible AI client through the optional local MCP server.</p><div class="inline-links"><a class="text-link" href="https://github.com/JasXTD/Download-Engine/blob/main/docs/automation.md">Scripting &amp; automation <span aria-hidden="true">↗</span></a><a class="text-link" href="https://github.com/JasXTD/Download-Engine/blob/main/docs/mcp.md">Local MCP guide <span aria-hidden="true">↗</span></a></div></div></section>
 
     <section class="downloads shell section-space" id="download" aria-labelledby="download-title">
-      <div class="download-heading"><div><p class="eyebrow">Make room for what’s next</p><h2 id="download-title">Get Download Engine.</h2></div><a class="release-pill" href="https://github.com/JasXTD/Download-Engine/releases/tag/v3.1.1"><span class="status-dot" aria-hidden="true"></span> v3.1.1 release notes <span aria-hidden="true">↗</span></a></div>
+      <div class="download-heading"><div><p class="eyebrow">Free. Open source. Yours.</p><h2 id="download-title">Your next download<br>starts here.</h2></div><a class="release-pill" href="https://github.com/JasXTD/Download-Engine/releases/tag/v3.1.1"><span class="status-dot" aria-hidden="true"></span> Stable v3.1.1 <span aria-hidden="true">↗</span></a></div>
       <div class="download-options">
-        <article class="download-option recommended"><div class="option-top"><span class="platform-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m3 5 8-1v7H3Zm10-1 8-1v8h-8ZM3 13h8v7l-8-1Zm10 0h8v8l-8-1Z"/></svg></span><span class="option-label">Everyday use</span></div><h3>Windows installer</h3><p>Install for your Windows account and keep Download Engine ready to use.</p><a class="button button-primary" href="https://github.com/JasXTD/Download-Engine/releases/download/v3.1.1/DownloadEngine-3.1.1-UnsignedSetup.exe">Download installer <span aria-hidden="true">↓</span></a><span class="package-detail">Windows x64 · .exe · Version 3.1.1</span></article>
-        <article class="download-option"><div class="option-top"><span class="platform-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 5h7l2 2h9v13H3Z" fill="none" stroke="currentColor" stroke-width="1.6"/></svg></span><span class="option-label">Take it with you</span></div><h3>Portable ZIP</h3><p>Extract the whole folder somewhere writable, then open <code>de.exe</code>.</p><a class="button button-secondary" href="https://github.com/JasXTD/Download-Engine/releases/download/v3.1.1/DownloadEngine-3.1.1-Unsigned-windows-x64.zip">Download portable ZIP <span aria-hidden="true">↓</span></a><span class="package-detail">Windows x64 · .zip · Version 3.1.1</span></article>
+        <article class="download-option recommended"><div class="option-top"><svg class="platform-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m3 5 8-1v7H3Zm10-1 8-1v8h-8ZM3 13h8v7l-8-1Zm10 0h8v8l-8-1Z"/></svg><span class="option-label">Everyday use</span></div><h3>Windows installer</h3><p>Install for your Windows account and keep Download Engine ready to use.</p><a class="button button-primary" href="https://github.com/JasXTD/Download-Engine/releases/download/v3.1.1/DownloadEngine-3.1.1-UnsignedSetup.exe">Download installer <span aria-hidden="true">↓</span></a><span class="package-detail">Windows x64 · .exe · Version 3.1.1</span></article>
+        <article class="download-option"><div class="option-top"><svg class="platform-icon folder-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5h7l2 2h9v13H3Z"/></svg><span class="option-label">Take it with you</span></div><h3>Portable ZIP</h3><p>Extract the whole folder somewhere writable, then open <code>de.exe</code>.</p><a class="button button-secondary" href="https://github.com/JasXTD/Download-Engine/releases/download/v3.1.1/DownloadEngine-3.1.1-Unsigned-windows-x64.zip">Download portable ZIP <span aria-hidden="true">↓</span></a><span class="package-detail">Windows x64 · .zip · Version 3.1.1</span></article>
       </div>
-      <div class="download-note"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v6m0-10v1"/></svg><p>Both packages include FFmpeg and its source and license files. Windows binaries are currently unsigned. <a href="https://github.com/JasXTD/Download-Engine/releases/download/v3.1.1/SHA256SUMS-3.1.1">Check the SHA-256 checksums</a> against your download.</p></div>
-      <div class="additional-downloads"><div><h3>Browser extensions</h3><p>Version 3.1.1 · Manual installation</p><div class="inline-links"><a href="https://github.com/JasXTD/Download-Engine/releases/download/v3.1.1/download-engine-chrome-3.1.1.zip">Chrome ZIP <span aria-hidden="true">↓</span></a><a href="https://github.com/JasXTD/Download-Engine/releases/download/v3.1.1/download-engine-edge-3.1.1.zip">Edge ZIP <span aria-hidden="true">↓</span></a><a href="https://github.com/JasXTD/Download-Engine/releases/download/v3.1.1/download-engine-firefox-3.1.1.zip">Firefox ZIP <span aria-hidden="true">↓</span></a></div></div><div><h3>Open source, from the start.</h3><p>Explore the code, report an issue or build it yourself.</p><div class="inline-links"><a href="https://github.com/JasXTD/Download-Engine/releases/download/v3.1.1/DownloadEngine-3.1.1-Source.zip">Source ZIP <span aria-hidden="true">↓</span></a><a href="https://github.com/JasXTD/Download-Engine/releases/latest">Latest GitHub release <span aria-hidden="true">↗</span></a></div></div></div>
+      <div class="download-note"><span aria-hidden="true">ⓘ</span><p>Both packages include FFmpeg and its source and license files. Windows binaries are currently unsigned. <a href="https://github.com/JasXTD/Download-Engine/releases/download/v3.1.1/SHA256SUMS-3.1.1">Check the SHA-256 checksums</a> against your download.</p></div>
+      <div class="additional-downloads"><div><h3>Browser extensions</h3><p>Version 3.1.1 · Manual installation</p><div class="inline-links"><a href="https://github.com/JasXTD/Download-Engine/releases/download/v3.1.1/download-engine-chrome-3.1.1.zip">Chrome ZIP <span aria-hidden="true">↓</span></a><a href="https://github.com/JasXTD/Download-Engine/releases/download/v3.1.1/download-engine-edge-3.1.1.zip">Edge ZIP <span aria-hidden="true">↓</span></a><a href="https://github.com/JasXTD/Download-Engine/releases/download/v3.1.1/download-engine-firefox-3.1.1.zip">Firefox ZIP <span aria-hidden="true">↓</span></a></div></div><div><h3>Build on what’s next.</h3><p>MEGA, WeTransfer and new link discovery are currently in the development source, ahead of these stable packages.</p><div class="inline-links"><a href="https://github.com/JasXTD/Download-Engine">Latest source <span aria-hidden="true">↗</span></a><a href="https://github.com/JasXTD/Download-Engine/releases/download/v3.1.1/DownloadEngine-3.1.1-Source.zip">v3.1.1 source ZIP <span aria-hidden="true">↓</span></a><a href="https://github.com/JasXTD/Download-Engine/releases/latest">Latest release <span aria-hidden="true">↗</span></a></div></div></div>
     </section>
 
-    <section class="getting-started shell section-space" aria-labelledby="start-title">
-      <p class="eyebrow">Ready in a few steps</p><h2 id="start-title">Your first download.</h2>
-      <ol class="steps"><li><span>01</span><h3>Open the app</h3><p>Use the installer, or extract the portable ZIP and open <code>de.exe</code>.</p></li><li><span>02</span><h3>Add your link</h3><p>Select <strong>Add URL</strong>, paste a file link and choose where it should go.</p></li><li><span>03</span><h3>Make it yours</h3><p>Start the download. Add a queue, connect a browser or explore Preferences.</p></li></ol>
-      <a class="text-link" href="https://github.com/JasXTD/Download-Engine/blob/main/docs/user-guide.md">Read the full user guide <span aria-hidden="true">↗</span></a>
-    </section>
+    <section class="getting-started shell" aria-labelledby="start-title"><div><p class="eyebrow">A few clicks, then you’re off</p><h2 id="start-title">Your first download.</h2></div><ol class="steps"><li><span>01</span><h3>Open the app</h3><p>Install it, or extract the portable ZIP and open <code>de.exe</code>.</p></li><li><span>02</span><h3>Add your link</h3><p>Select <strong>Add URL</strong>, paste a file link and choose where to save it.</p></li><li><span>03</span><h3>Take control</h3><p>Start your download, organize a queue or connect your browser.</p></li></ol><a class="text-link" href="https://github.com/JasXTD/Download-Engine/blob/main/docs/user-guide.md">Read the full user guide <span aria-hidden="true">↗</span></a></section>
 
-    <section class="faq shell section-space" aria-labelledby="faq-title"><div><p class="eyebrow">A few things to know</p><h2 id="faq-title">Before you start.</h2></div><div class="faq-items">
-      <details><summary>Is Download Engine free?<span aria-hidden="true">+</span></summary><p>Yes. The application is free and open source under the MIT license. Bundled components, including FFmpeg, have their own licenses. You can read them in the app’s About screen or in the source repository.</p></details>
-      <details><summary>Does it work on macOS or Linux?<span aria-hidden="true">+</span></summary><p>The current release supports Windows x64. macOS, Linux and Android packages are not provided.</p></details>
-      <details><summary>Can it download every video?<span aria-hidden="true">+</span></summary><p>No. Support covers selected public video pages and supported finished, unencrypted HLS and DASH streams. Site changes and access restrictions can affect availability. Live recording and DRM-protected media are unsupported. <a href="https://github.com/JasXTD/Download-Engine#supported-video-sites-and-formats">Check the supported sites and limitations.</a></p></details>
+    <section class="faq shell section-space" aria-labelledby="faq-title"><div><p class="eyebrow">Good to know</p><h2 id="faq-title">A little clarity.</h2></div><div class="faq-items">
+      <details><summary>Is Download Engine free?<span aria-hidden="true">+</span></summary><p>Yes. The application is free and open source under the MIT license. Bundled components, including FFmpeg, have their own licenses, available in About and the repository.</p></details>
+      <details><summary>Which hosting sites are supported?<span aria-hidden="true">+</span></summary><p>The latest development source adds individual MEGA public files and public WeTransfer transfers. It also discovers exposed links on supported download pages, including GitHub raw files. These additions are not in the v3.1.1 release packages yet. Password-protected transfers, account-only links and browser challenges are outside the supported workflows. <a href="#hosting">See the hosting support details.</a></p></details>
+      <details><summary>Can Web Grabber save any website?<span aria-hidden="true">+</span></summary><p>It can discover downloadable files and save supported static pages with their assets and local links. A saved copy does not reproduce server-side features, forms, sign-in flows or JavaScript applications. Site structure and access restrictions affect what can be saved.</p></details>
+      <details><summary>Can it download every video?<span aria-hidden="true">+</span></summary><p>No. Support covers selected public video pages and supported finished, unencrypted HLS and DASH streams. Live recording and DRM are unsupported. Website changes and access restrictions can affect availability. <a href="https://github.com/JasXTD/Download-Engine#supported-video-sites-and-formats">Check supported sites and limits.</a></p></details>
+      <details><summary>Does it work on macOS or Linux?<span aria-hidden="true">+</span></summary><p>Current packages support Windows x64. macOS, Linux and Android packages are not provided.</p></details>
       <details><summary>Is this Internet Download Manager?<span aria-hidden="true">+</span></summary><p>Download Engine is an independent project inspired by Internet Download Manager (IDM). It is not affiliated with IDM and does not offer complete IDM feature parity.</p></details>
-      <details><summary>How do I update?<span aria-hidden="true">+</span></summary><p>Check the <a href="https://github.com/JasXTD/Download-Engine/releases/latest">latest GitHub release</a>. Close the app before upgrading. For portable copies, preserve your data and downloads when updating the same folder. Keep desktop and extension versions aligned. There is no automatic updater.</p></details>
+      <details><summary>How do I update?<span aria-hidden="true">+</span></summary><p>Check the <a href="https://github.com/JasXTD/Download-Engine/releases/latest">latest GitHub release</a>. Close the app before upgrading. Preserve your data and downloads when updating a portable copy, and keep desktop and extension versions aligned. There is no automatic updater.</p></details>
     </div></section>
   </main>
 

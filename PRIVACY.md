@@ -2,8 +2,8 @@
 
 Last updated: 2026-10-27
 
-This policy covers the official Download Engine browser extensions and their
-integration with the Download Engine desktop application for Windows. The project
+This policy covers the official Download Engine project website, browser extensions
+and their integration with the Download Engine desktop application for Windows. The project
 is maintained at [JasXTD/Download-Engine](https://github.com/JasXTD/Download-Engine).
 
 Download Engine uses the information below to find, review, transfer and manage
@@ -11,6 +11,18 @@ downloads. The project does not operate an analytics, advertising, telemetry or
 account-sync service that receives your download activity. Data does leave your
 device when the desktop app contacts the websites and download servers needed to
 fulfil your requests, or when you use integrations you configure.
+
+## Project website
+
+The [project website](https://jasxtd.github.io/Download-Engine/) is a static site
+hosted on GitHub Pages. Its code does not set cookies, use browser storage, include
+analytics or advertising scripts, or collect form submissions. Fonts and images
+are served with the site. Download and documentation links take you to GitHub.
+
+GitHub processes normal hosting requests and logs visitor IP addresses for security
+purposes. See [GitHub Pages data collection](https://docs.github.com/en/pages/getting-started-with-github-pages/what-is-github-pages#data-collection)
+and [GitHub's privacy statement](https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement)
+for the hosting provider's practices.
 
 ## Information used and why
 

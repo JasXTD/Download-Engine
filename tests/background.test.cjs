@@ -90,12 +90,91 @@ for (const variant of ["chromium", "firefox"]) {
     assert.equal((await state.request({ action: "media_status" })).enabled, true);
   });
 }
+test("chromium: fast downloads wait for the existing recovery-first capture decision", async () => {
+  const {state,api,downloads,item}=background("chromium",{},true); await flush();
+  const native=api.runtime.sendNativeMessage;
+  let release, reached;
+  const pending=new Promise(resolve=>{release=resolve;});
+  const started=new Promise(resolve=>{reached=resolve;});
+  api.runtime.sendNativeMessage=async(host,request)=>{
+    if(request.action==="recovery_pending"){reached();await pending;}
+    return native(host,request);
+  };
+  downloads.onCreated.emit(item); await started;
+  let suggestions=0;
+  const held=downloads.onDeterminingFilename.emit(item,(...args)=>{
+    assert.equal(args.length,0,"Keep the browser's chosen filename"); suggestions++;
+    if(item.state==="in_progress" && !item.paused)item.state="complete";
+  });
+  downloads.onChanged.emit({id:item.id,filename:{current:item.filename}});
+  await flush();
+  // Chrome completes a small transfer if no filename listener holds it open.
+  if(held[0]!==true && suggestions===0)item.state="complete";
+  assert.equal(suggestions,0,"Do not release while the earlier recovery lookup is pending");
+  release(); await flush();
+  assert.equal(state.receipt,"committed"); assert.equal(state.cancel,1);
+  assert.equal(suggestions,1); assert.equal(item.state,"interrupted");
+  assert.equal(state.native.filter(r=>r.action==="recovery_pending").length,1);
+  assert.equal(state.native.filter(r=>r.action==="capture_commit").length,1);
+});
+for(const scenario of ["capture off","excluded type","host unavailable","storage failure"]) {
+  test("chromium: filename decision releases the browser on "+scenario,async()=>{
+    const {state,api,downloads,item}=background("chromium",scenario==="capture off"?{autoCapture:false}:{},true); await flush();
+    if(scenario==="excluded type")item.filename="notes.docx";
+    if(scenario==="host unavailable")api.runtime.sendNativeMessage=async()=>{throw Error("Host unavailable");};
+    if(scenario==="storage failure")api.storage.local.get=async()=>{throw Error("Storage unavailable");};
+    let suggestions=0;
+    downloads.onDeterminingFilename.emit(item,(...args)=>{assert.equal(args.length,0);suggestions++;});
+    await flush();
+    assert.equal(suggestions,1);assert.equal(item.paused,false);assert.equal(state.cancel,0);
+    assert(!state.native.some(r=>r.action==="capture_commit"));
+  });
+}
+
+test("chromium: filename hold preserves explicit link recovery when capture is off",async()=>{
+  const {state,api,downloads,item}=background("chromium",{autoCapture:false},true); await flush();
+  item.startTime=new Date().toISOString();
+  const session={id:"existing-recovery",state:"waiting",name:item.filename,size:item.totalBytes,
+    page:"https://example.test/page",expires:Math.floor(Date.now()/1000)+1800};
+  api.runtime.sendNativeMessage=async(host,request)=>{
+    state.native.push(request);
+    return {ok:true,version:1,recovery:{...session,state:request.action==="recovery_offer"?"accepted":"waiting"}};
+  };
+  let suggestions=0;
+  downloads.onCreated.emit(item);
+  assert.equal(downloads.onDeterminingFilename.emit(item,()=>{suggestions++;})[0],true);
+  downloads.onChanged.emit({id:item.id,filename:{current:item.filename}});
+  await flush();
+  assert.deepEqual(state.native.map(r=>r.action),["recovery_pending","recovery_offer"]);
+  assert.equal(suggestions,1);assert.equal(state.cancel,1);assert.equal(state.receipt,"missing");
+});
+test("chromium: ineligible files are released synchronously without native handoff",async()=>{
+  const {state,downloads,item}=background("chromium",{},true);await flush();
+  for(const change of [{incognito:true},{byExtensionId:"another-extension"},{danger:"dangerous"},
+    {paused:true},{mime:"text/html"},{url:"blob:https://example.test/file"},{state:"complete"}]) {
+    let suggestions=0;
+    const returned=downloads.onDeterminingFilename.emit({...item,...change},(...args)=>{
+      assert.equal(args.length,0);suggestions++;
+    });
+    assert.equal(returned[0],undefined);assert.equal(suggestions,1);
+  }
+  await flush();assert.equal(state.native.length,0);assert.equal(state.cancel,0);
+});
+test("chromium: setup failure releases the filename decision exactly once",async()=>{
+  const {api,downloads,item}=background("chromium",{},true);await flush();
+  api.alarms.get=async()=>{throw Error("Alarm unavailable");};
+  let suggestions=0;
+  downloads.onDeterminingFilename.emit(item,()=>{suggestions++;});
+  await flush();assert.equal(suggestions,1);assert.equal(item.paused,false);
+});
+
 function background(variant, values = {}, granted = false) {
   const state = { granted, compatible: true, values: structuredClone(values), session: {}, native: [], receipt: "missing", cancel: 0, alarms: [] };
   const item = { id: 42, url: "https://example.test/file.zip", startTime: "today", filename: "file.zip",
     mime: "application/zip", totalBytes: 100000, state: "in_progress", paused: false, danger: "safe" };
   const downloads = {
     onCreated: event(), onChanged: event(),
+    ...(variant === "chromium" ? { onDeterminingFilename: event() } : {}),
     search: async () => [structuredClone(item)],
     pause: async () => { item.paused = true; },
     resume: async () => { item.paused = false; },
@@ -142,7 +221,7 @@ function background(variant, values = {}, granted = false) {
     URL, performance, structuredClone, TextEncoder, crypto: { randomUUID: () => "random" }, setTimeout, clearTimeout, console });
   const load = name => vm.runInContext(fs.readFileSync(path.join(__dirname, "../extension", name), "utf8"), context, { filename: name });
   if (variant === "chromium") context.importScripts = (...files) => files.forEach(load);
-  else { load("core.js"); load("capture.js"); load("link-recovery.js"); load("page-links.js"); load("browser-login.js"); load("video-button-manager.js"); load("media.js"); load("permission-flow.js"); }
+  else { load("core.js"); load("capture.js"); load("link-recovery.js"); load("page-links.js"); load("browser-login.js"); load("video-button-manager.js"); load("github-download.js"); load("media.js"); load("permission-flow.js"); }
   load("background.js");
   state.request = message => new Promise(resolve => {
     const handled = api.runtime.onMessage.emit(message, {

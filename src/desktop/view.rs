@@ -504,6 +504,7 @@ impl Desktop {
             Some(Dialog::Hls) => self.hls_dialog(&ctx, p),
             Some(Dialog::BrowserVideo) => self.browser_video_dialog(&ctx, p),
             Some(Dialog::Grabber) => self.grabber_dialog(&ctx, p),
+            Some(Dialog::LinkFallback) => self.link_fallback_dialog(&ctx, p),
             Some(Dialog::AntivirusSettings) => self.antivirus_settings_dialog(&ctx, p),
             Some(Dialog::AntivirusResult) => self.antivirus_result_dialog(&ctx, p),
             Some(Dialog::AntivirusScan) => self.antivirus_scan_dialog(&ctx, p),

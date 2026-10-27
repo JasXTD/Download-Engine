@@ -17,6 +17,7 @@ pub(super) async fn finish(
     job: &mut Job,
     cancel: &CancellationToken,
     sources: Vec<PathBuf>,
+    verified_sha256: Option<&str>,
 ) -> Result<Option<FinishedFile>> {
     store.activity.set(&job.id, Phase::Assembling);
     store.save(job)?;
@@ -44,6 +45,12 @@ pub(super) async fn finish(
     if cancel.is_cancelled() {
         discard_cancelled(prepared)?;
         return Ok(None);
+    }
+    if let Some(expected) = verified_sha256 {
+        ensure!(
+            expected == prepared.hash,
+            "Verified file changed before saving. Restart this download."
+        );
     }
     job.integrity.actual = Some(prepared.hash);
     job.integrity.check()?;
@@ -222,6 +229,8 @@ async fn prepare_copy(
 fn direct_source(job: &Job, root: &Path) -> Option<PathBuf> {
     if job.hls.is_some() {
         None
+    } else if crate::mega::is_url(&job.url) {
+        Some(root.join("mega-plaintext.part"))
     } else if job.ftp.is_some() {
         Some(root.join("ftp.part"))
     } else if let Some(plan) = &job.plan {

@@ -18,6 +18,7 @@ mod interactions;
 mod scripts;
 use interactions::{Confirmation, DestructiveAction, Notice, Selection};
 mod link;
+mod link_fallback;
 mod list_transfer;
 mod logs;
 mod mcp;
@@ -132,6 +133,7 @@ enum Dialog {
     DownloadFolders,
     Batch,
     Grabber,
+    LinkFallback,
     Hls,
     BrowserVideo,
     NewQueue,
@@ -291,6 +293,7 @@ pub struct Desktop {
     antivirus: antivirus::State,
     extras: extras::Extras,
     grabber: Option<grabber::State>,
+    link_fallback: link_fallback::State,
     hls: Option<hls::State>,
     browser_video: Option<browser_video::State>,
     proxy: Option<proxy::Form>,
@@ -408,6 +411,7 @@ impl Desktop {
             antivirus: antivirus::State::default(),
             extras: extras::Extras::default(),
             grabber: None,
+            link_fallback: link_fallback::State::default(),
             hls: None,
             browser_video: None,
             proxy: None,
@@ -815,6 +819,7 @@ impl Desktop {
             self.hide_to_tray(ctx);
         }
         self.refresh();
+        self.poll_link_fallback(ctx);
         if self.dialog.is_none()
             && let Some(id) = self.pending_review.take()
         {
@@ -896,6 +901,12 @@ impl Desktop {
         ctx.request_repaint_after(Duration::from_millis(250));
     }
     fn command(&mut self, command: Command) {
+        if let Command::Resume(id) | Command::StartImmediately(id) = &command
+            && let Ok(Some(job)) = self.store.get(id)
+            && self.open_link_fallback(&job)
+        {
+            return;
+        }
         self.cancel_status_request(&command);
         let action = match &command {
             Command::Remove(id) => Some((DestructiveAction::Remove, id)),

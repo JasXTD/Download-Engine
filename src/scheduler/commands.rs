@@ -72,6 +72,7 @@ pub(super) fn apply(
         | Command::Resume(id)
         | Command::StartImmediately(id)
         | Command::Restart(id)
+        | Command::SelectDiscoveredFile { id, .. }
         | Command::Remove(id)
         | Command::DeleteFile { id, .. }
         | Command::RenameFile { id, .. }
@@ -97,6 +98,14 @@ pub(super) fn apply(
         return Ok(());
     };
     match command {
+        Command::SelectDiscoveredFile {
+            discovery,
+            selection,
+            ..
+        } => {
+            crate::link_fallback::select(&mut job, discovery, selection)?;
+            store.save_for_start(&job)?;
+        }
         Command::StartImmediately(_) => store.start_immediately(&job.id)?,
         Command::Pause(_) => {
             if job.status == Status::Queued {
@@ -125,6 +134,7 @@ pub(super) fn apply(
             job.retry = retry::State::default();
             job.quota_waiting = false;
             job.plan = None;
+            job.link_fallback = None;
             if let Some(ftp) = &mut job.ftp {
                 ftp.reset();
             }

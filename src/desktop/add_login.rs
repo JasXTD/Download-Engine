@@ -138,7 +138,9 @@ impl Desktop {
     pub(super) fn submit_add_login(&mut self) -> anyhow::Result<()> {
         anyhow::ensure!(
             !download_engine::hls::is_playlist_url(&self.url)
-                && !download_engine::hls::is_site_video(&self.url),
+                && !download_engine::hls::is_site_video(&self.url)
+                && !download_engine::mega::is_url(&self.url)
+                && !download_engine::wetransfer::is_url(&self.url),
             tr("Use login is available for direct file links only.")
         );
         let credentials = self

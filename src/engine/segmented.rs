@@ -8,6 +8,22 @@ use std::sync::{
 };
 use tokio::task::JoinSet;
 
+/// Range scheduling and disk ownership are shared; providers validate their
+/// own wire format. MEGA parts stay encrypted until its file MAC is checked.
+#[derive(Clone)]
+pub(crate) enum Source {
+    Http(http::Source),
+    Mega(crate::mega::Source),
+}
+impl Source {
+    async fn response(&self, plan: &Plan, start: u64, end: u64) -> Result<Response> {
+        match self {
+            Self::Mega(source) => source.range(start, end, plan.size).await,
+            Self::Http(source) => source.range(plan, start, end).await,
+        }
+    }
+}
+
 async fn part_len(path: &Path) -> Result<u64> {
     match tokio::fs::metadata(path).await {
         Ok(meta) => {
@@ -113,8 +129,8 @@ fn sync_activity_segments(store: &Store, job_id: &str, plan: &Plan, workers: &[S
 }
 
 #[allow(clippy::too_many_arguments)]
-pub(super) async fn run(
-    client: &DownloadClient,
+pub(crate) async fn run(
+    client: &Source,
     store: &Store,
     job: &mut Job,
     cancel: &CancellationToken,
@@ -260,7 +276,7 @@ pub(super) async fn run(
 }
 #[allow(clippy::too_many_arguments)]
 async fn download_segment(
-    client: DownloadClient,
+    client: Source,
     plan: Plan,
     segment: Segment,
     path: PathBuf,
@@ -278,28 +294,8 @@ async fn download_segment(
     activity.update_segment(&job_id, index, done, SegmentState::SendingGet);
     let mut response = tokio::select! {
         _=cancel.cancelled()=>return Ok(()),
-        result=client.get(&plan.final_url)?.header(header::ACCEPT_ENCODING,"identity")
-            .header(header::RANGE,format!("bytes={start}-{}",segment.end))
-            .header(header::IF_RANGE,&plan.etag).send()=>result?
+        result=client.response(&plan, start, segment.end)=>result?
     };
-    check_file_response(&response)?;
-    ensure!(
-        response.status() == reqwest::StatusCode::PARTIAL_CONTENT,
-        "Server changed the file or ignored a range. Restart to download it safely."
-    );
-    identity(&response)?;
-    ensure!(
-        range(&response)? == (start, segment.end, plan.size),
-        "Server returned an unexpected byte range"
-    );
-    ensure!(
-        strong_etag(&response).as_deref() == Some(plan.etag.as_str()),
-        "The remote file changed during download. Restart to get the new version."
-    );
-    ensure!(
-        response.url().as_str() == plan.final_url,
-        "The range request redirected to a different file"
-    );
     let expected = segment.end - start + 1;
     if let Some(len) = response.content_length() {
         ensure!(

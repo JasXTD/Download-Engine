@@ -677,7 +677,7 @@ fn failure_trigger_swaps_only_the_starter_example_and_every_trigger_name_fits() 
 #[test]
 fn sample_runs_start_from_event_scripts_and_are_labelled_in_run_logs() {
     let (_temp, mut app, ctx) = fixture();
-    let job = app
+    let mut job = app
         .store
         .new_download(
             "https://example.com/textures.zip",
@@ -686,10 +686,11 @@ fn sample_runs_start_from_event_scripts_and_are_labelled_in_run_logs() {
             uuid::Uuid::new_v4().to_string(),
         )
         .unwrap();
-    let mut job = app.store.enqueue(&job).unwrap();
+    // Publish the terminal snapshot atomically: the fixture's live scheduler
+    // must never claim this synthetic job and overwrite its sample error.
     job.status = download_engine::model::Status::Failed;
     job.error = Some("Server returned 404".into());
-    app.store.save(&job).unwrap();
+    let job = app.store.enqueue(&job).unwrap();
     app.view = View::Automation;
     click(&mut app, &ctx, "Scripts");
     click(&mut app, &ctx, "+ New script");

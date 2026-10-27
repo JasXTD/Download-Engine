@@ -7558,5 +7558,50 @@
     "1 个活动连接",
     "1 個作用中的連線",
     "1 sambungan aktif"
+  ],
+  "Close the current dialog to review this download's file links.": [
+    "关闭当前对话框以查看此下载的文件链接。",
+    "關閉目前的對話方塊以檢視此下載的檔案連結。",
+    "Tutup dialog semasa untuk menyemak pautan fail muat turun ini."
+  ],
+  "Choose a file": [
+    "选择文件",
+    "選擇檔案",
+    "Pilih fail"
+  ],
+  "This link opened a webpage. The link grabber checked it for downloadable files.": [
+    "此链接打开了一个网页。链接抓取器已检查其中可下载的文件。",
+    "此連結開啟了一個網頁。連結擷取器已檢查其中可下載的檔案。",
+    "Pautan ini membuka halaman web. Pengumpul pautan telah menyemaknya untuk mencari fail yang boleh dimuat turun."
+  ],
+  "No direct file links were found. This site may require JavaScript, login, or a dedicated integration. Open the website to continue there.": [
+    "未找到直接文件链接。此网站可能需要 JavaScript、登录或专用集成。请打开网站并在那里继续操作。",
+    "找不到直接檔案連結。此網站可能需要 JavaScript、登入或專用整合。請開啟網站並在該處繼續操作。",
+    "Tiada pautan terus ke fail ditemui. Laman ini mungkin memerlukan JavaScript, log masuk atau integrasi khusus. Buka laman web untuk meneruskan di sana."
+  ],
+  "Only part of this page's links could be listed. Use Website grabber for a broader scan.": [
+    "只能列出此页面的部分链接。请使用网站抓取器进行更全面的扫描。",
+    "只能列出此頁面的部分連結。請使用網站擷取器進行更全面的掃描。",
+    "Hanya sebahagian pautan halaman ini dapat disenaraikan. Gunakan pengumpul laman web untuk imbasan yang lebih luas."
+  ],
+  "Open website": [
+    "打开网站",
+    "開啟網站",
+    "Buka laman web"
+  ],
+  "Your current queue, folder, and download settings will be kept.": [
+    "将保留当前队列、文件夹和下载设置。",
+    "將保留目前的佇列、資料夾和下載設定。",
+    "Baris gilir, folder dan tetapan muat turun semasa anda akan dikekalkan."
+  ],
+  "Download selected file": [
+    "下载所选文件",
+    "下載所選檔案",
+    "Muat turun fail yang dipilih"
+  ],
+  "Save HTML page": [
+    "保存 HTML 页面",
+    "儲存 HTML 頁面",
+    "Simpan halaman HTML"
   ]
 }

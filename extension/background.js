@@ -1,5 +1,5 @@
 "use strict";
-if (typeof importScripts === "function") importScripts("i18n-catalog.js", "i18n.js", "core.js", "capture.js", "link-recovery.js", "page-links.js", "browser-login.js", "video-button-manager.js", "media.js", "permission-flow.js");
+if (typeof importScripts === "function") importScripts("i18n-catalog.js", "i18n.js", "core.js", "capture.js", "link-recovery.js", "page-links.js", "browser-login.js", "video-button-manager.js", "github-download.js", "media.js", "permission-flow.js");
   const __xdL = globalThis.IDMI18n || {t: text => text, f: (text, ...values) => text.replace(/\{(\d+)\}/g, (_, n) => String(values[n]))};
 const api = typeof browser !== "undefined" ? browser : chrome;
 const actionApi = api.action || api.browserAction;
@@ -128,6 +128,7 @@ void media.start().catch(() => { media.error = __xdL.t("Media detection is unava
 const pageLinks = new IDMPageLinks.Manager({ api, native, detected: tab => media.list(tab) });
 const browserLogin = new IDMBrowserLogin.Manager({ api, native });
 const videoButtons = new IDMVideoButtons.Manager({ api, pageLinks });
+const githubDownloads = new IDMGitHubDownload.Manager({ api, enabled });
 async function configureMedia(enabled) {
   const reply=await media.configure(enabled);
   if(api.scripting?.getRegisteredContentScripts) await videoButtons.sync(enabled);
@@ -159,22 +160,48 @@ api.tabs.onActivated?.addListener(({ tabId, windowId }) => {
 api.tabs.onUpdated?.addListener((tabId, changes) => media.navigated(tabId, changes));
 if (api.scripting?.getRegisteredContentScripts) {
   void videoButtons.sync(true).catch(console.warn);
+  void githubDownloads.sync(true).catch(console.warn);
+  api.storage.onChanged.addListener((changes, area) => {
+    if (area === "local" && changes.autoCapture) void githubDownloads.sync(true).catch(console.warn);
+  });
   api.permissions.onAdded.addListener(() => { void videoButtons.sync(true).catch(console.warn); });
   api.permissions.onRemoved.addListener(() => { void videoButtons.sync().catch(console.warn); });
+  api.permissions.onAdded.addListener(() => { void githubDownloads.sync(true).catch(console.warn); });
+  api.permissions.onRemoved.addListener(() => { void githubDownloads.sync().catch(console.warn); });
+}
+// All browser events for one download share the recovery-first decision. In
+// particular, a filename event must await an earlier onCreated native lookup.
+const consideringDownloads = new Map();
+function considerDownload(id) {
+  if (!consideringDownloads.has(id)) {
+    const task = ready().then(async () => {
+      if (!await linkRecovery.consider(id)) await capture.consider(id);
+    }).finally(() => consideringDownloads.delete(id));
+    consideringDownloads.set(id, task);
+  }
+  return consideringDownloads.get(id);
 }
 let listening = false;
 function installDownloadListeners() {
   if (listening || !api.downloads) return;
   listening = true;
   api.downloads.onCreated.addListener(item => {
-    void ready().then(async () => {if(!await linkRecovery.consider(item.id))await capture.consider(item.id);}).catch(console.warn);
+    void considerDownload(item.id).catch(console.warn);
+  });
+  // Chromium can finish a small file before the native host starts. Its
+  // filename callback keeps completion pending until that same handoff decides
+  // whether to take over or leave the file in the browser. Do not rename it.
+  api.downloads.onDeterminingFilename?.addListener((item, suggest) => {
+    if (!IDMCapture.candidate(item)) { suggest(); return; }
+    void considerDownload(item.id).catch(console.warn).finally(() => suggest());
+    return true;
   });
   api.downloads.onChanged.addListener(delta => {
     if (delta.state?.current === "complete" || delta.state?.current === "interrupted") {
       void capture.recover(delta.id);
       void linkRecovery.recover(delta.id);
     } else if (delta.filename || delta.mime || delta.totalBytes || delta.finalUrl) {
-      void ready().then(async () => {if(!await linkRecovery.consider(delta.id))await capture.consider(delta.id);}).catch(console.warn);
+      void considerDownload(delta.id).catch(console.warn);
     }
   });
 }
@@ -271,6 +298,10 @@ async function configureCaptureNow(value, permissionRevision) {
 }
 api.runtime.onMessage.addListener((message, sender, respond) => {
   if (sender.id !== api.runtime.id) return false;
+  if (message?.action === "github_download_state") {
+    githubDownloads.status(sender).then(respond, error => respond({ ok: false, message: error.message }));
+    return true;
+  }
   if (message?.action === "video_button_state" && /^https?:\/\//.test(sender.url || "")) {
     videoButtons.pageStatus(sender).then(respond, error => respond({ok:false,message:error.message}));
     return true;

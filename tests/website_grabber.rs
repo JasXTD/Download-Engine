@@ -146,6 +146,12 @@ async fn github_file_previews_use_raw_urls_and_deduplicate_the_download() {
         <a href="https://github.com.example.test/owner/repo/blob/main/guide.pdf">Other host</a>
         <a href="https://example.test/blob/main/guide.pdf">Other website</a>
         <a href="https://github.com/owner/repo/releases/download/v1/file.zip">Release</a>
+        <a href="https://github.com/owner/repo/commits/main/guide.pdf">History</a>
+        <a href="https://github.com/owner/repo/commit/abc/guide.pdf">Commit</a>
+        <a href="https://github.com/owner/repo/blame/main/guide.pdf">Blame</a>
+        <a href="https://github.com/owner/repo/edit/main/guide.pdf">Edit</a>
+        <a href="https://github.com/owner/repo/delete/main/guide.pdf">Delete</a>
+        <a href="https://github.com/owner/repo/tree/main/guide.pdf">Tree</a>
     "#));
     let report = s.scan(0, 1, "pdf,zip").await;
     assert_eq!(report.files.len(), 5);

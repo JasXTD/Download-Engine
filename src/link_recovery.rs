@@ -107,6 +107,14 @@ async fn check(
     progress: impl Fn(u64, u64),
 ) -> Result<Prepared> {
     ensure!(
+        !crate::mega::is_url(&job.url) && !crate::mega::is_url(&url),
+        "MEGA download addresses refresh automatically on resume. Add a new download to use a different share link."
+    );
+    ensure!(
+        !crate::wetransfer::is_url(&job.url) && !crate::wetransfer::is_url(&url),
+        "WeTransfer file addresses refresh automatically on resume. Add a new download to use a different transfer link."
+    );
+    ensure!(
         job.ftp.is_none(),
         "Add a new FTP download to use a different file link."
     );
@@ -396,6 +404,7 @@ impl Prepared {
         }
         job.retry = crate::retry::State::default();
         job.url = self.url;
+        job.link_fallback = None;
         crate::synchronization::restarting(&mut job);
         // The replacement dialog promises to retain the selected filename.
         job.server_name_pending = false;

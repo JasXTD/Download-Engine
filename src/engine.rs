@@ -1,5 +1,6 @@
 mod finalization;
-mod segmented;
+pub(crate) mod http;
+pub(crate) mod segmented;
 
 use crate::transfer_activity::Phase;
 use crate::{
@@ -285,6 +286,11 @@ async fn transfer(
     if let Some(file) = finalization::recover(store, job, &root, cancel).await? {
         return Ok(Some(file));
     }
+    if crate::mega::is_url(&job.url) {
+        // A previous publication intent may only have collided with an existing
+        // name. With no matching recovery anchor, verify again before retrying.
+        job.saved_path = None;
+    }
     job.integrity.actual = None;
     let _cache_guards =
         download_file::prepare_parts(&store.paths.data.join("parts"), &root).await?;
@@ -297,114 +303,25 @@ async fn transfer(
     if job.ftp.is_some() {
         return crate::ftp::transfer(store, job, &root, cancel, limiter).await;
     }
+    if crate::mega::is_url(&job.url) {
+        return crate::mega::transfer(store, job, &root, cancel, limiter).await;
+    }
+    if crate::wetransfer::is_url(&job.url) {
+        return crate::wetransfer::transfer(store, job, &root, cancel, limiter).await;
+    }
     ensure!(
         !crate::hls::is_playlist_url(&job.url) && !crate::hls::is_site_video(&job.url),
         "Use Preview video to choose a quality before adding this stream"
     );
-    let client = DownloadClient::for_job(store, job)?;
-    let connections = store.connection_settings()?;
-    let probe = tokio::select! {
-        _=cancel.cancelled()=>return Ok(None),
-        response=client.get(&job.url)?.header(header::ACCEPT_ENCODING,"identity").header(header::RANGE,"bytes=0-0").send()=>response?
-    };
-    check_file_response(&probe)?;
-    synchronization::check_response(job, &probe)?;
-    if let Some(expected) = &job.expected_file {
-        expected.check(&probe)?;
-    }
-    if probe.status() == reqwest::StatusCode::PARTIAL_CONTENT {
-        identity(&probe)?;
-        if let (Some(size), Some(etag)) = (probe_size(&probe)?, strong_etag(&probe)) {
-            job.remote = Some(RemoteFile::from_response(&probe));
-            let final_url = probe.url().to_string();
-            let connection_limit = connections.limit(&job.url, &final_url)?;
-            if let Some(plan) = &job.plan {
-                ensure!(
-                    plan.size == size && plan.etag == etag && plan.final_url == final_url,
-                    "The remote file changed. Use Restart to download the new version."
-                );
-            } else {
-                crate::server_filename::resolve(job, probe.headers());
-                let count = if size >= MIN_SEGMENT * 4 {
-                    (connection_limit as u64).min(size / MIN_SEGMENT)
-                } else {
-                    1
-                };
-                let mut segments = Vec::new();
-                for i in 0..count {
-                    let chunk = size / count;
-                    let start = chunk * i;
-                    let end = if i + 1 == count {
-                        size - 1
-                    } else {
-                        chunk * (i + 1) - 1
-                    };
-                    segments.push(Segment { start, end });
-                }
-                job.plan = Some(Plan {
-                    size,
-                    etag,
-                    final_url,
-                    segments,
-                });
-                job.total = Some(size);
-                store.save(job)?;
-            }
-            drop(probe);
-            if !segmented::run(
-                &client,
-                store,
-                job,
-                cancel,
-                &root,
-                limiter,
-                connection_limit,
-            )
-            .await?
-            {
-                return Ok(None);
-            }
-            return finalize(store, job, &root, cancel, true).await;
-        }
-    } else if !probe.status().is_success()
-        && probe.status() != reqwest::StatusCode::RANGE_NOT_SATISFIABLE
-    {
-        bail!("Server returned HTTP {}", probe.status().as_u16());
-    }
-    ensure!(
-        job.plan.is_none(),
-        "The server no longer supports safe resume. Use Restart to start over."
-    );
-    // Without a strong validator we never append unverified bytes from another request.
-    let response = if probe.status() == reqwest::StatusCode::OK {
-        probe
-    } else {
-        drop(probe);
-        tokio::select! {
-            _=cancel.cancelled()=>return Ok(None),
-            result=client.get(&job.url)?.header(header::ACCEPT_ENCODING,"identity").send()=>result?
-        }
-    };
-    check_file_response(&response)?;
-    ensure!(
-        response.status() == reqwest::StatusCode::OK,
-        "Server returned HTTP {}",
-        response.status().as_u16()
-    );
-    identity(&response)?;
-    synchronization::check_response(job, &response)?;
-    if let Some(expected) = &job.expected_file {
-        expected.check(&response)?;
-    }
-    crate::server_filename::resolve(job, response.headers());
-    job.total = response.content_length();
-    job.downloaded = 0;
-    job.remote = Some(RemoteFile::from_response(&response));
-    store.save(job)?;
-    if !single(response, store, job, &root, cancel, limiter).await? {
-        return Ok(None);
-    }
-    finalize(store, job, &root, cancel, false).await
+    http::transfer(
+        http::Source::Direct(DownloadClient::for_job(store, job)?),
+        store,
+        job,
+        &root,
+        cancel,
+        limiter,
+    )
+    .await
 }
 async fn single(
     mut response: Response,
@@ -493,7 +410,17 @@ pub(crate) async fn finalize_sources(
     cancel: &CancellationToken,
     sources: Vec<PathBuf>,
 ) -> Result<Option<FinishedFile>> {
-    finalization::finish(store, job, cancel, sources).await
+    finalization::finish(store, job, cancel, sources, None).await
+}
+/// Bind publication to bytes already authenticated by a provider's file MAC.
+pub(crate) async fn finalize_verified_source(
+    store: &Store,
+    job: &mut Job,
+    cancel: &CancellationToken,
+    source: PathBuf,
+    sha256: &str,
+) -> Result<Option<FinishedFile>> {
+    finalization::finish(store, job, cancel, vec![source], Some(sha256)).await
 }
 pub(crate) async fn publish_without_overwrite(
     store: &Store,

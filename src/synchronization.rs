@@ -57,6 +57,18 @@ pub struct State {
 impl State {
     pub(crate) fn begin(job: &mut Job) -> Result<()> {
         ensure!(
+            job.link_fallback.is_none(),
+            "Files discovered on webpages do not support synchronization checks. Add the direct file URL to check for updates."
+        );
+        ensure!(
+            !crate::mega::is_url(&job.url),
+            "MEGA files do not support synchronization checks. Use Redownload instead."
+        );
+        ensure!(
+            !crate::wetransfer::is_url(&job.url),
+            "WeTransfer transfers do not support synchronization checks. Use Redownload instead."
+        );
+        ensure!(
             job.ftp.is_none(),
             "FTP downloads do not support synchronization checks. Use Redownload instead."
         );

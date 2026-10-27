@@ -212,6 +212,16 @@ function capture(name, dark, size, view = 'downloads', empty = false, legacy = f
   console.log(JSON.stringify({name,screenshot}));
   return {name,screenshot,size,view,dark,legacy,compact,toolbar,queuedNetworkWork:false};
 }
+if(process.argv.includes('--link-fallback')) {
+  const results=[];
+  for(const dark of [true,false]) for(const size of ['860x600','1280x860']) {
+    for(const feature of ['link-fallback','link-fallback-empty','link-fallback-long']) {
+      results.push(capture(`${feature}-${dark?'dark':'light'}-${size}`,dark,size,'downloads',false,false,false,{feature}));
+    }
+  }
+  fs.writeFileSync(path.join(output,'verification.json'),JSON.stringify({results,scope:'Automatic link fallback review: populated, empty and long/truncated lists, both themes and window sizes. Isolated paused stores; no network work.'},null,2));
+  console.log(`Verification: ${path.join(output,'verification.json')}`);process.exit(0);
+}
 if(process.argv.includes('--localization') || process.argv.includes('--localization-layout')) {
   const results=[];
   const views=process.argv.includes('--localization-layout') ? ['settings','diagnostics','mcp'] : ['settings','add-advanced','new-queue','queues','guide','diagnostics','automation-scripts','mcp','scheduler','help'];

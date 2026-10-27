@@ -39,12 +39,24 @@ The familiar layout is inspired by **Internet Download Manager (IDM)**. Download
 Engine is an independent project, is not affiliated with IDM, and does not claim
 complete IDM feature parity.
 
+> **Latest source vs. release:** the feature list follows the development source.
+> MEGA, WeTransfer, automatic hosting-page file discovery and the new GitHub
+> raw-download capture are available on `main`; they are not included in the
+> published **v3.1.1** installer, portable ZIP or extension ZIPs yet.
+
 ## Features
 
 ### File downloads and recovery
 
 - Download over **HTTP, HTTPS, FTP, and FTPS**, with parallel connections where
   supported by the server.
+- Download **MEGA public file links** on Windows, including parallel transfers,
+  pause/resume, local decryption, and mandatory file-integrity verification.
+  Paste the complete link including its `#` key; see [MEGA downloads](docs/mega.md)
+  for supported links and limits.
+- Download **public WeTransfer transfers** by pasting a `we.tl` short link or
+  a `wetransfer.com/downloads/...` link. The complete transfer downloads as
+  supplied by WeTransfer; see [WeTransfer downloads](docs/wetransfer.md) for limits.
 - Pause and resume transfers, retry temporary failures, and recover unfinished
   downloads after restarting the app. Resume depends on the server and file remaining compatible.
 - Replace an expired link or use browser-assisted recovery while checking whether
@@ -72,6 +84,8 @@ complete IDM feature parity.
   file downloads; ordinary capture does not copy your browser cookies.
 - Find files with the website grabber, save and schedule grabber projects, or
   capture supported static pages and their assets for offline viewing.
+- Automatically inspect unsupported hosting pages for exposed file links: follow
+  one explicit same-site download link, or review the candidates before choosing.
 - Preview the contents of supported ZIP archives before downloading the whole file.
 
 ### Desktop controls and automation

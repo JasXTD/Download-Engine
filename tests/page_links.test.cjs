@@ -48,6 +48,16 @@ test('normalized names are safe text; search, final-suffix categories and indice
   const unicode=normalizeScan({...scan(),links:[{url:'https://example.test/a',filename:'x'.repeat(159)+'\ud83d'}]});
   assert(unicode.links[0].filename.isWellFormed());
 });
+test('page collection and batch selection preserve MEGA public file keys', () => {
+  const url = 'https://mega.nz/file/abcdefgh#AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8';
+  globalThis.document = {baseURI:'https://example.test/', title:'Files', links:[{getAttribute: name => name === 'href' ? url : '', textContent:'Shared file'}]};
+  globalThis.location = {href:'https://example.test/'};
+  try {
+    const collected = collect();
+    assert.equal(collected.links[0].url, url);
+    assert.equal(normalizeScan(collected).links[0].url, url);
+  } finally { delete globalThis.document; delete globalThis.location; }
+});
 test('scan is explicit, main-frame only and binds a session before loading its picker',async()=>{
   const f=fixture(); assert.equal(f.scans,0); assert.equal(f.requests.length,0);
   f.onNavigate=async tab=>{if(tab.url.includes('links.html')) {const id=tab.url.split('#')[1]; assert.equal((await f.manager.read(id)).picker,tab.id);}};

@@ -21,6 +21,14 @@ Use Save to apply pending changes, or Cancel, × or Escape to discard them. Them
 
 4. Watch progress in All downloads. When the file is Completed, use Open folder or the three-dot menu to open it.
 
+You can also paste a public WeTransfer short link (`we.tl`) or transfer link
+(`wetransfer.com/downloads/...`). Download Engine saves the whole transfer as
+supplied by WeTransfer, usually a ZIP for multiple files. Protected transfers
+requiring a password or identity verification are not supported. Resume and
+multiple connections depend on the file server; generated archives may restart
+from the beginning after a pause. The existing browser Send link action works
+without a WeTransfer-specific extension update.
+
 ### Find your way around
 
 The sidebar filters downloads by status, file type or queue. Manage queues controls groups of downloads. In the top toolbar, Scripting contains your rules, scripts, site readers and run history; Grabber beside it finds website files and saves offline websites. Logs contains application diagnostics and sits beside Preferences at the right end of the toolbar.
@@ -137,6 +145,18 @@ After saving, View capture report opens report.html with saved files and omissio
 The copy is static: JavaScript, forms, SVG animations, embedded players and other embedded pages are disabled, so JavaScript-only apps, login-only content, searches, shopping carts and live streams will not work offline. HTML and CSS must be UTF-8. There are also limits of 2 MB per HTML/CSS file, 16 MB per image/font, 20 MB of HTML/CSS, 2,000 assets, 10,000 inspected URLs and ten minutes per capture. Cross-origin redirects, attachment downloads and unsupported file types are reported as omissions. An offline copy is not a guarantee that every page on a website was captured.
 
 ### Find files on a website
+
+If an ordinary download returns an HTML landing page instead of a file, Download Engine automatically checks that page with the link grabber. One explicit HTML download link on the same origin can continue automatically. Other file links, multiple candidates, and links to another site open Choose a file. Select the intended file and choose Download selected file. The existing download keeps its original URL, queue, folder, custom filename, and checksum settings. No extension update is needed for this fallback.
+
+Public GitHub file pages can also offer the raw file for review when their download button needs JavaScript. File history, blame, edit and folder navigation links are excluded from the file candidates.
+
+The updated browser extension makes GitHub's Download raw file button use the raw file URL so normal automatic capture can handle it. Automatic capture and GitHub site access must be enabled; your capture rules still decide which files go to Download Engine. Other downloads generated as browser-only blob URLs remain in the browser.
+
+Closing the review leaves the download stopped; Retry or Start immediately reopens it. Your choice survives an app restart. Resume reuses the selected URL and verifies the saved file identity and ETag; Restart discards partial data and checks the original page again. Save HTML page explicitly saves the page itself. A filename you enter ending in .html, .htm or .xhtml, and server-declared attachments, keep normal file-download behavior. Landing-page URLs ending in .html still receive automatic discovery.
+
+Automatic discovery reads only the returned page (up to 2 MiB and 15 seconds of body reading), inspects up to 10,000 links, and lists up to 100 file candidates within a 256 KiB preview budget. It does not run JavaScript, submit forms, use browser cookies, solve challenges, or crawl the whole site. Decorative images and scripts are ignored. A same-site automatic link that redirects to another origin stops for review. MEGA, WeTransfer and video integrations keep their own download routes; authentication errors, rate limits, failed requests, browser-captured file mismatches and partially downloaded files never trigger this fallback. Webpage-derived downloads use anonymous access; add the actual file URL separately for saved logins, synchronization checks, or remote ZIP preview.
+
+When a site exposes no file link, Open website continues in your browser. A working browser extension with Automatic download capture enabled can hand a real file download to the app when it matches your capture rules. Clicking a link that only navigates to a hosting page still opens that page in the browser; Send link to Download Engine or Add URL sends the page to this fallback. This does not provide universal support for every hosting service.
 
 Choose Find downloadable files, enter a starting page and file types such as pdf, zip or png, then choose Scan website. Select the results you want and choose Add selected to queue. Scanning alone creates no downloads. Save a project to reuse its settings or schedule later scans for review.
 

@@ -17,7 +17,7 @@ use tokio_util::sync::CancellationToken;
 pub const MAX_DEPTH: u8 = 5;
 pub const MAX_PAGES: usize = 200;
 pub const MAX_FILES: usize = 1000;
-const MAX_PAGE_BYTES: usize = 2 * 1024 * 1024;
+pub(crate) const MAX_PAGE_BYTES: usize = 2 * 1024 * 1024;
 const MAX_SCAN_BYTES: usize = 20 * 1024 * 1024;
 const MAX_PREVIEW_BYTES: usize = 700_000;
 const MAX_LINKS_PER_PAGE: usize = 10_000;
@@ -323,20 +323,32 @@ struct Link {
     url: Url,
     filename: Option<String>,
     navigation: Option<Navigation>,
+    file_link: bool,
+    explicit_download: bool,
 }
 
-fn download_url(url: &Url) -> Url {
+fn download_url(url: &Url) -> Option<Url> {
     let mut download = url.clone();
     // GitHub's blob route is an HTML viewer, even when its path ends in a file
     // extension. The raw route preserves GitHub's own branch/tag resolution.
     if url.host_str() == Some("github.com") && url.port().is_none() {
         let mut segments: Vec<_> = url.path().trim_start_matches('/').split('/').collect();
+        // Repository navigation often ends in the file's name too. It is HTML,
+        // not a second download of that file.
+        if segments.len() >= 3
+            && matches!(
+                segments[2],
+                "commits" | "commit" | "blame" | "edit" | "delete" | "tree"
+            )
+        {
+            return None;
+        }
         if segments.len() >= 5 && segments[2] == "blob" && segments.iter().all(|s| !s.is_empty()) {
             segments[2] = "raw";
             download.set_path(&format!("/{}", segments.join("/")));
         }
     }
-    download
+    Some(download)
 }
 
 fn page_links(page: &Page) -> (Vec<Link>, bool) {
@@ -354,6 +366,18 @@ fn page_links(page: &Page) -> (Vec<Link>, bool) {
     .expect("static selector");
     let mut links = Vec::new();
     let mut truncated = false;
+    // Some file viewers render their download button with JavaScript instead of
+    // an anchor. Reuse the known blob-to-raw mapping for the page itself; this
+    // inferred link is never an explicit HTML download or a crawl destination.
+    if let Some(url) = download_url(&page.url).filter(|url| url != &page.url) {
+        links.push(Link {
+            url,
+            filename: None,
+            navigation: None,
+            file_link: true,
+            explicit_download: false,
+        });
+    }
     for (index, element) in document.select(&selector).enumerate() {
         if index >= MAX_LINKS_PER_PAGE {
             truncated = true;
@@ -380,6 +404,8 @@ fn page_links(page: &Page) -> (Vec<Link>, bool) {
         links.push(Link {
             url,
             filename,
+            file_link: navigate,
+            explicit_download: navigate && node.attr("download").is_some(),
             navigation: if node.name() == "include-fragment" {
                 // Copy only a known HTML media type, never arbitrary request
                 // headers from a page. Other fragment formats need JavaScript.
@@ -408,6 +434,97 @@ fn page_links(page: &Page) -> (Vec<Link>, bool) {
     // navigation can consume the page budget. They are parsed as HTML, never run.
     links.sort_by_key(|link| !matches!(link.navigation, Some(Navigation::Fragment(_))));
     (links, truncated)
+}
+
+/// Single-page fallback shares the grabber's URL parser, but ignores decorative
+/// media and navigation. Ordinary extension matches require review; only an
+/// explicit HTML download link on this origin can be followed automatically.
+pub(crate) fn fallback(page_url: Url, html: String) -> crate::link_fallback::State {
+    use crate::{
+        categories::Category,
+        link_fallback::{MAX_BYTES, MAX_FILES, Selection, State},
+    };
+    let (links, mut truncated) = page_links(&Page {
+        url: page_url.clone(),
+        html,
+    });
+    let mut files = Vec::new();
+    let mut seen = HashSet::new();
+    let mut explicit = HashSet::new();
+    let mut bytes = 0;
+    for link in links {
+        if !link.file_link {
+            continue;
+        }
+        let Some(url) = download_url(&link.url) else {
+            continue;
+        };
+        if url == page_url
+            || (page_url.scheme() == "https" && url.scheme() != "https")
+            || crate::mega::is_url(url.as_str())
+            || crate::wetransfer::is_url(url.as_str())
+        {
+            continue;
+        }
+        let name = link
+            .filename
+            .clone()
+            .unwrap_or_else(|| safe_filename(&url_name(&url)));
+        let extension = name.rsplit('.').next().unwrap_or("").to_ascii_lowercase();
+        let file_type = Category::from_filename(&name) != Category::Other
+            || matches!(
+                extension.as_str(),
+                "jpg"
+                    | "jpeg"
+                    | "png"
+                    | "gif"
+                    | "webp"
+                    | "svg"
+                    | "bmp"
+                    | "ico"
+                    | "tif"
+                    | "tiff"
+                    | "iso"
+                    | "bin"
+                    | "json"
+                    | "xml"
+                    | "torrent"
+            );
+        if !link.explicit_download && !file_type {
+            continue;
+        }
+        if link.explicit_download {
+            explicit.insert(url.to_string());
+        }
+        if !seen.insert(url.to_string()) {
+            continue;
+        }
+        bytes += url.as_str().len()
+            + name.len()
+            + page_url.as_str().len()
+            + link.filename.as_ref().map_or(0, String::len);
+        if files.len() == MAX_FILES || bytes > MAX_BYTES {
+            truncated = true;
+            break;
+        }
+        files.push(Candidate {
+            url: url.into(),
+            name,
+            filename: link.filename,
+            page: page_url.to_string(),
+        });
+    }
+    let automatic = !truncated
+        && files.len() == 1
+        && explicit.contains(&files[0].url)
+        && validate_url(&files[0].url).is_ok_and(|url| url.origin() == page_url.origin());
+    State {
+        id: uuid::Uuid::new_v4(),
+        page: page_url.into(),
+        files,
+        truncated,
+        selection: automatic.then_some(Selection::Automatic),
+    }
 }
 
 /// Breadth-first discovery: depth 0 reads the starting page and its same-origin
@@ -485,9 +602,9 @@ pub async fn scan(
                 .filename
                 .clone()
                 .unwrap_or_else(|| safe_filename(&url_name(&link.url)));
-            let download = download_url(&link.url);
             if !matches!(link.navigation, Some(Navigation::Fragment(_)))
                 && config.types.matches(&name)
+                && let Some(download) = download_url(&link.url)
                 && candidates.insert(download.to_string())
             {
                 preview_bytes += download.as_str().len() + name.len() + 96;

@@ -134,6 +134,8 @@ pub struct Job {
     pub server_name_pending: bool,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub source_page: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub link_fallback: Option<crate::link_fallback::State>,
     /// Reader-derived files must keep their network boundary across restarts.
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub public_only: bool,
@@ -168,6 +170,15 @@ pub struct Job {
 impl Job {
     pub fn validate_persisted(&self) -> Result<()> {
         validate_job_id(&self.id)?;
+        if let Some(state) = &self.link_fallback {
+            state.validate(self)?;
+        }
+        if crate::mega::is_url(&self.url) {
+            crate::mega::validate_job(self)?;
+        }
+        if crate::wetransfer::is_url(&self.url) {
+            crate::wetransfer::validate_job(self)?;
+        }
         if let Some(page) = &self.source_page {
             validate_url(page)?;
         }
@@ -234,6 +245,7 @@ impl Job {
             name: safe_filename(supplied_name.unwrap_or(&decoded)),
             server_name_pending: supplied_name.is_none(),
             source_page: None,
+            link_fallback: None,
             public_only: false,
             url: url.to_string(),
             directory,
@@ -259,6 +271,12 @@ impl Job {
 /// Download entry points may accept FTP. Browser, crawler and stream network
 /// boundaries keep using validate_url so their HTTP-only scope never widens.
 pub fn validate_download_url(value: &str) -> Result<reqwest::Url> {
+    if crate::mega::is_url(value) {
+        return crate::mega::canonical_url(value);
+    }
+    if crate::wetransfer::is_url(value) {
+        return crate::wetransfer::canonical_url(value);
+    }
     if !crate::ftp::is_url(value) {
         if reqwest::Url::parse(value.trim())
             .is_ok_and(|url| !matches!(url.scheme(), "http" | "https"))

@@ -35,6 +35,18 @@ pub struct Preview {
 /// The supplied job is a snapshot; it is never queued or modified. Existing
 /// per-download authentication and the current proxy route are reused.
 pub async fn inspect(store: &Store, job: &Job, cancel: &CancellationToken) -> Result<Preview> {
+    ensure!(
+        job.link_fallback.is_none(),
+        "Use the direct file URL for ZIP preview, or download this file before opening its contents."
+    );
+    ensure!(
+        !crate::mega::is_url(&job.url),
+        "Download and decrypt the MEGA file before opening its ZIP contents."
+    );
+    ensure!(
+        !crate::wetransfer::is_url(&job.url),
+        "Download the WeTransfer archive before opening its ZIP contents."
+    );
     let url = crate::model::validate_url(&job.url)?;
     ensure!(
         matches!(url.scheme(), "http" | "https") && job.hls.is_none(),

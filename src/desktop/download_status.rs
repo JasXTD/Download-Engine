@@ -620,7 +620,9 @@ impl Desktop {
                 self.download_status.auto_close_on_complete = window.close_on_complete;
             }
             let keep = self.status_action(id, window, action);
-            if action == Some(Action::OpenFile) && self.dialog.is_some() {
+            if (action == Some(Action::OpenFile) && self.dialog.is_some())
+                || (action == Some(Action::Start) && self.dialog == Some(Dialog::LinkFallback))
+            {
                 ctx.send_viewport_cmd_to(
                     egui::ViewportId::ROOT,
                     egui::ViewportCommand::Visible(true),
@@ -644,6 +646,9 @@ impl Desktop {
         let Some(job) = window.job.clone().filter(|_| window.error.is_none()) else {
             return true;
         };
+        if action == Some(Action::Start) && self.open_link_fallback(&job) {
+            return false;
+        }
         if action.is_some() {
             window.notice = None;
         }

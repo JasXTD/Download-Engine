@@ -6,6 +6,18 @@ test("validates links and removes fragments", () => {
   assert.equal(normalizeUrl(" https://example.com/a.zip#x "), "https://example.com/a.zip");
   for (const url of ["javascript:alert(1)", "file:///C:/x", "data:abc", "blob:https://x/y", "https://user:password@example.com/x", "x"]) assert.throws(() => normalizeUrl(url));
 });
+test("MEGA handoff keeps public-file keys and legacy link fragments", () => {
+  const key = "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8";
+  for (const host of ["mega.nz", "www.mega.nz", "mega.co.nz", "mega.io"]) {
+    for (const path of [`/file/abcdefgh#${key}`, `/#!abcdefgh!${key}`]) {
+      const url = `https://${host}${path}`;
+      assert.equal(makeRequest(url, "mega-file").url, url);
+      assert.equal(makeRequest(url, "mega-file").action, "add");
+    }
+  }
+  assert.equal(normalizeUrl(`https://mega.nz.attacker.example/file/abcdefgh#${key}`), "https://mega.nz.attacker.example/file/abcdefgh");
+  assert.equal(normalizeUrl("https://mega.nz/MEGAsyncSetup64.exe#anchor"), "https://mega.nz/MEGAsyncSetup64.exe");
+});
 test("handoff requires a durable queue acknowledgement", async () => {
   const request = makeRequest("https://example.com/a", "request-123");
   const reply = await handoff(async (host, body) => {

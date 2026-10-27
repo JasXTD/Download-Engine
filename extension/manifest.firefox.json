@@ -31,6 +31,7 @@
       "page-links.js",
       "browser-login.js",
       "video-button-manager.js",
+      "github-download.js",
       "media.js",
       "permission-flow.js",
       "background.js"

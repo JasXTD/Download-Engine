@@ -71,6 +71,63 @@ async fn single_part_publishes_the_verified_file_without_copying_and_keeps_colli
 }
 
 #[tokio::test]
+async fn provider_verified_plaintext_checks_hash_before_publish_and_recovers_its_own_anchor() {
+    let mut fixture = Fixture::new(1, 1024);
+    fixture.job.url =
+        "https://mega.nz/file/abcdefgh#AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8".into();
+    let root = fixture.store.paths.parts(&fixture.job.id).unwrap();
+    let source = root.join("mega-plaintext.part");
+    std::fs::rename(&fixture.sources[0], &source).unwrap();
+    fixture.store.save(&fixture.job).unwrap();
+    let error = finalize_verified_source(
+        &fixture.store,
+        &mut fixture.job,
+        &CancellationToken::new(),
+        source.clone(),
+        &"0".repeat(64),
+    )
+    .await
+    .err()
+    .unwrap();
+    assert!(error.to_string().contains("changed before saving"));
+    assert!(fixture.job.saved_path.is_none());
+    let result = finalize_verified_source(
+        &fixture.store,
+        &mut fixture.job,
+        &CancellationToken::new(),
+        source.clone(),
+        &fixture.hash,
+    )
+    .await
+    .unwrap()
+    .unwrap();
+    drop(result.guard);
+    let mut pending = fixture.store.get(&fixture.job.id).unwrap().unwrap();
+    let recovered = finalization::recover(
+        &fixture.store,
+        &mut pending,
+        &root,
+        &CancellationToken::new(),
+    )
+    .await
+    .unwrap()
+    .unwrap();
+    assert_eq!(recovered.path, result.path);
+    drop(recovered.guard);
+    std::fs::write(&result.path, vec![0; 1024]).unwrap();
+    let error = finalization::recover(
+        &fixture.store,
+        &mut pending,
+        &root,
+        &CancellationToken::new(),
+    )
+    .await
+    .err()
+    .unwrap();
+    assert!(error.to_string().contains("checksum changed"));
+}
+
+#[tokio::test]
 async fn multipart_assembly_uses_byte_order_and_does_not_mutate_parts() {
     let mut fixture = Fixture::new(4, 1024 * 1024 + 7);
     let originals: Vec<_> = fixture

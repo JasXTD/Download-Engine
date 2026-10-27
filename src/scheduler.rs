@@ -31,6 +31,11 @@ pub enum Command {
     Resume(String),
     StartImmediately(String),
     Restart(String),
+    SelectDiscoveredFile {
+        id: String,
+        discovery: uuid::Uuid,
+        selection: crate::link_fallback::Selection,
+    },
     Remove(String),
     DeleteFile {
         id: String,
@@ -218,6 +223,7 @@ async fn settle_before_command(
         | Command::Resume(id)
         | Command::StartImmediately(id)
         | Command::Restart(id)
+        | Command::SelectDiscoveredFile { id, .. }
         | Command::Remove(id)
         | Command::DeleteFile { id, .. }
         | Command::RenameFile { id, .. }

@@ -247,6 +247,10 @@ impl DownloadClient {
         }
         Self::for_replacement(store, job, &job.url)
     }
+    pub(crate) fn with_page(mut self, page: &str) -> Self {
+        self.page = Some(page.to_owned());
+        self
+    }
     pub(crate) fn for_replacement(store: &Store, job: &Job, url: &str) -> Result<Self> {
         if job.public_only {
             ensure!(
@@ -319,10 +323,12 @@ impl DownloadClient {
             route: self.route.clone(),
             authenticated: self.authenticated.clone(),
             public_only: self.public_only,
+            same_origin: false,
         })
     }
 }
 pub(crate) struct DownloadRequest {
+    same_origin: bool,
     public_only: bool,
     route: crate::proxy::Route,
     authenticated: Option<(String, Arc<Credentials>)>,
@@ -331,6 +337,10 @@ pub(crate) struct DownloadRequest {
     browser: Option<Arc<crate::browser_login::Session>>,
 }
 impl DownloadRequest {
+    pub(crate) fn same_origin(mut self) -> Self {
+        self.same_origin = true;
+        self
+    }
     pub(crate) fn header(
         mut self,
         name: reqwest::header::HeaderName,
@@ -371,6 +381,9 @@ impl DownloadRequest {
                         .map_err(|_| anyhow::anyhow!("Invalid browser download redirect"))?;
                     // Validate before any request to the next origin is made.
                     validate_url(url.as_str())?;
+                    if self.same_origin && url.origin() != next.url().origin() {
+                        return Err(crate::link_fallback::CrossOriginRedirect.into());
+                    }
                     ensure!(next.url().scheme() != "https" || url.scheme() == "https", "Refusing an HTTPS to HTTP redirect");
                     if let Some((scope, _)) = &self.authenticated {
                         ensure!(url.origin().ascii_serialization() == *scope, "Authenticated downloads cannot redirect to another server. Use a direct link for the intended server.");
@@ -482,6 +495,18 @@ pub(crate) fn apply(store: &Store, update: Update) -> Result<Option<String>> {
     let original = store
         .get(&update.job)?
         .context("Download no longer exists")?;
+    ensure!(
+        original.link_fallback.is_none(),
+        "Webpage file discovery uses anonymous access. Add the direct file URL as a new download to use a login."
+    );
+    ensure!(
+        !crate::mega::is_url(&original.url),
+        "MEGA public links use their share-link key and do not support saved logins."
+    );
+    ensure!(
+        !crate::wetransfer::is_url(&original.url),
+        "WeTransfer share links use anonymous access and do not support saved logins."
+    );
     ensure!(
         original.hls.is_none(),
         "HLS previews and downloads currently use anonymous requests"

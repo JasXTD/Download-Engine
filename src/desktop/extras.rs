@@ -143,6 +143,7 @@ impl Desktop {
             "dash-qualities" => self.dash_sample(false),
             "quotas" => self.open_data_quotas(),
             "grabber" => self.grabber_preview(),
+            "link-fallback" | "link-fallback-empty" | "link-fallback-long" => self.link_fallback_sample(mode),
             "grabber-setup" => self.open_grabber(),
             "offline-website" => self.offline_website_sample(false),
             "offline-website-report" => self.offline_website_sample(true),

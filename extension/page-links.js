@@ -30,7 +30,10 @@
       let url;
       try { url = new URL(raw, document.baseURI); } catch { return true; }
       if (!["http:", "https:"].includes(url.protocol) || url.username || url.password || url.href.length > 16384) return true;
-      url.hash = "";
+      // This collector runs without IDMCore in the isolated page frame.
+      const megaShare = ["mega.nz", "www.mega.nz", "mega.co.nz", "www.mega.co.nz", "mega.io", "www.mega.io"].includes(url.hostname)
+        && /^(?:\/$|\/(?:file|folder)(?:\/|$))/.test(url.pathname);
+      if (!megaShare) url.hash = "";
       const type = mime.split(";")[0].trim().toLowerCase();
       // Manifests only open the desktop preview; never queue them as files.
       const hls = /\.m3u8$/i.test(url.pathname) || (media && /^(application\/(vnd\.apple\.mpegurl|x-mpegurl|mpegurl)|audio\/(x-)?mpegurl)$/i.test(type));

@@ -284,6 +284,7 @@ impl Runtime {
                     | Command::Resume(id)
                     | Command::StartImmediately(id)
                     | Command::Restart(id)
+                    | Command::SelectDiscoveredFile { id, .. }
                     | Command::Remove(id)
                     | Command::DeleteFile { id, .. }
                     | Command::RenameFile { id, .. }

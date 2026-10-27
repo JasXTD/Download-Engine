@@ -14,6 +14,7 @@ pub mod grabber_projects;
 pub mod grabber_schedule;
 pub mod hls;
 pub mod mcp;
+pub mod mega;
 pub mod model;
 pub mod native;
 pub mod notifications;
@@ -30,6 +31,7 @@ pub mod synchronization;
 pub mod tiktok;
 pub mod twitch;
 pub mod website_grabber;
+pub mod wetransfer;
 
 pub mod queue;
 pub mod queue_schedule;
@@ -43,6 +45,7 @@ pub mod browser_recovery;
 pub mod browser_setup;
 pub mod browser_video;
 
+pub mod link_fallback;
 pub mod link_recovery;
 
 pub mod auth;

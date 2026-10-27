@@ -208,6 +208,14 @@ pub(crate) fn enqueue(
     url: String,
     mut cookies: Vec<Cookie>,
 ) -> Result<String> {
+    ensure!(
+        !crate::mega::is_url(&url),
+        "MEGA public links use their share-link key; send the link without browser login."
+    );
+    ensure!(
+        !crate::wetransfer::is_url(&url),
+        "Send WeTransfer share links without browser login. Protected transfers are not supported."
+    );
     let token = request_id
         .strip_prefix("login:")
         .context("Invalid browser login request identifier")?;

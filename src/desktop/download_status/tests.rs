@@ -781,7 +781,16 @@ fn failed_download_has_actionable_status_and_no_stale_activity() {
     app.add();
     let id = app.selected.clone().unwrap();
     until(&mut app, |app| {
+        // The worker commits before the window's next refresh. Waiting only
+        // for SQLite can observe a terminal row beside the previous UI snapshot.
         app.store.get(&id).unwrap().unwrap().status == Status::Failed
+            && app
+                .download_status
+                .windows
+                .get(&id)
+                .and_then(|window| window.job.as_ref())
+                .is_some_and(|job| job.status == Status::Failed)
+            && app.store.activity.get(&id).is_none()
     });
     assert!(
         app.download_status.windows[&id]

@@ -10,7 +10,11 @@
     if (!["http:", "https:"].includes(url.protocol) || url.username || url.password) {
       throw new Error(__xdL.t("Only HTTP/HTTPS links without embedded login details are supported."));
     }
-    url.hash = "";
+    // MEGA public file links carry their decryption key in the fragment.
+    // Keep it only for MEGA hosts; the desktop validates the complete link.
+    const megaShare = ["mega.nz", "www.mega.nz", "mega.co.nz", "www.mega.co.nz", "mega.io", "www.mega.io"].includes(url.hostname)
+      && /^(?:\/$|\/(?:file|folder)(?:\/|$))/.test(url.pathname);
+    if (!megaShare) url.hash = "";
     return url.href;
   }
   function makeRequest(url, requestId, sourcePage) {

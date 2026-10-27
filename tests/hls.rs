@@ -24,6 +24,8 @@ mod activity;
 mod dash;
 #[path = "hls/merge.rs"]
 mod merge;
+#[path = "hls/parallel.rs"]
+mod parallel;
 #[path = "hls/sidx.rs"]
 mod sidx;
 
@@ -35,6 +37,7 @@ struct Reply {
     cut: bool,
     ignore_range: bool,
     headers_for_start: Option<(usize, String)>,
+    gate: Option<Arc<tokio::sync::Semaphore>>,
 }
 impl Reply {
     fn bytes(body: impl AsRef<[u8]>) -> Self {
@@ -45,6 +48,7 @@ impl Reply {
             cut: false,
             ignore_range: false,
             headers_for_start: None,
+            gate: None,
         }
     }
     fn redirect(location: &str) -> Self {
@@ -120,6 +124,7 @@ impl Server {
                             }
                             let header = format!("HTTP/1.1 {} fixture\r\nContent-Length: {}\r\nConnection: close\r\n{}\r\n",reply.status,reply.body.len(),reply.headers);
                             if socket.write_all(header.as_bytes()).await.is_err() {return;}
+                            if let Some(gate) = reply.gate { let Ok(permit) = gate.acquire_owned().await else {return;}; permit.forget(); }
                             let body = if reply.cut { &reply.body[..reply.body.len()/2] } else { &reply.body };
                             for chunk in body.chunks(18800) {
                                 if socket.write_all(chunk).await.is_err() {return;}
@@ -365,6 +370,14 @@ async fn reader_security_selected_files_keep_the_boundary_after_reopening() {
 }
 
 async fn pause_at_part(server: &Server, store: &Store, job: Job, part: &hls::Part) -> Job {
+    // These legacy fixtures require an exact prefix at a named request. Exercise
+    // the supported single-connection policy; parallel recovery has gated tests.
+    let settings = store.connection_settings().unwrap();
+    let mut sequential = settings.clone();
+    sequential.default_connections = 1;
+    store
+        .save_connection_settings(&settings, sequential)
+        .unwrap();
     // Cancel once at the exact request, before any response bytes. Polling a
     // slowed response races completion and counts helper verification time
     // against the pause deadline. Range matching keeps index/init reads intact.

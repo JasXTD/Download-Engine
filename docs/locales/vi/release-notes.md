@@ -1,9 +1,9 @@
-## 3.0.2 — 2026-10-27
+## 3.1.0 — 2026-10-27
 
-### Chính sách quyền riêng tư
+### Tải video nhanh hơn và giảm chi phí xử lý
 
-Thêm chính sách công khai về tích hợp trình duyệt, lưu trữ cục bộ, cookie đăng nhập tùy chọn, lưu giữ và xóa dữ liệu, tích hợp bên thứ ba và yêu cầu Sử dụng có giới hạn của Chrome Web Store. README và hướng dẫn phát hành trình duyệt có liên kết đến chính sách; các gói mã nguồn, tiện ích, bản di động và bộ cài đều chứa bản sao. Hành vi tải xuống và quyền truy cập không thay đổi.
+Video tải song song tối đa 4 phân đoạn, tuân theo giới hạn kết nối toàn cục hoặc theo trang thấp hơn. Tạm dừng, thử lại và khởi động lại ứng dụng giữ các phân đoạn hoàn tất đã xác minh, kể cả khi hoàn tất không theo thứ tự; phân đoạn chưa xong được tải lại. Cửa sổ trạng thái hiển thị phân đoạn và kết nối đang hoạt động. Ghi đĩa có bộ đệm, giảm tần suất cập nhật tiến độ và tái sử dụng kết nối cơ sở dữ liệu giúp giảm chi phí xử lý. Tạm dừng vẫn đợi ghi xong và hạn mức vẫn được lưu bền vững cho từng khối dữ liệu nhận.
 
-### Kho mã nguồn và gói phát hành
+### Trạng thái lỗi rõ ràng hơn
 
-Tệp thực thi FFmpeg không còn được theo dõi trong kho mã nguồn. Bộ cài đặt và bản di động vẫn kèm tệp này cùng mã nguồn tương ứng và thông báo giấy phép. Mã nguồn FFmpeg vẫn được giữ trong Git; hướng dẫn biên dịch giải thích cách lấy tệp thực thi phù hợp.
+Trạng thái lỗi đổi thành “Thất bại”; chi tiết lỗi và thử lại tự động không đổi.

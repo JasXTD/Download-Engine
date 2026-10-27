@@ -16,6 +16,12 @@ async fn live_media_progress_tracks_partial_bytes_and_clears_on_pause_and_comple
     server.set("/third.ts", Reply::bytes(&third));
     let selected = playlist(&server, "/video.m3u8").await;
     let (_temp, store) = fixture();
+    let settings = store.connection_settings().unwrap();
+    let mut sequential = settings.clone();
+    sequential.default_connections = 1;
+    store
+        .save_connection_settings(&settings, sequential)
+        .unwrap();
     let job = enqueue(&store, &selected);
     let id = job.id.clone();
     let cancel = CancellationToken::new();

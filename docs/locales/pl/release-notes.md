@@ -1,9 +1,9 @@
-## 3.0.2 — 2026-10-27
+## 3.1.0 — 2026-10-27
 
-### Polityka prywatności
+### Szybsze pobieranie filmów i mniejszy narzut
 
-Dodano publiczną politykę opisującą integrację z przeglądarką, lokalne przechowywanie, opcjonalne pliki cookie logowania, przechowywanie i usuwanie danych, integracje zewnętrzne oraz zasady ograniczonego wykorzystania Chrome Web Store. README i instrukcja publikowania rozszerzeń zawierają odnośniki, a pakiety źródłowe, rozszerzenia, wersje przenośne i instalator zawierają kopię polityki. Działanie pobierania i uprawnienia pozostają bez zmian.
+Filmy pobierają do 4 segmentów równolegle, z uwzględnieniem niższych limitów globalnych i dla witryny. Wstrzymanie, ponowienie i restart aplikacji zachowują wszystkie zweryfikowane segmenty, również ukończone poza kolejnością; nieukończone są pobierane od nowa. Okno stanu pokazuje aktywne segmenty i połączenia. Buforowanie zapisu, rzadsze odświeżanie postępu i ponowne użycie połączenia z bazą ograniczają narzut. Wstrzymanie nadal czeka na zapis, a każdy odebrany blok jest trwale rozliczany w limicie danych.
 
-### Repozytorium źródeł i pakiety wydań
+### Czytelniejszy stan błędu
 
-Plik wykonywalny FFmpeg nie jest już śledzony w repozytorium źródeł. Instalator i wersja przenośna nadal zawierają go wraz z odpowiadającymi mu źródłami i informacjami licencyjnymi. Źródła FFmpeg pozostają w Git; instrukcja budowania opisuje, jak uzyskać zgodny plik wykonywalny.
+Etykieta błędu to teraz „Nieudane”; szczegóły błędu i automatyczne ponawianie nie zmieniły się.

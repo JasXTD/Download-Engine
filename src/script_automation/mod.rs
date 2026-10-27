@@ -52,7 +52,7 @@ pub enum Trigger {
     DownloadCompleted {
         queue: Option<String>,
     },
-    /// Downloads that reached Needs attention after their automatic retries.
+    /// Downloads that reached Failed after their automatic retries.
     DownloadFailed {
         queue: Option<String>,
     },

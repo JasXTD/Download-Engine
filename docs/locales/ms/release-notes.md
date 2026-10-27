@@ -1,9 +1,9 @@
-## 3.0.2 — 2026-10-27
+## 3.1.0 — 2026-10-27
 
-### Dasar privasi
+### Muat turun video lebih pantas dan beban pemindahan lebih rendah
 
-Menambah dasar privasi awam yang menerangkan integrasi pelayar, storan setempat, kuki log masuk pilihan, pengekalan dan pemadaman data, integrasi pihak ketiga serta syarat Penggunaan Terhad Chrome Web Store. README dan panduan keluaran pelayar memautkan dasar ini; pakej sumber, sambungan, mudah alih dan pemasang menyertakan salinannya. Tingkah laku muat turun dan kebenaran tidak berubah.
+Video kini memuat turun sehingga 4 segmen serentak, mengikut had sambungan global atau laman yang lebih rendah. Jeda, cuba semula dan mula semula aplikasi mengekalkan semua segmen lengkap yang disahkan, termasuk yang siap di luar urutan; segmen belum lengkap dimuat turun semula. Tetingkap status menunjukkan segmen dan sambungan aktif. Penimbalan tulisan cakera, kemas kini kemajuan yang lebih jarang dan penggunaan semula sambungan pangkalan data mengurangkan beban pemindahan. Jeda masih menunggu tulisan selesai dan kuota kekal direkodkan secara tahan lama bagi setiap cebisan data diterima.
 
-### Repositori sumber dan pakej keluaran
+### Status kegagalan lebih jelas
 
-Fail boleh laksana FFmpeg tidak lagi dijejaki dalam repositori sumber. Pemasang dan keluaran mudah alih masih menyertakannya bersama kod sumber yang sepadan dan notis lesen. Kod sumber FFmpeg kekal dalam Git; arahan binaan menerangkan cara mendapatkan fail boleh laksana yang sepadan.
+Label kegagalan kini “Gagal”; butiran ralat dan cubaan semula automatik tidak berubah.

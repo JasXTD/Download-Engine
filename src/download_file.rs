@@ -4,6 +4,22 @@ use std::{
     path::{Component, Path},
 };
 use tokio::fs::File as AsyncFile;
+use tokio::io::{AsyncWriteExt, BufWriter};
+
+/// Bound memory per worker while coalescing small network chunks into disk writes.
+pub(crate) fn buffered(file: AsyncFile) -> BufWriter<AsyncFile> {
+    BufWriter::with_capacity(256 * 1024, file)
+}
+
+/// Always wait for underlying I/O, even when flushing the outer buffer fails.
+/// Call on success, cancellation and errors before a worker releases its range.
+pub(crate) async fn flush_and_sync(file: &mut BufWriter<AsyncFile>) -> Result<()> {
+    let flushed = file.flush().await;
+    let synced = file.get_ref().sync_all().await;
+    flushed?;
+    synced?;
+    Ok(())
+}
 
 /// Do not share write/delete access while a Windows transfer owns this file.
 /// OPEN_REPARSE_POINT lets us inspect the opened object instead of following it.

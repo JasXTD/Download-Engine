@@ -528,18 +528,41 @@ async fn scheduler_pauses_an_update_and_resumes_after_restart_without_touching_t
         j.synchronization
             .as_ref()
             .is_some_and(|s| s.phase == Phase::Updating)
-            && std::fs::metadata(store.paths.parts(&j.id).unwrap().join("segment-0.part"))
-                .is_ok_and(|m| m.len() >= 128 * 1024)
+            && j.downloaded >= 128 * 1024
     })
     .await;
     scheduler
         .send(Command::PauseQueue(queue.id.clone()))
         .unwrap();
-    wait_job(&store, &old.id, |j| {
+    let paused = wait_job(&store, &old.id, |j| {
         j.status == Status::Queued && j.downloaded > 0
     })
     .await;
     drop(scheduler);
+    let root = store.paths.parts(&old.id).unwrap();
+    let saved: Vec<_> = paused
+        .plan
+        .as_ref()
+        .unwrap()
+        .segments
+        .iter()
+        .enumerate()
+        .map(|(index, segment)| {
+            let bytes = match std::fs::read(root.join(format!("segment-{index}.part"))) {
+                Ok(bytes) => bytes,
+                Err(error) if error.kind() == std::io::ErrorKind::NotFound => Vec::new(),
+                Err(error) => panic!("Cannot inspect paused update: {error}"),
+            };
+            assert!(bytes.iter().all(|byte| *byte == 7));
+            (segment.start, segment.end, bytes.len() as u64)
+        })
+        .collect();
+    assert_eq!(
+        saved.iter().map(|(_, _, size)| size).sum::<u64>(),
+        paused.downloaded
+    );
+    assert!(paused.downloaded >= 128 * 1024);
+    let previous_requests = server.requests.lock().unwrap().len();
     assert_eq!(
         std::fs::read(old.saved_path.as_ref().unwrap()).unwrap(),
         b"first version"
@@ -561,6 +584,17 @@ async fn scheduler_pauses_an_update_and_resumes_after_restart_without_touching_t
         std::fs::read(old.saved_path.unwrap()).unwrap(),
         b"first version"
     );
+    let requests = server.requests.lock().unwrap();
+    for (start, end, size) in saved.into_iter().filter(|(_, _, size)| *size > 0) {
+        assert!(requests[previous_requests..].iter().any(|request| {
+            request.to_ascii_lowercase().contains(&format!(
+                "range: bytes={}-{}\r\n",
+                start + size,
+                end
+            ))
+        }));
+    }
+    drop(requests);
     drop(scheduler);
 }
 

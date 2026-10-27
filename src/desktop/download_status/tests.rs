@@ -793,7 +793,7 @@ fn failed_download_has_actionable_status_and_no_stale_activity() {
     );
     assert_eq!(app.store.activity.get(&id), None);
     let output = draw_window(&mut app, &ctx, &id, egui::vec2(480.0, 390.0), vec![]);
-    text_rect(&output, "Needs attention");
+    text_rect(&output, "Failed");
     text_rect(&output, "Start again");
 }
 
@@ -1075,7 +1075,7 @@ fn video_status_shows_media_parts_instead_of_a_single_file_range() {
         let output = draw_window(&mut app, &ctx, &job.id, size, vec![]);
         text_rect(&output, "Video segments (1 / 5 complete)");
         text_rect(&output, "Video · Completed");
-        text_rect(&output, "Audio · Waiting");
+        text_rect(&output, "Audio · Paused (restarts segment)");
         let viewport = egui::Rect::from_min_size(egui::Pos2::ZERO, size);
         assert!(viewport.contains_rect(text_rect(&output, "Video segments (1 / 5 complete)")));
         let window = app.download_status.windows.get_mut(&job.id).unwrap();
@@ -1088,7 +1088,7 @@ fn video_status_shows_media_parts_instead_of_a_single_file_range() {
         });
         let output = draw_window(&mut app, &ctx, &job.id, size, vec![]);
         text_rect(&output, "Video · Downloading");
-        text_rect(&output, "1 connection · Segment 2 / 5 · 256.0 KB");
+        text_rect(&output, "1 active connection");
         let window = app.download_status.windows.get_mut(&job.id).unwrap();
         window.live_media.as_mut().unwrap().total = None;
         let current = window.job.as_ref().unwrap();
@@ -1097,7 +1097,33 @@ fn video_status_shows_media_parts_instead_of_a_single_file_range() {
             (262_144, None, "Downloading")
         );
         let output = draw_window(&mut app, &ctx, &job.id, size, vec![]);
-        text_rect(&output, "1 connection · Segment 2 / 5 · 256.0 KB");
+        text_rect(&output, "1 active connection");
+        let window = app.download_status.windows.get_mut(&job.id).unwrap();
+        let first = window.live_media.as_mut().unwrap();
+        first.state = SegmentState::Verifying;
+        window.live_media_parts = vec![
+            *first,
+            download_engine::transfer_activity::MediaSnapshot {
+                index: 2,
+                downloaded: 123,
+                total: Some(1000),
+                state: SegmentState::ReceivingData,
+            },
+            download_engine::transfer_activity::MediaSnapshot {
+                index: 4,
+                downloaded: 456,
+                total: Some(1000),
+                state: SegmentState::ReceivingData,
+            },
+        ];
+        let output = draw_window(&mut app, &ctx, &job.id, size, vec![]);
+        assert!(viewport.contains_rect(text_rect(&output, "2 active connections")));
+        let window = app.download_status.windows.get(&job.id).unwrap();
+        let current = window.job.as_ref().unwrap();
+        assert_eq!(
+            window.media_part(current, current.hls.as_ref().unwrap(), 4),
+            (456, Some(1000), "Downloading")
+        );
         // Long playlists must not create thousands of painted rows or dividers.
         let window = app.download_status.windows.get_mut(&job.id).unwrap();
         let download = window.job.as_mut().unwrap().hls.as_mut().unwrap();

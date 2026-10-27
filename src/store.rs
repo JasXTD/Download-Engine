@@ -15,8 +15,8 @@ pub struct Store {
     pub paths: AppPaths,
     pub activity: crate::transfer_activity::Activity,
     db: PathBuf,
-    // Keep WAL alive across short operations. Clones share this idle connection;
-    // no transaction is held, so other connections can still read and checkpoint.
+    // Keep WAL alive and reuse a connection for frequent progress/quota writes.
+    // No transaction is held between operations; other readers remain independent.
     lifetime_connection: Arc<Mutex<Connection>>,
 }
 impl Store {
@@ -66,6 +66,22 @@ impl Store {
     }
     pub(crate) fn connect(&self) -> Result<Connection> {
         connect_database(&self.db)
+    }
+    pub(crate) fn with_connection<T>(
+        &self,
+        operation: impl FnOnce(&mut Connection) -> Result<T>,
+    ) -> Result<T> {
+        let mut conn = self
+            .lifetime_connection
+            .lock()
+            .map_err(|_| anyhow::anyhow!("Database writer was interrupted"))?;
+        operation(&mut conn)
+    }
+    /// Progress checkpoints must not block a Tokio network worker on SQLite I/O.
+    pub(crate) async fn checkpoint(&self, job: &Job) -> Result<()> {
+        let store = self.clone();
+        let job = job.clone();
+        tokio::task::spawn_blocking(move || store.save(&job)).await?
     }
     /// Acknowledge a handoff only after this durable insert succeeds.
     pub fn enqueue(&self, job: &Job) -> Result<Job> {
@@ -182,10 +198,12 @@ impl Store {
     }
     pub fn save(&self, job: &Job) -> Result<()> {
         job.validate_persisted()?;
-        let count = self.connect()?.execute(
-            "UPDATE jobs SET data=?1 WHERE id=?2",
-            params![serde_json::to_string(job)?, job.id],
-        )?;
+        let data = serde_json::to_string(job)?;
+        let count = self.with_connection(|conn| {
+            Ok(conn
+                .prepare_cached("UPDATE jobs SET data=?1 WHERE id=?2")?
+                .execute(params![data, job.id])?)
+        })?;
         anyhow::ensure!(count == 1, "Download no longer exists");
         Ok(())
     }

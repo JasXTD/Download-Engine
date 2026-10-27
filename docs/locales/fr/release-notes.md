@@ -1,9 +1,9 @@
-## 3.0.2 — 2026-10-27
+## 3.1.0 — 2026-10-27
 
-### Politique de confidentialité
+### Vidéos plus rapides et charge de transfert réduite
 
-Ajout d’une politique publique décrivant l’intégration du navigateur, le stockage local, les cookies de connexion facultatifs, la conservation et la suppression des données, les intégrations tierces et les exigences d’utilisation limitée du Chrome Web Store. Le README et le guide de publication proposent un lien ; les paquets source, extensions, portables et d’installation en incluent une copie. Le fonctionnement des téléchargements et les autorisations restent inchangés.
+Les vidéos téléchargent jusqu’à 4 segments en parallèle en respectant les limites globales ou par site plus basses. La pause, les nouvelles tentatives et le redémarrage conservent tous les segments complets vérifiés, même terminés dans le désordre ; les segments incomplets sont retéléchargés. La fenêtre d’état affiche les segments et connexions actifs. Les écritures en tampon, les mises à jour de progression moins fréquentes et la réutilisation des connexions à la base réduisent la charge. La pause attend toujours la fin des écritures et chaque bloc reçu reste comptabilisé durablement dans le quota.
 
-### Dépôt source et paquets de distribution
+### État d’échec plus clair
 
-L’exécutable FFmpeg n’est plus suivi dans le dépôt source. Le programme d’installation et la version portable continuent de l’inclure avec ses sources correspondantes et les mentions de licence. Les sources FFmpeg restent dans Git ; les instructions de compilation expliquent comment obtenir l’exécutable correspondant.
+L’état d’erreur devient « Échec » ; les détails et tentatives automatiques restent inchangés.

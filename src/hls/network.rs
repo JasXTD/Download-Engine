@@ -8,12 +8,14 @@ use crate::{
 };
 use anyhow::{Context, Result, ensure};
 use reqwest::{Client, Response, Url, header};
-use std::{collections::HashMap, time::Duration};
+use std::{collections::HashMap, sync::Arc, time::Duration};
+use tokio::sync::Mutex;
 use tokio_util::sync::CancellationToken;
 
+#[derive(Clone)]
 pub(crate) struct Network {
     root: Url,
-    clients: HashMap<String, Client>,
+    clients: Arc<Mutex<HashMap<String, Client>>>,
     route: crate::proxy::Route,
     site: Option<SiteHeaders>,
     /// The browser page the stream was found on, sent as an origin-only Referer.
@@ -24,6 +26,7 @@ pub(crate) struct Network {
 /// Headers a site's own video servers require (for example a Referer and the
 /// visitor cookies of the page that listed the video). They are only sent to
 /// that site's domain and its subdomains, never kept on disk.
+#[derive(Clone)]
 pub(crate) struct SiteHeaders {
     pub domain: &'static str,
     pub headers: header::HeaderMap,
@@ -47,7 +50,7 @@ impl Network {
     pub async fn via(source: &str, route: crate::proxy::Route) -> Result<Self> {
         Ok(Self {
             root: validate_url(source)?,
-            clients: HashMap::new(),
+            clients: Arc::new(Mutex::new(HashMap::new())),
             route,
             site: None,
             page: None,
@@ -67,24 +70,24 @@ impl Network {
             self.route.require_public_pinning()?;
         }
         self.public_only = public_only;
-        self.clients.clear();
+        self.clients = Arc::new(Mutex::new(HashMap::new()));
         Ok(self)
     }
     pub(crate) fn public_only(&self) -> bool {
         self.public_only
     }
-    async fn client(&mut self, url: &Url) -> Result<Client> {
+    async fn client(&self, url: &Url) -> Result<Client> {
         let origin = url.origin().ascii_serialization();
-        if let Some(client) = self.clients.get(&origin) {
+        // Share checked/pinned clients across workers. The lock only covers
+        // client creation, never response headers or bodies.
+        let mut clients = self.clients.lock().await;
+        if let Some(client) = clients.get(&origin) {
             return Ok(client.clone());
         }
-        ensure!(
-            self.clients.len() < 64,
-            "Video stream uses too many servers"
-        );
+        ensure!(clients.len() < 64, "Video stream uses too many servers");
         if self.public_only {
             let client = crate::network_scope::public_client(url, &self.route).await?;
-            self.clients.insert(origin, client.clone());
+            clients.insert(origin, client.clone());
             return Ok(client);
         }
         let same_origin = url.origin() == self.root.origin();
@@ -116,11 +119,11 @@ impl Network {
             builder = builder.resolve_to_addrs(&host, &addresses);
         }
         let client = builder.build()?;
-        self.clients.insert(origin, client.clone());
+        clients.insert(origin, client.clone());
         Ok(client)
     }
     pub async fn get(
-        &mut self,
+        &self,
         value: &str,
         range: Option<&Range>,
         cancel: &CancellationToken,
@@ -286,7 +289,7 @@ mod tests {
             "http://reader-fixture.invalid:{}/master.m3u8",
             address.port()
         );
-        let mut network = Network::new(&url)
+        let network = Network::new(&url)
             .await
             .unwrap()
             .with_public_only(true)
@@ -299,7 +302,7 @@ mod tests {
             .resolve("reader-fixture.invalid", address)
             .build()
             .unwrap();
-        network.clients.insert(
+        network.clients.lock().await.insert(
             Url::parse(&url).unwrap().origin().ascii_serialization(),
             client,
         );

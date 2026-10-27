@@ -9,6 +9,7 @@ mod transfer;
 
 use anyhow::{Result, ensure};
 use serde::{Deserialize, Serialize};
+use std::collections::BTreeMap;
 use tokio_util::sync::CancellationToken;
 
 pub(crate) use network::SiteHeaders;
@@ -32,6 +33,9 @@ pub struct Download {
     pub playlist: Playlist,
     #[serde(default)]
     pub completed: Vec<CompletedPart>,
+    /// Verified parts beyond the contiguous prefix. Older saved jobs omit this.
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub completed_ahead: BTreeMap<usize, CompletedPart>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub youtube: Option<crate::youtube::Selection>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -53,10 +57,41 @@ impl Download {
             },
             playlist,
             completed: Vec::new(),
+            completed_ahead: BTreeMap::new(),
             youtube: None,
             bilibili: None,
             tiktok: None,
         }
+    }
+    pub fn completed_count(&self) -> usize {
+        self.completed.len() + self.completed_ahead.len()
+    }
+    pub fn saved_part(&self, index: usize) -> Option<&CompletedPart> {
+        self.completed
+            .get(index)
+            .or_else(|| self.completed_ahead.get(&index))
+    }
+    pub fn saved_bytes(&self) -> u64 {
+        self.completed
+            .iter()
+            .chain(self.completed_ahead.values())
+            .map(|part| part.size)
+            .sum()
+    }
+    pub(crate) fn remember_part(&mut self, index: usize, part: CompletedPart) -> Result<()> {
+        ensure!(
+            index < self.playlist.part_count() && self.saved_part(index).is_none(),
+            "Invalid completed video part"
+        );
+        if index == self.completed.len() {
+            self.completed.push(part);
+            while let Some(next) = self.completed_ahead.remove(&self.completed.len()) {
+                self.completed.push(next);
+            }
+        } else {
+            self.completed_ahead.insert(index, part);
+        }
+        Ok(())
     }
     pub fn validate(&self) -> Result<()> {
         // Version 6 is an indexed DASH download re-resolved from a Bilibili page;
@@ -94,10 +129,15 @@ impl Download {
             "Packed AAC is only supported for reviewed YouTube audio"
         );
         ensure!(
-            self.completed.len() <= self.playlist.part_count(),
+            self.completed.len() <= self.playlist.part_count()
+                && self
+                    .completed_ahead
+                    .keys()
+                    .all(|index| *index > self.completed.len()
+                        && *index < self.playlist.part_count()),
             "Invalid saved HLS progress"
         );
-        for part in &self.completed {
+        for part in self.completed.iter().chain(self.completed_ahead.values()) {
             ensure!(
                 part.size > 0
                     && part.size <= MAX_PART_BYTES

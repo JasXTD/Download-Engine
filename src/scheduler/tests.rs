@@ -1,6 +1,51 @@
 use super::*;
 use crate::{paths::AppPaths, queue::MAIN_QUEUE};
 
+#[test]
+fn restart_clears_both_contiguous_and_out_of_order_video_receipts() {
+    let (_temp, store) = setup();
+    let mut job = add(&store, MAIN_QUEUE, 1).remove(0);
+    job.hls = Some(crate::hls::Download::new(crate::hls::Playlist {
+        public_only: false,
+        source: job.url.clone(),
+        url: job.url.clone(),
+        quality: "Test".into(),
+        bandwidth: None,
+        duration_ms: 3000,
+        sequence: 0,
+        format: crate::hls::Format::TransportStream,
+        parts: (0..3)
+            .map(|index| crate::hls::Part {
+                url: format!("https://example.com/{index}.ts"),
+                range: None,
+                initialization: false,
+            })
+            .collect(),
+        audio: None,
+        dash: None,
+    }));
+    let receipt = crate::hls::CompletedPart {
+        size: 188,
+        sha256: "ab".repeat(32),
+    };
+    let download = job.hls.as_mut().unwrap();
+    download.remember_part(0, receipt.clone()).unwrap();
+    download.remember_part(2, receipt).unwrap();
+    job.downloaded = 376;
+    store.save(&job).unwrap();
+    apply(
+        &store,
+        &mut HashMap::new(),
+        Command::Restart(job.id.clone()),
+    )
+    .unwrap();
+    let restarted = store.get(&job.id).unwrap().unwrap();
+    assert_eq!(restarted.downloaded, 0);
+    let download = restarted.hls.unwrap();
+    assert!(download.completed.is_empty());
+    assert!(download.completed_ahead.is_empty());
+}
+
 #[tokio::test]
 async fn worker_error_never_leaves_an_ownerless_downloading_job() {
     let (_temp, store) = setup();

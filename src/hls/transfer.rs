@@ -1,3 +1,4 @@
+mod parallel;
 use super::{
     CompletedPart, Format, MAX_PART_BYTES, Playlist,
     network::Network,
@@ -17,7 +18,7 @@ use std::{
     path::{Path, PathBuf},
     time::{Duration, Instant},
 };
-use tokio::io::{AsyncReadExt, AsyncSeekExt, AsyncWriteExt};
+use tokio::io::{AsyncReadExt, AsyncSeekExt};
 use tokio_util::sync::CancellationToken;
 
 fn part_path(root: &Path, index: usize) -> PathBuf {
@@ -101,12 +102,12 @@ pub(crate) async fn transfer(
     let parts: Vec<_> = playlist
         .parts
         .iter()
-        .map(|p| (p, playlist.format))
+        .map(|p| (p.clone(), playlist.format))
         .chain(
             playlist
                 .audio
                 .iter()
-                .flat_map(|a| a.parts.iter().map(|p| (p, a.format))),
+                .flat_map(|a| a.parts.iter().map(|p| (p.clone(), a.format))),
         )
         .collect();
     job.downloaded = 0;
@@ -114,7 +115,10 @@ pub(crate) async fn transfer(
         .activity
         .set(&job.id, crate::transfer_activity::Phase::CheckingSaved);
     job.total = None;
-    for (index, completed) in job.hls.as_ref().unwrap().completed.iter().enumerate() {
+    for index in 0..parts.len() {
+        let Some(completed) = job.hls.as_ref().unwrap().saved_part(index) else {
+            continue;
+        };
         let mut file = download_file::read_part(&part_path(root, index))
             .await
             .context("Saved HLS segment is missing. Restart this download.")?;
@@ -141,86 +145,8 @@ pub(crate) async fn transfer(
         job.downloaded += completed.size;
     }
     store.save(job)?;
-    let start = job.hls.as_ref().unwrap().completed.len();
-    store
-        .activity
-        .set(&job.id, crate::transfer_activity::Phase::Downloading);
-    for (index, (part, format)) in parts.iter().enumerate().skip(start) {
-        if cancel.is_cancelled() {
-            return Ok(None);
-        }
-        limiter.check_quota().await?;
-        let mut activity = MediaSnapshot {
-            index,
-            downloaded: 0,
-            total: part.range.as_ref().map(|range| range.length),
-            state: SegmentState::SendingGet,
-        };
-        store.activity.set_media(&job.id, activity);
-        let mut response = network.get(&part.url, part.range.as_ref(), cancel).await?;
-        if let Some(dash) = &playlist.dash {
-            for index in dash.video_index.iter().chain(&dash.audio_index) {
-                index.check_response(part, &response)?;
-            }
-        }
-        let expected = part
-            .range
-            .as_ref()
-            .map(|r| r.length)
-            .or(response.content_length());
-        ensure!(
-            expected.is_none_or(|size| size > 0 && size <= MAX_PART_BYTES),
-            "HLS segment exceeds 256 MiB or is empty"
-        );
-        activity.total = expected;
-        activity.state = SegmentState::ReceivingData;
-        store.activity.set_media(&job.id, activity);
-        let path = part_path(root, index);
-        let mut file = download_file::fresh(&path).await?;
-        let mut received = 0u64;
-        let mut hash = Sha256::new();
-        let mut checkpoint = Instant::now();
-        let result: Result<bool> = async {
-            loop {
-                if expected != Some(received) { limiter.check_quota().await?; }
-                let chunk = tokio::select! { _=cancel.cancelled()=>return Ok(false), result=engine::network_wait(response.chunk())=>result? };
-                let Some(chunk) = chunk else { break; };
-                limiter.record_payload(chunk.len()).await?;
-                received += chunk.len() as u64;
-                ensure!(received <= expected.unwrap_or(MAX_PART_BYTES), "HLS segment is larger than declared or exceeds 256 MiB");
-                let mut remaining = chunk.as_ref();
-                while !remaining.is_empty() {
-                    let Some(n) = limiter.acquire(&job.id,remaining.len(),cancel).await else { return Ok(false); };
-                    file.write_all(&remaining[..n]).await?;
-                    hash.update(&remaining[..n]);
-                    job.downloaded += n as u64;
-                    activity.downloaded += n as u64;
-                    store.activity.set_media(&job.id, activity);
-                    remaining = &remaining[n..];
-                    if checkpoint.elapsed() >= Duration::from_millis(500) { store.save(job)?; checkpoint = Instant::now(); }
-                }
-            }
-            if expected.is_some_and(|size| size != received) { return Err(crate::retry::incomplete("HLS segment ended before all bytes arrived.")); }
-            ensure!(received > 0, "HLS segment is empty");
-            Ok(true)
-        }.await;
-        // Finish buffered writes on cancellation or failure before another
-        // worker can restart this segment. Only complete segments are resumable.
-        file.sync_all().await?;
-        drop(file);
-        if !result? {
-            return Ok(None);
-        }
-        activity.state = SegmentState::Verifying;
-        store.activity.set_media(&job.id, activity);
-        validate_media(&path, *format, part.initialization, index == 0, cancel).await?;
-        job.hls.as_mut().unwrap().completed.push(CompletedPart {
-            size: received,
-            sha256: format!("{:x}", hash.finalize()),
-        });
-        store.save(job)?;
-        activity.state = SegmentState::Completed;
-        store.activity.set_media(&job.id, activity);
+    if !parallel::run(network, store, job, root, cancel, limiter, parts).await? {
+        return Ok(None);
     }
     job.total = Some(job.downloaded);
     store.save(job)?;
@@ -293,14 +219,15 @@ async fn validate_media(
                 "HLS segment is not MPEG-TS. Packed audio and other containers are not supported."
             );
             let mut buffer = vec![0; 188 * 256];
+            let mut remaining = size;
             loop {
                 ensure!(!cancel.is_cancelled(), "HLS download cancelled");
-                let count =
-                    (size - file.stream_position().await?).min(buffer.len() as u64) as usize;
+                let count = remaining.min(buffer.len() as u64) as usize;
                 if count == 0 {
                     break;
                 }
                 file.read_exact(&mut buffer[..count]).await?;
+                remaining -= count as u64;
                 ensure!(
                     buffer[..count].chunks(188).all(|packet| packet[0] == 0x47),
                     "Invalid MPEG-TS segment"

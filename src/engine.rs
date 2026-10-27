@@ -433,7 +433,7 @@ async fn single(
     cancel: &CancellationToken,
     limiter: &Limiter,
 ) -> Result<bool> {
-    let mut file = download_file::fresh(&root.join("whole.part")).await?;
+    let mut file = download_file::buffered(download_file::fresh(&root.join("whole.part")).await?);
     store.activity.set(&job.id, Phase::Downloading);
     let mut checkpoint = std::time::Instant::now();
     let outcome = async {
@@ -466,7 +466,7 @@ async fn single(
                 remaining = &remaining[n..];
                 job.downloaded += n as u64;
                 if checkpoint.elapsed() >= Duration::from_millis(500) {
-                    store.save(job)?;
+                    store.checkpoint(job).await?;
                     checkpoint = std::time::Instant::now();
                 }
             }
@@ -483,7 +483,7 @@ async fn single(
     }
     .await;
     // Quota holds, like manual pauses, must release ownership only after I/O.
-    file.sync_all().await?;
+    download_file::flush_and_sync(&mut file).await?;
     outcome
 }
 async fn finalize(

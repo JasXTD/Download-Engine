@@ -9,11 +9,16 @@ impl Window {
         download: &Download,
         index: usize,
     ) -> (u64, Option<u64>, &'static str) {
-        if let Some(part) = download.completed.get(index) {
+        if let Some(part) = download.saved_part(index) {
             return (part.size, Some(part.size), tr("Completed"));
         }
         if job.status == Status::Downloading
-            && let Some(live) = self.live_media.filter(|part| part.index == index)
+            && let Some(live) = self
+                .live_media_parts
+                .iter()
+                .find(|part| part.index == index)
+                .copied()
+                .or_else(|| self.live_media.filter(|part| part.index == index))
         {
             return (
                 live.downloaded,
@@ -21,24 +26,14 @@ impl Window {
                 super::segment_label(live.state),
             );
         }
-        let state = if index == download.completed.len() {
-            match job.status {
-                Status::Paused => tr("Paused (restarts segment)"),
-                Status::Failed => tr("Interrupted"),
-                _ => tr("Waiting"),
-            }
-        } else {
-            tr("Waiting")
+        let state = match job.status {
+            Status::Paused => tr("Paused (restarts segment)"),
+            Status::Failed => tr("Interrupted"),
+            _ => tr("Waiting"),
         };
-        let received = if index == download.completed.len()
-            && matches!(job.status, Status::Paused | Status::Failed)
-        {
-            let saved: u64 = download.completed.iter().map(|part| part.size).sum();
-            job.downloaded.saturating_sub(saved)
-        } else {
-            0
-        };
-        (received, None, state)
+        // A paused job's aggregate includes several unfinished workers. Their
+        // bytes cannot be attributed to one segment and are fetched again.
+        (0, None, state)
     }
 
     pub(super) fn draw_media_details(
@@ -49,7 +44,12 @@ impl Window {
         p: Palette,
     ) {
         let count = download.playlist.part_count();
-        let completed = download.completed.len();
+        let completed = download.completed_count();
+        let live_parts = if self.live_media_parts.is_empty() {
+            self.live_media.into_iter().collect::<Vec<_>>()
+        } else {
+            self.live_media_parts.clone()
+        };
         ui.label(
             RichText::new(tf!(
                 "Video segments ({completed} / {count} complete)",
@@ -66,16 +66,26 @@ impl Window {
         let inner = rect.shrink(1.0);
         if count > 0 {
             let unit = inner.width() / count as f32;
-            let end = inner.left() + unit * completed as f32;
-            if completed > 0 {
+            let end = inner.left() + unit * download.completed.len() as f32;
+            if !download.completed.is_empty() {
                 painter.rect_filled(
                     Rect::from_min_max(inner.min, pos2(end, inner.bottom())),
                     0,
                     p.blue,
                 );
             }
-            if let Some(live) = self.live_media.filter(|part| {
-                job.status == Status::Downloading && part.index >= completed && part.index < count
+            for index in download.completed_ahead.keys() {
+                let left = inner.left() + unit * *index as f32;
+                painter.rect_filled(
+                    Rect::from_min_max(pos2(left, inner.top()), pos2(left + unit, inner.bottom())),
+                    0,
+                    p.blue,
+                );
+            }
+            for live in live_parts.iter().filter(|part| {
+                job.status == Status::Downloading
+                    && download.saved_part(part.index).is_none()
+                    && part.index < count
             }) {
                 let left = inner.left() + unit * live.index as f32;
                 // Unknown byte lengths get an outlined active segment, never a
@@ -122,27 +132,31 @@ impl Window {
             }
         }
         painter.rect_stroke(rect, 3, Stroke::new(1.0, p.border), StrokeKind::Inside);
-        if let Some(live) = self.live_media.filter(|part| {
-            job.status == Status::Downloading
-                && part.index < count
-                && matches!(
-                    part.state,
-                    SegmentState::SendingGet | SegmentState::ReceivingData
-                )
-        }) {
+        let active = live_parts
+            .iter()
+            .filter(|part| {
+                job.status == Status::Downloading
+                    && part.index < count
+                    && download.saved_part(part.index).is_none()
+                    && matches!(
+                        part.state,
+                        SegmentState::SendingGet | SegmentState::ReceivingData
+                    )
+            })
+            .count();
+        if active > 0 {
             ui.label(
-                RichText::new(format!(
-                    "1 connection · Segment {} / {} · {}",
-                    live.index + 1,
-                    count,
-                    bytes(live.downloaded)
-                ))
+                RichText::new(if active == 1 {
+                    tr("1 active connection").to_owned()
+                } else {
+                    tf!("{} active connections", active)
+                })
                 .size(11.0)
                 .color(p.text),
             );
         }
-        ui.label(RichText::new(tr("Video segments download one at a time.")).size(11.0).color(p.muted))
-            .on_hover_text(tr("The per-file connection setting applies to direct HTTP files. YouTube, HLS and DASH currently fetch video and audio segments sequentially. The map follows playlist order; segment widths do not represent bytes."));
+        ui.label(RichText::new(tr("Video segments download in parallel (up to 4).")).size(11.0).color(p.muted))
+            .on_hover_text(tr("Verified parts are kept on pause. Segment widths represent playlist order, not byte size."));
 
         egui::Frame::new()
             .fill(p.background)

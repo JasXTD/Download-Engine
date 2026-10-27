@@ -43,7 +43,7 @@ impl Desktop {
         let response=form_dialog::modal("download-connections",p).show(ctx,|ui| {
             ui.set_width(520.0);
             close=form_dialog::title(ui,tr("Download connections"),form_dialog::Icon::Symbol("\u{e968}"),p,true);
-            ui.label(tr("Choose the maximum connections used by each HTTP/HTTPS file."));
+            ui.label(tr("Choose the maximum connections used by each HTTP/HTTPS download."));
             egui::ScrollArea::vertical().max_height((ctx.content_rect().height()-210.0).max(180.0)).show(ui,|ui| {
                 ui.horizontal(|ui| {ui.label(tr("Default per file")); limit_picker(ui,"default-connections",&mut form.draft.default_connections);});
                 ui.label(RichText::new(tr("Small files and servers without range support use one connection.")).small().color(p.muted));
@@ -72,7 +72,7 @@ impl Desktop {
                 }
                 ui.label(RichText::new(tr("Use 1 for sites that reject parallel requests. More connections do not always improve speed.")).small().color(p.muted));
                 ui.label(RichText::new(tr("Rules match the file's hostname. For redirects, the stricter matching rule wins. These limits are per file; queue limits control simultaneous files.")).small().color(p.muted));
-                ui.label(RichText::new(tr("Pause and resume active files to apply changes. YouTube, HLS and DASH use one connection to fetch segments in order. FTP uses its own transfer rules.")).small().color(p.muted));
+                ui.label(RichText::new(tr("Pause and resume active downloads to apply changes. Video downloads use up to 4 connections and respect lower limits. FTP uses its own transfer rules.")).small().color(p.muted));
                 if let Some(error)=&form.error {ui.colored_label(p.warning,error);}
             });
             save=form_dialog::footer(ui,tr("Save settings"),None,p);

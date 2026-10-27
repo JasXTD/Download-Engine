@@ -50,6 +50,7 @@ struct Window {
     phase: Option<Phase>,
     live_segments: Vec<SegmentSnapshot>,
     live_media: Option<download_engine::transfer_activity::MediaSnapshot>,
+    live_media_parts: Vec<download_engine::transfer_activity::MediaSnapshot>,
     disk_segments: Vec<u64>,
     error: Option<String>,
     notice: Option<String>,
@@ -78,6 +79,7 @@ impl Window {
             phase: None,
             live_segments: Vec::new(),
             live_media: None,
+            live_media_parts: Vec::new(),
             disk_segments: Vec::new(),
             error: None,
             notice: None,
@@ -124,15 +126,19 @@ impl Window {
             Ok((mut job, queue_id, queue, running, limits)) => {
                 self.phase = store.activity.get(&previous.id);
                 self.live_segments = store.activity.segments(&previous.id);
-                self.live_media = store.activity.media(&previous.id);
+                self.live_media_parts = store.activity.media_parts(&previous.id);
+                self.live_media = self.live_media_parts.first().copied();
                 if let Some(ref mut current) = job
                     && current.status == Status::Downloading
                     && let Some(download) = &current.hls
-                    && let Some(media) = self.live_media
-                    && media.index >= download.completed.len()
                 {
-                    let saved: u64 = download.completed.iter().map(|part| part.size).sum();
-                    current.downloaded = current.downloaded.max(saved + media.downloaded);
+                    let live: u64 = self
+                        .live_media_parts
+                        .iter()
+                        .filter(|part| download.saved_part(part.index).is_none())
+                        .map(|part| part.downloaded)
+                        .sum();
+                    current.downloaded = current.downloaded.max(download.saved_bytes() + live);
                 }
                 if let Some(ref mut current) = job
                     && current.status == Status::Downloading
@@ -1659,7 +1665,10 @@ impl Desktop {
                     sha256: "0".repeat(64),
                 })
                 .collect();
-            job.downloaded = 3 * 1_048_576 + 524_288;
+            download
+                .completed_ahead
+                .insert(4, download.completed[0].clone());
+            job.downloaded = 4 * 1_048_576 + 524_288;
             job.hls = Some(download);
         }
         self.store.save(&job).unwrap();
@@ -1689,12 +1698,15 @@ impl Desktop {
             if job.hls.is_some() {
                 self.store.activity.seed_media_preview(
                     &job.id,
-                    download_engine::transfer_activity::MediaSnapshot {
-                        index: 3,
-                        downloaded: 524_288,
-                        total: (mode != "status-media-unknown").then_some(1_048_576),
-                        state: SegmentState::ReceivingData,
-                    },
+                    [3, 5, 6]
+                        .into_iter()
+                        .map(|index| download_engine::transfer_activity::MediaSnapshot {
+                            index,
+                            downloaded: 524_288 / (index as u64 - 2),
+                            total: (mode != "status-media-unknown").then_some(1_048_576),
+                            state: SegmentState::ReceivingData,
+                        })
+                        .collect(),
                 );
             }
         }

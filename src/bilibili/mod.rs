@@ -510,7 +510,7 @@ pub(crate) async fn refresh(
         current.selection == *selection,
         "Bilibili selection changed. Preview this video again."
     );
-    if !download.completed.is_empty() {
+    if download.completed_count() != 0 {
         check_refresh(&download.playlist, &current.playlist)?;
     }
     Ok(current.playlist)

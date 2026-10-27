@@ -583,7 +583,7 @@ The saved `event` (Lua) or `$Event` (PowerShell) input describes this run:
 | App startup | `trigger = startup`, empty `downloads`; once on the next launch, then each launch while enabled. Saving it in an open app does not fire it immediately. |
 | Every interval | `trigger = interval`, empty `downloads`; 1–10,080 minutes from save. Missed intervals while busy coalesce into one run; missed intervals while closed are skipped. |
 | Download completed | `trigger = download_completed`, `queue` filter or null, and up to 100 `downloads` with `id`, `queue`, `name`, `saved_path`. Events wait while the script is busy and are delivered in successive batches. Removed records can have null name/path. |
-| Download failed | `trigger = download_failed`, `queue` filter or null, and up to 100 `downloads` with `id`, `queue`, `name`, `error` and `attempts` (how many times Download Engine tried). Fires when a download reaches Needs attention after its automatic retries; temporary errors that are retried automatically do not count. The address is not included. |
+| Download failed | `trigger = download_failed`, `queue` filter or null, and up to 100 `downloads` with `id`, `queue`, `name`, `error` and `attempts` (how many times Download Engine tried). Fires when a download reaches Failed after its automatic retries; temporary errors that are retried automatically do not count. The address is not included. |
 | Queue completed | `trigger = queue_completed`, `queue` ID, empty `downloads`. Runs after all remaining files in a nonempty queue complete. Use `Invoke-DownloadEngine list` and filter by queue for its complete file list. |
 
 Automatic triggers are off on new scripts. Choose a trigger, enable it and save.

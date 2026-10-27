@@ -67,9 +67,9 @@ Pause keeps the window open. Resume or Start immediately starts only that file, 
 
 Unknown file sizes cannot show a percentage or time estimate. Video progress counts completed segments, so its percentage may advance in steps. Receiving every byte is followed by assembly, verification or merging; Completed appears only when the file is ready.
 
-Show details displays a position map and per-connection progress for direct files. For YouTube, HLS and DASH, it shows the actual video and audio segments, completed count, and the current segment's received bytes. The video map follows playlist order; each segment has equal width because its final byte size may be unknown. Hover for details or scroll the segment list. Resume keeps verified complete segments and restarts the unfinished segment.
+Show details displays a position map and per-connection progress for direct files. For YouTube, HLS and DASH, it shows the video and audio segments, completed count, active connections, and each active segment's received bytes. The video map follows playlist order; each segment has equal width because its final byte size may be unknown. Hover for details or scroll the segment list. Resume keeps every verified complete segment, including ones that finished out of order, and restarts unfinished segments.
 
-YouTube, HLS and DASH currently download segments one at a time, so one connection is expected. Preferences → Connection → Download connections controls direct HTTP/HTTPS files only; those can use parallel ranges when the server supports them and provides a strong file validator. Video segments and simultaneous network connections are different counts.
+Video downloads use up to four parallel connections after the first segment or initialization data has been verified. Preferences → Connection → Download connections also controls video downloads: a lower global or matching website limit reduces video concurrency, while values above four do not raise its safety cap. Pause and resume to apply changes to a running download. Direct HTTP/HTTPS files continue to use parallel ranges when the server supports them and provides a strong file validator. Video segments and simultaneous network connections are different counts. Server limits, disk speed, quotas and configured speed limits can still constrain throughput.
 
 ### Find a fresh link using your browser
 
@@ -381,7 +381,7 @@ Keep the app open or in the tray for triggers to run. Saving or re-enabling star
 
 ### Retry failed downloads and remember between runs
 
-Create a Lua script named Retry failed. Paste this example, set Trigger to Download failed, choose All queues, tick Automatic trigger enabled, then Save script. It runs when a download ends up in Needs attention, after Download Engine's own automatic retries.
+Create a Lua script named Retry failed. Paste this example, set Trigger to Download failed, choose All queues, tick Automatic trigger enabled, then Save script. It runs when a download ends up in Failed, after Download Engine's own automatic retries.
 
 ```lua
 -- Example: retry

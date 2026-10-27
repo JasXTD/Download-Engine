@@ -146,8 +146,8 @@ fn read_usage(row: &rusqlite::Row<'_>, column: usize) -> rusqlite::Result<u64> {
         .map_err(|_| rusqlite::Error::IntegralValueOutOfRange(column, value))
 }
 fn write(conn: &Connection, status: &Status) -> Result<()> {
-    let n = conn.execute(
-        "UPDATE data_quotas SET hourly_limit=?1,daily_limit=?2,hourly_used=?3,daily_used=?4,hour_start=?5,day_start=?6 WHERE id=1",
+    let n = conn.prepare_cached(
+        "UPDATE data_quotas SET hourly_limit=?1,daily_limit=?2,hourly_used=?3,daily_used=?4,hour_start=?5,day_start=?6 WHERE id=1")?.execute(
         params![status.limits.hourly.map(|n| n as i64), status.limits.daily.map(|n| n as i64),
             i64::try_from(status.hourly_used)?, i64::try_from(status.daily_used)?, status.hour_start, status.day_start],
     )?;
@@ -159,53 +159,56 @@ impl Store {
         self.quota_status_at(chrono::Utc::now().timestamp())
     }
     pub fn quota_status_at(&self, now: i64) -> Result<Status> {
-        let mut conn = self.connect()?;
-        let tx = conn.transaction_with_behavior(TransactionBehavior::Immediate)?;
-        let mut status = read(&tx)?;
-        let previous = status.clone();
-        status.advance(now)?;
-        if status != previous {
-            write(&tx, &status)?;
-        }
-        tx.commit()?;
-        Ok(status)
+        self.with_connection(|conn| {
+            let tx = conn.transaction_with_behavior(TransactionBehavior::Immediate)?;
+            let mut status = read(&tx)?;
+            let previous = status.clone();
+            status.advance(now)?;
+            if status != previous {
+                write(&tx, &status)?;
+            }
+            tx.commit()?;
+            Ok(status)
+        })
     }
     pub fn set_quota_limits_at(&self, limits: Limits, now: i64) -> Result<Status> {
         limits.validate()?;
-        let mut conn = self.connect()?;
-        let tx = conn.transaction_with_behavior(TransactionBehavior::Immediate)?;
-        let mut status = read(&tx)?;
-        status.limits = limits;
-        status.advance(now)?;
-        write(&tx, &status)?;
-        tx.commit()?;
-        Ok(status)
+        self.with_connection(|conn| {
+            let tx = conn.transaction_with_behavior(TransactionBehavior::Immediate)?;
+            let mut status = read(&tx)?;
+            status.limits = limits;
+            status.advance(now)?;
+            write(&tx, &status)?;
+            tx.commit()?;
+            Ok(status)
+        })
     }
     /// Account received payload before processing it, including bytes subsequently
     /// discarded after cancellation, a failed write, or a retry. Never refund data.
     pub fn record_quota_bytes_at(&self, bytes: u64, now: i64) -> Result<Status> {
-        let mut conn = self.connect()?;
-        let tx = conn.transaction_with_behavior(TransactionBehavior::Immediate)?;
-        let mut status = read(&tx)?;
-        let previous = status.clone();
-        status.advance(now)?;
-        if status.limits.enabled() {
-            status.hourly_used = status
-                .hourly_used
-                .checked_add(bytes)
-                .filter(|n| *n <= i64::MAX as u64)
-                .context("Hourly usage overflow")?;
-            status.daily_used = status
-                .daily_used
-                .checked_add(bytes)
-                .filter(|n| *n <= i64::MAX as u64)
-                .context("Daily usage overflow")?;
-        }
-        if status != previous {
-            write(&tx, &status)?;
-        }
-        tx.commit()?;
-        Ok(status)
+        self.with_connection(|conn| {
+            let tx = conn.transaction_with_behavior(TransactionBehavior::Immediate)?;
+            let mut status = read(&tx)?;
+            let previous = status.clone();
+            status.advance(now)?;
+            if status.limits.enabled() {
+                status.hourly_used = status
+                    .hourly_used
+                    .checked_add(bytes)
+                    .filter(|n| *n <= i64::MAX as u64)
+                    .context("Hourly usage overflow")?;
+                status.daily_used = status
+                    .daily_used
+                    .checked_add(bytes)
+                    .filter(|n| *n <= i64::MAX as u64)
+                    .context("Daily usage overflow")?;
+            }
+            if status != previous {
+                write(&tx, &status)?;
+            }
+            tx.commit()?;
+            Ok(status)
+        })
     }
 }
 

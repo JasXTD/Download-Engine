@@ -33,7 +33,7 @@ impl Status {
             Self::Downloading => "Downloading",
             Self::Paused => "Paused",
             Self::Complete => "Complete",
-            Self::Failed => "Needs attention",
+            Self::Failed => "Failed",
         }
     }
 }

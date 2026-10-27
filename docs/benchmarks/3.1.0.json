@@ -1,0 +1,1163 @@
+{
+  "date": "2026-10-27",
+  "baseline": "3.0.2",
+  "candidate": "3.1.0",
+  "cpu": "AMD Ryzen 7 3800X",
+  "compiler": "rustc 1.99.0 (b940084d7 2026-09-28)",
+  "platform": "x86_64-pc-windows-msvc",
+  "scope": "Release-mode loopback; shared Windows workstation; other Cargo test processes remained active; not an Internet speed guarantee.",
+  "blocks": [
+    {
+      "Trial": "before-1",
+      "Start": "2026-10-27T00:36:04.9420991Z",
+      "Seconds": 28.7656893,
+      "OtherCargoProcessesAtStart": 4,
+      "OtherCargoProcessesAtEnd": 4
+    },
+    {
+      "Trial": "after-1",
+      "Start": "2026-10-27T00:36:33.7613996Z",
+      "Seconds": 14.106649,
+      "OtherCargoProcessesAtStart": 4,
+      "OtherCargoProcessesAtEnd": 4
+    },
+    {
+      "Trial": "after-2",
+      "Start": "2026-10-27T00:36:47.8918087Z",
+      "Seconds": 12.5185379,
+      "OtherCargoProcessesAtStart": 4,
+      "OtherCargoProcessesAtEnd": 4
+    },
+    {
+      "Trial": "before-2",
+      "Start": "2026-10-27T00:37:00.4270774Z",
+      "Seconds": 28.1519363,
+      "OtherCargoProcessesAtStart": 4,
+      "OtherCargoProcessesAtEnd": 4
+    },
+    {
+      "Trial": "before-3",
+      "Start": "2026-10-27T00:37:28.5943406Z",
+      "Seconds": 28.3435956,
+      "OtherCargoProcessesAtStart": 4,
+      "OtherCargoProcessesAtEnd": 4
+    },
+    {
+      "Trial": "after-3",
+      "Start": "2026-10-27T00:37:56.9700240Z",
+      "Seconds": 14.2317185,
+      "OtherCargoProcessesAtStart": 4,
+      "OtherCargoProcessesAtEnd": 4
+    }
+  ],
+  "rows": [
+    {
+      "scenario": "video",
+      "before": {
+        "n": 9,
+        "median_ms": 3257.2434000000003,
+        "min_ms": 3145.532,
+        "max_ms": 5455.2551,
+        "peak_connections": [
+          1
+        ]
+      },
+      "after": {
+        "n": 9,
+        "median_ms": 1063.8726000000001,
+        "min_ms": 1011.352,
+        "max_ms": 1598.0948,
+        "peak_connections": [
+          4
+        ]
+      },
+      "speedup": 3.061685581525457,
+      "time_reduction_percent": 67.33825295340226
+    },
+    {
+      "scenario": "video_quota",
+      "before": {
+        "n": 9,
+        "median_ms": 2895.4047,
+        "min_ms": 2685.745,
+        "max_ms": 3484.4282,
+        "peak_connections": [
+          1
+        ]
+      },
+      "after": {
+        "n": 9,
+        "median_ms": 877.8023000000001,
+        "min_ms": 787.5572,
+        "max_ms": 1391.2420000000002,
+        "peak_connections": [
+          4
+        ]
+      },
+      "speedup": 3.298470168054925,
+      "time_reduction_percent": 69.68291513790801
+    },
+    {
+      "scenario": "file",
+      "before": {
+        "n": 9,
+        "median_ms": 288.16560000000004,
+        "min_ms": 261.5292,
+        "max_ms": 1147.7194,
+        "peak_connections": [
+          1
+        ]
+      },
+      "after": {
+        "n": 9,
+        "median_ms": 275.1764,
+        "min_ms": 251.51170000000002,
+        "max_ms": 851.8207,
+        "peak_connections": [
+          1
+        ]
+      },
+      "speedup": 1.0472031758537435,
+      "time_reduction_percent": 4.507547049335536
+    },
+    {
+      "scenario": "ranges",
+      "before": {
+        "n": 9,
+        "median_ms": 267.0322,
+        "min_ms": 241.1947,
+        "max_ms": 959.8219,
+        "peak_connections": [
+          4,
+          3
+        ]
+      },
+      "after": {
+        "n": 9,
+        "median_ms": 267.60650000000004,
+        "min_ms": 233.0467,
+        "max_ms": 1208.0616,
+        "peak_connections": [
+          4
+        ]
+      },
+      "speedup": 0.9978539385254093,
+      "time_reduction_percent": -0.215067695955784
+    },
+    {
+      "scenario": "ranges_quota",
+      "before": {
+        "n": 9,
+        "median_ms": 543.1662,
+        "min_ms": 441.524,
+        "max_ms": 1500.3500000000001,
+        "peak_connections": [
+          4
+        ]
+      },
+      "after": {
+        "n": 9,
+        "median_ms": 309.8669,
+        "min_ms": 291.1375,
+        "max_ms": 1219.8500999999999,
+        "peak_connections": [
+          4
+        ]
+      },
+      "speedup": 1.752901649062872,
+      "time_reduction_percent": 42.95173374190073
+    }
+  ],
+  "samples": [
+    {
+      "bytes": 12320768,
+      "mib_per_second": 3.6009004641545377,
+      "milliseconds": 3263.0726999999997,
+      "peak_connections": 1,
+      "sample": 0,
+      "scenario": "video",
+      "sha256_verified": true,
+      "build": "before",
+      "trial": "before-1"
+    },
+    {
+      "bytes": 12320768,
+      "mib_per_second": 2.153886442450693,
+      "milliseconds": 5455.2551,
+      "peak_connections": 1,
+      "sample": 1,
+      "scenario": "video",
+      "sha256_verified": true,
+      "build": "before",
+      "trial": "before-1"
+    },
+    {
+      "bytes": 12320768,
+      "mib_per_second": 3.6073447873131004,
+      "milliseconds": 3257.2434000000003,
+      "peak_connections": 1,
+      "sample": 2,
+      "scenario": "video",
+      "sha256_verified": true,
+      "build": "before",
+      "trial": "before-1"
+    },
+    {
+      "bytes": 12320768,
+      "mib_per_second": 3.530319556113543,
+      "milliseconds": 3328.3106,
+      "peak_connections": 1,
+      "sample": 0,
+      "scenario": "video_quota",
+      "sha256_verified": true,
+      "build": "before",
+      "trial": "before-1"
+    },
+    {
+      "bytes": 12320768,
+      "mib_per_second": 4.05815463378919,
+      "milliseconds": 2895.4047,
+      "peak_connections": 1,
+      "sample": 1,
+      "scenario": "video_quota",
+      "sha256_verified": true,
+      "build": "before",
+      "trial": "before-1"
+    },
+    {
+      "bytes": 12320768,
+      "mib_per_second": 4.260139567248134,
+      "milliseconds": 2758.1256,
+      "peak_connections": 1,
+      "sample": 2,
+      "scenario": "video_quota",
+      "sha256_verified": true,
+      "build": "before",
+      "trial": "before-1"
+    },
+    {
+      "bytes": 33554432,
+      "mib_per_second": 111.0472589372222,
+      "milliseconds": 288.16560000000004,
+      "peak_connections": 1,
+      "sample": 0,
+      "scenario": "file",
+      "sha256_verified": true,
+      "build": "before",
+      "trial": "before-1"
+    },
+    {
+      "bytes": 33554432,
+      "mib_per_second": 30.535452519184375,
+      "milliseconds": 1047.9622,
+      "peak_connections": 1,
+      "sample": 1,
+      "scenario": "file",
+      "sha256_verified": true,
+      "build": "before",
+      "trial": "before-1"
+    },
+    {
+      "bytes": 33554432,
+      "mib_per_second": 122.35727406346977,
+      "milliseconds": 261.5292,
+      "peak_connections": 1,
+      "sample": 2,
+      "scenario": "file",
+      "sha256_verified": true,
+      "build": "before",
+      "trial": "before-1"
+    },
+    {
+      "bytes": 33554432,
+      "mib_per_second": 114.46374629110635,
+      "milliseconds": 279.5645,
+      "peak_connections": 4,
+      "sample": 0,
+      "scenario": "ranges",
+      "sha256_verified": true,
+      "build": "before",
+      "trial": "before-1"
+    },
+    {
+      "bytes": 33554432,
+      "mib_per_second": 123.86594917315608,
+      "milliseconds": 258.3438,
+      "peak_connections": 4,
+      "sample": 1,
+      "scenario": "ranges",
+      "sha256_verified": true,
+      "build": "before",
+      "trial": "before-1"
+    },
+    {
+      "bytes": 33554432,
+      "mib_per_second": 120.1808872579341,
+      "milliseconds": 266.26529999999997,
+      "peak_connections": 4,
+      "sample": 2,
+      "scenario": "ranges",
+      "sha256_verified": true,
+      "build": "before",
+      "trial": "before-1"
+    },
+    {
+      "bytes": 33554432,
+      "mib_per_second": 31.831085163471524,
+      "milliseconds": 1005.3065999999999,
+      "peak_connections": 4,
+      "sample": 0,
+      "scenario": "ranges_quota",
+      "sha256_verified": true,
+      "build": "before",
+      "trial": "before-1"
+    },
+    {
+      "bytes": 33554432,
+      "mib_per_second": 72.47624138212191,
+      "milliseconds": 441.524,
+      "peak_connections": 4,
+      "sample": 1,
+      "scenario": "ranges_quota",
+      "sha256_verified": true,
+      "build": "before",
+      "trial": "before-1"
+    },
+    {
+      "bytes": 33554432,
+      "mib_per_second": 66.90417649321759,
+      "milliseconds": 478.296,
+      "peak_connections": 4,
+      "sample": 2,
+      "scenario": "ranges_quota",
+      "sha256_verified": true,
+      "build": "before",
+      "trial": "before-1"
+    },
+    {
+      "bytes": 12320768,
+      "mib_per_second": 11.536581321165366,
+      "milliseconds": 1018.4993,
+      "peak_connections": 4,
+      "sample": 0,
+      "scenario": "video",
+      "sha256_verified": true,
+      "build": "after",
+      "trial": "after-1"
+    },
+    {
+      "bytes": 12320768,
+      "mib_per_second": 11.618111201638994,
+      "milliseconds": 1011.352,
+      "peak_connections": 4,
+      "sample": 1,
+      "scenario": "video",
+      "sha256_verified": true,
+      "build": "after",
+      "trial": "after-1"
+    },
+    {
+      "bytes": 12320768,
+      "mib_per_second": 7.468013544624941,
+      "milliseconds": 1573.3769,
+      "peak_connections": 4,
+      "sample": 2,
+      "scenario": "video",
+      "sha256_verified": true,
+      "build": "after",
+      "trial": "after-1"
+    },
+    {
+      "bytes": 12320768,
+      "mib_per_second": 13.858869529063819,
+      "milliseconds": 847.8325,
+      "peak_connections": 4,
+      "sample": 0,
+      "scenario": "video_quota",
+      "sha256_verified": true,
+      "build": "after",
+      "trial": "after-1"
+    },
+    {
+      "bytes": 12320768,
+      "mib_per_second": 13.385701996907503,
+      "milliseconds": 877.8023000000001,
+      "peak_connections": 4,
+      "sample": 1,
+      "scenario": "video_quota",
+      "sha256_verified": true,
+      "build": "after",
+      "trial": "after-1"
+    },
+    {
+      "bytes": 12320768,
+      "mib_per_second": 14.91955124021468,
+      "milliseconds": 787.5572,
+      "peak_connections": 4,
+      "sample": 2,
+      "scenario": "video_quota",
+      "sha256_verified": true,
+      "build": "after",
+      "trial": "after-1"
+    },
+    {
+      "bytes": 33554432,
+      "mib_per_second": 116.28904222891208,
+      "milliseconds": 275.1764,
+      "peak_connections": 1,
+      "sample": 0,
+      "scenario": "file",
+      "sha256_verified": true,
+      "build": "after",
+      "trial": "after-1"
+    },
+    {
+      "bytes": 33554432,
+      "mib_per_second": 127.23066163522412,
+      "milliseconds": 251.51170000000002,
+      "peak_connections": 1,
+      "sample": 1,
+      "scenario": "file",
+      "sha256_verified": true,
+      "build": "after",
+      "trial": "after-1"
+    },
+    {
+      "bytes": 33554432,
+      "mib_per_second": 115.52129707312353,
+      "milliseconds": 277.0052,
+      "peak_connections": 1,
+      "sample": 2,
+      "scenario": "file",
+      "sha256_verified": true,
+      "build": "after",
+      "trial": "after-1"
+    },
+    {
+      "bytes": 33554432,
+      "mib_per_second": 118.57969685841621,
+      "milliseconds": 269.8607,
+      "peak_connections": 4,
+      "sample": 0,
+      "scenario": "ranges",
+      "sha256_verified": true,
+      "build": "after",
+      "trial": "after-1"
+    },
+    {
+      "bytes": 33554432,
+      "mib_per_second": 137.31153455509133,
+      "milliseconds": 233.0467,
+      "peak_connections": 4,
+      "sample": 1,
+      "scenario": "ranges",
+      "sha256_verified": true,
+      "build": "after",
+      "trial": "after-1"
+    },
+    {
+      "bytes": 33554432,
+      "mib_per_second": 26.48871547609824,
+      "milliseconds": 1208.0616,
+      "peak_connections": 4,
+      "sample": 2,
+      "scenario": "ranges",
+      "sha256_verified": true,
+      "build": "after",
+      "trial": "after-1"
+    },
+    {
+      "bytes": 33554432,
+      "mib_per_second": 104.86092655770088,
+      "milliseconds": 305.1661,
+      "peak_connections": 4,
+      "sample": 0,
+      "scenario": "ranges_quota",
+      "sha256_verified": true,
+      "build": "after",
+      "trial": "after-1"
+    },
+    {
+      "bytes": 33554432,
+      "mib_per_second": 103.27014598848731,
+      "milliseconds": 309.8669,
+      "peak_connections": 4,
+      "sample": 1,
+      "scenario": "ranges_quota",
+      "sha256_verified": true,
+      "build": "after",
+      "trial": "after-1"
+    },
+    {
+      "bytes": 33554432,
+      "mib_per_second": 36.051166970641845,
+      "milliseconds": 887.6273,
+      "peak_connections": 4,
+      "sample": 2,
+      "scenario": "ranges_quota",
+      "sha256_verified": true,
+      "build": "after",
+      "trial": "after-1"
+    },
+    {
+      "bytes": 12320768,
+      "mib_per_second": 11.044555522907535,
+      "milliseconds": 1063.8726000000001,
+      "peak_connections": 4,
+      "sample": 0,
+      "scenario": "video",
+      "sha256_verified": true,
+      "build": "after",
+      "trial": "after-2"
+    },
+    {
+      "bytes": 12320768,
+      "mib_per_second": 9.848862292955959,
+      "milliseconds": 1193.0312000000001,
+      "peak_connections": 4,
+      "sample": 1,
+      "scenario": "video",
+      "sha256_verified": true,
+      "build": "after",
+      "trial": "after-2"
+    },
+    {
+      "bytes": 12320768,
+      "mib_per_second": 11.484025378620986,
+      "milliseconds": 1023.1604000000001,
+      "peak_connections": 4,
+      "sample": 2,
+      "scenario": "video",
+      "sha256_verified": true,
+      "build": "after",
+      "trial": "after-2"
+    },
+    {
+      "bytes": 12320768,
+      "mib_per_second": 14.680966969698485,
+      "milliseconds": 800.356,
+      "peak_connections": 4,
+      "sample": 0,
+      "scenario": "video_quota",
+      "sha256_verified": true,
+      "build": "after",
+      "trial": "after-2"
+    },
+    {
+      "bytes": 12320768,
+      "mib_per_second": 8.445690972526705,
+      "milliseconds": 1391.2420000000002,
+      "peak_connections": 4,
+      "sample": 1,
+      "scenario": "video_quota",
+      "sha256_verified": true,
+      "build": "after",
+      "trial": "after-2"
+    },
+    {
+      "bytes": 12320768,
+      "mib_per_second": 11.671597212882183,
+      "milliseconds": 1006.7174000000001,
+      "peak_connections": 4,
+      "sample": 2,
+      "scenario": "video_quota",
+      "sha256_verified": true,
+      "build": "after",
+      "trial": "after-2"
+    },
+    {
+      "bytes": 33554432,
+      "mib_per_second": 125.78987194984128,
+      "milliseconds": 254.3925,
+      "peak_connections": 1,
+      "sample": 0,
+      "scenario": "file",
+      "sha256_verified": true,
+      "build": "after",
+      "trial": "after-2"
+    },
+    {
+      "bytes": 33554432,
+      "mib_per_second": 116.66250448877213,
+      "milliseconds": 274.2955,
+      "peak_connections": 1,
+      "sample": 1,
+      "scenario": "file",
+      "sha256_verified": true,
+      "build": "after",
+      "trial": "after-2"
+    },
+    {
+      "bytes": 33554432,
+      "mib_per_second": 93.41535590812717,
+      "milliseconds": 342.55609999999996,
+      "peak_connections": 1,
+      "sample": 2,
+      "scenario": "file",
+      "sha256_verified": true,
+      "build": "after",
+      "trial": "after-2"
+    },
+    {
+      "bytes": 33554432,
+      "mib_per_second": 38.017672990510555,
+      "milliseconds": 841.7138,
+      "peak_connections": 4,
+      "sample": 0,
+      "scenario": "ranges",
+      "sha256_verified": true,
+      "build": "after",
+      "trial": "after-2"
+    },
+    {
+      "bytes": 33554432,
+      "mib_per_second": 133.2497746204984,
+      "milliseconds": 240.1505,
+      "peak_connections": 4,
+      "sample": 1,
+      "scenario": "ranges",
+      "sha256_verified": true,
+      "build": "after",
+      "trial": "after-2"
+    },
+    {
+      "bytes": 33554432,
+      "mib_per_second": 127.77205465449637,
+      "milliseconds": 250.446,
+      "peak_connections": 4,
+      "sample": 2,
+      "scenario": "ranges",
+      "sha256_verified": true,
+      "build": "after",
+      "trial": "after-2"
+    },
+    {
+      "bytes": 33554432,
+      "mib_per_second": 106.33924812169995,
+      "milliseconds": 300.9237,
+      "peak_connections": 4,
+      "sample": 0,
+      "scenario": "ranges_quota",
+      "sha256_verified": true,
+      "build": "after",
+      "trial": "after-2"
+    },
+    {
+      "bytes": 33554432,
+      "mib_per_second": 109.91370057103603,
+      "milliseconds": 291.1375,
+      "peak_connections": 4,
+      "sample": 1,
+      "scenario": "ranges_quota",
+      "sha256_verified": true,
+      "build": "after",
+      "trial": "after-2"
+    },
+    {
+      "bytes": 33554432,
+      "mib_per_second": 90.94402168105478,
+      "milliseconds": 351.8648,
+      "peak_connections": 4,
+      "sample": 2,
+      "scenario": "ranges_quota",
+      "sha256_verified": true,
+      "build": "after",
+      "trial": "after-2"
+    },
+    {
+      "bytes": 12320768,
+      "mib_per_second": 3.0016519815207574,
+      "milliseconds": 3914.5110999999997,
+      "peak_connections": 1,
+      "sample": 0,
+      "scenario": "video",
+      "sha256_verified": true,
+      "build": "before",
+      "trial": "before-2"
+    },
+    {
+      "bytes": 12320768,
+      "mib_per_second": 3.6998722804088806,
+      "milliseconds": 3175.7853,
+      "peak_connections": 1,
+      "sample": 1,
+      "scenario": "video",
+      "sha256_verified": true,
+      "build": "before",
+      "trial": "before-2"
+    },
+    {
+      "bytes": 12320768,
+      "mib_per_second": 3.6607083523625263,
+      "milliseconds": 3209.7612999999997,
+      "peak_connections": 1,
+      "sample": 2,
+      "scenario": "video",
+      "sha256_verified": true,
+      "build": "before",
+      "trial": "before-2"
+    },
+    {
+      "bytes": 12320768,
+      "mib_per_second": 3.3721458229502335,
+      "milliseconds": 3484.4282,
+      "peak_connections": 1,
+      "sample": 0,
+      "scenario": "video_quota",
+      "sha256_verified": true,
+      "build": "before",
+      "trial": "before-2"
+    },
+    {
+      "bytes": 12320768,
+      "mib_per_second": 3.420015941640266,
+      "milliseconds": 3435.6565,
+      "peak_connections": 1,
+      "sample": 1,
+      "scenario": "video_quota",
+      "sha256_verified": true,
+      "build": "before",
+      "trial": "before-2"
+    },
+    {
+      "bytes": 12320768,
+      "mib_per_second": 4.304734775948264,
+      "milliseconds": 2729.5526,
+      "peak_connections": 1,
+      "sample": 2,
+      "scenario": "video_quota",
+      "sha256_verified": true,
+      "build": "before",
+      "trial": "before-2"
+    },
+    {
+      "bytes": 33554432,
+      "mib_per_second": 116.88161317080458,
+      "milliseconds": 273.7813,
+      "peak_connections": 1,
+      "sample": 0,
+      "scenario": "file",
+      "sha256_verified": true,
+      "build": "before",
+      "trial": "before-2"
+    },
+    {
+      "bytes": 33554432,
+      "mib_per_second": 117.05040300087971,
+      "milliseconds": 273.38649999999996,
+      "peak_connections": 1,
+      "sample": 1,
+      "scenario": "file",
+      "sha256_verified": true,
+      "build": "before",
+      "trial": "before-2"
+    },
+    {
+      "bytes": 33554432,
+      "mib_per_second": 108.5946193402266,
+      "milliseconds": 294.6739,
+      "peak_connections": 1,
+      "sample": 2,
+      "scenario": "file",
+      "sha256_verified": true,
+      "build": "before",
+      "trial": "before-2"
+    },
+    {
+      "bytes": 33554432,
+      "mib_per_second": 126.82001584457574,
+      "milliseconds": 252.3261,
+      "peak_connections": 4,
+      "sample": 0,
+      "scenario": "ranges",
+      "sha256_verified": true,
+      "build": "before",
+      "trial": "before-2"
+    },
+    {
+      "bytes": 33554432,
+      "mib_per_second": 132.6728986996812,
+      "milliseconds": 241.1947,
+      "peak_connections": 3,
+      "sample": 1,
+      "scenario": "ranges",
+      "sha256_verified": true,
+      "build": "before",
+      "trial": "before-2"
+    },
+    {
+      "bytes": 33554432,
+      "mib_per_second": 39.21553248810789,
+      "milliseconds": 816.0032,
+      "peak_connections": 4,
+      "sample": 2,
+      "scenario": "ranges",
+      "sha256_verified": true,
+      "build": "before",
+      "trial": "before-2"
+    },
+    {
+      "bytes": 33554432,
+      "mib_per_second": 60.78721340965927,
+      "milliseconds": 526.4265,
+      "peak_connections": 4,
+      "sample": 0,
+      "scenario": "ranges_quota",
+      "sha256_verified": true,
+      "build": "before",
+      "trial": "before-2"
+    },
+    {
+      "bytes": 33554432,
+      "mib_per_second": 67.01261931387454,
+      "milliseconds": 477.522,
+      "peak_connections": 4,
+      "sample": 1,
+      "scenario": "ranges_quota",
+      "sha256_verified": true,
+      "build": "before",
+      "trial": "before-2"
+    },
+    {
+      "bytes": 33554432,
+      "mib_per_second": 21.328356716766088,
+      "milliseconds": 1500.3500000000001,
+      "peak_connections": 4,
+      "sample": 2,
+      "scenario": "ranges_quota",
+      "sha256_verified": true,
+      "build": "before",
+      "trial": "before-2"
+    },
+    {
+      "bytes": 12320768,
+      "mib_per_second": 3.735457150014687,
+      "milliseconds": 3145.532,
+      "peak_connections": 1,
+      "sample": 0,
+      "scenario": "video",
+      "sha256_verified": true,
+      "build": "before",
+      "trial": "before-3"
+    },
+    {
+      "bytes": 12320768,
+      "mib_per_second": 2.9974762780365114,
+      "milliseconds": 3919.9643,
+      "peak_connections": 1,
+      "sample": 1,
+      "scenario": "video",
+      "sha256_verified": true,
+      "build": "before",
+      "trial": "before-3"
+    },
+    {
+      "bytes": 12320768,
+      "mib_per_second": 3.6549260798199152,
+      "milliseconds": 3214.8393,
+      "peak_connections": 1,
+      "sample": 2,
+      "scenario": "video",
+      "sha256_verified": true,
+      "build": "before",
+      "trial": "before-3"
+    },
+    {
+      "bytes": 12320768,
+      "mib_per_second": 3.723443411313013,
+      "milliseconds": 3155.6811,
+      "peak_connections": 1,
+      "sample": 0,
+      "scenario": "video_quota",
+      "sha256_verified": true,
+      "build": "before",
+      "trial": "before-3"
+    },
+    {
+      "bytes": 12320768,
+      "mib_per_second": 4.374949967327502,
+      "milliseconds": 2685.745,
+      "peak_connections": 1,
+      "sample": 1,
+      "scenario": "video_quota",
+      "sha256_verified": true,
+      "build": "before",
+      "trial": "before-3"
+    },
+    {
+      "bytes": 12320768,
+      "mib_per_second": 4.2380533693912925,
+      "milliseconds": 2772.4993,
+      "peak_connections": 1,
+      "sample": 2,
+      "scenario": "video_quota",
+      "sha256_verified": true,
+      "build": "before",
+      "trial": "before-3"
+    },
+    {
+      "bytes": 33554432,
+      "mib_per_second": 112.0620431501901,
+      "milliseconds": 285.55609999999996,
+      "peak_connections": 1,
+      "sample": 0,
+      "scenario": "file",
+      "sha256_verified": true,
+      "build": "before",
+      "trial": "before-3"
+    },
+    {
+      "bytes": 33554432,
+      "mib_per_second": 27.881379368511155,
+      "milliseconds": 1147.7194,
+      "peak_connections": 1,
+      "sample": 1,
+      "scenario": "file",
+      "sha256_verified": true,
+      "build": "before",
+      "trial": "before-3"
+    },
+    {
+      "bytes": 33554432,
+      "mib_per_second": 102.46210022970722,
+      "milliseconds": 312.3106,
+      "peak_connections": 1,
+      "sample": 2,
+      "scenario": "file",
+      "sha256_verified": true,
+      "build": "before",
+      "trial": "before-3"
+    },
+    {
+      "bytes": 33554432,
+      "mib_per_second": 119.83573516602118,
+      "milliseconds": 267.0322,
+      "peak_connections": 4,
+      "sample": 0,
+      "scenario": "ranges",
+      "sha256_verified": true,
+      "build": "before",
+      "trial": "before-3"
+    },
+    {
+      "bytes": 33554432,
+      "mib_per_second": 33.339518508589975,
+      "milliseconds": 959.8219,
+      "peak_connections": 4,
+      "sample": 1,
+      "scenario": "ranges",
+      "sha256_verified": true,
+      "build": "before",
+      "trial": "before-3"
+    },
+    {
+      "bytes": 33554432,
+      "mib_per_second": 116.2194397351359,
+      "milliseconds": 275.3412,
+      "peak_connections": 4,
+      "sample": 2,
+      "scenario": "ranges",
+      "sha256_verified": true,
+      "build": "before",
+      "trial": "before-3"
+    },
+    {
+      "bytes": 33554432,
+      "mib_per_second": 58.91382784864006,
+      "milliseconds": 543.1662,
+      "peak_connections": 4,
+      "sample": 0,
+      "scenario": "ranges_quota",
+      "sha256_verified": true,
+      "build": "before",
+      "trial": "before-3"
+    },
+    {
+      "bytes": 33554432,
+      "mib_per_second": 58.8844488378786,
+      "milliseconds": 543.4372,
+      "peak_connections": 4,
+      "sample": 1,
+      "scenario": "ranges_quota",
+      "sha256_verified": true,
+      "build": "before",
+      "trial": "before-3"
+    },
+    {
+      "bytes": 33554432,
+      "mib_per_second": 57.367841524206185,
+      "milliseconds": 557.8037999999999,
+      "peak_connections": 4,
+      "sample": 2,
+      "scenario": "ranges_quota",
+      "sha256_verified": true,
+      "build": "before",
+      "trial": "before-3"
+    },
+    {
+      "bytes": 12320768,
+      "mib_per_second": 7.473956600674068,
+      "milliseconds": 1572.1258,
+      "peak_connections": 4,
+      "sample": 0,
+      "scenario": "video",
+      "sha256_verified": true,
+      "build": "after",
+      "trial": "after-3"
+    },
+    {
+      "bytes": 12320768,
+      "mib_per_second": 11.177859049004876,
+      "milliseconds": 1051.1852,
+      "peak_connections": 4,
+      "sample": 1,
+      "scenario": "video",
+      "sha256_verified": true,
+      "build": "after",
+      "trial": "after-3"
+    },
+    {
+      "bytes": 12320768,
+      "mib_per_second": 7.35250499532318,
+      "milliseconds": 1598.0948,
+      "peak_connections": 4,
+      "sample": 2,
+      "scenario": "video",
+      "sha256_verified": true,
+      "build": "after",
+      "trial": "after-3"
+    },
+    {
+      "bytes": 12320768,
+      "mib_per_second": 13.762343650991651,
+      "milliseconds": 853.779,
+      "peak_connections": 4,
+      "sample": 0,
+      "scenario": "video_quota",
+      "sha256_verified": true,
+      "build": "after",
+      "trial": "after-3"
+    },
+    {
+      "bytes": 12320768,
+      "mib_per_second": 12.777234730198629,
+      "milliseconds": 919.6043000000001,
+      "peak_connections": 4,
+      "sample": 1,
+      "scenario": "video_quota",
+      "sha256_verified": true,
+      "build": "after",
+      "trial": "after-3"
+    },
+    {
+      "bytes": 12320768,
+      "mib_per_second": 11.378095568255985,
+      "milliseconds": 1032.686,
+      "peak_connections": 4,
+      "sample": 2,
+      "scenario": "video_quota",
+      "sha256_verified": true,
+      "build": "after",
+      "trial": "after-3"
+    },
+    {
+      "bytes": 33554432,
+      "mib_per_second": 37.56659118521069,
+      "milliseconds": 851.8207,
+      "peak_connections": 1,
+      "sample": 0,
+      "scenario": "file",
+      "sha256_verified": true,
+      "build": "after",
+      "trial": "after-3"
+    },
+    {
+      "bytes": 33554432,
+      "mib_per_second": 122.48306862955991,
+      "milliseconds": 261.2606,
+      "peak_connections": 1,
+      "sample": 1,
+      "scenario": "file",
+      "sha256_verified": true,
+      "build": "after",
+      "trial": "after-3"
+    },
+    {
+      "bytes": 33554432,
+      "mib_per_second": 112.12243208972038,
+      "milliseconds": 285.4023,
+      "peak_connections": 1,
+      "sample": 2,
+      "scenario": "file",
+      "sha256_verified": true,
+      "build": "after",
+      "trial": "after-3"
+    },
+    {
+      "bytes": 33554432,
+      "mib_per_second": 119.57856031150214,
+      "milliseconds": 267.60650000000004,
+      "peak_connections": 4,
+      "sample": 0,
+      "scenario": "ranges",
+      "sha256_verified": true,
+      "build": "after",
+      "trial": "after-3"
+    },
+    {
+      "bytes": 33554432,
+      "mib_per_second": 113.1027404087109,
+      "milliseconds": 282.92859999999996,
+      "peak_connections": 4,
+      "sample": 1,
+      "scenario": "ranges",
+      "sha256_verified": true,
+      "build": "after",
+      "trial": "after-3"
+    },
+    {
+      "bytes": 33554432,
+      "mib_per_second": 132.24206082721543,
+      "milliseconds": 241.98049999999998,
+      "peak_connections": 4,
+      "sample": 2,
+      "scenario": "ranges",
+      "sha256_verified": true,
+      "build": "after",
+      "trial": "after-3"
+    },
+    {
+      "bytes": 33554432,
+      "mib_per_second": 101.18154752117856,
+      "milliseconds": 316.26320000000004,
+      "peak_connections": 4,
+      "sample": 0,
+      "scenario": "ranges_quota",
+      "sha256_verified": true,
+      "build": "after",
+      "trial": "after-3"
+    },
+    {
+      "bytes": 33554432,
+      "mib_per_second": 104.5875019896138,
+      "milliseconds": 305.9639,
+      "peak_connections": 4,
+      "sample": 1,
+      "scenario": "ranges_quota",
+      "sha256_verified": true,
+      "build": "after",
+      "trial": "after-3"
+    },
+    {
+      "bytes": 33554432,
+      "mib_per_second": 26.232731382323124,
+      "milliseconds": 1219.8500999999999,
+      "peak_connections": 4,
+      "sample": 2,
+      "scenario": "ranges_quota",
+      "sha256_verified": true,
+      "build": "after",
+      "trial": "after-3"
+    }
+  ]
+}

@@ -203,7 +203,7 @@ pub(super) async fn run(
         tokio::select! {
             _ = tick.tick() => {
                 job.downloaded = progress.load(Ordering::Relaxed);
-                if let Err(error) = store.save(job) {
+                if let Err(error) = store.checkpoint(job).await {
                     retry::merge_error(&mut first_error, error);
                     workers_cancel.cancel();
                 }
@@ -307,12 +307,14 @@ async fn download_segment(
             "Range length does not match Content-Length"
         );
     }
-    let mut file = download_file::append_part(&path).await?;
+    let file = download_file::append_part(&path).await?;
     ensure!(
         file.metadata().await?.len() == done,
         "The partial file changed while the download was starting"
     );
     activity.update_segment(&job_id, index, done, SegmentState::ReceivingData);
+    let mut file = download_file::buffered(file);
+    let mut activity_update = std::time::Instant::now();
     let outcome = async {
         let mut received = 0;
         loop {
@@ -343,7 +345,10 @@ async fn download_segment(
                 remaining = &remaining[n..];
                 progress.fetch_add(n as u64, Ordering::Relaxed);
                 let current = segment_progress.fetch_add(n as u64, Ordering::Relaxed) + n as u64;
-                activity.update_segment(&job_id, index, current, SegmentState::ReceivingData);
+                if activity_update.elapsed() >= Duration::from_millis(100) {
+                    activity.update_segment(&job_id, index, current, SegmentState::ReceivingData);
+                    activity_update = std::time::Instant::now();
+                }
             }
         }
         if received != expected {
@@ -357,6 +362,6 @@ async fn download_segment(
     .await;
     // Finish buffered I/O even on errors before releasing ownership of the
     // range; Tokio may still have a write pending after write_all returns.
-    file.sync_all().await?;
+    download_file::flush_and_sync(&mut file).await?;
     outcome
 }

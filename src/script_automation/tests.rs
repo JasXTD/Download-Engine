@@ -857,7 +857,7 @@ fn sample_runs_match_the_real_event_and_check_the_chosen_downloads() {
     let missing = uuid::Uuid::new_v4().to_string();
     for (downloads, needle) in [
         (vec![], "Choose 1 to 100"),
-        (vec![finished.id.clone()], "Needs attention"),
+        (vec![finished.id.clone()], "Failed"),
         (vec![missing], "no longer exists"),
         (vec![job.id.clone(), job.id.clone()], "once"),
         (vec![job.id.clone(); 101], "Choose 1 to 100"),

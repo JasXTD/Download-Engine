@@ -2,6 +2,18 @@
 
 Release notes are available offline in Help → Changelog. Newest releases appear first.
 
+## 3.1.0 — 2026-10-27
+
+### Faster video downloads and lower transfer overhead
+
+Video downloads now fetch up to four segments in parallel, respecting lower global and per-site connection limits. Each track's first segment or initialization data is verified before its remaining segments start. Pause, retry and app restart retain verified segments even when they finished out of order; unfinished segments restart safely. Download status shows every active segment and the active connection count.
+
+HTTP/HTTPS transfers buffer small disk writes and throttle live progress updates. Frequent progress and quota writes reuse a database connection, and periodic progress checkpoints run off the network workers. Pause and cancellation still wait for buffered writes to flush; quota accounting remains durable for every received payload chunk.
+
+### Clearer failure status
+
+Failed downloads now display “Failed” instead of “Needs attention”. Error details and automatic retry behaviour are unchanged.
+
 ## 3.0.2 — 2026-10-27
 
 ### Privacy policy

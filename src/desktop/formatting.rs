@@ -147,7 +147,7 @@ pub(super) fn progress(job: &Job) -> Option<f32> {
         return Some(1.0);
     }
     if let Some(hls) = &job.hls {
-        return Some(hls.completed.len() as f32 / hls.playlist.part_count().max(1) as f32);
+        return Some(hls.completed_count() as f32 / hls.playlist.part_count().max(1) as f32);
     }
     job.total
         .filter(|total| *total > 0)

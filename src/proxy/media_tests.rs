@@ -189,7 +189,7 @@ async fn dash_and_grabber_use_proxy_and_keep_destination_boundaries() {
     let preview = hls::preview_with_audio_via(&inspection, 0, 0, &cancel, fixture.route())
         .await
         .unwrap();
-    let mut network = hls::network::Network::via(&preview.source, fixture.route())
+    let network = hls::network::Network::via(&preview.source, fixture.route())
         .await
         .unwrap();
     for part in &preview.parts {

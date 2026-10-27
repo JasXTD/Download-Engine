@@ -1,9 +1,9 @@
-## 3.0.2 — 2026-10-27
+## 3.1.0 — 2026-10-27
 
-### Personvernerklæring
+### Raskere videonedlasting og mindre belastning
 
-En offentlig erklæring beskriver nettleserintegrasjon, lokal lagring, valgfrie innloggingskapsler, oppbevaring og sletting av data, eksterne integrasjoner og Chrome Web Stores krav til begrenset bruk. README og publiseringsveiledningen lenker til erklæringen; kildekode-, utvidelses-, portable og installasjonspakker inneholder en kopi. Nedlastingsatferd og tillatelser er uendret.
+Videoer laster ned opptil 4 segmenter parallelt og følger lavere globale eller nettstedsspesifikke tilkoblingsgrenser. Pause, nytt forsøk og omstart beholder alle verifiserte ferdige segmenter, også de som ble ferdige i annen rekkefølge; uferdige segmenter lastes ned på nytt. Statusvinduet viser aktive segmenter og tilkoblinger. Bufret skriving, sjeldnere fremdriftsoppdateringer og gjenbruk av databasetilkoblinger reduserer belastningen. Pause venter fortsatt til skrivingen er ferdig, og hver mottatt datablokk registreres varig i kvoten.
 
-### Kildekodelager og utgivelsespakker
+### Tydeligere feilstatus
 
-Den kjørbare FFmpeg-filen spores ikke lenger i kildekodelageret. Installasjonsprogrammet og den portable utgaven inneholder den fortsatt sammen med tilhørende kildekode og lisensinformasjon. FFmpeg-kildekoden beholdes i Git; byggeinstruksjonene forklarer hvordan du får tak i riktig kjørbar fil.
+Feilstatusen heter nå «Mislyktes»; detaljer og automatiske forsøk er uendret.

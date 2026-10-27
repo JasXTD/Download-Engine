@@ -222,6 +222,67 @@ async fn dash_pause_reopen_and_resume_keeps_verified_video_and_audio_segments() 
 }
 
 #[tokio::test]
+async fn parallel_dash_pause_retains_out_of_order_tracks_and_decodes_after_resume() {
+    let (_files, server, inspection) = source().await;
+    let (_home, store) = fixture();
+    let preview = hls::preview(&inspection, 0, &CancellationToken::new())
+        .await
+        .unwrap();
+    let blocked = reqwest::Url::parse(&preview.parts[1].url)
+        .unwrap()
+        .path()
+        .to_owned();
+    let original = server.routes.lock().unwrap().get(&blocked).unwrap().clone();
+    server.set(
+        &blocked,
+        Reply {
+            gate: Some(Arc::new(tokio::sync::Semaphore::new(0))),
+            ..original.clone()
+        },
+    );
+    let mut job = enqueue(&store, &preview);
+    job.status = Status::Downloading;
+    let id = job.id.clone();
+    let token = CancellationToken::new();
+    let worker = tokio::spawn(engine::run(
+        store.clone(),
+        job,
+        token.clone(),
+        Limiter::default(),
+    ));
+    super::parallel::wait_saved(&store, &id, |job| {
+        job.hls.as_ref().unwrap().completed_count() == preview.part_count() - 1
+    })
+    .await;
+    token.cancel();
+    tokio::time::timeout(Duration::from_secs(5), worker)
+        .await
+        .unwrap()
+        .unwrap()
+        .unwrap();
+    let reopened = Store::open(store.paths.clone()).unwrap();
+    let paused = reopened.get(&id).unwrap().unwrap();
+    assert_eq!(paused.status, Status::Paused);
+    assert!(paused.hls.as_ref().unwrap().completed_ahead.len() > 1);
+    server.set(&blocked, original);
+    let done = run(&reopened, paused).await;
+    assert_eq!(done.status, Status::Complete, "{:?}", done.error);
+    assert_tracks_decode(&done.saved_path.unwrap());
+    for part in preview
+        .parts
+        .iter()
+        .chain(&preview.audio.as_ref().unwrap().parts)
+    {
+        let url = reqwest::Url::parse(&part.url).unwrap();
+        assert_eq!(
+            server.count(url.path()),
+            if url.path() == blocked { 2 } else { 1 }
+        );
+    }
+    assert_eq!(reopened.list().unwrap().len(), 1);
+}
+
+#[tokio::test]
 async fn dash_segment_list_byte_ranges_merge_real_media_and_do_not_cross_local_origins() {
     let (files, server, inspection) = source().await;
     let selected = hls::preview(&inspection, 0, &CancellationToken::new())

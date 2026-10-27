@@ -221,22 +221,49 @@ async fn browser_login_survives_pause_and_database_reopen_then_cleans_up() {
         cancel.clone(),
         download_engine::bandwidth::Limiter::new(&store.bandwidth_limits().unwrap()).unwrap(),
     ));
-    until_stalled(&store, async {
+    let observed = until_stalled(&store, async {
         loop {
-            let part = store.paths.parts(&id).unwrap().join("segment-0.part");
-            if std::fs::metadata(part).is_ok_and(|m| m.len() >= 128 * 1024) {
+            // The fixture stops below the write buffer's capacity. Observe
+            // received progress, then prove pause durably flushes those bytes.
+            if store.get(&id).unwrap().unwrap().downloaded >= 128 * 1024 {
                 break;
             }
             tokio::time::sleep(Duration::from_millis(10)).await;
         }
     })
-    .await
-    .unwrap();
+    .await;
     cancel.cancel();
     task.await.unwrap().unwrap();
+    observed.unwrap();
     let paused = store.get(&id).unwrap().unwrap();
     assert_eq!(paused.status, Status::Paused);
+    let plan = paused.plan.as_ref().unwrap();
+    let root = store.paths.parts(&id).unwrap();
+    let saved: Vec<_> = plan
+        .segments
+        .iter()
+        .enumerate()
+        .map(|(index, segment)| {
+            let path = root.join(format!("segment-{index}.part"));
+            let bytes = match std::fs::read(path) {
+                Ok(bytes) => bytes,
+                Err(error) if error.kind() == std::io::ErrorKind::NotFound => Vec::new(),
+                Err(error) => panic!("Cannot inspect paused segment: {error}"),
+            };
+            assert_eq!(
+                bytes,
+                fixture.data[segment.start as usize..segment.start as usize + bytes.len()]
+            );
+            (segment.start, segment.end, bytes.len() as u64)
+        })
+        .collect();
+    assert_eq!(
+        saved.iter().map(|(_, _, size)| size).sum::<u64>(),
+        paused.downloaded
+    );
+    assert!(paused.downloaded >= 128 * 1024 && paused.downloaded < fixture.data.len() as u64);
     assert_eq!(count(&store, "browser_sessions"), 1);
+    let previous_requests = fixture.requests.lock().unwrap().len();
     let paths = store.paths.clone();
     drop(store);
     let reopened = Store::open(paths).unwrap();
@@ -248,6 +275,19 @@ async fn browser_login_survives_pause_and_database_reopen_then_cleans_up() {
         *fixture.data
     );
     assert_eq!(count(&reopened, "browser_sessions"), 0);
+    let requests = fixture.requests.lock().unwrap();
+    for (start, end, size) in saved.into_iter().filter(|(_, _, size)| *size > 0) {
+        assert!(
+            requests[previous_requests..].iter().any(|request| {
+                request.to_ascii_lowercase().contains(&format!(
+                    "range: bytes={}-{}\r\n",
+                    start + size,
+                    end
+                ))
+            }),
+            "Resume did not reuse the flushed bytes"
+        );
+    }
 }
 
 #[tokio::test]

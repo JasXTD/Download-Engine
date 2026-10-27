@@ -443,7 +443,7 @@ pub(crate) async fn refresh(
             .collect::<Vec<_>>()
     };
     ensure!(
-        download.completed.is_empty() || ranges(&download.playlist) == ranges(&current.playlist),
+        download.completed_count() == 0 || ranges(&download.playlist) == ranges(&current.playlist),
         "This TikTok video changed. Preview it again before resuming."
     );
     current.selection.validate(&current.playlist)?;

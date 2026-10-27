@@ -1,9 +1,9 @@
-## 3.0.2 — 2026-10-27
+## 3.1.0 — 2026-10-27
 
-### Integritetspolicy
+### Snabbare videohämtningar och mindre belastning
 
-En offentlig policy beskriver webbläsarintegration, lokal lagring, valfria inloggningskakor, lagring och radering av data, externa integrationer och Chrome Web Stores krav på begränsad användning. README och publiceringsguiden länkar till policyn; källkods-, tilläggs-, portabla och installationspaket innehåller en kopia. Nedladdningsbeteende och behörigheter är oförändrade.
+Videor hämtar upp till 4 segment parallellt och följer lägre globala eller webbplatsspecifika anslutningsgränser. Paus, nytt försök och omstart behåller alla verifierade färdiga segment, även de som slutförts i annan ordning; ofärdiga segment hämtas på nytt. Statusfönstret visar aktiva segment och anslutningar. Buffrade skrivningar, färre uppdateringar av förloppet och återanvända databasanslutningar minskar belastningen. Paus väntar fortfarande på att skrivningar slutförs och varje mottaget datablock bokförs beständigt mot kvoten.
 
-### Källkodsarkiv och utgivningspaket
+### Tydligare felstatus
 
-Den körbara FFmpeg-filen versionshanteras inte längre i källkodsarkivet. Installationsprogrammet och den portabla versionen innehåller den fortfarande tillsammans med motsvarande källkod och licensinformation. FFmpeg-källkoden finns kvar i Git; bygginstruktionerna beskriver hur rätt körbar fil hämtas.
+Felstatusen heter nu ”Misslyckades”; detaljer och automatiska försök är oförändrade.

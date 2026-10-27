@@ -7,6 +7,53 @@ fn media(body: &str) -> String {
 }
 
 #[test]
+fn sparse_receipts_round_trip_collapse_and_reject_invalid_saved_progress() {
+    let Parsed::Media(playlist) = parse(
+        URL,
+        &media("#EXTINF:5,\na.ts\n#EXTINF:5,\nb.ts\n#EXTINF:5,\nc.ts\n#EXTINF:5,\nd.ts"),
+    )
+    .unwrap() else {
+        panic!()
+    };
+    let mut download = Download::new(*playlist);
+    let receipt = |index: u64| CompletedPart {
+        size: 188 * (index + 1),
+        sha256: "ab".repeat(32),
+    };
+    let old_json = serde_json::to_string(&download).unwrap();
+    assert!(!old_json.contains("completed_ahead"));
+    serde_json::from_str::<Download>(&old_json)
+        .unwrap()
+        .validate()
+        .unwrap();
+    download.remember_part(3, receipt(3)).unwrap();
+    download.remember_part(1, receipt(1)).unwrap();
+    download.validate().unwrap();
+    let mut restored: Download =
+        serde_json::from_str(&serde_json::to_string(&download).unwrap()).unwrap();
+    assert_eq!(restored.completed_count(), 2);
+    assert_eq!(restored.saved_bytes(), 188 * 6);
+    assert!(restored.remember_part(1, receipt(1)).is_err());
+    assert!(restored.remember_part(4, receipt(4)).is_err());
+    restored.remember_part(0, receipt(0)).unwrap();
+    assert_eq!(restored.completed.len(), 2);
+    assert_eq!(restored.saved_part(3).unwrap().size, receipt(3).size);
+    for invalid_index in [0, 2, 4, usize::MAX] {
+        let mut invalid = restored.clone();
+        invalid.completed_ahead.insert(invalid_index, receipt(0));
+        assert!(invalid.validate().is_err());
+    }
+    let mut invalid = restored.clone();
+    invalid.completed_ahead.get_mut(&3).unwrap().sha256 = "invalid".into();
+    assert!(invalid.validate().is_err());
+    restored.remember_part(2, receipt(2)).unwrap();
+    restored.validate().unwrap();
+    assert!(restored.completed_ahead.is_empty());
+    assert_eq!(restored.completed.len(), 4);
+    assert_eq!(restored.saved_bytes(), 188 * 10);
+}
+
+#[test]
 fn qualities_handle_quoted_codecs_resolution_and_external_audio() {
     let text = "#EXTM3U\n#EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID=\"sound\",NAME=\"English\",URI=\"audio.m3u8\"\n#EXT-X-STREAM-INF:BANDWIDTH=1000000,RESOLUTION=640x360,CODECS=\"avc1.4d401e,mp4a.40.2\"\nlow.m3u8\n#EXT-X-STREAM-INF:BANDWIDTH=5000000,RESOLUTION=1920x1080,AUDIO=\"sound\"\nhigh.m3u8\n";
     let Parsed::Master(variants) = parse(URL, text).unwrap() else {

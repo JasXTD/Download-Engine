@@ -1484,10 +1484,10 @@
     "下載連線",
     "Sambungan muat turun"
   ],
-  "Choose the maximum connections used by each HTTP/HTTPS file.": [
-    "选择每个 HTTP/HTTPS 文件的最大连接数。",
-    "選擇每個 HTTP/HTTPS 檔案的最大連線數。",
-    "Pilih bilangan maksimum sambungan bagi setiap fail HTTP/HTTPS."
+  "Choose the maximum connections used by each HTTP/HTTPS download.": [
+    "选择每个 HTTP/HTTPS 下载使用的最大连接数。",
+    "選擇每個 HTTP/HTTPS 下載使用的最大連線數。",
+    "Pilih bilangan maksimum sambungan bagi setiap muat turun HTTP/HTTPS."
   ],
   "Default per file": [
     "每个文件的默认值",
@@ -1529,10 +1529,10 @@
     "規則符合檔案的主機名稱。重新導向時使用更嚴格的相符規則。這些限制針對每個檔案；佇列限制控制同時下載的檔案數。",
     "Peraturan memadankan nama hos fail. Bagi ubah hala, peraturan sepadan yang lebih ketat digunakan. Had ini setiap fail; had giliran mengawal bilangan fail serentak."
   ],
-  "Pause and resume active files to apply changes. YouTube, HLS and DASH use one connection to fetch segments in order. FTP uses its own transfer rules.": [
-    "暂停并恢复活动文件以应用更改。YouTube、HLS 和 DASH 使用单个连接按顺序获取分段。FTP 使用自己的传输规则。",
-    "暫停並繼續活動檔案以套用變更。YouTube、HLS 和 DASH 使用單一連線依序取得區段。FTP 使用自己的傳輸規則。",
-    "Jeda dan sambung semula fail aktif untuk menerapkan perubahan. YouTube, HLS dan DASH menggunakan satu sambungan untuk segmen berurutan. FTP menggunakan peraturan pemindahannya sendiri."
+  "Pause and resume active downloads to apply changes. Video downloads use up to 4 connections and respect lower limits. FTP uses its own transfer rules.": [
+    "暂停并恢复正在进行的下载以应用更改。视频下载最多使用 4 个连接，并遵守更低的限制。FTP 使用自己的传输规则。",
+    "暫停並繼續進行中的下載以套用變更。影片下載最多使用 4 個連線，並遵守更低的限制。FTP 使用自己的傳輸規則。",
+    "Jeda dan sambung semula muat turun aktif untuk menggunakan perubahan. Muat turun video menggunakan sehingga 4 sambungan dan mematuhi had yang lebih rendah. FTP menggunakan peraturan pemindahannya sendiri."
   ],
   "Save settings": [
     "保存设置",
@@ -1609,15 +1609,15 @@
     "區段 {} · {} · {state}",
     "Segmen {} · {} · {state}"
   ],
-  "Video segments download one at a time.": [
-    "每次下载一个视频分段。",
-    "每次下載一個影片區段。",
-    "Segmen video dimuat turun satu demi satu."
+  "Video segments download in parallel (up to 4).": [
+    "视频分段并行下载（最多 4 个）。",
+    "影片分段平行下載（最多 4 個）。",
+    "Segmen video dimuat turun serentak (sehingga 4)."
   ],
-  "The per-file connection setting applies to direct HTTP files. YouTube, HLS and DASH currently fetch video and audio segments sequentially. The map follows playlist order; segment widths do not represent bytes.": [
-    "每文件连接设置适用于 HTTP 直链。YouTube、HLS 和 DASH 目前依次获取视频和音频分段。图表按播放列表顺序排列；分段宽度不代表字节数。",
-    "每檔案連線設定適用於 HTTP 直接連結。YouTube、HLS 和 DASH 目前依序取得影片和音訊區段。圖表按播放清單順序排列；區段寬度不代表位元組數。",
-    "Tetapan sambungan setiap fail terpakai pada fail HTTP terus. YouTube, HLS dan DASH mengambil segmen video dan audio secara berurutan. Peta mengikut urutan senarai main; lebar segmen tidak mewakili bait."
+  "Verified parts are kept on pause. Segment widths represent playlist order, not byte size.": [
+    "暂停时保留已验证的分段。分段宽度表示播放列表顺序，而非字节大小。",
+    "暫停時保留已驗證的分段。分段寬度表示播放清單順序，而非位元組大小。",
+    "Segmen yang disahkan dikekalkan apabila dijeda. Lebar segmen mewakili urutan senarai main, bukan saiz bait."
   ],
   "Downloaded": [
     "已下载",
@@ -5729,11 +5729,6 @@
     "完成",
     "Selesai"
   ],
-  "Needs attention": [
-    "需要处理",
-    "需要處理",
-    "Perlu perhatian"
-  ],
   "File name": [
     "文件名",
     "檔案名稱",
@@ -7553,5 +7548,15 @@
     "复制文本",
     "複製文字",
     "Salin teks"
+  ],
+  "{} active connections": [
+    "{} 个活动连接",
+    "{} 個作用中連線",
+    "{} sambungan aktif"
+  ],
+  "1 active connection": [
+    "1 个活动连接",
+    "1 個作用中的連線",
+    "1 sambungan aktif"
   ]
 }

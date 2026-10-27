@@ -348,7 +348,7 @@ impl Store {
                         "{} is not {}",
                         job.name,
                         if kind == "failed" {
-                            "in Needs attention"
+                            "in Failed"
                         } else {
                             "finished"
                         }

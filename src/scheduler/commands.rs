@@ -130,6 +130,7 @@ pub(super) fn apply(
             }
             if let Some(hls) = &mut job.hls {
                 hls.completed.clear();
+                hls.completed_ahead.clear();
             }
             crate::synchronization::restarting(&mut job);
             job.expected_file = None;

@@ -1,9 +1,9 @@
-## 3.0.2 — 2026-10-27
+## 3.1.0 — 2026-10-27
 
-### Decleraziun davart la protecziun da datas
+### Telechargiadas da video pli spertas e main chargia
 
-Ina decleraziun publica descriva l’integraziun dal navigatur, la memorisaziun locala, ils cookies d’annunzia facultativs, la conservaziun e stizzada da datas, las integraziuns externas e las pretensiuns Limited Use dal Chrome Web Store. README e la guida da publicaziun cuntegnan colliaziuns; ils pachets da code, extensiuns, versiuns portablas ed installaziun cuntegnan ina copia. Il cumportament da telechargiar e las permissiuns restan senza midadas.
+Videos telechargian fin a 4 segments parallelamain e respectan limits da connexiun pli bass, globals u per website. Pausa, novas emprovas e novs starts mantegnan tut ils segments cumplets verifitgads, er sch’els èn vegnids terminads en in’autra successiun; segments nunfinids vegnan telechargiads danovamain. La fanestra da status mussa ils segments e las connexiuns activas. Scritturas cun puffer, actualisaziuns da progress main frequentas e connexiuns a la banca da datas reutilisadas reduceschan la chargia. La pausa spetga anc adina la fin da las scritturas e mintga bloc retschavì vegn registrà permanentamain en la quota.
 
-### Repository dal code da funtauna e pachets da publicaziun
+### Status d’errur pli cler
 
-La datoteca executabla da FFmpeg na vegn betg pli registrada en il repository dal code da funtauna. Il program d’installaziun e la versiun portabla la cuntegnan vinavant ensemen cun il code da funtauna correspundent e las infurmaziuns da licenza. Il code da funtauna da FFmpeg resta en Git; las instrucziuns da compilaziun decleran co obtegnair la datoteca executabla correspundenta.
+Il status d’errur sa numna ussa «Betg reussì»; detagls ed emprovas automaticas restan invariads.

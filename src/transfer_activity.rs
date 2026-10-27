@@ -60,7 +60,7 @@ pub struct SegmentSnapshot {
 }
 
 /// Media parts have their own URLs and often unknown sizes; they are not byte
-/// ranges of the final merged file. Only the current sequential part is live.
+/// ranges of the final merged file. Each active worker publishes its own part.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct MediaSnapshot {
     pub index: usize,
@@ -73,7 +73,7 @@ pub struct MediaSnapshot {
 struct Entry {
     phase: Phase,
     segments: Vec<SegmentSnapshot>,
-    media: Option<MediaSnapshot>,
+    media: Vec<MediaSnapshot>,
 }
 
 #[derive(Clone, Default)]
@@ -104,7 +104,7 @@ impl Activity {
             Entry {
                 phase: Phase::Connecting,
                 segments: Vec::new(),
-                media: None,
+                media: Vec::new(),
             },
         );
         Guard {
@@ -118,21 +118,45 @@ impl Activity {
             Entry {
                 phase,
                 segments,
-                media: None,
+                media: Vec::new(),
             },
         );
     }
     pub fn media(&self, id: &str) -> Option<MediaSnapshot> {
-        self.entries().get(id).and_then(|entry| entry.media)
+        self.media_parts(id).into_iter().next()
+    }
+    pub fn media_parts(&self, id: &str) -> Vec<MediaSnapshot> {
+        let mut parts = self
+            .entries()
+            .get(id)
+            .map(|entry| entry.media.clone())
+            .unwrap_or_default();
+        parts.sort_unstable_by_key(|part| part.index);
+        parts
     }
     #[cfg(feature = "screenshot")]
-    pub fn seed_media_preview(&self, id: &str, media: MediaSnapshot) {
+    pub fn seed_media_preview(&self, id: &str, media: Vec<MediaSnapshot>) {
         self.seed_preview(id, Phase::Downloading, Vec::new());
-        self.set_media(id, media);
+        for part in media {
+            self.set_media(id, part);
+        }
     }
     pub(crate) fn set_media(&self, id: &str, media: MediaSnapshot) {
         if let Some(entry) = self.entries().get_mut(id) {
-            entry.media = Some(media);
+            if let Some(previous) = entry
+                .media
+                .iter_mut()
+                .find(|part| part.index == media.index)
+            {
+                *previous = media;
+            } else {
+                entry.media.push(media);
+            }
+        }
+    }
+    pub(crate) fn remove_media(&self, id: &str, index: usize) {
+        if let Some(entry) = self.entries().get_mut(id) {
+            entry.media.retain(|part| part.index != index);
         }
     }
     pub(crate) fn set(&self, id: &str, phase: Phase) {
@@ -173,6 +197,42 @@ impl Drop for Guard {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn parallel_media_updates_are_independent_and_removed_after_checkpoint() {
+        let activity = Activity::default();
+        let guard = activity.begin("video");
+        for index in [3, 1, 2] {
+            activity.set_media(
+                "video",
+                MediaSnapshot {
+                    index,
+                    downloaded: 10,
+                    total: Some(100),
+                    state: SegmentState::ReceivingData,
+                },
+            );
+        }
+        activity.set_media(
+            "video",
+            MediaSnapshot {
+                index: 2,
+                downloaded: 100,
+                total: Some(100),
+                state: SegmentState::Verifying,
+            },
+        );
+        let parts = activity.media_parts("video");
+        assert_eq!(
+            parts.iter().map(|part| part.index).collect::<Vec<_>>(),
+            [1, 2, 3]
+        );
+        assert_eq!(parts[0].downloaded, 10);
+        assert_eq!(parts[1].downloaded, 100);
+        activity.remove_media("video", 2);
+        assert_eq!(activity.media_parts("video").len(), 2);
+        drop(guard);
+        assert!(activity.media_parts("video").is_empty());
+    }
     #[test]
     fn clones_share_activity_and_worker_exit_clears_it() {
         let activity = Activity::default();

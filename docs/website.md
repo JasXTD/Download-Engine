@@ -16,6 +16,12 @@ No package installation, JavaScript application build, external font, analytics
 script or browser storage is needed. Native HTML handles navigation and the FAQ.
 The page remains usable with JavaScript disabled.
 
+The hero and video section explicitly name YouTube, Bilibili, TikTok and Twitch.
+HLS and DASH describe compatible stream formats from other sites, not universal
+page support. Keep these descriptions and their per-service guide links aligned
+with the support table in `README.md`; retain the public-video, quality, DRM and
+live-recording limits.
+
 The Web Grabber illustration uses native radio controls to preview file discovery
 and offline website capture. Its filenames, sizes and site tree are example
 content, not a live scan or a desktop screenshot. Keep that label visible.

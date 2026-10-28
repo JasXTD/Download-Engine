@@ -2,6 +2,26 @@
 
 Release notes are available offline in Help → Changelog. Newest releases appear first.
 
+## 3.2.0 — 2026-10-28
+
+### Public hosting links
+
+Download individual MEGA public files and public WeTransfer transfers through Add URL, batch imports, browser handoff, CLI and automation. MEGA retains encrypted partial files for pause/resume, decrypts locally and verifies the file MAC before publishing. WeTransfer refreshes temporary download addresses and reuses partial files only when the server and file identity support safe resumption. Existing queues, connection limits, speed limits, quotas and optional SHA-256 checks apply.
+
+MEGA folder/account/password-protected links and multi-server RAID responses are unsupported. WeTransfer password-protected, expired, deleted and account-only transfers are unsupported. Provider quotas and access challenges are reported without bypassing them.
+
+### Hosting-page file discovery and browser capture
+
+When a download resolves to an HTML hosting page, Download Engine can discover exposed file links. It follows one explicit same-site download link automatically; ambiguous choices and links to another site require review. The selection resumes the existing download entry, retaining the original page for recovery. Pages and error responses are not silently saved as file bytes.
+
+Browser extensions now preserve MEGA link keys and capture supported GitHub raw-file download actions. The download status window and shared review dialog expose discovered files, selection and recovery controls. Reload the extensions after upgrading.
+
+### Website and documentation
+
+Added Help → Check for updates to compare the installed version with the latest stable GitHub release, with cancellation, retry and a release-page link. Checks run only on request and respect proxy settings; installation remains manual. About now links to the official GitHub repository.
+
+Updated the public website with video-site support, Web Grabber previews, hosting details and a screenshot slideshow. Hosting guides explain supported links, resumption, privacy and service limitations. Installer and portable packages continue to include FFmpeg with its corresponding sources and license notices.
+
 ## 3.1.1 — 2026-10-27
 
 ### Faster large-file completion

@@ -1,5 +1,19 @@
-## 3.1.1 — 2026-10-27
+## 3.2.0 — 2026-10-28
 
-### Finir pli svelt datotecas grondas
+### Colliaziuns publicas
 
-Telechargiadas HTTP/HTTPS e FTP cun ina suletta part sin il medem disc vegnan ussa verifitgadas e memorisadas senza scriver ina segunda copia cumpletta. Telechargiadas cun pliras parts mantegnan il process asincron existent che unescha las parts en la dretga successiun. Memorisar sin in auter disc dovra vinavant ina copia segira. La verificaziun da la summa da controlla, l’interrupziun, la protecziun dals nums existents e la marcaziun da l’origin d’Internet restan activas. Ina memorisaziun interrutta vegn restabilida a partir da la part memorisada u da la datoteca unida senza telechargiar danovamain u crear duplicats.
+Nov è il sustegn per singulas datotecas publicas da MEGA e transfers publics da WeTransfer. MEGA decifrescha localmain e verifitgescha l’integritad. Pausar e cuntinuar en moda segira dependa dal server e da l’identitad da la datoteca.
+
+Transfers cun pled-clav, limitads ad in conto u scadids e ordinaturs MEGA na vegnan betg sustegnids.
+
+### Tschertga da datotecas e browser
+
+L’app chatta colliaziuns sin paginas da telechargiar; resultats ambigus e colliaziuns ad autras websites ston vegnir examinads. Las extensiuns mantegnan las clavs MEGA e sustegnan telechargiadas da datotecas brutas GitHub. Chargia danovamain las extensiuns suenter l’actualisaziun.
+
+### Website e documentaziun
+
+La website mussa il sustegn da videos, previstas da Web Grabber, detagls davart ils servetschs e diapositivas.
+
+Ils pachets d’installaziun e portabels cuntegnan vinavant FFmpeg, las funtaunas correspundentas e las licenzas.
+
+Il menu Agid permetta da controllar manualmain versiuns stablas da GitHub, repeter la controlla ed avrir la pagina da la versiun. Davart cuntegna ina colliaziun al repository GitHub uffizial.

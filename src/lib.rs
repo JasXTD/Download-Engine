@@ -30,6 +30,7 @@ pub mod store;
 pub mod synchronization;
 pub mod tiktok;
 pub mod twitch;
+pub mod updates;
 pub mod website_grabber;
 pub mod wetransfer;
 

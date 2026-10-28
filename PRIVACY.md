@@ -1,6 +1,6 @@
 # Privacy policy
 
-Last updated: 2026-10-27
+Last updated: 2026-10-28
 
 This policy covers the official Download Engine project website, browser extensions
 and their integration with the Download Engine desktop application for Windows. The project
@@ -76,6 +76,15 @@ No automatic copy of your download list, detected media or login cookies is sent
 to a project-operated collection server. The project does not sell this data or
 use it for advertising, credit scoring or unrelated profiling. Maintainers do not
 have remote access to your local profile through the extension.
+
+## Optional update checks
+
+Help → Check for updates contacts the public GitHub API only when you request it.
+The request includes a Download Engine version user-agent and normal connection
+information such as your IP address. It uses your configured proxy and does not
+send your download history, filenames, browser cookies or GitHub account token.
+Opening the release page or the GitHub link in About opens GitHub in your browser.
+There is no automatic update download or installation.
 
 ## Optional browser login
 

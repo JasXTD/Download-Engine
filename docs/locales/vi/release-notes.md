@@ -1,5 +1,19 @@
-## 3.1.1 — 2026-10-27
+## 3.2.0 — 2026-10-28
 
-### Hoàn tất tệp lớn nhanh hơn
+### Liên kết chia sẻ công khai
 
-Các bản tải HTTP/HTTPS và FTP một phần trên cùng ổ đĩa được xác minh và lưu trực tiếp từ tệp đã tải, không ghi thêm một bản sao đầy đủ. Các bản tải nhiều phần giữ cách ghép bất đồng bộ theo đúng thứ tự; lưu sang ổ đĩa khác vẫn sao chép an toàn. Giữ nguyên kiểm tra checksum, hủy tác vụ, bảo vệ tên tệp trùng và dấu nguồn Internet. Nếu quá trình lưu bị gián đoạn, ứng dụng khôi phục từ phần đã lưu hoặc tệp ghép mà không tải lại hay tạo tệp trùng.
+Bổ sung hỗ trợ tệp công khai riêng lẻ trên MEGA và lượt chuyển công khai trên WeTransfer. MEGA giải mã cục bộ và kiểm tra tính toàn vẹn; tạm dừng và tiếp tục an toàn tùy thuộc vào máy chủ và danh tính tệp.
+
+Không hỗ trợ liên kết có mật khẩu, yêu cầu tài khoản, đã hết hạn hoặc thư mục MEGA.
+
+### Tìm tệp và tích hợp trình duyệt
+
+Ứng dụng tìm liên kết tệp trên trang tải xuống; các lựa chọn không rõ ràng hoặc khác trang web cần được xem xét. Tiện ích giữ khóa MEGA và hỗ trợ thao tác tải tệp thô GitHub. Hãy tải lại tiện ích sau khi nâng cấp.
+
+### Trang web và tài liệu
+
+Trang web bổ sung thông tin hỗ trợ video, xem trước Web Grabber, chi tiết dịch vụ chia sẻ và trình chiếu ảnh.
+
+Bộ cài và bản di động tiếp tục kèm FFmpeg, mã nguồn tương ứng và giấy phép.
+
+Trợ giúp có thêm kiểm tra bản ổn định GitHub thủ công, thử lại và mở trang phát hành. Trang Giới thiệu liên kết tới kho GitHub chính thức.

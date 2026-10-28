@@ -7603,5 +7603,55 @@
     "保存 HTML 页面",
     "儲存 HTML 頁面",
     "Simpan halaman HTML"
+  ],
+  "Check for updates": [
+    "检查更新",
+    "檢查更新",
+    "Semak kemas kini"
+  ],
+  "Installed version": [
+    "已安装版本",
+    "已安裝版本",
+    "Versi dipasang"
+  ],
+  "Checking GitHub…": [
+    "正在检查 GitHub…",
+    "正在檢查 GitHub…",
+    "Menyemak GitHub…"
+  ],
+  "A new version is available": [
+    "有新版本可用",
+    "有新版本可用",
+    "Versi baharu tersedia"
+  ],
+  "No newer release is available": [
+    "没有更新的发行版",
+    "沒有更新的發行版",
+    "Tiada keluaran lebih baharu"
+  ],
+  "Latest stable version": [
+    "最新稳定版本",
+    "最新穩定版本",
+    "Versi stabil terkini"
+  ],
+  "Unable to check for updates": [
+    "无法检查更新",
+    "無法檢查更新",
+    "Tidak dapat menyemak kemas kini"
+  ],
+  "Open release page": [
+    "打开发行页面",
+    "開啟發行頁面",
+    "Buka halaman keluaran"
+  ],
+  "Check again": [
+    "重新检查",
+    "重新檢查",
+    "Semak semula"
+  ],
+  "Checks GitHub only when requested. Download and install updates from the release page.": [
+    "仅在请求时检查 GitHub。请从发行页面下载并安装更新。",
+    "僅在要求時檢查 GitHub。請從發行頁面下載並安裝更新。",
+    "GitHub disemak hanya apabila diminta. Muat turun dan pasang kemas kini dari halaman keluaran."
   ]
 }

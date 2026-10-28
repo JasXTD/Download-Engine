@@ -1,5 +1,19 @@
-## 3.1.1 — 2026-10-27
+## 3.2.0 — 2026-10-28
 
-### Completamento più rapido dei file grandi
+### Collegamenti pubblici
 
-I download HTTP/HTTPS e FTP in una sola parte sulla stessa unità vengono verificati e salvati senza scrivere una seconda copia completa. I download in più parti mantengono il precedente assemblaggio asincrono nell’ordine corretto. Il salvataggio su un’altra unità mantiene la copia sicura. Restano attivi verifica del checksum, annullamento, protezione dei nomi esistenti e indicazione della provenienza da Internet. Un salvataggio interrotto viene recuperato dalla parte salvata o dal file di assemblaggio, senza scaricare di nuovo o creare duplicati.
+Aggiunto il supporto per singoli file pubblici MEGA e trasferimenti pubblici WeTransfer. MEGA decifra localmente e verifica l’integrità; la pausa e la ripresa sicure dipendono dal server e dall’identità del file.
+
+Trasferimenti protetti da password, riservati a un account, scaduti e cartelle MEGA non sono supportati.
+
+### Ricerca dei file e acquisizione dal browser
+
+L’app trova i collegamenti nelle pagine di download; scelte ambigue e collegamenti ad altri siti richiedono una verifica. Le estensioni conservano le chiavi MEGA e supportano i download dei file grezzi GitHub. Ricarica le estensioni dopo l’aggiornamento.
+
+### Sito e documentazione
+
+Il sito presenta i video supportati, le anteprime Web Grabber, i servizi di hosting e una sequenza di schermate.
+
+Installer e pacchetto portatile continuano a includere FFmpeg, sorgenti corrispondenti e licenze.
+
+Il menu Aiuto consente di controllare manualmente le versioni stabili GitHub, riprovare e aprire la pagina della versione. Informazioni collega il repository GitHub ufficiale.

@@ -2,8 +2,7 @@
 use super::*;
 use egui::{Align, FontFamily, FontId, Rect, Sense, Stroke, StrokeKind, pos2, vec2};
 
-// Set Some("https://github.com/OWNER/REPOSITORY") when the project link is ready.
-const GITHUB_URL: Option<&str> = None;
+const GITHUB_URL: &str = download_engine::updates::REPOSITORY_URL;
 // Keep the reference design's proportions while presenting a compact About card.
 const SCALE: f32 = 0.7;
 
@@ -163,19 +162,14 @@ impl Desktop {
                     background,
                 );
                 ui.add_space(4.0 * SCALE);
-                match GITHUB_URL {
-                    Some(url) => {
-                        info_row(ui, InfoIcon::Github, "GitHub", Some(url), muted, background)
-                    }
-                    None => info_row(
-                        ui,
-                        InfoIcon::Github,
-                        tr("GitHub (coming soon)"),
-                        None,
-                        muted,
-                        background,
-                    ),
-                }
+                info_row(
+                    ui,
+                    InfoIcon::Github,
+                    "GitHub",
+                    Some(GITHUB_URL),
+                    blue,
+                    background,
+                );
                 ui.add_space(16.0 * SCALE);
                 let legal = ui
                     .add_sized(
@@ -376,10 +370,7 @@ fn info_row(
     if let Some(url) = url {
         label_ui.add(egui::Hyperlink::from_label_and_url(text, url));
     } else {
-        let response = label_ui.label(text);
-        if matches!(icon, InfoIcon::Github) {
-            response.on_hover_text(tr("The GitHub repository link will be added later."));
-        }
+        label_ui.label(text);
     }
 }
 
@@ -521,10 +512,17 @@ mod tests {
         app.dialog = Some(Dialog::About);
         frame(&mut app, &ctx, size, vec![egui::Event::PointerGone]);
         frame(&mut app, &ctx, size, vec![]);
-        // The close button is first, followed by Legal & licenses.
-        for key in [egui::Key::Tab, egui::Key::Tab, egui::Key::Enter] {
+        // Close, GitHub, then Legal & licenses are keyboard reachable in visual order.
+        let mut opened_repository = false;
+        for key in [
+            egui::Key::Tab,
+            egui::Key::Tab,
+            egui::Key::Enter,
+            egui::Key::Tab,
+            egui::Key::Enter,
+        ] {
             for pressed in [true, false] {
-                frame(
+                let output = frame(
                     &mut app,
                     &ctx,
                     size,
@@ -536,8 +534,11 @@ mod tests {
                         modifiers: egui::Modifiers::NONE,
                     }],
                 );
+                opened_repository |= output.platform_output.commands.iter().any(|command|
+                    matches!(command, egui::OutputCommand::OpenUrl(url) if url.url == GITHUB_URL));
             }
         }
+        assert!(opened_repository);
         assert_eq!(app.dialog, Some(Dialog::Legal(LegalPage::Application)));
     }
 

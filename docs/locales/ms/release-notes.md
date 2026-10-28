@@ -1,5 +1,19 @@
-## 3.1.1 — 2026-10-27
+## 3.2.0 — 2026-10-28
 
-### Penyelesaian fail besar yang lebih pantas
+### Pautan hos awam
 
-Muat turun HTTP/HTTPS dan FTP satu bahagian pada pemacu yang sama kini mengesahkan dan menyimpan fail sedia ada tanpa menulis satu lagi salinan penuh. Muat turun berbilang bahagian mengekalkan penggabungan tak segerak mengikut urutan; penyimpanan antara pemacu masih menyalin dengan selamat. Semakan checksum, pembatalan, perlindungan nama fail dan tanda asal Internet dikekalkan. Penyimpanan yang terganggu dipulihkan daripada bahagian atau fail gabungan tanpa muat turun semula atau fail pendua.
+Sokongan baharu untuk fail awam tunggal MEGA dan pemindahan awam WeTransfer. MEGA menyahsulit secara setempat dan mengesahkan integriti; jeda dan sambung semula bergantung pada sokongan pelayan serta identiti fail.
+
+Pautan terlindung kata laluan, khusus akaun, tamat tempoh dan folder MEGA tidak disokong.
+
+### Penemuan fail dan tangkapan pelayar
+
+Halaman muat turun boleh menemui pautan fail; pilihan yang tidak jelas atau merentas laman memerlukan semakan. Sambungan mengekalkan kunci MEGA dan menyokong tindakan muat turun fail mentah GitHub. Muat semula sambungan selepas naik taraf.
+
+### Laman web dan dokumentasi
+
+Laman web kini memaparkan sokongan video, pratonton Web Grabber, butiran hos dan tayangan slaid.
+
+Pemasang dan pakej mudah alih tetap menyertakan FFmpeg, sumber dan lesennya.
+
+Menu Bantuan kini boleh menyemak keluaran stabil GitHub secara manual, mencuba semula dan membuka halaman keluaran. Perihal kini dipautkan ke repositori GitHub rasmi.

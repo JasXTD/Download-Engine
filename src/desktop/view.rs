@@ -491,12 +491,16 @@ impl Desktop {
                 }
             });
         self.clipboard_card(&ctx, p);
+        if self.dialog != Some(Dialog::CheckUpdates) {
+            self.extras.update_check = None;
+        }
         match self.dialog {
             Some(Dialog::Automation) => self.automation_dialog(&ctx, p),
             Some(Dialog::ScriptSample) => self.script_sample_dialog(&ctx, p),
             Some(Dialog::ScriptReplace) => self.script_replace_dialog(&ctx, p),
             Some(Dialog::Confirm) => self.confirmation_dialog(&ctx, p),
             Some(Dialog::About) => self.about_dialog(&ctx),
+            Some(Dialog::CheckUpdates) => self.updates_dialog(&ctx, p),
             Some(Dialog::Legal(page)) => self.legal_dialog(&ctx, page),
             Some(Dialog::Proxy) => self.proxy_dialog(&ctx, p),
             Some(Dialog::Connections) => self.connections_dialog(&ctx, p),

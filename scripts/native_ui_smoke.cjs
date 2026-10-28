@@ -212,6 +212,16 @@ function capture(name, dark, size, view = 'downloads', empty = false, legacy = f
   console.log(JSON.stringify({name,screenshot}));
   return {name,screenshot,size,view,dark,legacy,compact,toolbar,queuedNetworkWork:false};
 }
+if(process.argv.includes('--updates')) {
+  const results=[];
+  for(const dark of [true,false]) for(const size of ['860x600','1280x860']) {
+    for(const feature of ['updates-available','updates-current','updates-error']) {
+      results.push(capture(feature+'-'+(dark?'dark':'light')+'-'+size,dark,size,'downloads',false,false,false,{feature}));
+    }
+  }
+  fs.writeFileSync(path.join(output,'verification.json'),JSON.stringify({results,scope:'Update dialog: available, current and error states in both themes and sizes. Offline fixtures, no GitHub requests.'},null,2));
+  console.log('Verification: '+path.join(output,'verification.json'));process.exit(0);
+}
 if(process.argv.includes('--link-fallback')) {
   const results=[];
   for(const dark of [true,false]) for(const size of ['860x600','1280x860']) {

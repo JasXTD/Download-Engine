@@ -283,7 +283,7 @@ fn about_card_fits_both_themes_and_leaves_the_selected_download_unchanged() {
                 "Download Engine",
                 &version,
                 "Created by Xetro",
-                "GitHub (coming soon)",
+                "GitHub",
                 "Legal & licenses",
             ] {
                 let rect = topmost_text_rect(&output, label);
@@ -307,7 +307,7 @@ fn about_card_fits_both_themes_and_leaves_the_selected_download_unchanged() {
             assert!(text_rect(&output, &version).top() > title.bottom());
             assert_eq!(
                 text_rect(&output, "Created by Xetro").left(),
-                text_rect(&output, "GitHub (coming soon)").left()
+                text_rect(&output, "GitHub").left()
             );
             assert!(text_rect(&output, "Created by Xetro").left() < title.left());
             assert!(
@@ -315,8 +315,8 @@ fn about_card_fits_both_themes_and_leaves_the_selected_download_unchanged() {
                     > text_rect(&output, &version).bottom()
             );
 
-            // The coming-soon row must not launch a browser or dismiss the card.
-            let pos = text_rect(&output, "GitHub (coming soon)").center();
+            // The repository link opens the official project without dismissing the card.
+            let pos = text_rect(&output, "GitHub").center();
             for pressed in [true, false] {
                 let output = frame(
                     &mut app,
@@ -332,13 +332,10 @@ fn about_card_fits_both_themes_and_leaves_the_selected_download_unchanged() {
                         },
                     ],
                 );
-                assert!(
-                    !output
-                        .platform_output
-                        .commands
-                        .iter()
-                        .any(|command| matches!(command, egui::OutputCommand::OpenUrl(_)))
-                );
+                if !pressed {
+                    assert!(output.platform_output.commands.iter().any(|command|
+                        matches!(command, egui::OutputCommand::OpenUrl(url) if url.url == download_engine::updates::REPOSITORY_URL)));
+                }
             }
             assert_eq!(app.dialog, Some(Dialog::About));
             for pressed in [true, false] {

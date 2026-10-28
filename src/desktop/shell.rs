@@ -620,6 +620,10 @@ impl Desktop {
                                 self.view = View::Changelog;
                                 ui.close();
                             }
+                            if ui.button(tr("Check for updates")).clicked() {
+                                self.open_updates();
+                                ui.close();
+                            }
                             if ui.button(tr("About")).clicked() {
                                 self.dialog = Some(Dialog::About);
                                 ui.close();

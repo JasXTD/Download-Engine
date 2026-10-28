@@ -245,6 +245,8 @@ Source: "{#SourceRoot}\THIRD-PARTY-NOTICES.md"; DestDir: "{app}"; Flags: ignorev
 Source: "{#SourceRoot}\docs\licenses\*"; DestDir: "{app}\docs\licenses"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "{#SourceRoot}\docs\github-release.md"; DestDir: "{app}\docs"; Flags: ignoreversion
 Source: "{#SourceRoot}\docs\reference.md"; DestDir: "{app}\docs"; Flags: ignoreversion
+Source: "{#SourceRoot}\docs\mega.md"; DestDir: "{app}\docs"; Flags: ignoreversion
+Source: "{#SourceRoot}\docs\wetransfer.md"; DestDir: "{app}\docs"; Flags: ignoreversion
 Source: "{#SourceRoot}\docs\images\*"; DestDir: "{app}\docs\images"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "{#SourceRoot}\tools\ffmpeg\source\*"; DestDir: "{app}\tools\ffmpeg\source"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "{#SourceRoot}\tools\ffmpeg\licenses\*"; DestDir: "{app}\tools\ffmpeg\licenses"; Flags: ignoreversion recursesubdirs createallsubdirs
@@ -264,6 +266,7 @@ Source: "{#SourceRoot}\tools\ffmpeg\media-manifest.json"; DestDir: "{app}\tools\
 Source: "{#SourceRoot}\scripts\Register-Browsers.ps1"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#SourceRoot}\extension\core.js"; DestDir: "{app}\extensions\chrome"; Flags: ignoreversion
 Source: "{#SourceRoot}\extension\capture.js"; DestDir: "{app}\extensions\chrome"; Flags: ignoreversion
+Source: "{#SourceRoot}\extension\github-download.js"; DestDir: "{app}\extensions\chrome"; Flags: ignoreversion
 Source: "{#SourceRoot}\extension\link-recovery.js"; DestDir: "{app}\extensions\chrome"; Flags: ignoreversion
 Source: "{#SourceRoot}\extension\media.js"; DestDir: "{app}\extensions\chrome"; Flags: ignoreversion
 Source: "{#SourceRoot}\extension\permission-flow.js"; DestDir: "{app}\extensions\chrome"; Flags: ignoreversion
@@ -283,6 +286,7 @@ Source: "{#SourceRoot}\extension\links.js"; DestDir: "{app}\extensions\chrome"; 
 Source: "{#SourceRoot}\extension\manifest.chromium.json"; DestDir: "{app}\extensions\chrome"; DestName: "manifest.json"; Flags: ignoreversion
 Source: "{#SourceRoot}\extension\core.js"; DestDir: "{app}\extensions\edge"; Flags: ignoreversion
 Source: "{#SourceRoot}\extension\capture.js"; DestDir: "{app}\extensions\edge"; Flags: ignoreversion
+Source: "{#SourceRoot}\extension\github-download.js"; DestDir: "{app}\extensions\edge"; Flags: ignoreversion
 Source: "{#SourceRoot}\extension\link-recovery.js"; DestDir: "{app}\extensions\edge"; Flags: ignoreversion
 Source: "{#SourceRoot}\extension\media.js"; DestDir: "{app}\extensions\edge"; Flags: ignoreversion
 Source: "{#SourceRoot}\extension\permission-flow.js"; DestDir: "{app}\extensions\edge"; Flags: ignoreversion
@@ -302,6 +306,7 @@ Source: "{#SourceRoot}\extension\links.js"; DestDir: "{app}\extensions\edge"; Fl
 Source: "{#SourceRoot}\extension\manifest.chromium.json"; DestDir: "{app}\extensions\edge"; DestName: "manifest.json"; Flags: ignoreversion
 Source: "{#SourceRoot}\extension\core.js"; DestDir: "{app}\extensions\brave"; Flags: ignoreversion
 Source: "{#SourceRoot}\extension\capture.js"; DestDir: "{app}\extensions\brave"; Flags: ignoreversion
+Source: "{#SourceRoot}\extension\github-download.js"; DestDir: "{app}\extensions\brave"; Flags: ignoreversion
 Source: "{#SourceRoot}\extension\link-recovery.js"; DestDir: "{app}\extensions\brave"; Flags: ignoreversion
 Source: "{#SourceRoot}\extension\media.js"; DestDir: "{app}\extensions\brave"; Flags: ignoreversion
 Source: "{#SourceRoot}\extension\permission-flow.js"; DestDir: "{app}\extensions\brave"; Flags: ignoreversion
@@ -321,6 +326,7 @@ Source: "{#SourceRoot}\extension\links.js"; DestDir: "{app}\extensions\brave"; F
 Source: "{#SourceRoot}\extension\manifest.chromium.json"; DestDir: "{app}\extensions\brave"; DestName: "manifest.json"; Flags: ignoreversion
 Source: "{#SourceRoot}\extension\core.js"; DestDir: "{app}\extensions\firefox"; Flags: ignoreversion
 Source: "{#SourceRoot}\extension\capture.js"; DestDir: "{app}\extensions\firefox"; Flags: ignoreversion
+Source: "{#SourceRoot}\extension\github-download.js"; DestDir: "{app}\extensions\firefox"; Flags: ignoreversion
 Source: "{#SourceRoot}\extension\link-recovery.js"; DestDir: "{app}\extensions\firefox"; Flags: ignoreversion
 Source: "{#SourceRoot}\extension\media.js"; DestDir: "{app}\extensions\firefox"; Flags: ignoreversion
 Source: "{#SourceRoot}\extension\permission-flow.js"; DestDir: "{app}\extensions\firefox"; Flags: ignoreversion

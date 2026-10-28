@@ -31,11 +31,10 @@ and offline website capture. Its filenames, sizes and site tree are example
 content, not a live scan or a desktop screenshot. Keep that label visible.
 
 The hosting section documents MEGA public files, public WeTransfer transfers and
-exposed-link discovery, including GitHub raw-file handling. It clearly marks these
-as **development-source features not included in v3.1.1**. Keep the availability
-notice, FAQ, download-section note and README consistent until a release contains
-them. Do not imply universal hosting support or full offline functionality for
-interactive websites. Service-specific limitations are in `mega.md`,
+exposed-link discovery, including GitHub raw-file handling. These features ship
+in **v3.2.0**. Keep the availability notice, FAQ, download-section note and README
+consistent with the featured release. Do not imply universal hosting support or
+full offline functionality for interactive websites. Service-specific limitations are in `mega.md`,
 `wetransfer.md` and `user-guide.md`.
 
 ## Updating the website
@@ -45,7 +44,7 @@ GitHub Pages deploys the `/docs` contents automatically. Check the repository's
 Actions page or Settings → Pages for the deployment result, then verify the
 published page and affected assets.
 
-Featured packages are explicitly pinned to **3.1.1**. When a new release is
+Featured packages are explicitly pinned to **3.2.0**. When a new release is
 published, update the version labels, seven asset URLs, release-notes URL and
 SoftwareApplication version/download URL together. Verify each asset exists in
 that release. The separate **Latest GitHub release** link always opens GitHub's

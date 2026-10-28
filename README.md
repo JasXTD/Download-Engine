@@ -41,10 +41,9 @@ The familiar layout is inspired by **Internet Download Manager (IDM)**. Download
 Engine is an independent project, is not affiliated with IDM, and does not claim
 complete IDM feature parity.
 
-> **Latest source vs. release:** the feature list follows the development source.
-> MEGA, WeTransfer, automatic hosting-page file discovery and the new GitHub
-> raw-download capture are available on `main`; they are not included in the
-> published **v3.1.1** installer, portable ZIP or extension ZIPs yet.
+> **New in v3.2.0:** MEGA public files, public WeTransfer transfers, hosting-page
+> file discovery and GitHub raw-download capture are included in the
+> [installer, portable ZIP and browser extensions](https://github.com/JasXTD/Download-Engine/releases/tag/v3.2.0).
 
 ## Features
 
@@ -155,7 +154,9 @@ a different extension, so its settings start fresh; your desktop queues, downloa
 and profile stay in place. Reload developer-loaded Chromium extensions after
 replacing their files. See the [browser setup guide](docs/reference.md#connect-a-browser).
 
-There is no automatic updater. Windows is the supported desktop platform;
+Use **Help → Check for updates** to check the latest GitHub release and open its
+download page. Updates are downloaded and installed manually.
+**Help → About → GitHub** opens this repository. Windows is the supported desktop platform;
 macOS, Linux, and Android packages are not provided by this release workflow.
 
 ## Quick start

@@ -30,6 +30,7 @@ mod settings;
 mod settings_page;
 mod speed_limits;
 mod theme;
+mod updates;
 use formatting::*;
 use theme::Palette;
 pub use theme::configure;
@@ -113,6 +114,7 @@ enum Dialog {
     Automation,
     Confirm,
     About,
+    CheckUpdates,
     Legal(about::LegalPage),
     Proxy,
     Connections,

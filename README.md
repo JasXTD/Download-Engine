@@ -24,6 +24,8 @@
   <strong>Windows x64</strong> · Installer or portable · Chrome, Edge, Brave &amp; Firefox · MIT licensed
 </p>
 
+> **Official website:** [jasxtd.github.io/Download-Engine](https://jasxtd.github.io/Download-Engine/) — screenshots, supported sites, and download links.
+
 ![Download Engine in dark mode, showing download controls, queues and file progress](docs/images/downloads-dark.png)
 
 <p align="center"><em>Example desktop layout in dark mode, with sample downloads.</em></p>

@@ -309,7 +309,7 @@ impl Desktop {
 mod tests {
     use super::*;
     use crate::desktop::interaction_tests::{click, fixture, frame, text_rect};
-    use rusqlite::{Connection, params};
+    use rusqlite::params;
     use sha2::{Digest, Sha256};
 
     fn project(app: &mut Desktop) -> Project {
@@ -331,12 +331,14 @@ mod tests {
                 },
             )
             .unwrap();
-        app.force_refresh();
+        app.refresh_and_wait();
         project
     }
 
     fn seed(app: &Desktop, project: &Project) {
-        let conn = Connection::open(app.store.paths.data.join("queue.sqlite3")).unwrap();
+        let conn =
+            crate::desktop::fixture_database::open(app.store.paths.data.join("queue.sqlite3"))
+                .unwrap();
         for name in ["a.pdf", "b.pdf"] {
             let url = format!("https://example.test/{name}");
             let hash = Sha256::digest(url.as_bytes());
@@ -402,7 +404,7 @@ mod tests {
         let (_temp, mut app, ctx) = fixture();
         let project = project(&mut app);
         seed(&app, &project);
-        app.force_refresh();
+        app.refresh_and_wait();
         click(&mut app, &ctx, "Review website files");
         assert_eq!(app.view, View::Scheduler);
         click(&mut app, &ctx, "Review new files (2)");
@@ -437,7 +439,7 @@ mod tests {
         let (_temp, mut app, ctx) = fixture();
         let project = project(&mut app);
         seed(&app, &project);
-        app.force_refresh();
+        app.refresh_and_wait();
         app.open_scheduled_grabber(&project.id, false);
         for dark in [false, true] {
             ctx.set_visuals(if dark {

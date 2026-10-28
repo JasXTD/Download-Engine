@@ -1,3 +1,4 @@
+const openProfileDatabase = require('./profile_database.cjs');
 // Exercise the actual portable desktop against loopback HTML and isolated data.
 // Stops only the child processes it starts; the intentional stop tests restart durability.
 const assert = require('node:assert/strict');
@@ -8,7 +9,6 @@ const { randomUUID } = require('node:crypto');
 const { spawn } = require('node:child_process');
 const { once } = require('node:events');
 const { setTimeout: delay } = require('node:timers/promises');
-const { DatabaseSync } = require('node:sqlite');
 
 (async () => {
   const root = path.resolve(__dirname, '..');
@@ -24,7 +24,7 @@ const { DatabaseSync } = require('node:sqlite');
   });
   server.listen(0, '127.0.0.1');
   await once(server, 'listening');
-  const db = new DatabaseSync(path.join(home, 'data', 'queue.sqlite3'));
+  const db = openProfileDatabase(path.join(home, 'data', 'queue.sqlite3'));
   db.exec(`PRAGMA busy_timeout=5000;
     CREATE TABLE grabber_projects(id TEXT PRIMARY KEY,name TEXT NOT NULL UNIQUE COLLATE NOCASE,revision INTEGER NOT NULL,settings TEXT NOT NULL);
     CREATE TABLE grabber_schedules(project_id TEXT PRIMARY KEY REFERENCES grabber_projects(id) ON DELETE CASCADE,enabled INTEGER NOT NULL DEFAULT 0,next_at INTEGER,every_hours INTEGER,run_id TEXT,last_at INTEGER,message TEXT NOT NULL DEFAULT '');`);

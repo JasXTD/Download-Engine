@@ -146,20 +146,18 @@ impl Desktop {
         let credentials = self
             .add_login
             .credentials(download_engine::ftp::is_url(&self.url))?;
-        let job = match &self.add_login.job {
-            Some(job) => job.clone(),
-            None => {
-                let mut job = self.prepare_add_download()?;
-                job.status = Status::Paused;
-                let job = self
-                    .store
-                    .enqueue_batch(&[job], self.add_queue_id())?
-                    .remove(0);
-                self.url.clone_from(&job.url);
-                self.add_login.job = Some(job.clone());
-                job
-            }
-        };
+        if let Some(job) = self.add_login.job.clone() {
+            self.request_add_credentials(job, credentials)
+        } else {
+            self.start_add_worker(Some(credentials))
+        }
+    }
+
+    pub(super) fn request_add_credentials(
+        &mut self,
+        job: Job,
+        credentials: Credentials,
+    ) -> anyhow::Result<()> {
         let request = Uuid::new_v4();
         self.scheduler.send(Command::Authentication(auth::Update {
             request,

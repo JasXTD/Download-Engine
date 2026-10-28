@@ -45,6 +45,10 @@ pub(crate) fn initialize(conn: &Connection) -> Result<()> {
         "notify_scripts",
         "INTEGER NOT NULL DEFAULT 1 CHECK(notify_scripts IN (0,1))",
     )?;
+    apply_install_language(conn)
+}
+
+pub(crate) fn apply_install_language(conn: &Connection) -> Result<()> {
     // A setup language is only an initial display preference. An explicit saved
     // choice (including System) always wins, also after an installer upgrade.
     if crate::paths::home_override().is_none() {
@@ -154,15 +158,98 @@ pub enum Appearance {
     Light,
     #[default]
     Dark,
+    Custom,
+}
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ThemePreset {
+    NeonCourier,
+    ReactorNight,
+    /// The scenery preset is the neutral first choice; it is also listed first.
+    #[default]
+    Aurora,
+    #[serde(alias = "fediel")]
+    Moonveil,
+    OwnImage,
+}
+
+impl ThemePreset {
+    pub const BUILT_IN: [Self; 4] = [
+        Self::Aurora,
+        Self::NeonCourier,
+        Self::ReactorNight,
+        Self::Moonveil,
+    ];
+
+    pub fn name(self) -> &'static str {
+        match self {
+            Self::NeonCourier => "Neon Courier",
+            Self::ReactorNight => "Reactor Night",
+            Self::Aurora => "Aurora",
+            Self::Moonveil => "Moonveil",
+            Self::OwnImage => "Your image",
+        }
+    }
+
+    pub fn accent(self) -> [u8; 3] {
+        match self {
+            Self::NeonCourier => [195, 165, 255],
+            Self::ReactorNight => [118, 224, 181],
+            Self::Aurora => [122, 212, 246],
+            Self::Moonveil => [224, 163, 244],
+            Self::OwnImage => [163, 191, 255],
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct CustomTheme {
+    pub preset: ThemePreset,
+    pub strength: u8,
+    pub accent: [u8; 3],
+    /// A profile-local, content-addressed image. Never persist a user file path.
+    pub image: Option<[u8; 32]>,
+}
+
+impl Default for CustomTheme {
+    fn default() -> Self {
+        Self {
+            preset: ThemePreset::default(),
+            strength: 80,
+            accent: ThemePreset::default().accent(),
+            image: None,
+        }
+    }
+}
+
+impl CustomTheme {
+    pub fn validate(self) -> Result<()> {
+        anyhow::ensure!(
+            self.strength <= 100,
+            "Background strength must be between 0 and 100"
+        );
+        anyhow::ensure!(
+            self.preset != ThemePreset::OwnImage || self.image.is_some(),
+            "Choose a theme image first"
+        );
+        Ok(())
+    }
 }
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct InterfacePreferences {
     pub language: crate::i18n::Language,
     pub appearance: Appearance,
+    pub custom_theme: CustomTheme,
     pub compact_rows: bool,
     pub sidebar_labels: bool,
     pub show_details: bool,
+    /// Preferred inspector height in logical points. None uses the compact-window default.
+    pub details_height: Option<u16>,
+    /// Optional toolbar actions, in the stable order defined by the desktop toolbar.
+    pub toolbar_pins: [bool; 10],
     pub auto_download_status: bool,
     /// Offer HTTP(S) file links copied in other apps. Saved data without this
     /// field (older versions) turns it on, the default.
@@ -182,10 +269,13 @@ impl Default for InterfacePreferences {
     fn default() -> Self {
         Self {
             appearance: Appearance::default(),
+            custom_theme: CustomTheme::default(),
             language: crate::i18n::Language::default(),
             compact_rows: false,
             sidebar_labels: true,
             show_details: true,
+            details_height: None,
+            toolbar_pins: [true; 10],
             auto_download_status: true,
             clipboard_links: true,
             completion_sound: false,
@@ -198,6 +288,7 @@ impl Default for InterfacePreferences {
 }
 fn write_interface(conn: &Connection, value: InterfacePreferences) -> Result<()> {
     value.table_layout.validate()?;
+    value.custom_theme.validate()?;
     let n = conn.execute(
         "UPDATE interface_preferences SET data=?1 WHERE id=1",
         [serde_json::to_string(&value)?],
@@ -214,6 +305,7 @@ impl Store {
         )?;
         let value: InterfacePreferences = serde_json::from_str(&data)?;
         value.table_layout.validate()?;
+        value.custom_theme.validate()?;
         Ok(value)
     }
     pub fn save_interface_preferences(&self, value: InterfacePreferences) -> Result<()> {
@@ -245,6 +337,78 @@ mod tests {
         model::{Job, Status},
         paths::AppPaths,
     };
+    #[test]
+    fn pre_release_theme_key_loads_as_moonveil_and_saves_the_new_name() {
+        let preset: ThemePreset = serde_json::from_str(r#""fediel""#).unwrap();
+        assert_eq!(preset, ThemePreset::Moonveil);
+        assert_eq!(preset.name(), "Moonveil");
+        assert_eq!(serde_json::to_string(&preset).unwrap(), r#""moonveil""#);
+    }
+
+    #[test]
+    fn custom_theme_defaults_roundtrip_and_validation_preserve_previous_preferences() {
+        let previous: InterfacePreferences =
+            serde_json::from_str(r#"{"appearance":"dark"}"#).unwrap();
+        assert_eq!(previous.custom_theme, CustomTheme::default());
+        let conn = Connection::open_in_memory().unwrap();
+        initialize(&conn).unwrap();
+        for preset in ThemePreset::BUILT_IN {
+            let value = InterfacePreferences {
+                appearance: Appearance::Custom,
+                custom_theme: CustomTheme {
+                    preset,
+                    strength: 65,
+                    accent: preset.accent(),
+                    image: None,
+                },
+                ..previous
+            };
+            write_interface(&conn, value).unwrap();
+            let read = || -> InterfacePreferences {
+                serde_json::from_str(
+                    &conn
+                        .query_row::<String, _, _>(
+                            "SELECT data FROM interface_preferences",
+                            [],
+                            |row| row.get(0),
+                        )
+                        .unwrap(),
+                )
+                .unwrap()
+            };
+            assert_eq!(read(), value);
+            let mut invalid = value;
+            invalid.custom_theme.strength = 101;
+            assert!(write_interface(&conn, invalid).is_err());
+            invalid.custom_theme.strength = 50;
+            invalid.custom_theme.preset = ThemePreset::OwnImage;
+            assert!(write_interface(&conn, invalid).is_err());
+            assert_eq!(read(), value);
+        }
+    }
+    #[test]
+    fn older_profiles_get_toolbar_and_details_defaults_and_preserve_other_settings() {
+        let older: InterfacePreferences =
+            serde_json::from_str(r#"{"language":"de","compact_rows":true,"show_details":false}"#)
+                .unwrap();
+        assert_eq!(older.toolbar_pins, [true; 10]);
+        assert_eq!(older.details_height, None);
+        let conn = Connection::open_in_memory().unwrap();
+        initialize(&conn).unwrap();
+        let mut changed = older;
+        changed.toolbar_pins[6] = false;
+        changed.details_height = Some(237);
+        write_interface(&conn, changed).unwrap();
+        let data: String = conn
+            .query_row("SELECT data FROM interface_preferences", [], |r| r.get(0))
+            .unwrap();
+        assert_eq!(
+            serde_json::from_str::<InterfacePreferences>(&data).unwrap(),
+            changed
+        );
+        assert!(changed.compact_rows && !changed.show_details);
+        assert_eq!(changed.language, older.language);
+    }
     #[test]
     fn clipboard_links_default_on_including_older_saved_settings_and_persist_off() {
         assert!(InterfacePreferences::default().clipboard_links);
@@ -494,10 +658,15 @@ mod tests {
         assert!(store.preferences().unwrap().close_to_tray);
         let custom = InterfacePreferences {
             appearance: Appearance::System,
+            custom_theme: CustomTheme::default(),
             language: crate::i18n::Language::Malay,
             compact_rows: true,
             sidebar_labels: false,
             show_details: false,
+            details_height: Some(236),
+            toolbar_pins: [
+                true, false, true, false, true, false, true, false, true, false,
+            ],
             auto_download_status: false,
             clipboard_links: false,
             completion_sound: true,

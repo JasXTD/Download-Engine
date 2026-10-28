@@ -19,7 +19,7 @@ fn secured(store: &Store, url: &str, cookies: Vec<Value>) -> Job {
     store.get(&reply.job_id.unwrap()).unwrap().unwrap()
 }
 fn count(store: &Store, table: &str) -> i64 {
-    rusqlite::Connection::open(store.paths.data.join("queue.sqlite3"))
+    crate::fixture_database::open(store.paths.data.join("queue.sqlite3"))
         .unwrap()
         .query_row(&format!("SELECT count(*) FROM {table}"), [], |r| r.get(0))
         .unwrap()
@@ -97,7 +97,7 @@ fn browser_login_is_encrypted_atomic_and_idempotent_even_after_removal() {
 #[test]
 fn browser_login_rolls_back_ciphertext_and_receipt_if_queue_insert_fails() {
     let (_temp, store) = setup();
-    let conn = rusqlite::Connection::open(store.paths.data.join("queue.sqlite3")).unwrap();
+    let conn = crate::fixture_database::open(store.paths.data.join("queue.sqlite3")).unwrap();
     conn.execute_batch("CREATE TRIGGER reject_fixture BEFORE INSERT ON jobs BEGIN SELECT RAISE(FAIL,'fixture disk failure'); END;").unwrap();
     assert!(!handoff(&store, &request("http://127.0.0.1/file", vec![cookie()])).ok);
     assert_eq!(count(&store, "browser_sessions"), 0);
@@ -200,7 +200,7 @@ async fn browser_login_tampered_ciphertext_fails_before_any_network_request() {
     let fixture = Fixture::new(128, 16, false).await;
     let (_temp, store) = setup();
     let job = secured(&store, &fixture.url, vec![cookie()]);
-    let conn = rusqlite::Connection::open(store.paths.data.join("queue.sqlite3")).unwrap();
+    let conn = crate::fixture_database::open(store.paths.data.join("queue.sqlite3")).unwrap();
     conn.execute("UPDATE browser_sessions SET sealed=zeroblob(400)", [])
         .unwrap();
     let failed = run(&store, job).await;

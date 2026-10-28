@@ -1,8 +1,9 @@
+const openProfileDatabase = require('./profile_database.cjs');
 // Real CLI/desktop, isolated SQLite, loopback bytes. Only owned fixture processes are stopped.
 const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
 const http=require('node:http'),{spawn,spawnSync}=require('node:child_process');
 const {once}=require('node:events'),{randomUUID,createHash}=require('node:crypto');
-const {DatabaseSync}=require('node:sqlite'),{setTimeout:delay}=require('node:timers/promises');
+const {setTimeout:delay}=require('node:timers/promises');
 const root=path.resolve(__dirname,'..'),binary=path.resolve(process.argv[2]||path.join(root,'dist/IDM-EX-UnsignedDev'));
 const home=path.join(root,'artifacts',`cli-automation-smoke-${randomUUID().slice(0,8)}`);
 fs.mkdirSync(home,{recursive:true});
@@ -42,7 +43,7 @@ function mark(label){checks.push(label);console.log(label);}
   server.listen(0,'127.0.0.1');await once(server,'listening');const url=`http://127.0.0.1:${server.address().port}`;
   try {
     const initial=await cli(['list']);assert.deepEqual(initial.value.result,[]);
-    db=new DatabaseSync(path.join(home,'data/queue.sqlite3'));db.exec('PRAGMA busy_timeout=5000;UPDATE download_queues SET running=0;');
+    db=openProfileDatabase(path.join(home,'data/queue.sqlite3'));db.exec('PRAGMA busy_timeout=5000;UPDATE download_queues SET running=0;');
     // A stopped app must not execute timed-out requests on a later startup.
     const timeout=await cli(['queue','create','Must not exist','--no-start','--wait','1'],1);assert.equal(timeout.value.receipt.state,'cancelled');
     // This command cold-launches the real desktop. Find only its direct child for cleanup.

@@ -7,6 +7,8 @@ use download_engine::script_automation::{
 mod editor;
 mod file;
 mod form;
+mod library;
+mod reference;
 mod sample;
 #[cfg(test)]
 mod tests;
@@ -36,11 +38,25 @@ pub(super) struct State {
     /// A file's code waiting for the person to confirm replacing unsaved code.
     replace: Option<file::Loaded>,
     editor: editor::State,
+    api_search: String,
+    imported: Option<(bool, bool)>,
+    pub(super) package_action: Option<bool>,
+    pub(super) full_editor: bool,
+    library_search: String,
+    library_open: bool,
+    show_full_logs: bool,
+    pub(super) settings_open: bool,
 }
 impl State {
+    pub(super) fn full_editor(&self) -> bool {
+        self.full_editor && self.draft.is_some()
+    }
+    pub(super) fn can_export(&self) -> bool {
+        self.draft.is_some()
+    }
     #[cfg(feature = "screenshot")]
     pub(super) fn capture_ready(&self) -> bool {
-        self.draft.is_none() || self.editor.capture_ready()
+        self.library_visible() || self.draft.is_none() || self.editor.capture_ready()
     }
     pub(super) fn guide(&self) -> (&'static str, &'static str) {
         match self.draft.as_ref().map(|script| script.language) {
@@ -52,7 +68,20 @@ impl State {
     pub(super) fn dirty(&self) -> bool {
         self.draft != self.baseline
     }
+    pub(super) fn library_visible(&self) -> bool {
+        !self.full_editor() && (self.library_open || (self.draft.is_none() && self.runs.is_empty()))
+    }
+    pub(super) fn exit_full_editor(&mut self, ctx: &egui::Context) {
+        if !self.editor.completion_open()
+            && ctx.input_mut(|input| input.consume_key(egui::Modifiers::NONE, egui::Key::Escape))
+        {
+            self.full_editor = false;
+        }
+    }
     pub(super) fn new_script(&mut self) {
+        self.library_open = false;
+        self.full_editor = false;
+        self.imported = None;
         self.draft = Some(Script {
             id: uuid::Uuid::new_v4().to_string(),
             revision: 0,
@@ -72,6 +101,7 @@ impl State {
         self.all_history = false;
     }
     fn select(&mut self, script: Script) {
+        self.imported = None;
         let other = self.draft.as_ref().is_none_or(|d| d.id != script.id);
         self.baseline = Some(script.clone());
         self.draft = Some(script);
@@ -88,9 +118,11 @@ impl State {
     }
     /// Show one run's log, whichever script is open; a clicked notification asks for it.
     pub(super) fn show_run(&mut self, run: String) {
+        self.library_open = false;
         self.all_history = true;
         self.selected_run = Some(run);
         self.pinned_run = true;
+        self.show_full_logs = true;
     }
     fn reader(&self) -> bool {
         self.draft
@@ -423,217 +455,211 @@ fn test_card(ui: &mut egui::Ui, store: &Store, state: &mut State, p: Palette) {
 }
 
 fn script_badge(ui: &mut egui::Ui, label: &str, color: Color32) {
-    egui::Frame::new()
-        .fill(color.gamma_multiply(0.14))
-        .stroke(egui::Stroke::new(1.0, color.gamma_multiply(0.38)))
-        .corner_radius(5)
-        .inner_margin(egui::Margin::symmetric(7, 2))
-        .show(ui, |ui| {
-            ui.label(RichText::new(label).size(11.0).strong().color(color));
-        });
+    let size = ui
+        .painter()
+        .layout_no_wrap(label.into(), egui::FontId::proportional(11.0), color)
+        .size()
+        + egui::vec2(16.0, 6.0);
+    // Reserve the whole badge before drawing. A translated label at the end of
+    // a wrapped row must move to the next row, not wrap one character per line.
+    ui.allocate_ui(size, |ui| {
+        egui::Frame::new()
+            .fill(color.gamma_multiply(0.14))
+            .stroke(egui::Stroke::new(1.0, color.gamma_multiply(0.38)))
+            .corner_radius(5)
+            .inner_margin(egui::Margin::symmetric(7, 2))
+            .show(ui, |ui| {
+                ui.add(
+                    egui::Label::new(RichText::new(label).size(11.0).strong().color(color))
+                        .extend(),
+                );
+            });
+    });
 }
 
-fn controls(ui: &mut egui::Ui, store: &Store, state: &mut State, p: Palette) {
-    if state.draft.is_none() && state.items.is_empty() {
+fn controls(
+    ui: &mut egui::Ui,
+    store: &Store,
+    state: &mut State,
+    p: Palette,
+    file_request: &mut Option<file::Request>,
+) {
+    let Some(draft) = state.draft.clone() else {
         return;
-    }
+    };
     let dirty = state.dirty();
-    let mut chosen = None;
-    egui::Frame::new()
-        .fill(p.surface)
-        .stroke(egui::Stroke::new(1.0, p.border))
-        .corner_radius(10)
-        .inner_margin(egui::Margin::symmetric(12, 9))
-        .show(ui, |ui| {
-            ui.set_width(ui.available_width());
-            ui.spacing_mut().interact_size.y = form::CONTROL_HEIGHT;
-            if let Some(draft) = state.draft.clone() {
-                let active = state
-                    .runs
-                    .iter()
-                    .find(|r| r.script_id == draft.id && r.active())
-                    .cloned();
-                ui.horizontal_wrapped(|ui| {
-                    if ui.add_enabled(dirty, primary(tr("Save script"), p)).clicked() {
-                        match store.save_script(&draft) {
-                            Ok(saved) => {
-                                state.select(saved);
-                                refresh(store, state);
-                            }
-                            Err(e) => state.error = Some(e.to_string()),
-                        }
-                    }
-                    let reader = matches!(draft.trigger, Trigger::SiteReader { .. });
-                    if reader {
-                        if ui
-                            .add_enabled(
-                                !dirty
-                                    && draft.revision > 0
-                                    && active.is_none()
-                                    && !state.test_url.trim().is_empty(),
-                                egui::Button::new(tr("Test on URL")),
-                            )
-                            .on_hover_text(tr("Runs the saved script on a page. Nothing is downloaded."))
-                            .clicked()
-                        {
-                            test_reader(store, state);
-                        }
-                    } else if ui
-                        .add_enabled(
-                            !dirty && draft.revision > 0 && active.is_none(),
-                            egui::Button::new(tr("Run script")),
-                        )
-                        .on_hover_text(tr("Save changes before running. Manual runs work even with automatic triggers disabled."))
-                        .clicked()
-                    {
-                        match store.run_script(&draft.id, &uuid::Uuid::new_v4().to_string()) {
-                            Ok(run) => {
-                                state.selected_run = Some(run.id);
-                                state.pinned_run = false;
-                                state.all_history = false;
-                                state.error = None;
-                                refresh(store, state);
-                            }
-                            Err(e) => state.error = Some(e.to_string()),
-                        }
-                    }
-                    if !reader
-                        && draft.takes_sample()
-                        && ui
-                            .add_enabled(
-                                !dirty && draft.revision > 0 && active.is_none(),
-                                egui::Button::new(tr("Run with sample…")),
-                            )
-                            .on_hover_text(tr("Runs the saved script with downloads you choose. Changes are only simulated."))
-                            .on_disabled_hover_text(tr("Save changes before running."))
-                            .clicked()
-                    {
-                        match sample::Picker::open(store, &draft) {
-                            Ok(picker) => {
-                                state.sample = Some(picker);
-                                state.error = None;
-                            }
-                            Err(e) => state.error = Some(e.to_string()),
-                        }
-                    }
-                    if ui
-                        .add_enabled(
-                            active.is_some() && state.stopping.is_none(),
-                            egui::Button::new(if state.stopping.is_some() {
-                                tr("Stopping…")
-                            } else {
-                                tr("Stop script")
-                            }),
-                        )
-                        .clicked()
-                        && let Some(run) = active.clone()
-                    {
-                        match store.stop_script(&run.id) {
-                            Ok(()) => {
-                                state.stopping = Some(run.id);
-                                refresh(store, state);
-                            }
-                            Err(e) => state.error = Some(e.to_string()),
-                        }
-                    }
-                    if ui.button(tr("Reload / discard edits")).clicked() {
-                        match store.script(&draft.id) {
-                            Ok(saved) => state.select(saved),
-                            Err(e) if draft.revision > 0 => state.error = Some(e.to_string()),
-                            Err(_) => {
-                                state.draft = None;
-                                state.baseline = None;
-                                state.error = None;
-                            }
-                        }
+    let active = state
+        .runs
+        .iter()
+        .find(|r| r.script_id == draft.id && r.active())
+        .cloned();
+    let reader = matches!(draft.trigger, Trigger::SiteReader { .. });
+    ui.spacing_mut().interact_size.y = form::CONTROL_HEIGHT;
+    ui.horizontal_wrapped(|ui| {
+        script_badge(ui, if draft.language == Language::Lua { "LUA" } else { "PS1" }, p.blue);
+        ui.label(RichText::new(tf!("{} editor", draft.language.label())).strong());
+        // Keep the primary actions beside the code title. Wrapped rows also
+        // accommodate long translations without shrinking or clipping labels.
+        if ui.add_enabled(dirty, egui::Button::new(tr("Save script"))).clicked() {
+            match store.save_script(&draft) {
+                Ok(saved) => { state.select(saved); refresh(store, state); }
+                Err(e) => state.error = Some(e.to_string()),
+            }
+        }
+        if let Some(run) = &active {
+            if ui.add_enabled(state.stopping.is_none(), egui::Button::new(
+                if state.stopping.is_some() { tr("Stopping…") } else { tr("Stop script") }
+            )).clicked() {
+                match store.stop_script(&run.id) {
+                    Ok(()) => { state.stopping = Some(run.id.clone()); refresh(store, state); }
+                    Err(e) => state.error = Some(e.to_string()),
+                }
+            }
+        } else if reader {
+            if ui.add_enabled(!dirty && draft.revision > 0 && !state.test_url.trim().is_empty(),
+                primary(tr("Test on URL"), p))
+                .on_hover_text(tr("Runs the saved script on a page. Nothing is downloaded."))
+                .clicked() { test_reader(store, state); }
+        } else if ui.add_enabled(!dirty && draft.revision > 0, primary(tr("Run script"), p))
+            .on_hover_text(tr("Save changes before running. Manual runs work even with automatic triggers disabled."))
+            .clicked() {
+            match store.run_script(&draft.id, &uuid::Uuid::new_v4().to_string()) {
+                Ok(run) => {
+                    state.selected_run = Some(run.id);
+                    state.pinned_run = false;
+                    state.all_history = false;
+                    state.error = None;
+                    state.show_full_logs = true;
+                    refresh(store, state);
+                }
+                Err(e) => state.error = Some(e.to_string()),
+            }
+        }
+        if ui.button(tr(if state.full_editor { "Exit full editor" } else { "Full editor" })).clicked() {
+            state.full_editor = !state.full_editor;
+        }
+    });
+    ui.horizontal_wrapped(|ui| {
+        ui.add(egui::Label::new(RichText::new(&draft.name).strong()).truncate()).on_hover_text(&draft.name);
+        if dirty { script_badge(ui, tr("Unsaved changes"), p.warning); }
+        else if active.is_some() { script_badge(ui, tr("Running"), p.accent); }
+        if reader { script_badge(ui, &tr("Site reader").to_uppercase(), p.blue); }
+        ui.label(RichText::new(format!("{} / 64 KiB", draft.body.len().div_ceil(1024))).small().color(p.muted));
+        if draft.language == Language::Lua {
+            // Status badges change as runs and triggers change. The reference
+            // popup must keep the same identity across those neighboring widgets.
+            ui.scope_builder(egui::UiBuilder::new().id(ui.make_persistent_id(("script-core-api", &draft.id))), |ui| {
+                reference::show(ui, &draft, &mut state.api_search, p);
+            });
+        }
+        ui.menu_button(tr("Editor actions"), |ui| {
+            if ui.button(tr("Open file…")).on_hover_text(tr("Copies a .lua or .ps1 file into the editor. Nothing is saved until you choose Save script.")).clicked() {
+                *file_request = Some(file::Request::Open); ui.close();
+            }
+            if ui.button(tr("Save to file…")).on_hover_text(tr("Saves the code in the editor to a .lua or .ps1 file.")).clicked() {
+                *file_request = Some(file::Request::Save); ui.close();
+            }
+            if !reader && draft.takes_sample() && ui.add_enabled(!dirty && draft.revision > 0 && active.is_none(),
+                egui::Button::new(tr("Run with sample…")))
+                .on_hover_text(tr("Runs the saved script with downloads you choose. Changes are only simulated."))
+                .on_disabled_hover_text(tr("Save changes before running.")).clicked() {
+                match sample::Picker::open(store, &draft) {
+                    Ok(picker) => { state.sample = Some(picker); state.error = None; }
+                    Err(e) => state.error = Some(e.to_string()),
+                }
+                ui.close();
+            }
+            ui.separator();
+            if ui.button(tr("Reload / discard edits")).clicked() {
+                match store.script(&draft.id) {
+                    Ok(saved) => state.select(saved),
+                    Err(e) if draft.revision > 0 => state.error = Some(e.to_string()),
+                    Err(_) => { state.draft = None; state.baseline = None; state.error = None; state.full_editor = false; }
+                }
+                refresh(store, state); ui.close();
+            }
+            if ui.add_enabled(!dirty && draft.revision > 0 && active.is_none(), egui::Button::new(tr("Remove script")))
+                .on_hover_text(tr("Removes the saved script. Run logs stay in All scripts history.")).clicked() {
+                match store.remove_script(&draft.id) {
+                    Ok(()) => {
+                        state.draft = None; state.baseline = None; state.error = None;
+                        state.all_history = true; state.full_editor = false; state.library_open = true;
                         refresh(store, state);
                     }
-                    if ui
-                        .add_enabled(
-                            !dirty
-                                && draft.revision > 0
-                                && !state.runs.iter().any(|r| r.script_id == draft.id && r.active()),
-                            egui::Button::new(tr("Remove script")),
-                        )
-                        .on_hover_text(tr("Removes the saved script. Run logs stay in All scripts history."))
-                        .clicked()
-                    {
-                        match store.remove_script(&draft.id) {
-                            Ok(()) => {
-                                state.draft = None;
-                                state.baseline = None;
-                                state.error = None;
-                                state.all_history = true;
-                                refresh(store, state);
-                            }
-                            Err(e) => state.error = Some(e.to_string()),
-                        }
-                    }
-                    if dirty {
-                        script_badge(ui, tr("Unsaved changes"), p.warning);
-                    } else if active.is_some() {
-                        script_badge(ui, tr("Running"), p.accent);
-                    }
-                    if reader {
-                        script_badge(ui, &tr("Site reader").to_uppercase(), p.blue);
-                    }
-                });
-            }
-            if !state.items.is_empty() {
-                if state.draft.is_some() {
-                    ui.add_space(6.0);
+                    Err(e) => state.error = Some(e.to_string()),
                 }
-                ui.horizontal_wrapped(|ui| {
-                    ui.label(RichText::new(tr("Saved script")).small().color(p.muted));
-                    ui.add_enabled_ui(!dirty, |ui| {
-                        ui.set_max_width(240.0);
-                        egui::ComboBox::from_id_salt("saved-scripts")
-                            .width(240.0)
-                            .truncate()
-                            .selected_text(
-                                state
-                                    .draft
-                                    .as_ref()
-                                    .map_or(tr("Choose a script"), |s| s.name.as_str()),
-                            )
-                            .show_ui(ui, |ui| {
-                                for item in &state.items {
-                                    if ui
-                                        .selectable_label(
-                                            state.draft.as_ref().is_some_and(|s| s.id == item.id),
-                                            &item.name,
-                                        )
-                                        .clicked()
-                                    {
-                                        chosen = Some(item.clone());
-                                    }
-                                }
-                            })
-                            .response
-                            .on_hover_text(state.draft.as_ref().map_or(tr("Choose a script"), |s| s.name.as_str()));
-                    });
-                });
+                ui.close();
             }
         });
-    if let Some(item) = chosen {
-        state.select(item);
-        refresh(store, state);
+    });
+    if state.full_editor() && reader {
+        ui.horizontal(|ui| {
+            ui.label(tr("Address"));
+            ui.add(
+                view::line_edit(&mut state.test_url)
+                    .hint_text("https://www.example.com/watch/…")
+                    .desired_width(ui.available_width())
+                    .char_limit(4096),
+            );
+        });
     }
-    ui.add_space(8.0);
+    ui.add_space(4.0);
+    ui.separator();
 }
 
 impl Desktop {
     pub(super) fn scripts_page(&mut self, ui: &mut egui::Ui, p: Palette) {
         let mut state = std::mem::take(&mut self.scripts);
+        let mut file_request = state.package_action.take().map(|import| {
+            if import {
+                file::Request::Import
+            } else {
+                file::Request::Export
+            }
+        });
+        if let Some((files, queue)) = state.imported {
+            ui.label(RichText::new(tr("Imported disabled. Review before saving.")).color(p.muted));
+            if files {
+                ui.colored_label(p.warning, tr("File access is off. Review before enabling."));
+            }
+            if queue {
+                ui.colored_label(p.warning, tr("Choose a local queue before saving."));
+            }
+        }
         if let Some(error) = &state.load_error {
             ui.colored_label(p.warning, error);
         }
         if let Some(error) = &state.error {
             ui.colored_label(p.warning, error);
         }
-        controls(ui, &self.store, &mut state, p);
+        #[cfg(feature = "screenshot")]
+        if std::env::var("IDM_EX_TEST_SCRIPT_LIBRARY").as_deref() == Ok("1") {
+            state.library_open = true;
+        }
+        if !state.full_editor() {
+            library::tabs(ui, &mut state);
+        }
+        if state.library_visible() {
+            library::page(ui, &self.store, &mut state, p);
+            self.handle_script_file(&mut state, file_request);
+            self.scripts = state;
+            return;
+        }
+        // The editor owns its actions. Keep this header visible while settings
+        // and output scroll, without changing the editor's persistent text ID.
+        egui::Frame::new()
+            .fill(p.surface)
+            .stroke(egui::Stroke::new(1.0, p.border))
+            .corner_radius(10)
+            .inner_margin(14)
+            .show(ui, |ui| {
+        ui.set_width(ui.available_width());
+        controls(ui, &self.store, &mut state, p, &mut file_request);
         #[cfg(feature = "screenshot")]
         {
+            if std::env::var("IDM_EX_TEST_FULL_LOGS").as_deref() == Ok("1") {
+                state.show_full_logs = true;
+            }
             static SAMPLE_OPENED: std::sync::atomic::AtomicBool =
                 std::sync::atomic::AtomicBool::new(false);
             match std::env::var("IDM_EX_TEST_VIEW").as_deref() {
@@ -656,7 +682,11 @@ impl Desktop {
         if state.sample.is_some() && self.dialog.is_none() {
             self.dialog = Some(Dialog::ScriptSample);
         }
-        let mut file_request = None;
+        let full_editor = state.full_editor();
+        let editor_height = full_editor.then(|| {
+            (ui.available_height() - 132.0 - if state.show_full_logs { 190.0 } else { 0.0 })
+                .max(130.0)
+        });
         egui::ScrollArea::vertical()
             .id_salt("scripts-page")
             .auto_shrink([false, false])
@@ -678,7 +708,7 @@ impl Desktop {
                             ui.label(tr("Run custom Lua or PowerShell code manually, on a timer, or when downloads and queues finish."));
                             ui.add_space(4.0);
                             ui.label(
-                                RichText::new(tr("Choose + New script in the top right to start from a working example."))
+                                RichText::new(tr("Choose New script in Loaded scripts to start from a working example."))
                                     .color(p.muted),
                             );
                             ui.label(
@@ -688,75 +718,34 @@ impl Desktop {
                         });
                 }
                 if let Some(mut draft) = state.draft.take() {
-                    egui::Frame::new()
-                        .fill(p.surface)
-                        .stroke(egui::Stroke::new(1.0, p.border))
-                        .corner_radius(10)
-                        .inner_margin(14)
-                        .show(ui, |ui| {
+                    ui.scope(|ui| {
                             ui.set_width(ui.available_width());
-                            form::show(
+                            if !full_editor {
+                                let settings = egui::CollapsingHeader::new(tr("Script settings"))
+                                    .id_salt(("script-settings", &draft.id))
+                                    .open(Some(state.settings_open)).show(ui, |ui| {
+                                form::show(
                                 ui,
                                 &mut draft,
                                 &mut state.pages,
                                 &self.queues,
                                 &mut state.values,
                                 p,
-                            );
+                                );
+                                });
+                                if settings.header_response.clicked() { state.settings_open = !state.settings_open; }
 
-                            ui.add_space(8.0);
-                            ui.separator();
-                            ui.add_space(6.0);
-                            ui.horizontal(|ui| {
-                                script_badge(
-                                    ui,
-                                    match draft.language {
-                                        Language::Lua => "LUA",
-                                        Language::PowerShell => "PS1",
-                                    },
-                                    match draft.language {
-                                        Language::Lua => p.blue,
-                                        Language::PowerShell => p.accent,
-                                    },
-                                );
-                                ui.label(
-                                    RichText::new(tf!("{} editor", draft.language.label()))
-                                        .strong(),
-                                );
-                                ui.with_layout(
-                                    egui::Layout::right_to_left(egui::Align::Center),
-                                    |ui| {
-                                        ui.label(
-                                            RichText::new(format!(
-                                                "{} / 64 KiB",
-                                                draft.body.len().div_ceil(1024)
-                                            ))
-                                            .small()
-                                            .monospace()
-                                            .color(p.muted),
-                                        );
-                                        // Right to left: these read "Open file… Save to file…".
-                                        if ui
-                                            .button(tr("Save to file…"))
-                                            .on_hover_text(tr("Saves the code in the editor to a .lua or .ps1 file."))
-                                            .clicked()
-                                        {
-                                            file_request = Some(file::Request::Save);
-                                        }
-                                        if ui
-                                            .button(tr("Open file…"))
-                                            .on_hover_text(tr("Copies a .lua or .ps1 file into the editor. Nothing is saved until you choose Save script."))
-                                            .clicked()
-                                        {
-                                            file_request = Some(file::Request::Open);
-                                        }
-                                    },
-                                );
-                            });
+                                ui.add_space(8.0);
+                                ui.separator();
+                                ui.add_space(6.0);
+                            }
+                            if editor_height.is_some() {
+                                editor::show_sized(ui, &mut draft, &mut state.editor, p, editor_height);
+                            } else {
+                                editor::show(ui, &mut draft, &mut state.editor, p);
+                            }
                             ui.add_space(4.0);
-                            editor::show(ui, &mut draft, &mut state.editor, p);
-                            ui.add_space(4.0);
-                            ui.label(
+                            if !full_editor { ui.label(
                                 RichText::new(match (&draft.trigger, draft.language) {
                                     (Trigger::SiteReader { .. }, _) => tr("event.url is the page. Use xd.fetch to read it or the site's API, then return the videos you found."),
                                     (Trigger::DownloadFailed { .. }, Language::Lua) => tr("event.downloads lists the downloads that need attention, with their errors. Use xd.retry or xd.restart to try again."),
@@ -766,7 +755,7 @@ impl Desktop {
                                 })
                                 .small()
                                 .color(p.muted),
-                            );
+                            ); }
                         });
                     state.draft = Some(draft.clone());
                     if std::mem::take(&mut state.values.clear) {
@@ -779,13 +768,16 @@ impl Desktop {
                         }
                     }
                 }
-                if state.reader() {
+                if full_editor {
+                    ui.toggle_value(&mut state.show_full_logs, tr("Run logs"));
+                }
+                if state.reader() && !full_editor {
                     ui.add_space(8.0);
                     test_card(ui, &self.store, &mut state, p);
                 }
 
                 // Only show Run logs card when a script is open or historical runs exist
-                if state.draft.is_some() || !state.runs.is_empty() {
+                if (!full_editor || state.show_full_logs) && (state.draft.is_some() || !state.runs.is_empty()) {
                     ui.add_space(8.0);
                     egui::Frame::new()
                         .fill(p.surface)
@@ -971,11 +963,18 @@ impl Desktop {
                     ui.scroll_to_cursor(Some(egui::Align::BOTTOM));
                 }
             });
-        match file_request {
-            Some(file::Request::Open) => self.open_script_file(&mut state),
-            Some(file::Request::Save) => self.save_script_file(&mut state),
+        });
+        self.handle_script_file(&mut state, file_request);
+        self.scripts = state;
+    }
+
+    fn handle_script_file(&mut self, state: &mut State, request: Option<file::Request>) {
+        match request {
+            Some(file::Request::Open) => self.open_script_file(state),
+            Some(file::Request::Save) => self.save_script_file(state),
+            Some(file::Request::Import) => self.import_script_package(state),
+            Some(file::Request::Export) => self.export_script_package(state),
             None => {}
         }
-        self.scripts = state;
     }
 }

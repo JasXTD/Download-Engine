@@ -3,6 +3,14 @@ use download_engine::hls::{self as service, Inspection, Playlist};
 use std::sync::mpsc;
 use tokio_util::sync::CancellationToken;
 
+type Incoming = (String, String, bool);
+#[derive(Default)]
+pub(super) struct Requests {
+    reading: Option<background_io::Task<Option<Incoming>>>,
+    ready: Option<Incoming>,
+    acknowledge: Option<background_io::Task<()>>,
+}
+
 enum Loaded {
     Inspection(Inspection, Option<String>),
     Preview(
@@ -37,6 +45,7 @@ pub(super) struct State {
     queue: String,
     receipt: String,
     task: Option<Task>,
+    saving: Option<background_io::Task<Job>>,
     error: Option<String>,
     title: Option<String>,
     youtube_selection: Option<download_engine::youtube::Selection>,
@@ -53,6 +62,10 @@ pub(super) struct State {
     found: Option<download_engine::browser_video::Review>,
 }
 impl State {
+    #[cfg(test)]
+    pub(super) fn saving(&self) -> bool {
+        self.saving.is_some()
+    }
     fn new(url: &str, queue: &str, store: Store) -> Self {
         Self {
             store,
@@ -67,6 +80,7 @@ impl State {
             queue: queue.into(),
             receipt: Uuid::new_v4().to_string(),
             task: None,
+            saving: None,
             error: None,
             title: None,
             youtube_selection: None,
@@ -342,6 +356,10 @@ impl State {
     }
 }
 impl Desktop {
+    #[cfg(test)]
+    pub(super) fn hls_requests_pending(&self) -> bool {
+        self.hls_requests.reading.is_some() || self.hls_requests.acknowledge.is_some()
+    }
     #[cfg(any(test, feature = "screenshot"))]
     pub(super) fn youtube_sample(&mut self, mode: &str) {
         self.hls_audio_sample(true);
@@ -529,32 +547,76 @@ impl Desktop {
         self.dialog = Some(Dialog::Hls);
     }
     pub(super) fn poll_hls_requests(&mut self, ctx: &egui::Context) {
-        if self.dialog.is_some() || self.hls_request_check.elapsed() < Duration::from_secs(1) {
+        if let Some(result) = self
+            .hls_requests
+            .acknowledge
+            .as_mut()
+            .and_then(background_io::Task::poll)
+        {
+            self.hls_requests.acknowledge = None;
+            if let Err(error) = result {
+                self.notice = Some(Notice::error(tf!(
+                    "Cannot acknowledge HLS preview: {error}",
+                    error = error
+                )));
+            }
+        }
+        if let Some(result) = self
+            .hls_requests
+            .reading
+            .as_mut()
+            .and_then(background_io::Task::poll)
+        {
+            self.hls_requests.reading = None;
+            match result {
+                Ok(incoming) => self.hls_requests.ready = incoming,
+                Err(error) => {
+                    self.notice = Some(Notice::error(tf!(
+                        "Cannot read HLS previews: {error}",
+                        error = error
+                    )))
+                }
+            }
+        }
+        if self.dialog.is_some() {
+            return;
+        }
+        if let Some((id, url, reader)) = self.hls_requests.ready.take() {
+            if reader {
+                self.open_browser_stream(&url, &self.queue_id.clone(), None);
+            } else {
+                self.open_hls(&url);
+            }
+            let store = self.store.clone();
+            match background_io::Task::spawn(Some(ctx.clone()), move || {
+                store.acknowledge_hls_preview(&id)
+            }) {
+                Ok(task) => self.hls_requests.acknowledge = Some(task),
+                Err(error) => self.notice = Some(Notice::error(error.to_string())),
+            }
+            self.show_window(ctx);
+            return;
+        }
+        if self.hls_requests.reading.is_some()
+            || self.hls_requests.acknowledge.is_some()
+            || self.hls_request_check.elapsed() < Duration::from_secs(1)
+        {
             return;
         }
         self.hls_request_check = Instant::now();
-        match self.store.next_hls_preview() {
-            Ok(Some((id, url))) => {
-                if download_engine::hls::is_site_video(&url) || self.has_site_reader(&url) {
-                    self.open_browser_stream(&url, &self.queue_id.clone(), None);
-                } else {
-                    self.open_hls(&url);
-                }
-                if let Err(error) = self.store.acknowledge_hls_preview(&id) {
-                    self.notice = Some(Notice::error(tf!(
-                        "Cannot acknowledge HLS preview: {error}",
-                        error = error
-                    )));
-                }
-                self.show_window(ctx);
-            }
-            Ok(None) => {}
-            Err(error) => {
-                self.notice = Some(Notice::error(tf!(
-                    "Cannot read HLS previews: {error}",
-                    error = error
-                )))
-            }
+        let store = self.store.clone();
+        match background_io::Task::spawn(Some(ctx.clone()), move || {
+            store
+                .next_hls_preview()?
+                .map(|(id, url)| {
+                    let reader = download_engine::hls::is_site_video(&url)
+                        || store.site_reader_for(&url)?.is_some();
+                    Ok((id, url, reader))
+                })
+                .transpose()
+        }) {
+            Ok(task) => self.hls_requests.reading = Some(task),
+            Err(error) => self.notice = Some(Notice::error(error.to_string())),
         }
     }
     pub(super) fn open_browser_stream(&mut self, url: &str, queue: &str, folder: Option<&str>) {
@@ -594,20 +656,14 @@ impl Desktop {
             draft.fallback = Some(fallback);
         }
     }
-    /// Whether one of the user's site readers covers this page.
-    pub(super) fn has_site_reader(&mut self, url: &str) -> bool {
-        match self.store.site_reader_for(url) {
-            Ok(reader) => reader.is_some(),
-            Err(error) => {
-                self.notice = Some(Notice::error(tf!(
-                    "Cannot read your site readers: {error:#}",
-                    error = error
-                )));
-                false
-            }
-        }
-    }
     fn close_hls(&mut self) {
+        if self
+            .hls
+            .as_ref()
+            .is_some_and(|draft| draft.saving.is_some())
+        {
+            return;
+        }
         if let Some(fallback) = self.hls.take().and_then(|draft| draft.fallback) {
             self.discard_browser_video(fallback);
         }
@@ -617,56 +673,81 @@ impl Desktop {
         let Some(draft) = &mut self.hls else {
             return;
         };
-        if draft.task.is_some() {
+        if draft.task.is_some() || draft.saving.is_some() {
             return;
         }
-        let Some(preview) = &draft.preview else {
+        let Some(preview) = draft.preview.clone() else {
             return;
         };
         let folder = (!draft.folder.trim().is_empty()).then(|| PathBuf::from(draft.folder.trim()));
-        let result = if let Some(selection) = &draft.youtube_selection {
-            self.store.enqueue_youtube(
-                &download_engine::youtube::Preview {
-                    playlist: preview.clone(),
-                    selection: selection.clone(),
-                },
-                &draft.name,
-                folder.as_deref(),
-                &draft.queue,
-                &draft.receipt,
-            )
-        } else if let Some(selection) = &draft.bilibili_selection {
-            self.store.enqueue_bilibili(
-                &download_engine::bilibili::Preview {
-                    playlist: preview.clone(),
-                    selection: selection.clone(),
-                },
-                &draft.name,
-                folder.as_deref(),
-                &draft.queue,
-                &draft.receipt,
-            )
-        } else if let Some(selection) = &draft.tiktok_selection {
-            self.store.enqueue_tiktok(
-                &download_engine::tiktok::Preview {
-                    playlist: preview.clone(),
-                    selection: selection.clone(),
-                },
-                &draft.name,
-                folder.as_deref(),
-                &draft.queue,
-                &draft.receipt,
-            )
-        } else {
-            self.store.enqueue_found_hls(
-                preview,
-                draft.inspection.as_ref().and_then(|i| i.page.as_deref()),
-                &draft.name,
-                folder.as_deref(),
-                &draft.queue,
-                &draft.receipt,
-            )
+        let store = self.store.clone();
+        let youtube = draft.youtube_selection.clone();
+        let bilibili = draft.bilibili_selection.clone();
+        let tiktok = draft.tiktok_selection.clone();
+        let page = draft.inspection.as_ref().and_then(|i| i.page.clone());
+        let name = draft.name.clone();
+        let queue = draft.queue.clone();
+        // The same receipt survives a failed attempt, including a lost reply.
+        let receipt = draft.receipt.clone();
+        draft.error = None;
+        match background_io::Task::spawn(self.background_io.context.clone(), move || {
+            if let Some(selection) = &youtube {
+                store.enqueue_youtube(
+                    &download_engine::youtube::Preview {
+                        playlist: preview.clone(),
+                        selection: selection.clone(),
+                    },
+                    &name,
+                    folder.as_deref(),
+                    &queue,
+                    &receipt,
+                )
+            } else if let Some(selection) = &bilibili {
+                store.enqueue_bilibili(
+                    &download_engine::bilibili::Preview {
+                        playlist: preview.clone(),
+                        selection: selection.clone(),
+                    },
+                    &name,
+                    folder.as_deref(),
+                    &queue,
+                    &receipt,
+                )
+            } else if let Some(selection) = &tiktok {
+                store.enqueue_tiktok(
+                    &download_engine::tiktok::Preview {
+                        playlist: preview.clone(),
+                        selection: selection.clone(),
+                    },
+                    &name,
+                    folder.as_deref(),
+                    &queue,
+                    &receipt,
+                )
+            } else {
+                store.enqueue_found_hls(
+                    &preview,
+                    page.as_deref(),
+                    &name,
+                    folder.as_deref(),
+                    &queue,
+                    &receipt,
+                )
+            }
+        }) {
+            Ok(task) => draft.saving = Some(task),
+            Err(error) => draft.error = Some(format!("{error:#}")),
+        }
+    }
+
+    pub(super) fn poll_hls_save(&mut self) {
+        let Some(draft) = &mut self.hls else {
+            return;
         };
+        let Some(result) = draft.saving.as_mut().and_then(background_io::Task::poll) else {
+            return;
+        };
+        draft.saving = None;
         match result {
             Ok(job) => {
                 self.queue_id.clone_from(&draft.queue);
@@ -684,6 +765,7 @@ impl Desktop {
         }
     }
     pub(super) fn hls_dialog(&mut self, ctx: &egui::Context, p: Palette) {
+        self.poll_hls_save();
         let Some(draft) = &mut self.hls else {
             self.dialog = None;
             return;
@@ -706,11 +788,13 @@ impl Desktop {
             self.open_found_videos(review, &queue);
             return;
         }
+        let saving = draft.saving.is_some();
         let inspecting = draft.task.as_ref().is_some_and(|task| task.inspecting);
         let (mut load, mut preview, mut add, mut close, mut edit) =
             (false, false, false, false, false);
         let mut retarget = false;
         let response = form_dialog::modal("hls-preview", p).show(ctx, |ui| {
+            if saving { ui.disable(); }
             ui.set_width((ctx.content_rect().width() - 100.0).clamp(440.0, 680.0));
             close = form_dialog::title(
                 ui,
@@ -1004,8 +1088,8 @@ impl Desktop {
             form_dialog::controls(ui, |ui| {
                 add = form_dialog::primary_enabled(
                     ui,
-                    draft.preview.is_some() && draft.task.is_none() && !preview && !edit,
-                    tr("Add video to queue"),
+                    draft.preview.is_some() && draft.task.is_none() && !saving && !preview && !edit,
+                    if saving { tr("Adding…") } else { tr("Add video to queue") },
                 )
                 .clicked();
                 if draft.task.is_some()
@@ -1042,7 +1126,9 @@ impl Desktop {
         if let Some(stale) = stale {
             self.discard_browser_video(stale);
         }
-        if close || response.should_close() {
+        if saving {
+            ctx.request_repaint_after(Duration::from_millis(16));
+        } else if close || response.should_close() {
             self.close_hls();
         } else if add {
             self.add_hls();
@@ -1295,7 +1381,7 @@ mod tests {
         app.store
             .schedule_queue(MAIN_QUEUE, now + 3600, now)
             .unwrap();
-        app.force_refresh();
+        app.refresh_and_wait();
         app.youtube_sample("youtube-preview");
         let draft = app.hls.as_mut().unwrap();
         draft.title = Some(format!("Title. With dots {}", "界".repeat(170)));
@@ -1404,6 +1490,7 @@ mod tests {
                 )
                 .unwrap();
             app.poll_browser_video_requests(&ctx);
+            app.wait_for_io();
             assert_eq!(app.dialog, Some(Dialog::Hls), "{url}");
             assert!(app.hls.as_ref().unwrap().start_on_poll);
             assert_eq!(app.hls.as_ref().unwrap().url, url);
@@ -1414,6 +1501,7 @@ mod tests {
             app.url = url.into();
             app.open_add();
             app.add();
+            app.wait_for_io();
             assert_eq!(app.dialog, Some(Dialog::Hls), "{url}");
             assert_eq!(app.hls.as_ref().unwrap().url, url);
             assert!(app.store.list().unwrap().is_empty());
@@ -1425,6 +1513,7 @@ mod tests {
                 .unwrap();
             app.hls_request_check = Instant::now() - Duration::from_secs(2);
             app.poll_hls_requests(&ctx);
+            app.wait_for_io();
             assert_eq!(app.dialog, Some(Dialog::Hls), "{url}");
             assert!(app.hls.as_ref().unwrap().start_on_poll);
             assert!(app.store.list().unwrap().is_empty());
@@ -1453,6 +1542,7 @@ mod tests {
             )
             .unwrap();
         app.poll_browser_video_requests(ctx);
+        app.wait_for_io();
         assert_eq!(app.dialog, Some(Dialog::Hls));
         let draft = app.hls.as_mut().unwrap();
         assert!(draft.fallback.is_some() && draft.start_on_poll);
@@ -1521,7 +1611,7 @@ mod tests {
         let mut reader = app.store.scripts().unwrap().remove(0);
         reader.enabled = false;
         app.store.save_script(&reader).unwrap();
-        assert!(!app.has_site_reader(page));
+        assert!(app.store.site_reader_for(page).unwrap().is_none());
     }
 
     #[test]
@@ -1612,6 +1702,7 @@ mod tests {
         site_review(&mut app, &ctx, page);
         click(&mut app, &ctx, page);
         frame(&mut app, &ctx, size, vec![egui::Event::Text("x".into())]);
+        app.wait_for_io();
         assert!(app.hls.as_ref().unwrap().fallback.is_none());
         assert!(app.store.next_browser_video_review().unwrap().is_none());
         let stream = "https://cdn.example.test/master.m3u8";
@@ -1667,7 +1758,7 @@ mod tests {
         app.store
             .schedule_queue(MAIN_QUEUE, now + 3600, now)
             .unwrap();
-        app.force_refresh();
+        app.refresh_and_wait();
         app.open_browser_stream(&server.url("/master.m3u8"), MAIN_QUEUE, None);
         finish_preview(&mut app);
         let draft = app.hls.as_ref().unwrap();
@@ -1724,10 +1815,12 @@ mod tests {
         app.dialog = Some(Dialog::Add);
         app.url = "https://example.com/unsaved.zip".into();
         app.poll_hls_requests(&ctx);
+        app.wait_for_io();
         assert_eq!(app.dialog, Some(Dialog::Add));
         assert!(app.store.next_hls_preview().unwrap().is_some());
         app.dialog = None;
         app.poll_hls_requests(&ctx);
+        app.wait_for_io();
         assert_eq!(app.dialog, Some(Dialog::Hls));
         assert!(app.hls.as_ref().unwrap().preview.is_none());
         assert!(app.store.list().unwrap().is_empty());
@@ -1741,7 +1834,7 @@ mod tests {
         app.store
             .schedule_queue(MAIN_QUEUE, now + 3600, now)
             .unwrap();
-        app.force_refresh();
+        app.refresh_and_wait();
         let folder = temp.path().join("chosen-videos");
         app.open_browser_stream(&server.url("/master.m3u8"), MAIN_QUEUE, folder.to_str());
         finish_preview(&mut app);
@@ -1846,7 +1939,7 @@ mod tests {
         app.store
             .schedule_queue(MAIN_QUEUE, now + 3600, now)
             .unwrap();
-        app.force_refresh();
+        app.refresh_and_wait();
         app.dash_sample(true);
         let reviewed = app.hls.as_ref().unwrap().preview.clone().unwrap();
         frame(&mut app, &ctx, egui::vec2(860., 600.), vec![]);

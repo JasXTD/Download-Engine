@@ -212,7 +212,7 @@ async fn browser_cancellation_and_failed_commit_never_acknowledge_or_change_save
         if cancel {
             store.cancel_browser_recovery(lease.id).unwrap();
         } else {
-            let db = rusqlite::Connection::open(store.paths.data.join("queue.sqlite3")).unwrap();
+            let db = crate::fixture_database::open(store.paths.data.join("queue.sqlite3")).unwrap();
             db.execute_batch("CREATE TRIGGER refuse_recovery BEFORE UPDATE ON jobs BEGIN SELECT RAISE(FAIL,'injected write failure'); END;").unwrap();
         }
         assert!(matches!(
@@ -862,7 +862,7 @@ async fn completion_wait_reports_scheduler_store_error_without_waiting_for_timeo
     )
     .unwrap();
     store.enqueue(&job).unwrap();
-    rusqlite::Connection::open(store.paths.data.join("queue.sqlite3")).unwrap()
+    crate::fixture_database::open(store.paths.data.join("queue.sqlite3")).unwrap()
         .execute_batch("CREATE TRIGGER reject_update BEFORE UPDATE ON jobs BEGIN SELECT RAISE(FAIL, 'injected scheduler write failure'); END;").unwrap();
     let scheduler = Scheduler::start(store.clone()).unwrap();
     let error = completed(&store, &job.id, &fixture, &scheduler)

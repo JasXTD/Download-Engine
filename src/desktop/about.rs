@@ -33,7 +33,7 @@ impl LegalPage {
 impl Desktop {
     pub(super) fn about_dialog(&mut self, ctx: &egui::Context) {
         let dark = ctx.theme() == egui::Theme::Dark;
-        let p = Palette::new(dark);
+        let p = Palette::for_context(ctx);
         let background = if dark {
             Color32::from_rgb(29, 32, 39)
         } else {
@@ -187,7 +187,7 @@ impl Desktop {
     }
 
     pub(super) fn legal_dialog(&mut self, ctx: &egui::Context, mut page: LegalPage) {
-        let p = Palette::new(ctx.theme() == egui::Theme::Dark);
+        let p = Palette::for_context(ctx);
         let response = form_dialog::modal("about-legal", p).show(ctx, |ui| {
             ui.set_width((ctx.content_rect().width() - 80.0).clamp(280.0, 680.0));
             ui.spacing_mut().interact_size.y = view::CONTROL_HEIGHT;

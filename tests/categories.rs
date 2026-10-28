@@ -1,3 +1,5 @@
+#[path = "../src/desktop/fixture_database.rs"]
+mod fixture_database;
 use download_engine::{
     categories::{Category, DownloadFolders},
     model::{Job, Status},
@@ -6,7 +8,7 @@ use download_engine::{
     queue::MAIN_QUEUE,
     store::Store,
 };
-use rusqlite::{Connection, params};
+use rusqlite::params;
 use std::path::Path;
 
 fn setup() -> (tempfile::TempDir, Store) {
@@ -167,7 +169,7 @@ fn legacy_history_and_existing_files_are_unchanged_when_rules_are_initialized() 
         downloads: root.path().join("downloads"),
     };
     paths.prepare().unwrap();
-    let conn = Connection::open(paths.data.join("queue.sqlite3")).unwrap();
+    let conn = crate::fixture_database::open(paths.data.join("queue.sqlite3")).unwrap();
     conn.execute_batch(
         "CREATE TABLE jobs(id TEXT PRIMARY KEY,request_id TEXT UNIQUE,created INTEGER,data TEXT);",
     )
@@ -254,7 +256,7 @@ fn invalid_folder_settings_fail_atomically_and_bad_storage_is_reported() {
             )
             .is_err()
     );
-    let conn = Connection::open(store.paths.data.join("queue.sqlite3")).unwrap();
+    let conn = crate::fixture_database::open(store.paths.data.join("queue.sqlite3")).unwrap();
     conn.execute("UPDATE download_folders SET data='{}'", [])
         .unwrap();
     assert!(store.download_folders().is_err());

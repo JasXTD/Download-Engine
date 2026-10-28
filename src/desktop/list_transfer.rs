@@ -948,7 +948,7 @@ mod tests {
             })
             .collect();
         app.store.enqueue_batch(&jobs, MAIN_QUEUE).unwrap();
-        app.force_refresh();
+        app.refresh_and_wait();
     }
     fn finish(app: &mut Desktop) {
         let deadline = Instant::now() + Duration::from_secs(10);

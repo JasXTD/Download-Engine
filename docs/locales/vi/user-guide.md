@@ -8,6 +8,16 @@ Tùy chọn mở trong cửa sổ chia theo danh mục. Lưu để áp dụng; H
 
 Chọn Thêm URL trên thanh công cụ, dán liên kết trực tiếp đến tệp, kiểm tra tên, hàng đợi và thư mục rồi bắt đầu. Thêm hàng loạt nhận mỗi liên kết trên một dòng. Chọn Từ mẫu để tạo liên kết đánh số như img001…img100 từ một liên kết có dấu *. Chọn ngôn ngữ trong Cài đặt → Giao diện → Ngôn ngữ. Ngôn ngữ hệ thống theo Windows; nếu không hỗ trợ thì dùng tiếng Anh.
 
+
+
+<!-- custom-themes-3.4.0 -->
+### Bộ sưu tập giao diện
+
+Tùy chọn → Giao diện → Tùy chỉnh có Neon Courier, Reactor Night, Aurora và Moonveil. Điều chỉnh nền và màu nhấn hoặc nhập PNG/JPEG. Lưu giữ bản xem trước; Hủy khôi phục giao diện cũ. Ảnh chỉ lưu cục bộ, có giới hạn kích thước và được xử lý nền. Bản này cũng có bảo vệ phiên bản hồ sơ và kiểm soát truy cập MCP.
+
+PNG / JPEG · tối đa 16 MiB và 16 megapixel. Sao chép vào hồ sơ này.
+<!-- /custom-themes-3.4.0 -->
+
 ## Tải xuống và khôi phục
 
 ### Tải xuống và khôi phục
@@ -33,6 +43,9 @@ Mở Công cụ → Thiết lập trình duyệt để kết nối Chrome, Edge,
 Quản lý hàng đợi để nhóm tệp và đặt số tải đồng thời. Hàng đợi mới chờ bạn bắt đầu hoặc lên lịch. Bộ lập lịch có bắt đầu, dừng và lặp lại. Ứng dụng phải mở, kể cả ở khay hệ thống. Thoát, tắt máy, ngủ hoặc ngủ đông khi xong cần bật riêng; có thể hủy đếm ngược.
 
 ## Tập lệnh
+
+Trình chỉnh sửa và danh sách tập lệnh đã tải nay có các thẻ riêng. Tìm kiếm hoặc tạo tập lệnh trong danh sách, rồi mở trình chỉnh sửa toàn màn hình từ tiêu đề Lua hoặc PowerShell. Lưu, chạy/dừng và nhật ký tùy chọn được đặt cùng mã; các lệnh tệp nằm trong trình đơn thao tác. Chuyển chế độ xem vẫn giữ mã chưa lưu, cài đặt và vị trí con trỏ.
+
 
 ### Tập lệnh
 
@@ -73,6 +86,24 @@ print("Failed downloads handled:", handled)
 ```
 
 Để sửa tập lệnh trong chương trình khác, hãy dùng Mở tệp… và Lưu vào tệp… ở đầu trình soạn thảo. Mở tệp… sao chép tệp .lua hoặc .ps1 vào trình soạn thảo và hỏi trước nếu thao tác này thay mã chưa lưu; chọn Lưu tập lệnh để giữ lại. Lưu vào tệp… ghi mã trong trình soạn thảo ra tệp.
+
+### Lua Core API 1
+
+Tạo hoặc mở tập lệnh trong Loaded scripts; chọn Lua và Manual only trong Script settings. Full editor mở rộng vùng mã; chọn Save script rồi Run script và xem Run logs. Core API liệt kê hàm theo trình kích hoạt, Ctrl+Space mở gợi ý. API 1 là phiên bản giao diện, khác phiên bản ứng dụng. Ví dụ chỉ phân tích HTML trong bộ nhớ, không kết nối mạng hay tải tệp; khả năng lấy trang của tập lệnh thủ công là false.
+
+```lua
+-- Example: core-api
+assert(xd.api_version == 1, "This example needs Lua API 1")
+print("App:", xd.app_version, "Role:", xd.script_kind)
+local html = '<a class="download" href="/files/demo.zip">Demo</a>'
+local links = xd.html_select(html, "a.download[href]", "href")
+local url = xd.url_join("https://example.com/catalog/", links[1])
+print("Preview:", xd.to_json({ kind = "file", url = url }))
+print("Can fetch a page:", xd.supports("xd.fetch"))
+```
+
+Open examples/core-api-automation.lua or examples/custom-site-reader.lua with Editor actions → Open file…. Site reader uses public pages, Pages patterns and Direct connection; test with Test on URL before enabling its trigger. Ordinary automation cannot call xd.fetch. Import script… accepts .de-script.json as a new draft with automatic triggers and file changes off; review its code and reselect local queues. Stop script does not undo submitted downloads. Full English reference: docs/automation.md.
+
 
 ## Dòng lệnh
 

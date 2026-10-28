@@ -61,7 +61,7 @@ fn repeated_pages_dialogs_and_history_cleanup() {
     let (temp, mut app, ctx) = fixture();
     let size = egui::vec2(1080.0, 800.0);
     app.interface.auto_download_status = false;
-    app.force_refresh();
+    app.refresh_and_wait();
     let mut samples = Vec::new();
     for cycle in 0..300 {
         let mut job = Job::new(
@@ -75,7 +75,7 @@ fn repeated_pages_dialogs_and_history_cleanup() {
         job.downloaded = 1024;
         job.total = Some(1024);
         app.store.enqueue(&job).unwrap();
-        app.force_refresh();
+        app.refresh_and_wait();
         for view in [
             View::Downloads,
             View::Queues,
@@ -86,7 +86,7 @@ fn repeated_pages_dialogs_and_history_cleanup() {
             View::Changelog,
         ] {
             app.view = view;
-            app.force_refresh();
+            app.refresh_and_wait();
             app.background(&ctx);
             for _ in 0..2 {
                 drop(frame(&mut app, &ctx, size, vec![]));
@@ -128,13 +128,13 @@ fn repeated_pages_dialogs_and_history_cleanup() {
             }
             assert!(app.dialog.is_none(), "{dialog:?} did not close");
         }
-        click(&mut app, &ctx, "Clear finished");
+        click(&mut app, &ctx, "Clear completed history");
         let deadline = Instant::now() + Duration::from_secs(5);
         while app.store.get(&job.id).unwrap().is_some() {
             assert!(Instant::now() < deadline, "History removal did not settle");
             std::thread::sleep(Duration::from_millis(5));
         }
-        app.force_refresh();
+        app.refresh_and_wait();
         app.background(&ctx);
         for _ in 0..3 {
             drop(frame(&mut app, &ctx, size, vec![]));

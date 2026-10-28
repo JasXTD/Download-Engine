@@ -15,7 +15,7 @@ fn hiding_status_never_changes_the_download() {
     let (_temp, mut app, _ctx) = fixture();
     let job = app.jobs[0].clone();
     app.store.enqueue(&job).unwrap();
-    app.open_download_status(&job);
+    app.open_status_and_wait(&job);
     let mut window = app.download_status.windows.remove(&job.id).unwrap();
     assert!(!app.status_action(&job.id, &mut window, Some(Action::Hide)));
     assert_eq!(app.store.get(&job.id).unwrap().unwrap().status, job.status);
@@ -33,7 +33,7 @@ fn status_layout_shows_real_values_in_both_themes() {
         app.configure_appearance(&ctx);
         let job = app.jobs[0].clone();
         app.store.enqueue(&job).unwrap();
-        app.open_download_status(&job);
+        app.open_status_and_wait(&job);
         for _ in 0..3 {
             frame(&mut app, &ctx, egui::vec2(1080.0, 800.0), vec![]);
         }
@@ -115,7 +115,7 @@ fn draw_window(
     output
 }
 fn status_click(app: &mut Desktop, ctx: &egui::Context, id: &str, label: &str) {
-    app.refresh_download_status();
+    app.refresh_status_and_wait();
     let size = egui::vec2(480.0, 390.0);
     draw_window(app, ctx, id, size, vec![]);
     let output = draw_window(app, ctx, id, size, vec![]);
@@ -219,13 +219,13 @@ fn status_tracks_its_job_across_queue_changes_and_removal() {
     let (_temp, mut app, _ctx) = fixture();
     let mut job = app.jobs[0].clone();
     app.store.enqueue(&job).unwrap();
-    app.open_download_status(&job);
+    app.open_status_and_wait(&job);
     app.view = View::Queues;
     app.jobs.clear();
     app.selected = None;
     job.downloaded = 2048;
     app.store.save(&job).unwrap();
-    app.refresh_download_status();
+    app.refresh_status_and_wait();
     assert_eq!(
         app.download_status.windows[&job.id]
             .job
@@ -235,7 +235,7 @@ fn status_tracks_its_job_across_queue_changes_and_removal() {
         2048
     );
     app.store.remove(&job.id).unwrap();
-    app.refresh_download_status();
+    app.refresh_status_and_wait();
     assert!(app.download_status.windows[&job.id].job.is_none());
 }
 
@@ -244,18 +244,18 @@ fn automatic_opening_ignores_background_jobs_disabled_preferences_and_repeated_r
     let (_temp, mut app, _ctx) = fixture();
     let job = app.jobs[1].clone();
     app.store.enqueue(&job).unwrap();
-    app.refresh_download_status();
+    app.refresh_status_and_wait();
     assert!(app.download_status.windows.is_empty());
     app.interface.auto_download_status = false;
     app.expect_download_status(&job.id);
-    app.refresh_download_status();
+    app.refresh_status_and_wait();
     assert!(app.download_status.windows.is_empty());
     app.interface.auto_download_status = true;
     app.expect_download_status(&job.id);
-    app.refresh_download_status();
+    app.refresh_status_and_wait();
     assert_eq!(app.download_status.windows.len(), 1);
     app.download_status.windows.clear();
-    app.refresh_download_status();
+    app.refresh_status_and_wait();
     assert!(app.download_status.windows.is_empty());
 }
 
@@ -267,8 +267,8 @@ fn manual_open_is_idempotent_and_paused_queue_additions_do_not_open() {
     app.store.set_queue_running(MAIN_QUEUE, false).unwrap();
     app.expect_added_status(&job.id);
     assert!(app.download_status.pending.is_empty());
-    app.open_download_status(&job);
-    app.open_download_status(&job);
+    app.open_status_and_wait(&job);
+    app.open_status_and_wait(&job);
     assert_eq!(app.download_status.windows.len(), 1);
     app.expect_download_status(&job.id);
     app.command(Command::Pause(job.id.clone()));
@@ -338,15 +338,16 @@ fn unreadable_status_is_reported_and_does_not_replace_its_last_snapshot() {
     let (_temp, mut app, _ctx) = fixture();
     let job = app.jobs[0].clone();
     app.store.enqueue(&job).unwrap();
-    app.open_download_status(&job);
-    let database = rusqlite::Connection::open(app.store.paths.data.join("queue.sqlite3")).unwrap();
+    app.open_status_and_wait(&job);
+    let database =
+        crate::desktop::fixture_database::open(app.store.paths.data.join("queue.sqlite3")).unwrap();
     database
         .execute(
             "UPDATE jobs SET data=json_set(data,'$.total','broken') WHERE id=?1",
             [&job.id],
         )
         .unwrap();
-    app.refresh_download_status();
+    app.refresh_status_and_wait();
     let window = &app.download_status.windows[&job.id];
     assert!(window.error.as_ref().unwrap().contains("Cannot refresh"));
     assert_eq!(window.job.as_ref().unwrap().id, job.id);
@@ -491,6 +492,7 @@ fn toolbar_and_tasks_stop_all_stop_other_queues_and_immediate_transfers_without_
         let other = app.store.create_queue("Other downloads").unwrap();
         app.url = server.url.clone();
         app.add();
+        app.wait_for_io();
         let first = app.selected.clone().unwrap();
         let waiting = Job::new(
             &server.url,
@@ -525,19 +527,19 @@ fn toolbar_and_tasks_stop_all_stop_other_queues_and_immediate_transfers_without_
             app.store.get(&waiting.id).unwrap().unwrap().status,
             Status::Queued
         );
-        app.open_download_status(&waiting);
+        app.open_status_and_wait(&waiting);
         app.expect_download_status(&waiting.id);
         let mut complete = waiting.clone();
         complete.id = Uuid::new_v4().to_string();
         complete.request_id = Uuid::new_v4().to_string();
         complete.status = Status::Complete;
         app.store.enqueue(&complete).unwrap();
-        app.open_download_status(&complete);
+        app.open_status_and_wait(&complete);
         let queues = app.store.queues().unwrap();
         // Stop all must work while a different queue and a filter hide the running files.
         app.queue_id = other.id.clone();
         app.filter = Filter::Complete;
-        app.force_refresh();
+        app.refresh_and_wait();
         if tasks_menu {
             click(&mut app, &ctx, "Tasks");
         }
@@ -608,14 +610,23 @@ fn stop_selected_controls_keep_other_files_and_close_only_selected_status_window
         let (_temp, mut app, ctx) = fixture();
         separate_status_input(&ctx);
         let now = chrono::Utc::now().timestamp();
-        app.store
-            .schedule_queue(MAIN_QUEUE, now + 3600, now)
-            .unwrap();
         let mut jobs = app.jobs.clone();
+        // Serialize setup with dispatch before inserting queued fixtures. Writing
+        // the store directly can race a tick which already read a running queue.
+        app.scheduler
+            .send(Command::ScheduleQueue(MAIN_QUEUE.into(), now + 3600))
+            .unwrap();
+        until(&mut app, |app| {
+            app.store
+                .queues()
+                .unwrap()
+                .iter()
+                .any(|q| q.id == MAIN_QUEUE && !q.running && q.scheduled_at == Some(now + 3600))
+        });
         jobs[0].status = Status::Queued;
         jobs[2].status = Status::Queued;
         app.store.enqueue_batch(&jobs, MAIN_QUEUE).unwrap();
-        app.force_refresh();
+        app.refresh_and_wait();
         app.set_selection(Some(jobs[0].id.clone()));
         app.interface.show_details = false;
         if entry == "multiple" {
@@ -623,7 +634,7 @@ fn stop_selected_controls_keep_other_files_and_close_only_selected_status_window
             app.selection.additional.insert(jobs[2].id.clone());
         }
         for job in &jobs {
-            app.open_download_status(job);
+            app.open_status_and_wait(job);
         }
         app.expect_download_status(&jobs[0].id);
         if matches!(entry, "actions" | "multiple") {
@@ -703,6 +714,7 @@ fn live_status_controls_pause_resume_close_and_hide_without_duplicate_or_lost_pr
     let (_temp, mut app, ctx) = fixture();
     app.url = server.url.clone();
     app.add();
+    app.wait_for_io();
     let id = app.selected.clone().unwrap();
     until(&mut app, |app| {
         app.store
@@ -733,7 +745,7 @@ fn live_status_controls_pause_resume_close_and_hide_without_duplicate_or_lost_pr
     let job = app.store.get(&id).unwrap().unwrap();
     assert_eq!(job.status, Status::Paused);
     assert!(job.downloaded >= saved);
-    app.open_download_status(&job);
+    app.open_status_and_wait(&job);
     status_click(&mut app, &ctx, &id, "Resume");
     until(&mut app, |app| {
         app.store.get(&id).unwrap().unwrap().status == Status::Downloading
@@ -760,7 +772,7 @@ fn live_status_controls_pause_resume_close_and_hide_without_duplicate_or_lost_pr
             .any(|start| *start >= saved)
     );
     assert_eq!(app.store.activity.get(&id), None);
-    app.open_download_status(&job);
+    app.open_status_and_wait(&job);
     let output = draw_window(&mut app, &ctx, &id, egui::vec2(480.0, 390.0), vec![]);
     text_rect(&output, "Download complete");
     text_rect(&output, "Open");
@@ -779,6 +791,7 @@ fn failed_download_has_actionable_status_and_no_stale_activity() {
     let (_temp, mut app, ctx) = fixture();
     app.url = server.url.replace("file.bin", "failed");
     app.add();
+    app.wait_for_io();
     let id = app.selected.clone().unwrap();
     until(&mut app, |app| {
         // The worker commits before the window's next refresh. Waiting only
@@ -813,6 +826,7 @@ fn ui_stop_and_external_commands_share_ownership_without_losing_saved_bytes() {
     let (_temp, mut app, ctx) = fixture();
     app.url = server.url.clone();
     app.add();
+    app.wait_for_io();
     let id = app.selected.clone().unwrap();
     until(&mut app, |app| {
         let job = app.store.get(&id).unwrap().unwrap();
@@ -841,7 +855,7 @@ fn ui_stop_and_external_commands_share_ownership_without_losing_saved_bytes() {
         });
         // A status-window Pause requests a stop even while an external Pause
         // is settling; closing the window afterwards keeps the download state.
-        app.refresh_download_status();
+        app.refresh_status_and_wait();
         let mut window = app.download_status.windows.remove(&id).unwrap();
         assert!(app.status_action(&id, &mut window, Some(Action::Pause)));
         assert!(!app.status_action(&id, &mut window, Some(Action::Hide)));
@@ -877,7 +891,7 @@ fn ui_stop_and_external_commands_share_ownership_without_losing_saved_bytes() {
         assert!(job.downloaded >= previous);
         previous = job.downloaded;
         assert_eq!(app.store.list().unwrap().len(), 1);
-        app.open_download_status(&job);
+        app.open_status_and_wait(&job);
         status_click(&mut app, &ctx, &id, "Resume");
         until(&mut app, |app| {
             app.store.get(&id).unwrap().unwrap().status == Status::Downloading
@@ -939,7 +953,7 @@ fn status_tabs_and_multi_segment_connections_work() {
             },
         ],
     );
-    app.open_download_status(&job);
+    app.open_status_and_wait(&job);
     let size = egui::vec2(540.0, 440.0);
     draw_window(&mut app, &ctx, &job.id, size, vec![]);
     let output = draw_window(&mut app, &ctx, &job.id, size, vec![]);
@@ -978,7 +992,7 @@ fn when_done_offers_sleep_and_explains_why_hibernate_is_unavailable() {
         hibernate: false,
     };
     let job = app.store.enqueue(&app.jobs[0]).unwrap();
-    app.open_download_status(&job);
+    app.open_status_and_wait(&job);
     status_click(&mut app, &ctx, &job.id, "When done");
     // Tall enough to show every choice without scrolling.
     let size = egui::vec2(540.0, 640.0);
@@ -1078,7 +1092,7 @@ fn video_status_shows_media_parts_instead_of_a_single_file_range() {
         job.url = download.playlist.source.clone();
         job.hls = Some(download);
         app.store.enqueue(&job).unwrap();
-        app.open_download_status(&job);
+        app.open_status_and_wait(&job);
         let size = egui::vec2(540.0, 495.0);
         draw_window(&mut app, &ctx, &job.id, size, vec![]);
         let output = draw_window(&mut app, &ctx, &job.id, size, vec![]);

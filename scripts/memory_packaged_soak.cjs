@@ -1,3 +1,4 @@
+const openProfileDatabase = require('./profile_database.cjs');
 // Packaged Windows memory/handle soak. Only loopback traffic and a fresh profile.
 // Retained download/run history is counted explicitly, not mistaken for a leak.
 const assert = require('node:assert/strict');
@@ -7,7 +8,6 @@ const http = require('node:http');
 const {spawn} = require('node:child_process');
 const {once} = require('node:events');
 const {randomUUID, createHash} = require('node:crypto');
-const {DatabaseSync} = require('node:sqlite');
 const {setTimeout: delay} = require('node:timers/promises');
 const root = path.resolve(__dirname, '..');
 const binary = path.resolve(process.argv[2] || path.join(root, 'dist/IDM-EX-UnsignedDev'));
@@ -130,7 +130,7 @@ async function nativeAdd(url) {
     const probe = http.createServer(); port = await listen(probe); await new Promise(r => probe.close(r));
     config = (await cli(['mcp-config', '--port', String(port)], false)).mcpServers["download-engine"];
     await cli(['queues'], false);
-    db = new DatabaseSync(path.join(home, 'data/queue.sqlite3')); db.exec('PRAGMA busy_timeout=5000');
+    db = openProfileDatabase(path.join(home, 'data/queue.sqlite3')); db.exec('PRAGMA busy_timeout=5000');
     db.exec('UPDATE desktop_preferences SET close_to_tray=0,notify_complete=0,notify_failed=0');
     db.prepare('UPDATE interface_preferences SET data=?').run(JSON.stringify({auto_download_status: true}));
     db.prepare('UPDATE mcp_settings SET port=?,start_with_app=1,read_only=0').run(port);

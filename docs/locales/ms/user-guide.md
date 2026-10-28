@@ -10,6 +10,16 @@ Pilih Tambah URL pada bar alat, tampal pautan fail HTTP, HTTPS, FTP atau FTPS, s
 
 Pilih bahasa di Keutamaan → Penampilan → Bahasa: English, 简体中文, 繁體中文, Bahasa Melayu, 日本語, 한국어, Tiếng Việt, ไทย, Polski, Русский, Українська, العربية, Deutsch, Français, Svenska, Norsk bokmål, Deutsch (Schweiz), Italiano atau Rumantsch Grischun. Bahasa sistem mengikut Windows; bahasa yang tidak disokong menggunakan bahasa Inggeris. Perubahan berkuat kuasa selepas Simpan, tanpa menukar fail, nama atau skrip anda.
 
+
+
+<!-- custom-themes-3.4.0 -->
+### Koleksi tema
+
+Keutamaan → Penampilan → Tersuai menyediakan Neon Courier, Reactor Night, Aurora dan Moonveil. Laraskan latar dan warna aksen atau import PNG/JPEG. Simpan mengekalkan pratonton; Batal memulihkan tema asal. Imej kekal setempat, dengan had saiz dan pemuatan latar. Termasuk perlindungan versi profil dan kawalan akses MCP.
+
+PNG / JPEG · hingga 16 MiB dan 16 megapiksel. Disalin ke profil ini.
+<!-- /custom-themes-3.4.0 -->
+
 ## Muat turun dan pemulihan
 
 ### Lihat kemajuan dan kawal muat turun
@@ -47,6 +57,9 @@ Baris gilir mengumpulkan muat turun, mengehadkan bilangan serentak dan menetapka
 Penjadual menyokong mula, henti dan pengulangan. Aplikasi mesti terbuka atau berada dalam dulang sistem. Semak zon waktu dan baris gilir. Keluar, matikan, tidurkan atau hibernasikan komputer selepas muat turun perlu didayakan berasingan; kira detik boleh dibatalkan.
 
 ## Skrip
+
+Editor dan skrip yang dimuatkan kini mempunyai tab berasingan. Cari atau cipta skrip dalam pustaka, dan buka editor penuh dari pengepala editor Lua atau PowerShell. Simpan, Jalankan/Hentikan dan log pilihan kekal bersama kod. Arahan fail berada dalam menu tindakan editor. Pertukaran paparan mengekalkan kod yang belum disimpan, tetapan dan kedudukan kursor.
+
 
 ### Peraturan dan skrip
 
@@ -101,6 +114,24 @@ print("Failed downloads handled:", handled)
 ```
 
 Untuk menyunting skrip dalam program lain, gunakan Buka fail… dan Simpan ke fail… di bahagian atas editor. Buka fail… menyalin fail .lua atau .ps1 ke dalam editor dan bertanya dahulu jika ia akan menggantikan kod yang belum disimpan; pilih Simpan skrip untuk menyimpannya. Simpan ke fail… menulis kod dalam editor ke sebuah fail.
+
+### Lua Core API 1
+
+Cipta atau buka skrip dalam Loaded scripts. Pilih Lua dan Manual only dalam Script settings. Full editor meluaskan ruang kod; pilih Save script kemudian Run script dan baca Run logs. Core API menyenaraikan fungsi bagi pencetus semasa; Ctrl+Space membuka pelengkapan. API 1 ialah versi kontrak, bukan versi aplikasi. Contoh ini hanya menghuraikan HTML dalam memori, tanpa rangkaian atau muat turun; keupayaan mengambil halaman ialah false bagi skrip manual.
+
+```lua
+-- Example: core-api
+assert(xd.api_version == 1, "This example needs Lua API 1")
+print("App:", xd.app_version, "Role:", xd.script_kind)
+local html = '<a class="download" href="/files/demo.zip">Demo</a>'
+local links = xd.html_select(html, "a.download[href]", "href")
+local url = xd.url_join("https://example.com/catalog/", links[1])
+print("Preview:", xd.to_json({ kind = "file", url = url }))
+print("Can fetch a page:", xd.supports("xd.fetch"))
+```
+
+Editor actions → Open file… membuka contoh .lua dalam folder examples. Site reader menggunakan laman awam, corak Pages dan Direct connection; gunakan Test on URL sebelum mengaktifkannya. Skrip biasa tidak boleh memanggil xd.fetch. Import script… membaca .de-script.json sebagai draf baharu dengan pencetus automatik dan akses perubahan fail dimatikan; semak kod dan pilih semula baris gilir. Stop script tidak membatalkan muat turun yang sudah dihantar. Rujukan penuh: docs/automation.md.
+
 
 ## Baris perintah
 

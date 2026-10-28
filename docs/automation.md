@@ -117,6 +117,19 @@ its file; `--delete-file` also deletes a finished download's file. When a script
 sends these commands, its own limits apply (see [Files, notifications and stored
 values](#files-notifications-and-stored-values)).
 
+Moves and renames run in bounded background workers. Their receipts stay
+`running` until the file and its download record agree. Other downloads and
+commands keep running. A move to another drive verifies SHA-256 for the data and
+named streams (including the Internet-origin mark) before deleting the original.
+Pause or app shutdown cancels an unfinished copy and keeps the original. Once a
+file is published, its record update finishes before cancellation takes effect.
+An additive recovery journal repairs interrupted operations on the next startup;
+if file identity or content has changed, it preserves the files and reports the
+problem. Further changes to that download are blocked while recovery is pending.
+Cross-drive moves of EFS-encrypted or read-only files are refused with the original
+preserved. Filesystem creation time and destination permissions belong to the new
+copy; content modification time and supported file attributes are retained.
+
 Adding or resuming a file wakes an idle, unscheduled Main queue. Custom queues,
 scheduled queues and a paused queue with existing waiting work keep their start
 policy. In the desktop, right-click a file and choose **Start immediately** to
@@ -145,8 +158,12 @@ Interrupting the CLI itself does not cancel a submitted command.
 
 For retryable scripts, supply a UUID using `--request-id UUID`. Resubmitting the
 same command and ID returns its existing receipt; a different command with that
-ID is rejected. The most recent 1,000 receipts are retained, so keep your own
-script records for longer retention. After an app crash, a command that was
+ID is rejected. The most recent 1,000 detailed receipts are retained; a compact
+request-ID and action-hash ledger prevents replay after their removal. A `retired`
+receipt means the command was already accepted but its result is no longer
+available. Inspect current state before choosing a new operation and ID. Requests
+already pruned before this protection was introduced cannot be reconstructed.
+Keep your own script records for longer result retention. After an app crash, a command that was
 executing is marked `interrupted` and is **not automatically replayed**. Inspect
 downloads, queues or rules before submitting a new request. `--no-start` is useful
 for scripts that should only talk to an already-running app; if none is running,
@@ -231,11 +248,28 @@ means the requested action was accepted/executed, not that a newly added file ha
 finished downloading. Use `status DOWNLOAD_ID` or `list` to track transfers.
 
 Receipt states are `pending`, `running`, `done`, `failed`, `cancelled`, `expired`
-and `interrupted`. Pending requests expire after 30 seconds; a CLI wait timeout tries
+`interrupted`, and `retired`. Pending requests expire after 30 seconds; a CLI wait timeout tries
 to cancel only a still-pending request. A running action is not rolled back by
 closing the CLI. After a crash, previously running requests become interrupted
 instead of being replayed automatically. The same request UUID with different
-arguments is rejected; identical requests reuse their receipt while retained.
+arguments is rejected; identical requests return the receipt or `retired` without
+re-enqueueing. The compact ledger grows with accepted requests and intentionally
+has no traffic-based or time-based expiry; deleting it would lose this guarantee.
+
+### Profile compatibility
+
+Profiles record their schema, serialized-data, and minimum-writer versions. Schema
+upgrades run in an ordered transaction with a migration ledger and foreign-key
+validation. Failed upgrades roll back. Migration does not rewrite existing job
+JSON, downloaded files, or partial-file contents.
+
+After upgrade, older executables cannot write this profile: persistent database
+guards require compatible connection capabilities. Older builds may show a SQLite
+function error instead of a friendly version message. Use the compatible build
+again; do not remove the guard or metadata. To test an older version, use a separate
+profile or an offline backup taken before upgrade. Newer incompatible formats are
+rejected before schema initialization. Normal resumable downloads and saved
+settings remain in the same profile and paths.
 
 ### Routing and completion events
 
@@ -259,9 +293,8 @@ shell history should be treated as private application data.
 
 ## Custom scripts: Lua and PowerShell
 
-Open **Scripting → Scripts → New script**, edit the built-in example, then
-**Save script → Run script**. The fixed control bar also provides Stop and
-Reload / discard edits. Unsaved buffers survive background refresh and navigation;
+Open **Scripting → Scripts → Loaded scripts → New script**, edit the built-in example, then
+**Save script → Run script**. The editor header provides Save and Run/Stop. **Editor actions** contains file commands, Run with sample, Reload / discard edits and Remove script. Unsaved buffers survive background refresh and navigation;
 changing the selected script is disabled until you save or discard them.
 
 New scripts use built-in **Lua 5.4**. Select **PowerShell** in the Language
@@ -284,12 +317,12 @@ An automatic trigger needs its checkbox enabled and the script saved. Clicking
 **Run script** always produces a manual event, with an empty `event.downloads`.
 
 To work on a script in another editor, use the buttons in the editor's header.
-**Open file…** copies a `.lua` or `.ps1` file into the editor and sets the
+**Editor actions → Open file…** copies a `.lua` or `.ps1` file into the editor and sets the
 language from its extension; a new script also takes the file's name. The file
 is copied once and nothing is saved until **Save script**; if the editor holds
 unsaved code, Download Engine asks before replacing it. Files up to 64 KiB in UTF-8
 or UTF-16 work (UTF-16 with its byte-order mark), and Windows line endings are
-converted. **Save to file…** writes the editor's code to a `.lua` or `.ps1`
+converted. **Editor actions → Save to file…** writes the editor's code to a `.lua` or `.ps1`
 file; PowerShell files get a UTF-8 byte-order mark so Windows PowerShell 5.1
 reads non-English text correctly. Site readers open `.lua` files only.
 
@@ -344,12 +377,35 @@ loop. It exposes no `io`, `os`, `package`, `require`, `debug`, file loaders or
 bytecode loader. Use PowerShell when you need general file/program access.
 Lua can still start downloads and change app state, so review code before running
 it. These API limits are not a claim of OS-level isolation from hostile code.
-The VM memory cap does not include Rust command processing or the whole process.
+The VM cap is supplemented by a 256 MiB Windows process-memory limit for managed
+Lua workers, applied before execution. Lua-to-JSON conversion checks the expanded
+value before allocating Rust output: at most 64 levels and 65,536 items, with an
+8 MiB general limit, 1 MiB reader-result limit, or 16 KiB stored-value limit.
+Cycles and non-UTF-8 strings are rejected; repeated references count each time
+they expand. JSON input is capped at 8 MiB. PowerShell retains its existing trusted
+script permissions and process behavior.
 
 Lua is embedded with [mlua](https://github.com/mlua-rs/mlua); dependency and Lua
 copyright notices ship in `docs/licenses/lua-automation-LICENSES`.
 
 ### Live editor assistance
+
+Expand **Script settings** for the name, language, trigger, timeout and file permissions. Collapse it to give code more space. The library shows **Manual** for scripts run on request and **Automatic trigger on/off** for event-driven scripts; turning a trigger off still allows a manual run. Scripting uses the whole content area without the download sidebar.
+
+**Loaded scripts** provides a searchable list of saved scripts, including disabled
+scripts, with language, trigger and enabled/running status. Use the **Loaded scripts**
+tab to manage scripts and create a **New script**. The **Editor** tab keeps the
+current draft. Search by name, language or trigger. Selecting a script does not
+execute it; save or discard unsaved edits before switching.
+
+Choose **Full editor** in the Lua or PowerShell editor header to give code the window space. The same draft, cursor,
+syntax checks and completion stay active. Save, Run/Stop, Core API and **Editor
+actions** stay in the editor header; Loaded scripts and New script are hidden.
+File commands, sample runs, reload/discard and removal are under Editor actions.
+Toggle **Run logs** to show output. Site readers also
+have an Address field for Test on URL. Choose **Exit full editor** to return to
+trigger/settings controls; changing views never saves or runs code. Escape first
+closes completion suggestions; press it again to leave the full editor.
 
 The Lua and PowerShell editors check syntax automatically about 400 ms after you
 pause typing. There is no Check button. Checks parse the current draft without
@@ -463,10 +519,37 @@ For standard Lua syntax and error handling, see the official
 [Lua 5.4 reference manual](https://www.lua.org/manual/5.4/manual.html).
 Download Engine exposes the app-specific API above and only the listed standard libraries.
 
+### Upgraded editor walkthrough
+
+For a complete first run, see [the offline Lua walkthrough](user-guide.md#try-the-upgraded-core-api-without-downloading-anything). It covers a no-download parsing example, the bundled read-only report, custom site-reader testing, triggers, Stop and package sharing. The same guide is available from **Help → Guide → Lua scripting** and **Lua guide** in Scripting.
+
+### Core API and shared scripts
+
+Use **Scripting → Scripts** for both automation and custom site readers. There is no separate plugin editor. The trigger decides which operations are available: ordinary scripts control downloads and queues; Site reader scripts resolve matching pages and return links for the normal download engine.
+
+Choose **Core API** in the Lua editor header to search available functions and copy their signatures. Autocomplete uses the same catalog. `xd.api_version` is currently **1**, `xd.app_version` is the installed app version, and `xd.script_kind` is `automation` or `site_reader`. Check `xd.supports("xd.fetch")` for function availability; this is not a permission grant. Existing `xd.add`, queue, file and stored-value functions retain their contracts.
+
+Both roles can use these pure core functions, which perform no networking or file access:
+
+| Function | Result and limits |
+| --- | --- |
+| `xd.json(text)` / `xd.to_json(value)` | Decode/encode JSON. |
+| `xd.url_encode(text)` | Encode one URL component. |
+| `xd.url_join(base, relative)` | Resolve an HTTP(S) URL; reject embedded credentials and URLs over 16 KiB. Network destination checks still happen when fetched or downloaded. |
+| `xd.html_select(html, selector, attribute)` | CSS selection returning a list of strings. Omit attribute for element text; use `"href"` or `"src"` for links. HTML entities are decoded and whitespace at the ends is trimmed. It does not execute JavaScript or follow the document's base element automatically. Limits: 2 MiB HTML, 512-byte selector, 1,000 results, 1 MiB total result text. Exceeding a limit raises an error. |
+
+For example, a Site reader can call `xd.fetch(event.url)`, select `a.download[href]` with `xd.html_select`, resolve each link against the reply's final `url` with `xd.url_join`, and return `{items={{kind="file",url=...}}}`. Set matching Pages, use Test on URL, and inspect the results before enabling its automatic trigger. Built-in site precedence, public-network-only checks and Direct connection requirements still apply.
+
+**Import script…** opens a `.de-script.json` package as a new unsaved, disabled draft. Review the code, choose a local queue for queue-specific triggers, and explicitly enable file access if appropriate. Save before running or enabling the trigger. Import never overwrites a saved script, copies stored values, or runs the code. Unknown package/API versions and invalid definitions are refused. Unsaved editor changes are protected by a replacement question.
+
+**Export script…** writes the current code and settings, including unsaved edits, to a package. Logs, stored values, saved identities and automatic enablement are excluded. Code literals are included: remove any private URLs, tokens or passwords before sharing. Open file… and Save to file… remain available for plain .lua/.ps1 code. PowerShell retains its existing full Windows access; importing it does not make it restricted Lua.
+
+Working examples are included as `examples/core-api-automation.lua` (read-only queue/status reporting) and `examples/custom-site-reader.lua` (adapt its CSS selector to a public site). Script API 1 is separate from the app version; compatible additions keep API 1, while a future incompatible contract needs a new API version. Sharing scripts does not install external programs or add unsupported protocols.
+
 ## Site readers
 
 A site reader is a Lua script with the **Site reader** trigger. It reads video pages
-that Download Engine has no built-in reader for. Create one in **Scripting → Scripts → New
+that Download Engine has no built-in reader for. Create one in **Scripting → Scripts → Loaded scripts → New
 script**: keep **Language: Lua** (site readers are Lua only), choose **Trigger: Site
 reader** and add the pages it covers under **Pages**.
 
@@ -660,7 +743,8 @@ each launch; write startup actions to tolerate repetition.
 
 `scripts run` returns a queued run receipt, not its eventual execution result.
 Poll `scripts runs SCRIPT_ID` until the returned run is terminal. Reusing the same
-`--request-id UUID` is idempotent while its receipt is retained.
+`--request-id UUID` does not replay an already recorded command even after the
+detailed receipt is retired.
 
 `scripts save FILE.json` accepts the entire definition. New definitions need a
 new UUID and `revision: 0`; edits must send the revision returned by show/save.

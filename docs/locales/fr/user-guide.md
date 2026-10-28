@@ -8,6 +8,16 @@ Les préférences s’ouvrent dans une fenêtre organisée par catégories. Enre
 
 Choisissez Ajouter une URL, collez un lien direct, vérifiez le nom, la file et le dossier puis démarrez. Ajouter un lot accepte un lien par ligne. « À partir d’un modèle » crée des liens numérotés comme img001…img100 à partir d’un lien contenant *. Changez la langue dans Paramètres → Apparence → Langue. Langue du système suit Windows ; les langues non prises en charge utilisent l’anglais.
 
+
+
+<!-- custom-themes-3.4.0 -->
+### Collection de thèmes
+
+Préférences → Apparence → Personnalisé propose Neon Courier, Reactor Night, Aurora et Moonveil. Réglez le fond et l’accent ou importez un PNG/JPEG. Enregistrer conserve l’aperçu ; Annuler rétablit le thème précédent. Les images restent locales, avec des limites de taille et un traitement en arrière-plan. Protection des versions du profil et contrôles d’accès MCP inclus.
+
+PNG / JPEG · jusqu’à 16 Mio et 16 mégapixels. Copie dans ce profil.
+<!-- /custom-themes-3.4.0 -->
+
 ## Téléchargements et récupération
 
 ### Téléchargements et récupération
@@ -33,6 +43,9 @@ Ouvrez Outils → Configuration du navigateur pour connecter Chrome, Edge, Brave
 Gérer les files permet de grouper les fichiers et limiter les téléchargements simultanés. Les nouvelles files attendent un démarrage ou un planning. Le planificateur gère début, pause et répétition. L’application doit rester ouverte, même dans la zone de notification. Fermeture, arrêt, mise en veille et veille prolongée automatiques exigent une activation séparée ; le compte à rebours peut être annulé.
 
 ## Scripts
+
+L’éditeur et les scripts chargés disposent désormais d’onglets distincts. Recherchez ou créez un script dans la liste, puis ouvrez l’éditeur complet depuis l’en-tête Lua ou PowerShell. Enregistrement, exécution/arrêt et journaux facultatifs restent près du code. Les commandes de fichiers sont regroupées dans le menu d’actions de l’éditeur. Le changement de vue conserve le code non enregistré, les réglages et la position du curseur.
+
 
 ### Scripts
 
@@ -73,6 +86,24 @@ print("Failed downloads handled:", handled)
 ```
 
 Pour modifier un script dans un autre programme, utilisez Ouvrir un fichier… et Enregistrer dans un fichier… dans l’en-tête de l’éditeur. Ouvrir un fichier… copie un fichier .lua ou .ps1 dans l’éditeur et demande d’abord s’il remplacerait du code non enregistré ; choisissez Enregistrer le script pour le conserver. Enregistrer dans un fichier… écrit le code de l’éditeur dans un fichier.
+
+### Lua Core API 1
+
+Créez ou ouvrez un script dans Loaded scripts ; choisissez Lua et Manual only dans Script settings. Full editor agrandit l’éditeur. Utilisez Save script puis Run script et consultez Run logs. Core API liste les fonctions du déclencheur actuel ; Ctrl+Espace ouvre les suggestions. API 1 désigne le contrat, pas la version de l’application. Cet exemple analyse uniquement du HTML en mémoire, sans réseau ni téléchargement ; la lecture de pages vaut false pour un script manuel.
+
+```lua
+-- Example: core-api
+assert(xd.api_version == 1, "This example needs Lua API 1")
+print("App:", xd.app_version, "Role:", xd.script_kind)
+local html = '<a class="download" href="/files/demo.zip">Demo</a>'
+local links = xd.html_select(html, "a.download[href]", "href")
+local url = xd.url_join("https://example.com/catalog/", links[1])
+print("Preview:", xd.to_json({ kind = "file", url = url }))
+print("Can fetch a page:", xd.supports("xd.fetch"))
+```
+
+Open examples/core-api-automation.lua or examples/custom-site-reader.lua with Editor actions → Open file…. Site reader uses public pages, Pages patterns and Direct connection; test with Test on URL before enabling its trigger. Ordinary automation cannot call xd.fetch. Import script… accepts .de-script.json as a new draft with automatic triggers and file changes off; review its code and reselect local queues. Stop script does not undo submitted downloads. Full English reference: docs/automation.md.
+
 
 ## Ligne de commande
 

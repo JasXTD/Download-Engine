@@ -1,3 +1,4 @@
+const openProfileDatabase = require('./profile_database.cjs');
 // Real packaged downloads against a gated loopback server, with an isolated profile.
 // No browser registration, proxy, antivirus setting or shutdown action is changed.
 const assert = require('node:assert/strict');
@@ -6,12 +7,11 @@ const path = require('node:path');
 const http = require('node:http');
 const {spawn, spawnSync} = require('node:child_process');
 const {randomUUID, createHash} = require('node:crypto');
-const {DatabaseSync} = require('node:sqlite');
 const root = path.resolve(__dirname, '..');
 const binaries = path.resolve(process.argv[2] || path.join(root, 'dist', 'IDM-EX-UnsignedDev'));
 const home = path.join(root, 'artifacts', 'queue-concurrency-' + randomUUID().slice(0, 8));
 fs.mkdirSync(path.join(home, 'data'), {recursive:true});
-const db = new DatabaseSync(path.join(home, 'data', 'queue.sqlite3'));
+const db = openProfileDatabase(path.join(home, 'data', 'queue.sqlite3'));
 db.exec(`CREATE TABLE desktop_preferences(id INTEGER PRIMARY KEY,close_to_tray INTEGER NOT NULL,notify_complete INTEGER NOT NULL,notify_failed INTEGER NOT NULL);
 INSERT INTO desktop_preferences VALUES(1,0,0,0);
 CREATE TABLE interface_preferences(id INTEGER PRIMARY KEY,data TEXT NOT NULL);

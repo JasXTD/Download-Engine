@@ -1,6 +1,10 @@
 //! Saved Lua/PowerShell programs, durable run receipts and scheduler-owned execution.
+pub mod api;
 mod fetch;
+mod helpers;
+mod json;
 mod lua;
+pub mod package;
 pub use fetch::{FetchReply, FetchRequest, Fetcher};
 pub use lua::{execute_lua, execute_reader};
 mod reading;
@@ -83,6 +87,39 @@ pub struct Script {
     pub change_files: bool,
 }
 impl Script {
+    /// Shared structural validation for saved definitions and imported packages.
+    pub fn validate(&self) -> anyhow::Result<()> {
+        use anyhow::ensure;
+        crate::model::validate_job_id(&self.id)?;
+        crate::queue::queue_name(&self.name)?;
+        ensure!(!self.body.trim().is_empty(), "Enter a script");
+        ensure!(
+            self.body.len() <= MAX_SCRIPT_BYTES && !self.body.contains('\0'),
+            "Script must be at most 64 KiB and contain no NUL characters"
+        );
+        ensure!(
+            (1..=3600).contains(&self.timeout_seconds),
+            "Timeout must be 1 to 3600 seconds"
+        );
+        if let Trigger::Interval { minutes } = self.trigger {
+            ensure!(
+                (1..=10080).contains(&minutes),
+                "Interval must be 1 to 10080 minutes"
+            );
+        }
+        if let Trigger::SiteReader { pages } = &self.trigger {
+            ensure!(
+                self.language == Language::Lua,
+                "Site readers must be written in Lua"
+            );
+            ensure!(
+                !self.change_files,
+                "Site readers cannot change downloaded files"
+            );
+            site::validate_pages(pages)?;
+        }
+        Ok(())
+    }
     /// Event scripts can be tried on downloads or a queue the person picks.
     pub fn takes_sample(&self) -> bool {
         matches!(

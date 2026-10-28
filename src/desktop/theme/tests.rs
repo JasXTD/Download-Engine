@@ -6,6 +6,45 @@ use super::*;
 use egui::text::{Galley, LayoutJob, TextFormat};
 use std::sync::Arc;
 
+#[test]
+fn custom_accents_keep_text_and_pressed_buttons_readable() {
+    use download_engine::preferences::{CustomTheme, ThemePreset};
+    for accent in ThemePreset::BUILT_IN
+        .map(|preset| preset.accent())
+        .into_iter()
+        .chain([
+            [0, 0, 0],
+            [255, 255, 255],
+            [0, 0, 255],
+            [255, 0, 0],
+            [90, 90, 90],
+        ])
+    {
+        let p = Palette::custom(CustomTheme {
+            accent,
+            ..Default::default()
+        });
+        assert!((luminance(p.accent) + 0.05) / (luminance(p.background) + 0.05) >= 4.5);
+        assert!(
+            (luminance(p.accent.gamma_multiply(0.80)) + 0.05) / (luminance(p.accent_text) + 0.05)
+                >= 4.5
+        );
+    }
+}
+
+#[test]
+fn panels_are_translucent_only_over_custom_artwork() {
+    for dark in [true, false] {
+        let p = Palette::new(dark);
+        assert!(!p.backdrop);
+        assert_eq!(p.panel(p.background), p.background);
+    }
+    let p = Palette::custom(download_engine::preferences::CustomTheme::default());
+    assert!(p.backdrop);
+    let panel = p.panel(p.background);
+    assert!(panel.a() > 200 && panel.a() < 255);
+}
+
 fn context() -> egui::Context {
     let ctx = egui::Context::default();
     configure(&ctx);

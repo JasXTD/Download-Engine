@@ -1,3 +1,4 @@
+const openProfileDatabase = require('./profile_database.cjs');
 // Isolated native screenshots and packaged proxy/browser-handoff verification.
 // Uses built-in Node APIs, synthetic data and loopback listeners only.
 const assert = require('node:assert/strict');
@@ -7,7 +8,6 @@ const http = require('node:http');
 const { spawn, spawnSync } = require('node:child_process');
 const { once } = require('node:events');
 const { randomUUID, createHash } = require('node:crypto');
-const { DatabaseSync } = require('node:sqlite');
 const { deflateSync } = require('node:zlib');
 const root = path.resolve(__dirname, '..');
 const ui = process.argv.includes('--ui');
@@ -37,13 +37,13 @@ function screenshots() {
   const results=[];
   for(const feature of ['proxy','zip-preview','add']) for(const dark of [false,true]) {
     const directory=path.join(home,`${feature}-${dark?'dark-small':'light'}`);fs.mkdirSync(path.join(directory,'data'),{recursive:true});
-    const db=new DatabaseSync(path.join(directory,'data/queue.sqlite3'));
+    const db=openProfileDatabase(path.join(directory,'data/queue.sqlite3'));
     db.exec('CREATE TABLE interface_preferences(id INTEGER PRIMARY KEY CHECK(id=1),data TEXT NOT NULL)');
     db.prepare('INSERT INTO interface_preferences VALUES(1,?)').run(JSON.stringify({appearance:dark?'dark':'light'}));db.close();
     const ppm=path.join(directory,'dialog.ppm');
     const result=spawnSync(path.join(binaryRoot,'de.exe'),[],{windowsHide:true,timeout:30000,encoding:'utf8',env:{...env,IDM_EX_HOME:directory,IDM_EX_SCREENSHOT_TO:ppm,IDM_EX_TEST_FEATURE:feature,IDM_EX_TEST_SIZE:dark?'860x600':'1080x800'}});
     assert.equal(result.error,undefined,String(result.error));assert.equal(result.status,0,result.stderr);
-    const reopened=new DatabaseSync(path.join(directory,'data/queue.sqlite3'));assert.equal(reopened.prepare('SELECT COUNT(*) AS n FROM jobs').get().n,0);reopened.close();
+    const reopened=openProfileDatabase(path.join(directory,'data/queue.sqlite3'));assert.equal(reopened.prepare('SELECT COUNT(*) AS n FROM jobs').get().n,0);reopened.close();
     results.push({feature,dark,screenshot:png(ppm),jobsCreated:0});
   }
   return {home,binaryRoot,results,prefilledUiOnly:true};
@@ -73,7 +73,7 @@ async function packaged() {
   async function stop(){if(child&&child.exitCode===null&&child.signalCode===null){const end=once(child,'exit');child.kill();await end;}child=undefined;}
   try {
     proxy.listen(0,'127.0.0.1');await once(proxy,'listening');assert((await native({action:'ping'})).ok);
-    db=new DatabaseSync(path.join(home,'data/queue.sqlite3'));db.exec('PRAGMA busy_timeout=5000');
+    db=openProfileDatabase(path.join(home,'data/queue.sqlite3'));db.exec('PRAGMA busy_timeout=5000');
     db.prepare('UPDATE proxy_settings SET data=? WHERE id=1').run(JSON.stringify({mode:'custom',endpoint:`http://127.0.0.1:${proxy.address().port}/`,credential:null,allow_unencrypted_login:false}));
     db.exec('UPDATE desktop_preferences SET close_to_tray=0,notify_complete=0,notify_failed=0');
     const request_id=`capture:${randomUUID()}`;

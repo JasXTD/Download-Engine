@@ -8,6 +8,16 @@ Las preferenzas sa avran en ina fanestra cun categorias. Memorisar applitgescha 
 
 Tscherna Agiuntar URL, encolla ina colliaziun directa e verifitga il num da datoteca, la colonna e l’ordinatur. Avia lura la telechargiada. Agiuntar ina gruppa accepta ina colliaziun per lingia. Tenor in model generescha colliaziuns numeradas sco img001…img100 ord ina colliaziun cun *. Sut Parameters → Apparientscha → Lingua tscherna Rumantsch Grischun u Lingua dal sistem. La selecziun automatica reconuscha rm-CH; linguas betg sustegnidas dovran englais. La tscherna vala immediatamain e vegn memorisada.
 
+
+
+<!-- custom-themes-3.4.0 -->
+### Collecziun da temas
+
+Preferenzas → Aspect → Persunalisà porscha Neon Courier, Reactor Night, Aurora e Moonveil. Adatta il fund e l’accent u importa PNG/JPEG. Memorisar mantegna la prevista; Annullar restabilescha il tema precedent. Ils maletgs restan locals, cun limits da grondezza ed elavuraziun en il fund. Inclus èn era protecziun da versiuns dal profil e controllas d’access MCP.
+
+PNG / JPEG · fin a 16 MiB e 16 megapixels. Copia en quest profil.
+<!-- /custom-themes-3.4.0 -->
+
 ## Telechargiadas e recuperaziun
 
 ### Telechargiadas e recuperaziun
@@ -33,6 +43,9 @@ Avra Utensils → Configuraziun dal navigatur per colliar Chrome, Edge, Brave u 
 Administrar las colonnas gruppescha datotecas e limitescha quants telechargiadas che pon funcziunar a la giada. Novas colonnas spetgan in cumenzament manual u in urari. Definescha temps da cumenzament e pausa e dis da repetiziun en la Planisaziun. L’app sto restar averta, era en la zona da notificaziun. Sortida automatica, stizzar, durmir ed ibernaziun dal computer basegnan ina tscherna explicita; ti pos interrumper il quint enavos.
 
 ## Scripts
+
+L’editur ed ils scripts chargiads han ussa registers separads. Tschertga u creescha scripts en la glista ed avra l’editur cumplet en il chau da l’editur Lua u PowerShell. Memorisar, exequir/fermar ed ils protocols opziunals restan sper il code. Ils cumonds da datotecas èn en il menu d’acziuns da l’editur. La midada da vista mantegna il code betg memorisà, ils parameters e la posiziun dal cursor.
+
 
 ### Scripts
 
@@ -73,6 +86,24 @@ print("Failed downloads handled:", handled)
 ```
 
 Per modifitgar in script en in auter program, dovra Avrir ina datoteca… e Memorisar en ina datoteca… en il chau da l'editur. Avrir ina datoteca… copiescha ina datoteca .lua u .ps1 en l'editur e dumonda avant, sch'ella remplazzass code betg memorisà; tscherna Memorisar il script per al tegnair. Memorisar en ina datoteca… scriva il code da l'editur en ina datoteca.
+
+### Lua Core API 1
+
+Creescha u avra in script en Loaded scripts; tscherna Lua e Manual only en Script settings. Full editor dat dapli spazi al code. Tscherna Save script, lura Run script e legia Run logs. Core API mussa las funcziuns dal trigger actual; Ctrl+Space avra propostas. API 1 è la versiun dal contract, betg da l’app. L’exempel analisescha mo HTML en memoria, senza rait u telechargiadas; la lectura da paginas è false per in script manual.
+
+```lua
+-- Example: core-api
+assert(xd.api_version == 1, "This example needs Lua API 1")
+print("App:", xd.app_version, "Role:", xd.script_kind)
+local html = '<a class="download" href="/files/demo.zip">Demo</a>'
+local links = xd.html_select(html, "a.download[href]", "href")
+local url = xd.url_join("https://example.com/catalog/", links[1])
+print("Preview:", xd.to_json({ kind = "file", url = url }))
+print("Can fetch a page:", xd.supports("xd.fetch"))
+```
+
+Open examples/core-api-automation.lua or examples/custom-site-reader.lua with Editor actions → Open file…. Site reader uses public pages, Pages patterns and Direct connection; test with Test on URL before enabling its trigger. Ordinary automation cannot call xd.fetch. Import script… accepts .de-script.json as a new draft with automatic triggers and file changes off; review its code and reselect local queues. Stop script does not undo submitted downloads. Full English reference: docs/automation.md.
+
 
 ## Lingia da commandos
 

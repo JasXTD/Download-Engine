@@ -89,11 +89,12 @@ fn ux_review_enter_in_url_adds_exactly_one_download() {
     app.store
         .schedule_queue(MAIN_QUEUE, now + 3600, now)
         .unwrap();
-    app.force_refresh();
+    app.refresh_and_wait();
     app.url = "https://example.invalid/archive.zip".into();
     app.open_add();
     settled(&mut app, &ctx);
     key(&mut app, &ctx, egui::Key::Enter, egui::Modifiers::NONE);
+    app.wait_for_io();
     assert_eq!(app.dialog, None);
     let jobs = app.store.list().unwrap();
     assert_eq!(jobs.len(), 1);
@@ -230,7 +231,7 @@ fn ux_review_add_error_keeps_actions_visible() {
 fn ux_review_enter_in_dropdown_does_not_submit_download() {
     let (_temp, mut app, ctx) = fixture();
     app.store.set_queue_running(MAIN_QUEUE, false).unwrap();
-    app.force_refresh();
+    app.refresh_and_wait();
     app.url = "ftps://example.com/archive.zip".into();
     app.open_add();
     click(
@@ -271,14 +272,14 @@ fn ux_review_search_returns_to_first_result_after_scrolling() {
         })
         .collect();
     app.store.enqueue_batch(&app.jobs, MAIN_QUEUE).unwrap();
-    app.force_refresh();
+    app.refresh_and_wait();
     settled(&mut app, &ctx);
     let output = scroll_down(&mut app, &ctx);
     assert!(
         !has_text(&output, "file-000.zip"),
         "Fixture must be scrolled"
     );
-    app.force_refresh();
+    app.refresh_and_wait();
     let refreshed = settled(&mut app, &ctx);
     assert!(
         !has_text(&refreshed, "file-000.zip"),
@@ -305,7 +306,7 @@ fn ux_review_search_returns_to_first_result_after_scrolling() {
     let output = scroll_down(&mut app, &ctx);
     assert!(!has_text(&output, "file-000.zip"));
     app.queue_id = other.id;
-    app.force_refresh();
+    app.refresh_and_wait();
     let output = settled(&mut app, &ctx);
     assert_visible(&output, "file-000-other.zip");
 }

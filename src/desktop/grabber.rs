@@ -1,4 +1,11 @@
 use super::*;
+
+fn dialog_width(ctx: &egui::Context) -> f32 {
+    (ctx.content_rect().width() - 120.0).clamp(400.0, 760.0)
+}
+fn dialog_body_height(ctx: &egui::Context) -> f32 {
+    (ctx.content_rect().height() - 240.0).clamp(180.0, 490.0)
+}
 use anyhow::Context;
 use download_engine::{
     browser_batch::{Destination, Link, Options},
@@ -602,9 +609,10 @@ impl Desktop {
         let preview = draft.report.is_some();
         let scheduling = draft.schedule.visible;
         let persistent_preview = draft.pending.is_some() && !scheduling;
-        let height = (ctx.content_rect().height() - 120.0).max(300.0);
+
+        let height = dialog_body_height(ctx);
         let response = form_dialog::modal(DIALOG_ID, p).show(ctx, |ui| {
-            ui.set_width((ctx.content_rect().width() - 120.0).clamp(400.0, 760.0));
+            ui.set_width(dialog_width(ctx));
             close = form_dialog::title(
                 ui,
                 if scheduling {
@@ -632,7 +640,9 @@ impl Desktop {
             }
             egui::ScrollArea::vertical()
                 .id_salt("grabber-body")
-                .max_height(height - 75.0 - if persistent_preview { 65.0 } else { 0.0 })
+                .max_height(height)
+                .min_scrolled_height(height)
+                .auto_shrink([false, false])
                 .show(ui, |ui| {
                     ui.spacing_mut().item_spacing.y = 8.0;
                     if scheduling {
@@ -1007,7 +1017,9 @@ impl Desktop {
         let result = (|| -> anyhow::Result<()> {
             let draft = self.grabber.as_mut().context("Missing preview fixture")?;
             let project = draft.project.as_ref().context("Missing project fixture")?;
-            let conn = rusqlite::Connection::open(self.store.paths.data.join("queue.sqlite3"))?;
+            let conn = crate::desktop::fixture_database::open(
+                self.store.paths.data.join("queue.sqlite3"),
+            )?;
             let at = chrono::Utc::now().timestamp();
             for file in &draft.report.as_ref().context("Missing file fixture")?.files {
                 let fingerprint = <sha2::Sha256 as sha2::Digest>::digest(file.url.as_bytes());
@@ -1058,7 +1070,7 @@ mod tests {
     fn saved_grabber_projects_restore_update_copy_and_confirm_deletion_through_ui() {
         let (_temp, mut app, ctx) = fixture();
         let queue = app.store.create_queue("Manuals queue").unwrap();
-        app.force_refresh();
+        app.refresh_and_wait();
         app.open_grabber();
         {
             let draft = app.grabber.as_mut().unwrap();
@@ -1166,7 +1178,7 @@ mod tests {
         let (_temp, mut app, ctx) = fixture();
         let queue = app.store.create_queue("Temporary").unwrap();
         app.queue_id = queue.id.clone();
-        app.force_refresh();
+        app.refresh_and_wait();
         app.open_grabber();
         click(&mut app, &ctx, "Save project");
         assert!(app.grabber.as_ref().unwrap().error.is_some());
@@ -1195,7 +1207,7 @@ mod tests {
         );
         assert_eq!(app.grabber.as_ref().unwrap().depth, 5);
         app.store.delete_queue(&queue.id).unwrap();
-        app.force_refresh();
+        app.refresh_and_wait();
         let draft = app.grabber.as_mut().unwrap();
         draft
             .project_action(&app.store, ProjectAction::Open(current.id), MAIN_QUEUE)
@@ -1259,7 +1271,7 @@ mod tests {
         });
         let queue = app.store.create_queue("Review first").unwrap();
         app.queue_id = queue.id.clone();
-        app.force_refresh();
+        app.refresh_and_wait();
         app.open_grabber();
         app.grabber.as_mut().unwrap().url = url;
         app.grabber.as_mut().unwrap().project_name = "Local manuals".into();
@@ -1338,7 +1350,7 @@ mod tests {
         let (_temp, mut app, ctx) = fixture();
         let queue = app.store.create_queue("Website files").unwrap();
         app.queue_id = queue.id.clone();
-        app.force_refresh();
+        app.refresh_and_wait();
         app.open_grabber();
         app.grabber.as_mut().unwrap().receive(report());
         click(&mut app, &ctx, "Add selected to queue"); // Disabled with no selection.
@@ -1378,7 +1390,7 @@ mod tests {
         let queue = app.store.create_queue("Temporary").unwrap();
         let other = app.store.create_queue("Keep files").unwrap();
         app.queue_id = queue.id.clone();
-        app.force_refresh();
+        app.refresh_and_wait();
         app.open_grabber();
         app.grabber.as_mut().unwrap().receive(report());
         click(&mut app, &ctx, "Select visible");

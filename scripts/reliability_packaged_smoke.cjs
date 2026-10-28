@@ -1,3 +1,4 @@
+const openProfileDatabase = require('./profile_database.cjs');
 // Real packaged processes, isolated profiles and generated loopback bytes.
 // --large writes a 4 GiB + 64 MiB + 17 byte file (up to twice that during assembly).
 // No remote downloads, global settings, or personal profiles are used.
@@ -8,7 +9,6 @@ const http = require('node:http');
 const {spawn} = require('node:child_process');
 const {once} = require('node:events');
 const {randomUUID, createHash} = require('node:crypto');
-const {DatabaseSync} = require('node:sqlite');
 const {setTimeout: delay, setImmediate: yieldTurn} = require('node:timers/promises');
 const root = path.resolve(__dirname, '..');
 const binary = path.resolve(process.argv[2] || 'dist/IDM-EX-UnsignedDev');
@@ -256,7 +256,7 @@ async function combined() {
   }
   try {
     await cli(['list']);
-    db=new DatabaseSync(path.join(home,'data/queue.sqlite3')); db.exec('PRAGMA busy_timeout=5000');
+    db=openProfileDatabase(path.join(home,'data/queue.sqlite3')); db.exec('PRAGMA busy_timeout=5000');
     db.exec(`CREATE TABLE IF NOT EXISTS connection_settings(id INTEGER PRIMARY KEY CHECK(id=1),data TEXT NOT NULL)`);
     db.prepare('INSERT OR REPLACE INTO connection_settings VALUES(1,?)').run(JSON.stringify({default_connections:1,sites:[]}));
     await launch();

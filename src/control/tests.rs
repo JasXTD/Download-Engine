@@ -14,6 +14,56 @@ fn id() -> String {
 }
 
 #[test]
+fn pruned_receipt_remains_deduplicated_across_reopen_and_conflicting_retries() {
+    let (_temp, store) = fixture();
+    let original = id();
+    store.submit_control(&original, &Action::PauseAll).unwrap();
+    store.cancel_control(&original).unwrap();
+    // Exercise the real pruning path instead of deleting the target directly.
+    for _ in 0..1005 {
+        let key = id();
+        store.submit_control(&key, &Action::PauseAll).unwrap();
+        store.cancel_control(&key).unwrap();
+    }
+    let reopened = Store::open(store.paths.clone()).unwrap();
+    assert_eq!(
+        reopened.control_receipt(&original).unwrap().state,
+        "retired"
+    );
+    assert_eq!(
+        reopened
+            .submit_control(&original, &Action::PauseAll)
+            .unwrap()
+            .state,
+        "retired"
+    );
+    assert!(
+        reopened
+            .submit_control(
+                &original,
+                &Action::CreateQueue {
+                    name: "Duplicate".into()
+                }
+            )
+            .is_err()
+    );
+    assert!(reopened.claim_control().unwrap().is_none());
+    let conn = reopened.connect().unwrap();
+    assert!(
+        conn.query_row("SELECT count(*) FROM control_requests", [], |r| r
+            .get::<_, i64>(0))
+            .unwrap()
+            <= 1000
+    );
+    assert_eq!(
+        conn.query_row("SELECT count(*) FROM control_request_ids", [], |r| r
+            .get::<_, i64>(0))
+            .unwrap(),
+        1006
+    );
+}
+
+#[test]
 fn request_identity_cancellation_expiry_and_interrupted_execution_are_explicit() {
     let (_temp, s) = fixture();
     let key = id();

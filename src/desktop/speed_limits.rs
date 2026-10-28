@@ -65,6 +65,7 @@ impl Desktop {
         }
         match event.result {
             Ok(limits) => {
+                self.note_advanced_preferences_saved();
                 self.limits = limits;
                 self.speed_limits = None;
                 self.dialog = None;

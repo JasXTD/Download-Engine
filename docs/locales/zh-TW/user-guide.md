@@ -10,6 +10,16 @@
 
 在「偏好設定 → 外觀 → 語言」選擇繁體中文、简体中文、English、Bahasa Melayu、日本語、한국어、Tiếng Việt、ไทย、Polski、Русский、Українська、العربية、Deutsch、Français、Svenska、Norsk bokmål、Deutsch (Schweiz)、Italiano 或 Rumantsch Grischun。「系統語言」會跟隨 Windows；不支援的語言使用英語。儲存後套用語言變更，不會變更下載檔案、名稱或指令碼。
 
+
+
+<!-- custom-themes-3.4.0 -->
+### 主題集
+
+偏好設定 → 外觀 → 自訂提供 Neon Courier、Reactor Night、Aurora 和 Moonveil 主題。可調整背景強度與強調色，或匯入 PNG/JPEG。儲存以保留預覽，取消以還原原外觀。圖片僅存於本機，匯入有大小限制並在背景執行。本版也包含設定檔版本保護和 MCP 權限控制。
+
+PNG / JPEG · 最大 16 MiB、1600 萬像素。複製到目前設定檔。
+<!-- /custom-themes-3.4.0 -->
+
 ## 下載與復原
 
 ### 查看進度與控制下載
@@ -47,6 +57,9 @@
 排程支援開始、停止和重複時間。應用程式必須開啟或留在系統匣才會執行排程。檢查時區和選取的佇列。下載完成後結束程式、關機、睡眠或休眠需要另行啟用；倒數可以取消。
 
 ## 指令碼
+
+腳本編輯器與已載入腳本現在使用獨立分頁。在已載入腳本中搜尋或新增腳本；在 Lua 或 PowerShell 編輯器標題列中開啟全螢幕編輯器。儲存、執行或停止及選用日誌集中顯示，檔案操作移至「編輯器操作」。切換檢視會保留未儲存的程式碼、設定及游標位置。
+
 
 ### 規則與指令碼
 
@@ -101,6 +114,24 @@ print("Failed downloads handled:", handled)
 ```
 
 要在其他程式中編輯指令碼，請使用編輯器標題列中的「開啟檔案…」和「儲存到檔案…」。「開啟檔案…」會將 .lua 或 .ps1 檔案複製到編輯器中；如果會取代未儲存的程式碼，會先詢問你。選擇「儲存指令碼」即可保留。「儲存到檔案…」會將編輯器中的程式碼寫入檔案。
+
+### Lua Core API 1
+
+在 Loaded scripts 建立或開啟腳本；Script settings 選擇 Lua 和 Manual only。Full editor 擴大編輯區，Save script 後再 Run script，並在 Run logs 查看結果。Core API 可搜尋目前觸發器支援的函式，Ctrl+Space 提供補全。API 1 是介面版本，與應用程式版本不同。以下範例只解析記憶體中的 HTML，不連線或下載；手動執行時網頁讀取能力為 false。
+
+```lua
+-- Example: core-api
+assert(xd.api_version == 1, "This example needs Lua API 1")
+print("App:", xd.app_version, "Role:", xd.script_kind)
+local html = '<a class="download" href="/files/demo.zip">Demo</a>'
+local links = xd.html_select(html, "a.download[href]", "href")
+local url = xd.url_join("https://example.com/catalog/", links[1])
+print("Preview:", xd.to_json({ kind = "file", url = url }))
+print("Can fetch a page:", xd.supports("xd.fetch"))
+```
+
+Editor actions → Open file… 可開啟 examples/core-api-automation.lua 或 examples/custom-site-reader.lua。Site reader 使用公開網站、Pages 規則及 Direct connection；先 Test on URL，再啟用自動觸發。一般腳本不能呼叫 xd.fetch。Import script… 讀取 .de-script.json，並關閉自動觸發及檔案修改權限；檢查程式碼、重新選擇佇列後儲存。Stop script 停止腳本，不撤銷已提交的下載。完整步驟見隨附 docs/automation.md。
+
 
 ## 命令列
 

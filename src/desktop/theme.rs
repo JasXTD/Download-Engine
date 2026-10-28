@@ -30,9 +30,43 @@ pub(super) struct Palette {
     pub(super) track: Color32,
     pub(super) success: Color32,
     pub(super) warning: Color32,
+    /// Theme artwork fills the window behind the panels.
+    pub(super) backdrop: bool,
 }
 
+/// Window panels over theme artwork keep this much of their fill, so the art reads
+/// as one picture while toolbar and sidebar text stays on a dark surface.
+const PANEL_OPACITY: f32 = 0.84;
+
 impl Palette {
+    pub(super) fn for_context(ctx: &egui::Context) -> Self {
+        custom(ctx).map_or_else(
+            || Self::new(ctx.global_style().visuals.dark_mode),
+            Self::custom,
+        )
+    }
+
+    fn custom(theme: download_engine::preferences::CustomTheme) -> Self {
+        let mut p = Self::new(true);
+        p.background = Color32::from_rgb(17, 21, 32);
+        p.surface = Color32::from_rgb(23, 28, 42);
+        p.border = Color32::from_rgb(58, 65, 88);
+        p.muted = Color32::from_rgb(179, 188, 205);
+        p.accent = readable_accent(theme.accent);
+        p.accent_text = Color32::BLACK;
+        p.selected = p.accent.lerp_to_gamma(p.background, 0.76);
+        p.backdrop = true;
+        p
+    }
+
+    /// Fill for a window panel: unchanged in the standard themes, translucent over art.
+    pub(super) fn panel(self, base: Color32) -> Color32 {
+        if self.backdrop {
+            base.gamma_multiply(PANEL_OPACITY)
+        } else {
+            base
+        }
+    }
     pub(super) fn new(dark: bool) -> Self {
         let rgb = |r, g, b| Color32::from_rgb(r, g, b);
         if dark {
@@ -50,6 +84,7 @@ impl Palette {
                 track: rgb(58, 66, 72),
                 success: rgb(104, 211, 169),
                 warning: rgb(243, 149, 149),
+                backdrop: false,
             }
         } else {
             Self {
@@ -66,6 +101,7 @@ impl Palette {
                 track: rgb(230, 235, 239),
                 success: rgb(22, 124, 87),
                 warning: rgb(190, 70, 70),
+                backdrop: false,
             }
         }
     }
@@ -79,6 +115,28 @@ impl Palette {
             _ => self.muted,
         }
     }
+}
+
+/// The same accent is used for text, focus rings and button fills. Lift dark
+/// choices to a readable shade instead of allowing invisible controls.
+pub(super) fn readable_accent(rgb: [u8; 3]) -> Color32 {
+    let mut color = Color32::from_rgb(rgb[0], rgb[1], rgb[2]);
+    while luminance(color) < 0.32 {
+        color = color.lerp_to_gamma(Color32::WHITE, 0.08);
+    }
+    color
+}
+
+fn luminance(color: Color32) -> f32 {
+    let linear = |value: u8| {
+        let value = f32::from(value) / 255.0;
+        if value <= 0.04045 {
+            value / 12.92
+        } else {
+            ((value + 0.055) / 1.055).powf(2.4)
+        }
+    };
+    0.2126 * linear(color.r()) + 0.7152 * linear(color.g()) + 0.0722 * linear(color.b())
 }
 
 pub fn configure(ctx: &egui::Context) {
@@ -162,45 +220,79 @@ pub fn configure(ctx: &egui::Context) {
 
     for theme in [egui::Theme::Light, egui::Theme::Dark] {
         let p = Palette::new(theme == egui::Theme::Dark);
-        let mut style = egui::Style {
-            visuals: match theme {
-                egui::Theme::Light => egui::Visuals::light(),
-                egui::Theme::Dark => egui::Visuals::dark(),
-            },
-            ..Default::default()
-        };
-        style.visuals.override_text_color = Some(p.text);
-        style.visuals.panel_fill = p.background;
-        style.visuals.window_fill = p.surface;
-        style.visuals.extreme_bg_color = p.background;
-        style.visuals.faint_bg_color = p.track;
-        style.visuals.selection.bg_fill = p.selected;
-        style.visuals.selection.stroke = egui::Stroke::new(1.0, p.accent);
-        style.visuals.window_stroke = egui::Stroke::new(1.0, p.border);
-        style.visuals.widgets.noninteractive.bg_stroke = egui::Stroke::new(1.0, p.border);
-        style.visuals.widgets.inactive.bg_fill = p.surface;
-        style.visuals.widgets.inactive.weak_bg_fill = p.surface;
-        style.visuals.widgets.inactive.bg_stroke = egui::Stroke::new(1.0, p.border);
-        style.visuals.widgets.hovered.bg_fill = p.selected;
-        style.visuals.widgets.hovered.weak_bg_fill = p.selected;
-        style.visuals.widgets.inactive.corner_radius = 6.into();
-        style.visuals.widgets.hovered.corner_radius = 6.into();
-        style.visuals.widgets.active.corner_radius = 6.into();
-        style.spacing.item_spacing = egui::vec2(8.0, 6.0);
-        // Makes buttons, dropdowns and number boxes the shared 26px control height.
-        style.spacing.button_padding = egui::vec2(10.0, 4.0);
-        style
-            .text_styles
-            .insert(egui::TextStyle::Body, egui::FontId::proportional(13.0));
-        style
-            .text_styles
-            .insert(egui::TextStyle::Button, egui::FontId::proportional(13.0));
-        style
-            .text_styles
-            .insert(egui::TextStyle::Small, egui::FontId::proportional(12.0));
-        ctx.set_style_of(theme, style);
+        ctx.set_style_of(theme, style(theme, p));
     }
     ctx.set_theme(egui::ThemePreference::Dark);
+}
+
+fn style(theme: egui::Theme, p: Palette) -> egui::Style {
+    let mut style = egui::Style {
+        visuals: match theme {
+            egui::Theme::Light => egui::Visuals::light(),
+            egui::Theme::Dark => egui::Visuals::dark(),
+        },
+        ..Default::default()
+    };
+    style.visuals.override_text_color = Some(p.text);
+    style.visuals.panel_fill = p.background;
+    style.visuals.window_fill = p.surface;
+    style.visuals.extreme_bg_color = p.background;
+    style.visuals.faint_bg_color = p.track;
+    style.visuals.selection.bg_fill = p.selected;
+    style.visuals.selection.stroke = egui::Stroke::new(1.0, p.accent);
+    style.visuals.window_stroke = egui::Stroke::new(1.0, p.border);
+    style.visuals.widgets.noninteractive.bg_stroke = egui::Stroke::new(1.0, p.border);
+    style.visuals.widgets.inactive.bg_fill = p.surface;
+    style.visuals.widgets.inactive.weak_bg_fill = p.surface;
+    style.visuals.widgets.inactive.bg_stroke = egui::Stroke::new(1.0, p.border);
+    style.visuals.widgets.hovered.bg_fill = p.selected;
+    style.visuals.widgets.hovered.weak_bg_fill = p.selected;
+    style.visuals.widgets.inactive.corner_radius = 6.into();
+    style.visuals.widgets.hovered.corner_radius = 6.into();
+    style.visuals.widgets.active.corner_radius = 6.into();
+    style.spacing.item_spacing = egui::vec2(8.0, 6.0);
+    // Makes buttons, dropdowns and number boxes the shared 26px control height.
+    style.spacing.button_padding = egui::vec2(10.0, 4.0);
+    style
+        .text_styles
+        .insert(egui::TextStyle::Body, egui::FontId::proportional(13.0));
+    style
+        .text_styles
+        .insert(egui::TextStyle::Button, egui::FontId::proportional(13.0));
+    style
+        .text_styles
+        .insert(egui::TextStyle::Small, egui::FontId::proportional(12.0));
+    style
+}
+
+pub(super) fn custom(ctx: &egui::Context) -> Option<download_engine::preferences::CustomTheme> {
+    ctx.data(|data| {
+        data.get_temp::<download_engine::preferences::CustomTheme>(egui::Id::new("custom-theme"))
+    })
+}
+
+pub(super) fn apply_custom(
+    ctx: &egui::Context,
+    value: Option<download_engine::preferences::CustomTheme>,
+) {
+    if custom(ctx) == value {
+        return;
+    }
+    ctx.data_mut(|data| {
+        let id = egui::Id::new("custom-theme");
+        if let Some(value) = value {
+            data.insert_temp(id, value);
+        } else {
+            data.remove::<download_engine::preferences::CustomTheme>(id);
+        }
+    });
+    ctx.set_style_of(
+        egui::Theme::Dark,
+        style(
+            egui::Theme::Dark,
+            value.map_or_else(|| Palette::new(true), Palette::custom),
+        ),
+    );
 }
 
 #[cfg(test)]

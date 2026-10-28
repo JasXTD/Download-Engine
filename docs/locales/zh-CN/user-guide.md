@@ -10,6 +10,16 @@
 
 在“偏好设置 → 外观 → 语言”中选择简体中文、繁體中文、English、Bahasa Melayu、日本語、한국어、Tiếng Việt、ไทย、Polski、Русский、Українська、العربية、Deutsch、Français、Svenska、Norsk bokmål、Deutsch (Schweiz)、Italiano 或 Rumantsch Grischun。选择“系统语言”可跟随 Windows；不支持的语言使用英语。保存后应用语言更改，不会改变下载文件、名称或脚本。
 
+
+
+<!-- custom-themes-3.4.0 -->
+### 主题集
+
+偏好设置 → 外观 → 自定义提供 Neon Courier、Reactor Night、Aurora 和 Moonveil 主题。可调整背景强度与强调色，或导入 PNG/JPEG。保存以保留预览，取消以恢复原外观。图片仅存于本地，导入有大小限制并在后台运行。本版还包含配置版本保护和 MCP 权限控制。
+
+PNG / JPEG · 最大 16 MiB、1600 万像素。复制到当前配置。
+<!-- /custom-themes-3.4.0 -->
+
 ## 下载与恢复
 
 ### 查看进度和控制下载
@@ -47,6 +57,9 @@
 计划程序支持开始、停止和重复时间。应用必须保持打开或留在托盘，计划才会执行。检查时区和所选队列。下载完成后的退出、关机、睡眠或休眠操作需要单独启用；倒计时可以取消。
 
 ## 脚本
+
+脚本编辑器与已加载脚本现在使用独立标签页。在已加载脚本中搜索或新建脚本；在 Lua 或 PowerShell 编辑器标题栏中打开全屏编辑器。保存、运行或停止及可选日志集中显示，文件操作移至“编辑器操作”。切换视图会保留未保存的代码、设置和光标位置。
+
 
 ### 规则和脚本
 
@@ -101,6 +114,24 @@ print("Failed downloads handled:", handled)
 ```
 
 要在其他程序中编辑脚本，请使用编辑器标题栏中的“打开文件…”和“保存到文件…”。“打开文件…”会将 .lua 或 .ps1 文件复制到编辑器中；如果会替换未保存的代码，会先询问你。选择“保存脚本”即可保留。“保存到文件…”会将编辑器中的代码写入文件。
+
+### Lua Core API 1
+
+在 Loaded scripts 中创建或打开脚本；Script settings 选择 Lua 和 Manual only。Full editor 扩大编辑区，Save script 后再 Run script，并在 Run logs 查看结果。Core API 可搜索当前触发器支持的函数，Ctrl+Space 提供补全。API 1 是接口版本，与应用版本不同。下面的示例只解析内存中的 HTML，不访问网站或下载文件；手动运行时页面读取能力为 false。
+
+```lua
+-- Example: core-api
+assert(xd.api_version == 1, "This example needs Lua API 1")
+print("App:", xd.app_version, "Role:", xd.script_kind)
+local html = '<a class="download" href="/files/demo.zip">Demo</a>'
+local links = xd.html_select(html, "a.download[href]", "href")
+local url = xd.url_join("https://example.com/catalog/", links[1])
+print("Preview:", xd.to_json({ kind = "file", url = url }))
+print("Can fetch a page:", xd.supports("xd.fetch"))
+```
+
+Editor actions → Open file… 可打开 examples/core-api-automation.lua 或 examples/custom-site-reader.lua。Site reader 使用公共网站、Pages 匹配规则与 Direct connection；先 Test on URL，再启用自动触发。普通脚本不能调用 xd.fetch。Import script… 读取 .de-script.json，并关闭自动触发及文件修改权限；检查代码、重新选择队列后保存。Stop script 停止脚本，不撤销已提交的下载。完整步骤见随包 docs/automation.md。
+
 
 ## 命令行
 

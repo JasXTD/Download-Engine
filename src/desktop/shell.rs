@@ -1,6 +1,7 @@
 //! The main window chrome: menus, download toolbar, categories and status bar.
 use super::view::icon;
 use super::*;
+mod toolbar;
 use egui::{Align, Align2, FontId, Layout, Sense, Stroke, pos2, vec2};
 
 const ADD: &str = "\u{e710}";
@@ -31,9 +32,9 @@ fn menu(ui: &mut egui::Ui, label: &str, content: impl FnOnce(&mut egui::Ui)) {
     capture_target(ui, label, &_response.response);
 }
 
-/// Toolbar label sizes: labels shrink from the largest size to fit whole words.
+/// Keep readable labels; the responsive toolbar moves excess actions into More.
 const LABEL_LARGEST: f32 = 11.0;
-const LABEL_SMALLEST: f32 = 9.0;
+const LABEL_SMALLEST: f32 = 11.0;
 /// Horizontal space a toolbar button keeps around its label.
 const LABEL_PADDING: f32 = 6.0;
 
@@ -109,56 +110,6 @@ fn elide_long_words(ui: &egui::Ui, label: &str, size: f32, width: f32) -> String
             })
             .collect()
     })
-}
-
-/// Widens toolbar buttons whose longest word does not fit even at the smallest label
-/// size, so long translations wrap between words instead of inside one. The width
-/// comes from unused toolbar space, then from buttons with room to spare: first room
-/// beyond their largest-size label, then room beyond their smallest-size label. A row
-/// that already overflows (negative `free`) also gets that space back from them.
-/// Each tool is (base width, widest word at the largest size, whole-word width at the
-/// smallest size). When every word fits, the base widths are returned unchanged.
-fn fit_tool_widths<const N: usize>(tools: &[(f32, f32, f32); N], free: f32) -> [f32; N] {
-    let need = |word: f32| word + LABEL_PADDING;
-    let short = |&(base, _, small): &(f32, f32, f32)| (need(small) - base).max(0.0);
-    let mut widths = tools.map(|tool| tool.0);
-    let missing: f32 = tools.iter().map(short).sum();
-    if missing <= 0.0 {
-        return widths;
-    }
-    let unused = free.clamp(0.0, missing);
-    let mut wanted = missing - unused + (-free).max(0.0);
-    let mut taken = 0.0;
-    for keep_largest in [true, false] {
-        let spare: Vec<f32> = tools
-            .iter()
-            .zip(&widths)
-            .map(|(tool, width)| {
-                let keep = need(if keep_largest { tool.1 } else { tool.2 });
-                if short(tool) > 0.0 {
-                    0.0
-                } else {
-                    (width - keep).max(0.0)
-                }
-            })
-            .collect();
-        let total: f32 = spare.iter().sum();
-        let take = wanted.min(total);
-        if take <= 0.0 {
-            continue;
-        }
-        for (width, spare) in widths.iter_mut().zip(spare) {
-            *width -= spare * take / total;
-        }
-        wanted -= take;
-        taken += take;
-    }
-    // Whole words come first when there is not enough room for both.
-    let granted = unused + taken.min(missing - unused);
-    for (width, tool) in widths.iter_mut().zip(tools) {
-        *width += short(tool) * granted / missing;
-    }
-    widths
 }
 
 /// The largest label size, in half points, at which `label` wraps only between whole
@@ -450,7 +401,7 @@ impl Desktop {
             .resizable(false)
             .frame(
                 egui::Frame::new()
-                    .fill(p.background)
+                    .fill(p.panel(p.background))
                     .inner_margin(egui::Margin::symmetric(14, 2)),
             )
             .show(ui, |ui| {
@@ -634,98 +585,7 @@ impl Desktop {
     }
 
     pub(super) fn toolbar(&mut self, ui: &mut egui::Ui, p: Palette) {
-        egui::Panel::top("download-toolbar").exact_size(78.0).resizable(false)
-            .frame(egui::Frame::new().fill(p.background).inner_margin(egui::Margin::symmetric(10, 7)))
-            .show(ui, |ui| {
-                // Keep all navigation/view tools equal width while fitting 860px minimum windows.
-                let width = ((ui.available_width() - 38.0) / 14.35).clamp(56.0, 76.0);
-                // Use one label size across the row, including the wider file-action buttons.
-                let label_size = if width < 60.0 { 11.0 } else if width < 64.0 { 11.5 } else { 12.0 };
-                ui.style_mut().text_styles.insert(egui::TextStyle::Button, FontId::proportional(label_size));
-                let selected = self.selected_job();
-                let selection = self.selected_jobs();
-                ui.horizontal(|ui| {
-                    ui.spacing_mut().item_spacing.x = 2.0;
-                    // Base widths in toolbar order. Resume measures both of its labels so
-                    // the row does not shift when the selection changes.
-                    let labels: [(&[&str], f32); 15] = [
-                        (&[tr("Add URL")], width - 6.0),
-                        (&[tr("Resume"), tr("Start again")], width - 1.0),
-                        (&[tr("Pause")], width - 14.0),
-                        (&[tr("Stop")], width - 16.0),
-                        (&[tr("Stop all")], width - 10.0),
-                        (&[tr("Remove")], width - 10.0),
-                        (&[tr("Open folder")], width + 6.0),
-                        (&[tr("Clear finished")], width + 12.0),
-                        (&[tr("Queues")], width),
-                        (&[tr("Scheduler")], width),
-                        (&[tr("Scripting")], width),
-                        (&[tr("Grabber")], width),
-                        (&["MCP"], width),
-                        (&[tr("Preferences")], width),
-                        (&[tr("Logs")], width),
-                    ];
-                    let tools = labels.map(|(labels, base)| {
-                        let largest = labels.iter().map(|label| widest_word(ui, label, LABEL_LARGEST)).fold(0.0_f32, f32::max);
-                        let smallest = labels.iter().map(|label| whole_word_width(ui, label, LABEL_SMALLEST)).fold(0.0_f32, f32::max);
-                        (base, largest, smallest)
-                    });
-                    // Three 4-point separators and the spacing between all 18 items.
-                    let used = tools.iter().map(|tool| tool.0).sum::<f32>() + 3.0 * 4.0 + 17.0 * ui.spacing().item_spacing.x;
-                    let widths = fit_tool_widths(&tools, ui.available_width() - used);
-                    // One label size and top line for the whole row; Resume counts both labels
-                    // so the row does not change when the selection does.
-                    let look = row_look(ui, &labels.iter().zip(widths).flat_map(|((labels, _), width)| labels.iter().map(move |label| (*label, width))).collect::<Vec<_>>());
-                    let [add, resume, pause, stop, stop_all, remove, open, clear, queues, scheduler, automation, grabber, mcp, settings, logs] = widths;
-                    if tool(ui, tr("Add URL"), ADD, p.accent, add, false, look).on_hover_text(tr("Add a download (Ctrl+N)")).clicked() { self.open_add(); }
-                    ui.add(egui::Separator::default().vertical().spacing(4.0));
-                    let can_resume = selection.iter().any(|j| matches!(j.status, Status::Paused | Status::Failed));
-                    ui.add_enabled_ui(can_resume, |ui| {
-                        let label = selected.as_ref().filter(|_| can_resume).map(resume_action).unwrap_or(tr("Resume"));
-                        if tool(ui, label, PLAY, p.accent, resume, false, look).on_hover_text(selected.as_ref().map(resume_description).unwrap_or(if can_resume { tr("Resume selected downloads; files without a resume plan start again") } else { tr("Select a paused download") })).clicked()
-                            { self.selection_command(false); }
-                    });
-                    ui.add_enabled_ui(selection.iter().any(|j| matches!(j.status, Status::Downloading | Status::Queued)), |ui| {
-                        if tool(ui, tr("Pause"), PAUSE, p.orange, pause, false, look).clicked() { self.selection_command(true); }
-                        if tool(ui, tr("Stop"), STOP, p.warning, stop, false, look).on_hover_text(tr("Stop the selected downloads and close their status windows. Saved progress is kept.")).clicked() { self.stop_selected_downloads(); }
-                    });
-                    if tool(ui, tr("Stop all"), STOP, p.warning, stop_all, false, look).on_hover_text(tr("Stop current and waiting downloads in every queue, including files started immediately. Saved progress is kept; resume files when ready.")).clicked() { self.stop_all_downloads(); }
-                    ui.add(egui::Separator::default().vertical().spacing(4.0));
-                    ui.add_enabled_ui(!selection.is_empty() && selection.iter().all(|j| j.status != Status::Downloading), |ui| {
-                        if tool(ui, tr("Remove"), DELETE, p.text, remove, false, look).on_hover_text(tr("Remove the selected entry and its partial data. Completed files are kept.")).clicked()
-                            { self.request_destructive(DestructiveAction::Remove, selection.clone()); }
-                    });
-                    ui.add_enabled_ui(selected.is_some(), |ui| {
-                        if tool(ui, tr("Open folder"), FOLDER, p.text, open, false, look).clicked() && let Some(job) = &selected { self.show_folder(job); }
-                    });
-                    ui.add_enabled_ui(self.jobs.iter().any(|j| j.status == Status::Complete), |ui| {
-                        if tool(ui, tr("Clear finished"), CHECK, p.text, clear, false, look).on_hover_text(tr("Clear completed entries from the selected queue. Saved files are kept.")).clicked() { self.clear_finished(); }
-                    });
-                    ui.add(egui::Separator::default().vertical().spacing(4.0));
-                    if tool(ui, tr("Queues"), QUEUE, p.text, queues, self.view == View::Queues, look).on_hover_text(tr("Manage download queues")).clicked() {
-                        self.view = View::Queues;
-                        self.refresh_queue_summaries();
-                    }
-                    if tool(ui, tr("Scheduler"), CALENDAR, p.text, scheduler, false, look).clicked() { self.open_queue_dialog(Dialog::Schedule); }
-                    if tool(ui, tr("Scripting"), AUTOMATION, p.text, automation, self.view == View::Automation, look).on_hover_text(tr("Rules, scripts, site readers and run history")).clicked() {
-                        self.view = View::Automation;
-                        self.refresh_automation();
-                    }
-                    if tool(ui, tr("Grabber"), GRABBER, p.text, grabber, self.dialog == Some(Dialog::Grabber), look).on_hover_text(tr("Find website files or save an offline website")).clicked() {
-                        self.open_grabber();
-                    }
-                    if tool(ui, "MCP", "\u{e839}", p.text, mcp, self.dialog == Some(Dialog::Mcp), look).on_hover_text(tr("AI connection settings and server controls")).clicked() {
-                        self.open_mcp();
-                    }
-                    ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                        if tool(ui, tr("Preferences"), SETTINGS, p.text, settings, self.preferences_window.is_some(), look).clicked() { self.open_preferences_window(); }
-                        if tool(ui, tr("Logs"), LOGS, p.text, logs, self.view == View::Logs, look).on_hover_text(tr("Application logs and diagnostics")).clicked() {
-                            self.view = View::Logs;
-                            self.logs.request_refresh();
-                        }
-                    });
-                });
-            });
+        self.responsive_toolbar(ui, p);
     }
 
     pub(super) fn sidebar(&mut self, ui: &mut egui::Ui, p: Palette) {
@@ -736,7 +596,7 @@ impl Desktop {
             .resizable(false)
             .frame(
                 egui::Frame::new()
-                    .fill(p.background)
+                    .fill(p.panel(p.background))
                     .inner_margin(egui::Margin::symmetric(8, if small { 6 } else { 14 })),
             )
             .show(ui, |ui| {
@@ -872,7 +732,7 @@ impl Desktop {
             .resizable(false)
             .frame(
                 egui::Frame::new()
-                    .fill(p.background)
+                    .fill(p.panel(p.background))
                     .inner_margin(egui::Margin::symmetric(16, 5)),
             )
             .show(ui, |ui| {
@@ -1017,7 +877,7 @@ mod tests {
                     tr("Stop all"),
                     tr("Remove"),
                     tr("Open folder"),
-                    tr("Clear finished"),
+                    tr("Clear completed history"),
                     tr("Queues"),
                     tr("Scheduler"),
                     tr("Scripting"),
@@ -1026,16 +886,15 @@ mod tests {
                     tr("Logs"),
                     tr("Preferences"),
                 ] {
-                    let (rect, galley) = texts
-                        .iter()
-                        .find(|(rect, galley)| {
-                            galley.job.text == label
-                                && rect.top() >= TOOLBAR.start
-                                && rect.bottom() <= TOOLBAR.end
-                        })
-                        .unwrap_or_else(|| {
-                            panic!("{language:?} {size:?}: toolbar label missing: {label}")
-                        });
+                    let found = texts.iter().find(|(rect, galley)| {
+                        galley.job.text == label
+                            && rect.top() >= TOOLBAR.start
+                            && rect.bottom() <= TOOLBAR.end
+                    });
+                    // Every hidden action is checked in the overflow reachability test.
+                    let Some((rect, galley)) = found else {
+                        continue;
+                    };
                     assert!(
                         !galley.elided && shown(galley) == label,
                         "{language:?} {size:?}: toolbar label shortened: {label}"
@@ -1203,7 +1062,7 @@ mod tests {
         let out = run(vec![]);
         let (rect, galley) = texts(&out)
             .into_iter()
-            .find(|(_, galley)| galley.job.text.starts_with("Donau"))
+            .find(|(_, galley)| galley.job.text.starts_with("Don"))
             .unwrap();
         assert_whole_words(&galley);
         assert!(rect.width() <= 44.0 - LABEL_PADDING + 0.5);
@@ -1222,34 +1081,5 @@ mod tests {
                 .iter()
                 .any(|(_, galley)| galley.job.text == label && !galley.elided)
         }));
-    }
-
-    #[test]
-    fn tool_widths_change_only_to_fit_whole_words() {
-        // (base width, widest word at the largest size, at the smallest size)
-        let fitting = [(50.0, 40.0, 30.0), (60.0, 20.0, 15.0)];
-        assert_eq!(fit_tool_widths(&fitting, 100.0), [50.0, 60.0]);
-        assert_eq!(fit_tool_widths(&fitting, -20.0), [50.0, 60.0]);
-
-        let tools = [(40.0, 50.0, 45.0), (80.0, 30.0, 25.0), (60.0, 30.0, 25.0)];
-        assert_eq!(fit_tool_widths(&tools, 20.0), [51.0, 80.0, 60.0]);
-        let borrowed = fit_tool_widths(&tools, 0.0);
-        assert!((borrowed[0] - 51.0).abs() < 0.01);
-        assert!((borrowed.iter().sum::<f32>() - 180.0).abs() < 0.01);
-        // Donors keep room for their largest label size.
-        assert!(borrowed[1] >= 36.0 && borrowed[2] >= 36.0);
-        // A rebalanced row that overflowed by 5 points fits afterwards.
-        let overflowing = fit_tool_widths(&tools, -5.0);
-        assert!((overflowing[0] - 51.0).abs() < 0.01);
-        assert!((overflowing.iter().sum::<f32>() - 175.0).abs() < 0.01);
-        // An overflow alone does not change a row whose words fit.
-        assert_eq!(fit_tool_widths(&fitting, -5.0), [50.0, 60.0]);
-
-        // Without enough room, take what is spare down to the smallest size, and
-        // fit words before recovering an overflow.
-        let crowded = fit_tool_widths(&[(30.0, 60.0, 50.0), (40.0, 30.0, 30.0)], 0.0);
-        assert!((crowded[0] - 34.0).abs() < 0.01 && (crowded[1] - 36.0).abs() < 0.01);
-        let crowded = fit_tool_widths(&[(30.0, 60.0, 50.0), (40.0, 30.0, 30.0)], -3.0);
-        assert!((crowded[0] - 34.0).abs() < 0.01 && (crowded[1] - 36.0).abs() < 0.01);
     }
 }

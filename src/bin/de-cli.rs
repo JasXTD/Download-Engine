@@ -23,6 +23,10 @@ const HELP: &str = concat!(
 Usage: de-cli COMMAND [arguments] [options]
   mcp [--port N] [--read-only] [--no-start] Serve MCP at http://127.0.0.1:17842/mcp
   mcp-config [--port N] Print HTTP client settings, including the private token
+  mcp-approve-script ID REVISION  Approve the reviewed script revision for MCP
+  mcp-revoke-script ID          Revoke its MCP execution approval
+MCP controls: --no-download-control, --no-queue-control, --allow-lua,
+              --allow-powershell (scripts also need local revision approval)
   list                         List downloads
   status ID                    Read one download
   add URL... [--queue NAME|ID] [--folder ABSOLUTE_PATH] [--name FILE]
@@ -151,6 +155,7 @@ fn main() {
 fn mcp(args: &[String]) -> Result<()> {
     let mut port = download_engine::mcp::DEFAULT_PORT;
     let (mut read_only, mut no_start) = (false, false);
+    let mut permissions = download_engine::mcp::Permissions::default();
     let mut options = args[1..].iter();
     while let Some(option) = options.next() {
         match option.as_str() {
@@ -163,8 +168,12 @@ fn mcp(args: &[String]) -> Result<()> {
             }
             "--read-only" if args[0] == "mcp" => read_only = true,
             "--no-start" if args[0] == "mcp" => no_start = true,
+            "--no-download-control" if args[0] == "mcp" => permissions.downloads = false,
+            "--no-queue-control" if args[0] == "mcp" => permissions.queues = false,
+            "--allow-lua" if args[0] == "mcp" => permissions.lua = true,
+            "--allow-powershell" if args[0] == "mcp" => permissions.powershell = true,
             _ => anyhow::bail!(
-                "MCP options: --port NUMBER; mcp also accepts --read-only and --no-start. See docs/mcp.md."
+                "MCP options: --port NUMBER; mcp also accepts --read-only, --no-start, --no-download-control, --no-queue-control, --allow-lua and --allow-powershell. See docs/mcp.md."
             ),
         }
     }
@@ -187,6 +196,7 @@ fn mcp(args: &[String]) -> Result<()> {
         download_engine::mcp::Context {
             store: Store::open(AppPaths::discover()?)?,
             read_only,
+            permissions,
             no_start,
             start: desktop_process::ensure_running,
         },
@@ -282,6 +292,28 @@ fn run(raw: Vec<String>) -> Result<(Value, i32)> {
         !args.delete_file || matches!(w.as_slice(), ["remove", _]),
         "--delete-file is for remove"
     );
+    if matches!(
+        w.first(),
+        Some(&"mcp-approve-script" | &"mcp-revoke-script")
+    ) {
+        args.finish()?;
+        ensure!(
+            script_run.is_none(),
+            "Automation workers cannot grant or revoke MCP script approvals"
+        );
+        ensure!(
+            request.is_none(),
+            "MCP approvals are local settings, not queued app commands"
+        );
+        match w.as_slice() {
+            ["mcp-approve-script", id, revision] => {
+                store.approve_mcp_script(id, revision.parse()?)?
+            }
+            ["mcp-revoke-script", id] => store.revoke_mcp_script(id)?,
+            _ => bail!("Use mcp-approve-script ID REVISION or mcp-revoke-script ID"),
+        }
+        return Ok((json!({"ok":true}), 0));
+    }
     // What a script keeps between runs. Only a running script has a store.
     if let ["state", rest @ ..] = w.as_slice() {
         args.finish()?;
@@ -528,7 +560,10 @@ fn run(raw: Vec<String>) -> Result<(Value, i32)> {
     let ok = receipt.state == "done";
     let code = if ok {
         0
-    } else if matches!(receipt.state.as_str(), "running" | "interrupted") {
+    } else if matches!(
+        receipt.state.as_str(),
+        "running" | "interrupted" | "retired"
+    ) {
         2
     } else {
         1

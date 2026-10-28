@@ -8,6 +8,16 @@
 
 เลือกเพิ่ม URL บนแถบเครื่องมือ วางลิงก์ไฟล์โดยตรง ตรวจสอบชื่อ คิว และโฟลเดอร์แล้วเริ่ม เพิ่มเป็นชุดรับหนึ่งลิงก์ต่อบรรทัด เลือกจากรูปแบบเพื่อสร้างลิงก์เรียงเลข เช่น img001…img100 จากลิงก์ที่มี * หนึ่งตัว เปลี่ยนภาษาที่การตั้งค่า → รูปลักษณ์ → ภาษา ภาษาระบบใช้ตาม Windows และใช้ภาษาอังกฤษหากไม่รองรับ
 
+
+
+<!-- custom-themes-3.4.0 -->
+### ชุดธีม
+
+การตั้งค่า → รูปลักษณ์ → กำหนดเอง มี Neon Courier, Reactor Night, Aurora และMoonveil ปรับพื้นหลังและสีเน้น หรือนำเข้า PNG/JPEG ได้ บันทึกเพื่อใช้หรือยกเลิกเพื่อคืนค่าเดิม รูปภาพเก็บในเครื่อง ประมวลผลเบื้องหลังและจำกัดขนาด พร้อมการป้องกันเวอร์ชันโปรไฟล์และการควบคุมการเข้าถึง MCP
+
+PNG / JPEG · สูงสุด 16 MiB และ 16 ล้านพิกเซล คัดลอกลงโปรไฟล์นี้
+<!-- /custom-themes-3.4.0 -->
+
 ## ดาวน์โหลดและการกู้คืน
 
 ### ดาวน์โหลดและการกู้คืน
@@ -33,6 +43,9 @@
 จัดการคิวเพื่อจัดกลุ่มไฟล์และตั้งจำนวนดาวน์โหลดพร้อมกัน คิวใหม่รอจนคุณเริ่มหรือตั้งเวลา ตัวตั้งเวลารองรับเริ่ม หยุด และทำซ้ำ แอปต้องเปิดอยู่ รวมในถาดระบบ การออก ปิดเครื่อง สลีป หรือไฮเบอร์เนตเมื่อเสร็จต้องเปิดแยก และยกเลิกนับถอยหลังได้
 
 ## สคริปต์
+
+ตัวแก้ไขและรายการสคริปต์ที่โหลดมีแท็บแยกกันแล้ว ค้นหาหรือสร้างสคริปต์ในรายการ และเปิดตัวแก้ไขแบบเต็มจากส่วนหัว Lua หรือ PowerShell ปุ่มบันทึก เรียกใช้/หยุด และบันทึกการทำงานแบบเลือกแสดงอยู่ร่วมกับโค้ด คำสั่งไฟล์อยู่ในเมนูการทำงานของตัวแก้ไข การสลับมุมมองจะเก็บโค้ดที่ยังไม่บันทึก การตั้งค่า และตำแหน่งเคอร์เซอร์ไว้
+
 
 ### สคริปต์
 
@@ -73,6 +86,24 @@ print("Failed downloads handled:", handled)
 ```
 
 หากต้องการแก้ไขสคริปต์ในโปรแกรมอื่น ให้ใช้ เปิดไฟล์… และ บันทึกเป็นไฟล์… ที่ส่วนหัวของตัวแก้ไข เปิดไฟล์… จะคัดลอกไฟล์ .lua หรือ .ps1 ลงในตัวแก้ไข และจะถามก่อนหากจะแทนที่โค้ดที่ยังไม่บันทึก เลือก บันทึกสคริปต์ เพื่อเก็บไว้ ส่วน บันทึกเป็นไฟล์… จะเขียนโค้ดในตัวแก้ไขลงไฟล์
+
+### Lua Core API 1
+
+สร้างหรือเปิดสคริปต์ใน Loaded scripts แล้วเลือก Lua และ Manual only ใน Script settings ใช้ Full editor เพื่อขยายพื้นที่ จากนั้น Save script และ Run script แล้วดู Run logs ปุ่ม Core API แสดงฟังก์ชันของทริกเกอร์ปัจจุบัน และ Ctrl+Space เปิดคำแนะนำ API 1 เป็นรุ่นของสัญญา API ไม่ใช่รุ่นแอป ตัวอย่างนี้แยกวิเคราะห์ HTML ในหน่วยความจำเท่านั้น ไม่เชื่อมต่อหรือดาวน์โหลด การอ่านเว็บสำหรับสคริปต์แบบแมนนวลจะแสดง false
+
+```lua
+-- Example: core-api
+assert(xd.api_version == 1, "This example needs Lua API 1")
+print("App:", xd.app_version, "Role:", xd.script_kind)
+local html = '<a class="download" href="/files/demo.zip">Demo</a>'
+local links = xd.html_select(html, "a.download[href]", "href")
+local url = xd.url_join("https://example.com/catalog/", links[1])
+print("Preview:", xd.to_json({ kind = "file", url = url }))
+print("Can fetch a page:", xd.supports("xd.fetch"))
+```
+
+Open examples/core-api-automation.lua or examples/custom-site-reader.lua with Editor actions → Open file…. Site reader uses public pages, Pages patterns and Direct connection; test with Test on URL before enabling its trigger. Ordinary automation cannot call xd.fetch. Import script… accepts .de-script.json as a new draft with automatic triggers and file changes off; review its code and reselect local queues. Stop script does not undo submitted downloads. Full English reference: docs/automation.md.
+
 
 ## บรรทัดคำสั่ง
 

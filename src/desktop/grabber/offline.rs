@@ -136,11 +136,13 @@ impl Desktop {
         let mut start = false;
         let mut open = None;
         let response = form_dialog::modal(DIALOG_ID, p).show(ctx, |ui| {
-            ui.set_width((ctx.content_rect().width() - 100.0).clamp(330.0, 620.0));
+            ui.set_width(super::dialog_width(ctx));
             close |= form_dialog::title(ui, tr("Website grabber"), form_dialog::Icon::Symbol("\u{e774}"), p, true);
+            ui.label(RichText::new(tr("Save pages, styles, images and fonts for offline browsing.")).small().color(p.muted));
+            ui.add_space(4.0);
             mode_switch(ui, &mut draft.offline_mode, running);
             egui::ScrollArea::vertical().id_salt("offline-website-body")
-                .max_height((ctx.content_rect().height() - 240.0).max(180.0)).show(ui, |ui| {
+                .max_height(super::dialog_body_height(ctx)).min_scrolled_height(super::dialog_body_height(ctx)).auto_shrink([false, false]).show(ui, |ui| {
                 ui.spacing_mut().item_spacing.y = 8.0;
                 if let Some(report) = &state.report {
                     ui.heading(tr(report.stop.label()));
@@ -158,7 +160,6 @@ impl Desktop {
                         if ui.button(tr("Open folder")).clicked() { open = Some(report.folder.clone()); }
                     });
                 } else {
-                    ui.label(tr("Save pages, styles, images and fonts for offline browsing."));
                     egui::Frame::new().fill(p.surface).stroke(egui::Stroke::new(1.0, p.border)).corner_radius(8)
                         .inner_margin(12).show(ui, |ui| {
                         ui.set_min_width(ui.available_width());

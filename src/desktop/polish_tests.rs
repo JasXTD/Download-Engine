@@ -74,7 +74,7 @@ fn persist(app: &mut Desktop) {
     for job in &app.jobs {
         app.store.enqueue(job).unwrap();
     }
-    app.force_refresh();
+    app.refresh_and_wait();
 }
 
 #[test]
@@ -200,7 +200,7 @@ fn bulk_toolbar_pause_and_resume_apply_to_all_eligible_selected_jobs() {
             .count()
             == 2
     });
-    app.force_refresh();
+    app.refresh_and_wait();
     assert_eq!(app.selected_jobs().len(), 2);
     click(&mut app, &ctx, "Pause");
     wait_for(|| {
@@ -301,7 +301,7 @@ fn completed_file_menu_confirms_deletion_and_cancel_keeps_file_and_history() {
     std::fs::write(&saved, b"completed bytes").unwrap();
     job.saved_path = Some(saved.clone());
     app.store.save(&job).unwrap();
-    app.force_refresh();
+    app.refresh_and_wait();
     select(&mut app, &ctx, "guide.pdf", egui::Modifiers::NONE);
     click(&mut app, &ctx, "File actions");
     click(&mut app, &ctx, "Delete file…");
@@ -344,7 +344,7 @@ fn delete_file_confirmation_rechecks_the_saved_path() {
     std::fs::write(&replacement, b"replacement").unwrap();
     job.saved_path = Some(original.clone());
     app.store.save(&job).unwrap();
-    app.force_refresh();
+    app.refresh_and_wait();
     select(&mut app, &ctx, "guide.pdf", egui::Modifiers::NONE);
     click(&mut app, &ctx, "File actions");
     click(&mut app, &ctx, "Delete file…");
@@ -376,13 +376,13 @@ fn delete_file_failure_is_visible_and_keeps_the_history_entry() {
         .clone();
     job.saved_path = Some(root.path().join("missing.pdf"));
     app.store.save(&job).unwrap();
-    app.force_refresh();
+    app.refresh_and_wait();
     select(&mut app, &ctx, "guide.pdf", egui::Modifiers::NONE);
     click(&mut app, &ctx, "File actions");
     click(&mut app, &ctx, "Delete file…");
     click(&mut app, &ctx, "Delete file");
     wait_for(|| {
-        app.force_refresh();
+        app.refresh_and_wait();
         app.notice
             .as_ref()
             .is_some_and(|notice| notice.contains("Cannot delete guide.pdf"))
@@ -407,7 +407,7 @@ fn delete_files_selection_requires_confirmation_and_escape_preserves_every_file(
         job.saved_path = Some(path);
         app.store.save(job).unwrap();
     }
-    app.force_refresh();
+    app.refresh_and_wait();
     select(&mut app, &ctx, &jobs[0].name, egui::Modifiers::NONE);
     select(&mut app, &ctx, &jobs[1].name, CTRL);
     click(&mut app, &ctx, "File actions");

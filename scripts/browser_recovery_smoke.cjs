@@ -1,9 +1,10 @@
+const openProfileDatabase = require('./profile_database.cjs');
 /* Invoked by the ignored Rust browser-recovery integration test. The real
    browser/native-host APIs use isolated profiles and only loopback file data.
    A unique test-only host registration is removed even when a check fails. */
 const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
 const {execFileSync}=require('node:child_process'),{createHash,randomUUID}=require('node:crypto');
-const {DatabaseSync}=require('node:sqlite'),{chromium}=require('playwright');
+const {chromium}=require('playwright');
 const config=JSON.parse(fs.readFileSync(process.argv[2],'utf8'));
 const quote=value=>"'"+value.replaceAll("'","''")+"'";
 const powershell=script=>execFileSync('powershell.exe',['-NoProfile','-NonInteractive','-Command',script],{encoding:'utf8',windowsHide:true});
@@ -48,7 +49,7 @@ async function main(){
     const site=await context.newPage();
     await site.route(config.page,route=>route.fulfill({contentType:'text/html',body:`<!doctype html><a id="file" href="${config.url}">Get the file again</a>`}));
     await site.goto(config.page);
-    const db=new DatabaseSync(path.join(config.run,'data','queue.sqlite3'),{readOnly:true});
+    const db=openProfileDatabase(path.join(config.run,'data','queue.sqlite3'),{readOnly:true});
     try {
       for(let i=0;i<2;i++) {
         await popup.goto('chrome-extension://'+id+'/popup.html');

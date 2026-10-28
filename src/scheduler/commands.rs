@@ -1,11 +1,35 @@
 //! Queue commands and fair, bounded dispatch selection.
 use super::*;
 
+pub(super) fn job_id(command: &Command) -> Option<&str> {
+    match command {
+        Command::Pause(id)
+        | Command::Resume(id)
+        | Command::StartImmediately(id)
+        | Command::Restart(id)
+        | Command::SelectDiscoveredFile { id, .. }
+        | Command::Remove(id)
+        | Command::DeleteFile { id, .. }
+        | Command::RenameFile { id, .. }
+        | Command::MoveFile { id, .. }
+        | Command::MoveJob(id, _)
+        | Command::ReorderJob(id, _) => Some(id),
+        Command::Authentication(update) => Some(&update.job),
+        _ => None,
+    }
+}
+
 pub(super) fn apply(
     store: &Store,
     active: &mut HashMap<String, Active>,
     command: Command,
 ) -> Result<()> {
+    if let Some(id) = job_id(&command) {
+        anyhow::ensure!(
+            !crate::file_relocation::is_pending(store, id)?,
+            "A file operation needs recovery before changing this download"
+        );
+    }
     match &command {
         Command::StartQueue(id) => {
             store.set_queue_running(id, true)?;
@@ -172,22 +196,8 @@ pub(super) fn apply(
                 .remove(&job.id)
                 .context("File deleted, but its history entry could not be removed")?;
         }
-        Command::RenameFile { name, .. } => {
-            anyhow::ensure!(
-                !name.is_empty() && crate::model::safe_filename(&name) == name,
-                "Choose a file name without \\ / : * ? \" < > |, control characters, a trailing dot or space, or a reserved name such as CON"
-            );
-            let from = saved_file(&job, "renamed")?;
-            let to = from.with_file_name(&name);
-            anyhow::ensure!(to != from, "The file already has this name");
-            relocate(store, &mut job, &from, &to, |job| job.name = name)?;
-        }
-        Command::MoveFile { folder, .. } => {
-            let from = saved_file(&job, "moved")?;
-            let folder = movable_folder(store, &folder)?;
-            let to = folder.join(from.file_name().context("Missing file name")?);
-            anyhow::ensure!(to != from, "The file is already in this folder");
-            relocate(store, &mut job, &from, &to, |job| job.directory = folder)?;
+        command @ (Command::RenameFile { .. } | Command::MoveFile { .. }) => {
+            relocate_command(store, command, &CancellationToken::new())?
         }
         _ => {}
     }
@@ -204,24 +214,33 @@ fn saved_file(job: &Job, verb: &str) -> Result<std::path::PathBuf> {
         .context("This download has no saved file")
 }
 
-/// Move the file, then record where it is. If the record cannot be saved,
-/// move the file back so the list never points at a missing file.
-fn relocate(
+pub(super) fn relocate_command(
     store: &Store,
-    job: &mut Job,
-    from: &std::path::Path,
-    to: &std::path::Path,
-    update: impl FnOnce(&mut Job),
+    command: Command,
+    cancel: &CancellationToken,
 ) -> Result<()> {
-    crate::download_file::move_completed(from, to)?;
-    update(job);
-    job.saved_path = Some(to.to_owned());
-    if let Err(error) = store.save(job) {
-        let _ = crate::download_file::move_completed(to, from);
-        return Err(error
-            .context("The file was not moved because its download record could not be updated"));
+    let id = job_id(&command).context("Missing file operation download")?;
+    let job = store.get(id)?.context("Download not found")?;
+    match command {
+        Command::RenameFile { name, .. } => {
+            anyhow::ensure!(
+                !name.is_empty() && crate::model::safe_filename(&name) == name,
+                "Choose a file name without \\ / : * ? \" < > |, control characters, a trailing dot or space, or a reserved name such as CON"
+            );
+            let from = saved_file(&job, "renamed")?;
+            let to = from.with_file_name(&name);
+            anyhow::ensure!(to != from, "The file already has this name");
+            crate::file_relocation::relocate(store, &job, to, name, job.directory.clone(), cancel)
+        }
+        Command::MoveFile { folder, .. } => {
+            let from = saved_file(&job, "moved")?;
+            let folder = movable_folder(store, &folder)?;
+            let to = folder.join(from.file_name().context("Missing file name")?);
+            anyhow::ensure!(to != from, "The file is already in this folder");
+            crate::file_relocation::relocate(store, &job, to, job.name.clone(), folder, cancel)
+        }
+        _ => anyhow::bail!("Expected a file move or rename"),
     }
-    Ok(())
 }
 
 /// Scripts move files only into the download folder, a category folder, or a

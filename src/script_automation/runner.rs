@@ -198,7 +198,11 @@ impl Active {
                 .stdin(Stdio::null())
                 .stdout(Stdio::piped())
                 .stderr(Stdio::piped());
-            let mut process = Running::spawn(&mut command, &CancellationToken::new(), None)?;
+            // Include native parsing/conversion allocations in the worker budget.
+            // Lua calls the CLI in-process and does not need child processes.
+            let memory_limit = (claim.run.language == Language::Lua).then_some(256 * 1024 * 1024);
+            let mut process =
+                Running::spawn(&mut command, &CancellationToken::new(), memory_limit)?;
             let (tx, output) = mpsc::channel();
             let budget = Arc::new(AtomicUsize::new(0));
             let stdout = process

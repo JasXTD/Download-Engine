@@ -1,3 +1,4 @@
+const openProfileDatabase = require('./profile_database.cjs');
 // Isolated native screenshots or packaged FTP transfer/restart smoke test.
 // No installed packages, personal data, external servers or OS trust changes.
 const assert = require('node:assert/strict');
@@ -8,7 +9,6 @@ const tls = require('node:tls');
 const { spawn, spawnSync } = require('node:child_process');
 const { once } = require('node:events');
 const { randomUUID, createHash } = require('node:crypto');
-const { DatabaseSync } = require('node:sqlite');
 const { deflateSync } = require('node:zlib');
 
 const root = path.resolve(__dirname, '..');
@@ -48,7 +48,7 @@ function screenshots() {
   for (const feature of ['ftp-add', 'ftps-add', 'ftps-login']) for (const dark of [false, true]) {
     const directory = path.join(home, `${feature}-${dark ? 'dark-small' : 'light'}`);
     fs.mkdirSync(path.join(directory, 'data'), { recursive: true });
-    const db = new DatabaseSync(path.join(directory, 'data/queue.sqlite3'));
+    const db = openProfileDatabase(path.join(directory, 'data/queue.sqlite3'));
     db.exec('CREATE TABLE interface_preferences(id INTEGER PRIMARY KEY CHECK(id=1),data TEXT NOT NULL)');
     db.prepare('INSERT INTO interface_preferences VALUES(1,?)').run(JSON.stringify({ appearance: dark ? 'dark' : 'light' })); db.close();
     const ppm = path.join(directory, 'dialog.ppm');
@@ -56,7 +56,7 @@ function screenshots() {
       ...env, IDM_EX_HOME: directory, IDM_EX_SCREENSHOT_TO: ppm, IDM_EX_TEST_FEATURE: feature, IDM_EX_TEST_SIZE: dark ? '860x600' : '1080x800'
     } });
     assert.equal(result.error, undefined, String(result.error)); assert.equal(result.status, 0, result.stderr);
-    const reopened = new DatabaseSync(path.join(directory, 'data/queue.sqlite3'));
+    const reopened = openProfileDatabase(path.join(directory, 'data/queue.sqlite3'));
     assert.equal(reopened.prepare('SELECT COUNT(*) AS n FROM jobs').get().n, 0); reopened.close();
     results.push({ feature, dark, screenshot: png(ppm), jobs: 0 });
   }
@@ -122,7 +122,7 @@ async function packaged() {
     assert((await native({ action: 'ping' })).ok);
     const reply = await native({ action: 'add', request_id: randomUUID(), url: `ftp://127.0.0.1:${server.address().port}/fixture.bin` });
     assert.equal(reply.ok, false); assert(reply.message.includes('HTTP'));
-    db = new DatabaseSync(path.join(home, 'data/queue.sqlite3')); db.exec('PRAGMA busy_timeout=5000');
+    db = openProfileDatabase(path.join(home, 'data/queue.sqlite3')); db.exec('PRAGMA busy_timeout=5000');
     db.exec('UPDATE desktop_preferences SET close_to_tray=0,notify_complete=0,notify_failed=0; UPDATE download_queues SET max_active=1;');
     const jobs = [['ftp', '127.0.0.1', server.address().port, 'plain'], ['ftps', 'localhost', secure.address().port, 'implicit']].map(([scheme, host, port, security], i) => {
       const id = randomUUID(), created = Math.floor(Date.now() / 1000);

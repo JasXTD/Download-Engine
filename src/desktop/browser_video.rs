@@ -4,6 +4,13 @@ use download_engine::{
     browser_video::{Kind, Pending},
 };
 
+#[derive(Default)]
+pub(super) struct Requests {
+    reading: Option<background_io::Task<Option<(State, bool)>>>,
+    ready: Option<(State, bool)>,
+    dismissals: HashMap<String, background_io::Task<()>>,
+}
+
 pub(super) struct State {
     pending: Pending,
     selected: Vec<bool>,
@@ -12,9 +19,14 @@ pub(super) struct State {
     destination: usize,
     options: Options,
     error: Option<String>,
+    saving: Option<background_io::Task<Vec<String>>>,
 }
 
 impl State {
+    #[cfg(test)]
+    pub(super) fn saving(&self) -> bool {
+        self.saving.is_some()
+    }
     fn new(pending: Pending, queue: &str, options: Options) -> Self {
         let queue = options
             .queues
@@ -31,6 +43,7 @@ impl State {
             destination: 0,
             options,
             error: None,
+            saving: None,
         }
     }
     fn destination(&self) -> Destination {
@@ -42,59 +55,88 @@ impl State {
 }
 
 impl Desktop {
+    #[cfg(test)]
+    pub(super) fn browser_requests_pending(&self) -> bool {
+        self.browser_video_requests.reading.is_some()
+            || !self.browser_video_requests.dismissals.is_empty()
+    }
     pub(super) fn poll_browser_video_requests(&mut self, ctx: &egui::Context) {
-        if self.dialog.is_some()
+        self.browser_video_requests
+            .dismissals
+            .retain(|_, task| match task.poll() {
+                Some(result) => {
+                    if let Err(error) = result {
+                        self.notice = Some(Notice::error(tf!(
+                            "Cannot dismiss this video review: {error:#}",
+                            error = error
+                        )));
+                    }
+                    false
+                }
+                None => true,
+            });
+        if let Some(result) = self
+            .browser_video_requests
+            .reading
+            .as_mut()
+            .and_then(background_io::Task::poll)
+        {
+            self.browser_video_requests.reading = None;
+            match result {
+                Ok(incoming) => self.browser_video_requests.ready = incoming,
+                Err(error) => {
+                    self.notice = Some(Notice::error(tf!(
+                        "Cannot open video review: {error:#}",
+                        error = error
+                    )))
+                }
+            }
+        }
+        if self.dialog.is_some() {
+            return;
+        }
+        if let Some((state, reader)) = self.browser_video_requests.ready.take() {
+            let page = state.pending.review.page_url.clone();
+            if reader {
+                let queue = state.queue.clone();
+                if state.pending.review.items.is_empty() {
+                    self.discard_browser_video(state);
+                    self.open_browser_stream(&page, &queue, None);
+                } else {
+                    self.open_site_video(state, &page, &queue);
+                }
+            } else {
+                self.browser_video = Some(state);
+                self.dialog = Some(Dialog::BrowserVideo);
+            }
+            self.show_window(ctx);
+            return;
+        }
+        if self.browser_video_requests.reading.is_some()
+            || !self.browser_video_requests.dismissals.is_empty()
             || self.browser_video_request_check.elapsed() < Duration::from_secs(1)
         {
             return;
         }
         self.browser_video_request_check = Instant::now();
-        let result = self.store.next_browser_video_review().and_then(|pending| {
-            pending
+        let store = self.store.clone();
+        let queue = self.queue_id.clone();
+        match background_io::Task::spawn(Some(ctx.clone()), move || {
+            store
+                .next_browser_video_review()?
                 .map(|pending| {
-                    Ok(State::new(
-                        pending,
-                        &self.queue_id,
-                        self.store.browser_batch_options()?,
+                    let page = &pending.review.page_url;
+                    let reader = download_engine::hls::is_site_video(page)
+                        || store.site_reader_for(page)?.is_some();
+                    Ok((
+                        State::new(pending, &queue, store.browser_batch_options()?),
+                        reader,
                     ))
                 })
                 .transpose()
-        });
-        match result {
-            Ok(Some(state)) => {
-                let page = state.pending.review.page_url.clone();
-                if download_engine::hls::is_site_video(&page) || self.has_site_reader(&page) {
-                    // A built-in reader gives the best result; the browser's own
-                    // findings stay pending in case the reader fails.
-                    let queue = state.queue.clone();
-                    if state.pending.review.items.is_empty() {
-                        if let Err(error) =
-                            self.store.dismiss_browser_video_review(&state.pending.id)
-                        {
-                            self.notice = Some(Notice::error(tf!(
-                                "Cannot open the video preview: {error:#}",
-                                error = error
-                            )));
-                            return;
-                        }
-                        self.open_browser_stream(&page, &queue, None);
-                    } else {
-                        self.open_site_video(state, &page, &queue);
-                    }
-                    self.show_window(ctx);
-                    return;
-                }
-                self.browser_video = Some(state);
-                self.dialog = Some(Dialog::BrowserVideo);
-                self.show_window(ctx);
-            }
-            Ok(None) => {}
-            Err(error) => {
-                self.notice = Some(Notice::error(tf!(
-                    "Cannot open video review: {error:#}",
-                    error = error
-                )))
-            }
+        }) {
+            Ok(task) => self.browser_video_requests.reading = Some(task),
+            Err(error) => self.notice = Some(Notice::error(error.to_string())),
         }
     }
 
@@ -110,11 +152,19 @@ impl Desktop {
 
     /// Drop a fallback review that the site reader made unnecessary.
     pub(super) fn discard_browser_video(&mut self, state: State) {
-        if let Err(error) = self.store.dismiss_browser_video_review(&state.pending.id) {
-            self.notice = Some(Notice::error(tf!(
-                "Cannot dismiss this video review: {error:#}",
-                error = error
-            )));
+        let id = state.pending.id;
+        if self.browser_video_requests.dismissals.contains_key(&id) {
+            return;
+        }
+        let store = self.store.clone();
+        let receipt = id.clone();
+        match background_io::Task::spawn(self.background_io.context.clone(), move || {
+            store.dismiss_browser_video_review(&receipt)
+        }) {
+            Ok(task) => {
+                self.browser_video_requests.dismissals.insert(id, task);
+            }
+            Err(error) => self.notice = Some(Notice::error(error.to_string())),
         }
     }
 
@@ -144,6 +194,13 @@ impl Desktop {
     }
 
     fn close_browser_video(&mut self) -> bool {
+        if self
+            .browser_video
+            .as_ref()
+            .is_some_and(|draft| draft.saving.is_some())
+        {
+            return false;
+        }
         let Some(draft) = &mut self.browser_video else {
             return false;
         };
@@ -163,18 +220,37 @@ impl Desktop {
         let Some(draft) = &mut self.browser_video else {
             return;
         };
+        if draft.saving.is_some() {
+            return;
+        }
         let indices: Vec<_> = draft
             .selected
             .iter()
             .enumerate()
             .filter_map(|(i, selected)| selected.then_some(i))
             .collect();
-        match self.store.add_browser_video_selection(
-            &draft.pending.id,
-            &indices,
-            &draft.queue,
-            draft.destination(),
-        ) {
+        let store = self.store.clone();
+        let id = draft.pending.id.clone();
+        let queue = draft.queue.clone();
+        let destination = draft.destination();
+        draft.error = None;
+        match background_io::Task::spawn(self.background_io.context.clone(), move || {
+            store.add_browser_video_selection(&id, &indices, &queue, destination)
+        }) {
+            Ok(task) => draft.saving = Some(task),
+            Err(error) => draft.error = Some(error.to_string()),
+        }
+    }
+
+    pub(super) fn poll_browser_video_save(&mut self) {
+        let Some(draft) = &mut self.browser_video else {
+            return;
+        };
+        let Some(result) = draft.saving.as_mut().and_then(background_io::Task::poll) else {
+            return;
+        };
+        draft.saving = None;
+        match result {
             Ok(ids) => {
                 self.queue_id.clone_from(&draft.queue);
                 if let [id] = ids.as_slice() {
@@ -200,14 +276,17 @@ impl Desktop {
     }
 
     pub(super) fn browser_video_dialog(&mut self, ctx: &egui::Context, p: Palette) {
+        self.poll_browser_video_save();
         let Some(draft) = &mut self.browser_video else {
             self.dialog = None;
             return;
         };
+        let saving = draft.saving.is_some();
         let (mut close, mut add, mut reload) = (false, false, false);
         let mut preview = None;
         let empty = draft.pending.review.items.is_empty();
         let response = form_dialog::modal("browser-video-review", p).show(ctx, |ui| {
+                if saving { ui.disable(); }
                 ui.set_width((ctx.content_rect().width()-100.0).clamp(420.0,760.0));
                 close = form_dialog::title(ui, tr("Video downloads"), form_dialog::Icon::Symbol("\u{e714}"), p, true);
                 egui::ScrollArea::vertical().id_salt("browser-video-body").max_height((ctx.content_rect().height()-190.0).max(260.0)).show(ui, |ui| {
@@ -274,7 +353,7 @@ impl Desktop {
                 form_dialog::controls(ui, |ui| {
                     if !empty {
                         let count = draft.selected.iter().filter(|selected| **selected).count();
-                        add = form_dialog::primary_enabled(ui, count > 0, tr("Add selected files")).clicked();
+                        add = form_dialog::primary_enabled(ui, count > 0 && !saving, if saving { tr("Adding…") } else { tr("Add selected files") }).clicked();
                         ui.label(RichText::new(tf!("{count} selected", count = count)).color(p.muted));
                     }
                     if empty { ui.label(RichText::new(tr("Nothing has been downloaded.")).small().color(p.muted)); }
@@ -289,7 +368,9 @@ impl Desktop {
                 Err(error) => draft.error = Some(error.to_string()),
             }
         }
-        if close || response.should_close() {
+        if saving {
+            ctx.request_repaint_after(Duration::from_millis(16));
+        } else if close || response.should_close() {
             self.close_browser_video();
         } else if let Some(index) = preview {
             let queue = draft.queue.clone();
@@ -454,9 +535,11 @@ mod tests {
         app.browser_video = None;
         app.dialog = Some(Dialog::About);
         app.poll_browser_video_requests(&ctx);
+        app.wait_for_io();
         assert_eq!(app.dialog, Some(Dialog::About));
         app.dialog = None;
         app.poll_browser_video_requests(&ctx);
+        app.wait_for_io();
         assert_eq!(app.dialog, Some(Dialog::BrowserVideo));
         assert!(app.store.next_browser_video_review().unwrap().is_some());
         click(&mut app, &ctx, "×");

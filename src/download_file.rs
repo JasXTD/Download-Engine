@@ -355,79 +355,8 @@ pub(crate) fn delete_completed(path: &Path) -> Result<()> {
     }
 }
 
-/// Rename or move a finished file to `to`, never replacing a file already
-/// there. Another drive needs a copy: it is checked against the original's
-/// size before the original is deleted, and removed again if that fails.
-pub(crate) fn move_completed(from: &Path, to: &Path) -> Result<()> {
-    let _from = guard_parents(from)?;
-    let _to = guard_parents(to)?;
-    let size = read_completed(from)?.metadata()?.len();
-    match move_new(from, to) {
-        Ok(()) => Ok(()),
-        Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => {
-            anyhow::bail!(
-                "{} already exists. Choose another name or folder.",
-                to.display()
-            )
-        }
-        // ERROR_NOT_SAME_DEVICE: the destination is on another drive.
-        Err(error) if error.raw_os_error() == Some(17) => copy_completed(from, to, size),
-        Err(error) => Err(error)
-            .context("Cannot move the saved file; close any program using it and try again"),
-    }
-}
-
-fn copy_completed(from: &Path, to: &Path, size: u64) -> Result<()> {
-    let name = to
-        .file_name()
-        .context("Missing file name")?
-        .to_string_lossy();
-    let temporary = to.with_file_name(format!(".{name}.{}.moving", uuid::Uuid::new_v4()));
-    let copied = (|| -> Result<()> {
-        // CopyFileEx keeps alternate streams, including the downloaded-from-the-internet mark.
-        std::fs::copy(from, &temporary).context("Cannot copy the saved file to the other drive")?;
-        ensure!(
-            std::fs::metadata(&temporary)?.len() == size,
-            "The copy on the other drive is incomplete"
-        );
-        match move_new(&temporary, to) {
-            Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => {
-                anyhow::bail!(
-                    "{} already exists. Choose another name or folder.",
-                    to.display()
-                )
-            }
-            result => Ok(result?),
-        }
-    })();
-    if let Err(error) = copied {
-        let _ = std::fs::remove_file(&temporary);
-        return Err(error);
-    }
-    if let Err(error) = delete_completed(from) {
-        let _ = std::fs::remove_file(to);
-        return Err(error.context("The original could not be deleted, so the file was not moved"));
-    }
-    Ok(())
-}
-
-#[cfg(windows)]
-fn move_new(from: &Path, to: &Path) -> std::io::Result<()> {
-    use std::os::windows::ffi::OsStrExt;
-    use windows_sys::Win32::Storage::FileSystem::{MOVEFILE_WRITE_THROUGH, MoveFileExW};
-    let wide =
-        |path: &Path| -> Vec<u16> { path.as_os_str().encode_wide().chain(Some(0)).collect() };
-    let (from, to) = (wide(from), wide(to));
-    // Without MOVEFILE_REPLACE_EXISTING or COPY_ALLOWED the move fails if the
-    // destination exists, and also across drives.
-    if unsafe { MoveFileExW(from.as_ptr(), to.as_ptr(), MOVEFILE_WRITE_THROUGH) } == 0 {
-        Err(std::io::Error::last_os_error())
-    } else {
-        Ok(())
-    }
-}
 #[cfg(not(windows))]
-fn move_new(from: &Path, to: &Path) -> std::io::Result<()> {
+pub(crate) fn move_new(from: &Path, to: &Path) -> std::io::Result<()> {
     std::fs::hard_link(from, to)?;
     std::fs::remove_file(from)
 }
@@ -497,38 +426,4 @@ pub(crate) fn guard_parents(path: &Path) -> Result<Vec<File>> {
         guards.push(file);
     }
     Ok(guards)
-}
-
-#[cfg(all(test, windows))]
-mod move_tests {
-    use super::*;
-    #[test]
-    fn moves_never_replace_files_and_a_copy_is_checked_before_the_original_goes() {
-        let temp = tempfile::tempdir().unwrap();
-        let from = temp.path().join("report.pdf");
-        let taken = temp.path().join("taken.pdf");
-        std::fs::write(&from, b"report").unwrap();
-        std::fs::write(&taken, b"keep").unwrap();
-        let error = move_completed(&from, &taken).unwrap_err();
-        assert!(error.to_string().contains("already exists"), "{error:#}");
-        assert_eq!(std::fs::read(&taken).unwrap(), b"keep");
-        // The other-drive path: copy, check the size, then delete the original.
-        let size = std::fs::metadata(&from).unwrap().len();
-        let error = copy_completed(&from, &taken, size).unwrap_err();
-        assert!(error.to_string().contains("already exists"), "{error:#}");
-        assert!(from.is_file());
-        assert_eq!(std::fs::read(&taken).unwrap(), b"keep");
-        let to = temp.path().join("moved.pdf");
-        assert!(copy_completed(&from, &to, size + 1).is_err());
-        assert!(from.is_file() && !to.exists());
-        copy_completed(&from, &to, size).unwrap();
-        assert!(!from.exists());
-        assert_eq!(std::fs::read(&to).unwrap(), b"report");
-        // No temporary copies are left behind.
-        let names: Vec<_> = std::fs::read_dir(temp.path())
-            .unwrap()
-            .map(|e| e.unwrap().file_name())
-            .collect();
-        assert_eq!(names.len(), 2, "{names:?}");
-    }
 }

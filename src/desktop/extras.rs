@@ -1011,6 +1011,7 @@ mod tests {
         app.url = "https://example.com/file".into();
         app.expected_sha256 = "invalid".into();
         app.add();
+        app.wait_for_io();
         assert!(app.store.list().unwrap().is_empty());
         assert!(app.form_error.as_ref().unwrap().contains("64"));
         assert_eq!(app.dialog, Some(Dialog::Add));
@@ -1020,6 +1021,7 @@ mod tests {
             .unwrap();
         app.expected_sha256 = "Ab".repeat(32);
         app.add();
+        app.wait_for_io();
         assert_eq!(
             app.store.list().unwrap()[0].integrity.expected,
             Some("ab".repeat(32))
@@ -1314,7 +1316,9 @@ mod tests {
         assert_eq!(app.interface.table_layout, custom);
         app.open_columns();
         click(&mut app, &ctx, "Reset");
-        let conn = rusqlite::Connection::open(app.store.paths.data.join("queue.sqlite3")).unwrap();
+        let conn =
+            crate::desktop::fixture_database::open(app.store.paths.data.join("queue.sqlite3"))
+                .unwrap();
         conn.execute_batch("CREATE TRIGGER reject_layout BEFORE UPDATE ON interface_preferences BEGIN SELECT RAISE(ABORT,'fixture save failure'); END;").unwrap();
         click(&mut app, &ctx, "Save");
         assert_eq!(app.dialog, Some(Dialog::Columns));

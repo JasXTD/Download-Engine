@@ -1,3 +1,7 @@
+#[path = "../src/desktop/fixture_database.rs"]
+mod fixture_database;
+#[path = "support/legacy_profile.rs"]
+mod legacy_profile;
 use download_engine::{
     browser_batch::Destination,
     grabber_projects::{MAX_PROJECTS, Settings},
@@ -6,7 +10,6 @@ use download_engine::{
     queue::MAIN_QUEUE,
     store::Store,
 };
-use rusqlite::Connection;
 
 fn fixture() -> (tempfile::TempDir, Store) {
     let temp = tempfile::tempdir().unwrap();
@@ -231,8 +234,9 @@ fn migration_and_project_edits_preserve_existing_downloads_and_preferences() {
     let prefs = store.interface_preferences().unwrap();
     let paths = store.paths.clone();
     drop(store);
-    let conn = Connection::open(paths.data.join("queue.sqlite3")).unwrap();
+    let conn = crate::fixture_database::open(paths.data.join("queue.sqlite3")).unwrap();
     conn.execute("DROP TABLE grabber_projects", []).unwrap();
+    legacy_profile::unversioned_fixture(&conn);
     drop(conn);
     let migrated = Store::open(paths.clone()).unwrap();
     assert!(migrated.grabber_projects().unwrap().is_empty());
@@ -291,7 +295,7 @@ fn stored_invalid_urls_are_rejected_and_folder_choices_use_stable_names() {
     let saved = store
         .create_grabber_project("Manuals", &settings())
         .unwrap();
-    let conn = Connection::open(store.paths.data.join("queue.sqlite3")).unwrap();
+    let conn = crate::fixture_database::open(store.paths.data.join("queue.sqlite3")).unwrap();
     let raw: String = conn
         .query_row("SELECT settings FROM grabber_projects", [], |r| r.get(0))
         .unwrap();

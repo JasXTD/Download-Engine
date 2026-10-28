@@ -117,7 +117,7 @@ fn add_destination_queue_is_a_draft_until_the_download_is_submitted() {
     let (_temp, mut app, ctx) = fixture();
     app.store.set_queue_running(MAIN_QUEUE, false).unwrap();
     let later = app.store.create_queue("Later").unwrap();
-    app.force_refresh();
+    app.refresh_and_wait();
     app.url = "https://example.invalid/draft.zip".into();
     app.open_add();
     click(&mut app, &ctx, "Main queue");
@@ -141,14 +141,14 @@ fn add_destination_queue_is_a_draft_until_the_download_is_submitted() {
 fn idle_main_offers_start_download_but_a_schedule_keeps_add_to_queue() {
     let (_temp, mut app, ctx) = fixture();
     app.store.set_queue_running(MAIN_QUEUE, false).unwrap();
-    app.force_refresh();
+    app.refresh_and_wait();
     app.open_add();
     text_rect(&settled(&mut app, &ctx, SMALL), "Start download");
     let now = chrono::Utc::now().timestamp();
     app.store
         .schedule_queue(MAIN_QUEUE, now + 3600, now)
         .unwrap();
-    app.force_refresh();
+    app.refresh_and_wait();
     text_rect(&settled(&mut app, &ctx, SMALL), "Add to queue");
     assert!(app.store.list().unwrap().is_empty());
 }
@@ -200,6 +200,7 @@ fn inline_login_method_and_destination_changes_discard_credentials() {
     app.add_authentication = true;
     *app.add_login.username = "fixture-user".into();
     app.add();
+    app.wait_for_io();
     assert!(app.form_error.as_deref().unwrap().contains("direct file"));
     assert!(app.store.list().unwrap().is_empty());
 }
@@ -208,7 +209,7 @@ fn inline_login_method_and_destination_changes_discard_credentials() {
 fn inline_login_failed_save_stays_paused_retries_same_job_and_ignores_stale_results() {
     let (_temp, mut app, ctx) = fixture();
     app.store.set_queue_running(MAIN_QUEUE, false).unwrap();
-    app.force_refresh();
+    app.refresh_and_wait();
     // Remote plain HTTP is rejected before vault access or network traffic.
     app.url = "http://example.invalid/private.zip".into();
     app.add_authentication = true;
@@ -216,6 +217,7 @@ fn inline_login_failed_save_stays_paused_retries_same_job_and_ignores_stale_resu
     *app.add_login.username = "fixture-user".into();
     *app.add_login.secret = "fixture-password".into();
     app.add();
+    app.wait_for_io();
     let request = app.add_login.request.unwrap();
     let id = app.add_login.job.as_ref().unwrap().id.clone();
     click(&mut app, &ctx, "×");
@@ -235,6 +237,7 @@ fn inline_login_failed_save_stays_paused_retries_same_job_and_ignores_stale_resu
     visible(&output, "×", SMALL);
     visible(&output, app.form_error.as_deref().unwrap(), SMALL);
     app.add();
+    app.wait_for_io();
     assert_eq!(app.add_login.job.as_ref().unwrap().id, id);
     wait_for(&mut app, |app| app.add_login.request.is_none());
     assert_eq!(app.store.list().unwrap().len(), 1);
@@ -262,7 +265,7 @@ fn inline_login_saves_through_scheduler_and_windows_vault_before_queueing() {
         app.store
             .schedule_queue(MAIN_QUEUE, now + 3600, now)
             .unwrap();
-        app.force_refresh();
+        app.refresh_and_wait();
         app.url = url.into();
         app.open_add();
         app.add_authentication = true;
@@ -271,6 +274,7 @@ fn inline_login_saves_through_scheduler_and_windows_vault_before_queueing() {
         *app.add_login.secret = "fixture-secret".into();
         let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
             app.add();
+            app.wait_for_io();
             assert!(app.add_login.request.is_some());
             let id = app.add_login.job.as_ref().unwrap().id.clone();
             click(&mut app, &ctx, "×");
@@ -462,7 +466,7 @@ fn queue_cards_read_each_queue_and_route_actions_to_the_clicked_card() {
     unknown.downloaded = 100;
     app.store.enqueue_batch(&[unknown], &second.id).unwrap();
     app.view = View::Queues;
-    app.force_refresh();
+    app.refresh_and_wait();
     let main = app.queue_summaries[MAIN_QUEUE].as_ref().unwrap();
     assert_eq!(
         (main.files, main.downloaded, main.total, main.unknown),
@@ -487,6 +491,7 @@ fn queue_cards_read_each_queue_and_route_actions_to_the_clicked_card() {
     assert_eq!(actions.len(), 2);
     app.search = "unrelated".into();
     click_at(&mut app, &ctx, size, actions[1]);
+    app.wait_for_io();
     assert_eq!(app.view, View::Downloads);
     assert_eq!(app.queue_id, second.id);
     assert_eq!(app.search, "unrelated");
@@ -513,7 +518,7 @@ fn queue_card_number_input_rejects_invalid_limits_and_updates_only_its_queue() {
         app.store.set_queue_running(MAIN_QUEUE, false).unwrap();
         let other = app.store.create_queue("Later").unwrap();
         app.view = View::Queues;
-        app.force_refresh();
+        app.refresh_and_wait();
         assert_eq!(app.queue_id, MAIN_QUEUE);
 
         for limit in [20, 30, 32, 1] {

@@ -8,6 +8,16 @@
 
 Выберите «Добавить URL», вставьте прямую ссылку, проверьте имя, очередь и папку, затем начните загрузку. Пакет принимает по одной ссылке на строку. «По шаблону» создаёт нумерованные ссылки вроде img001…img100 из одной ссылки со *. Язык меняется в Настройки → Внешний вид → Язык. Системный язык следует Windows; неподдерживаемый заменяется английским.
 
+
+
+<!-- custom-themes-3.4.0 -->
+### Коллекция тем
+
+Настройки → Внешний вид → Свой: Neon Courier, Reactor Night, Aurora и Moonveil. Настройте фон и акцент или импортируйте PNG/JPEG. Сохранение применяет предпросмотр, отмена возвращает прежний вид. Изображения хранятся локально, обрабатываются в фоне с ограничением размера. Также включены защита версий профиля и управление доступом MCP.
+
+PNG / JPEG · до 16 МиБ и 16 мегапикселей. Копируется в этот профиль.
+<!-- /custom-themes-3.4.0 -->
+
 ## Загрузки и восстановление
 
 ### Загрузки и восстановление
@@ -33,6 +43,9 @@
 Управление очередями группирует файлы и задаёт число одновременных загрузок. Новые очереди ждут запуска или расписания. Планировщик поддерживает начало, остановку и повторение. Приложение должно работать, включая трей. Выход, выключение, сон и гибернация компьютера включаются отдельно; обратный отсчёт можно отменить.
 
 ## Скрипты
+
+Редактор и загруженные скрипты теперь находятся на отдельных вкладках. Поиск и создание скриптов доступны в списке, а полный редактор открывается из заголовка Lua или PowerShell. Сохранение, запуск/остановка и необязательные журналы расположены рядом с кодом. Файловые команды перенесены в меню действий редактора. Смена вида сохраняет несохранённый код, настройки и положение курсора.
+
 
 ### Скрипты
 
@@ -73,6 +86,24 @@ print("Failed downloads handled:", handled)
 ```
 
 Чтобы редактировать скрипт в другой программе, используйте «Открыть файл…» и «Сохранить в файл…» в заголовке редактора. «Открыть файл…» копирует файл .lua или .ps1 в редактор и сначала спрашивает, если при этом заменится несохранённый код; выберите «Сохранить скрипт», чтобы сохранить его. «Сохранить в файл…» записывает код из редактора в файл.
+
+### Lua Core API 1
+
+Создайте или откройте скрипт в Loaded scripts; выберите Lua и Manual only в Script settings. Full editor увеличивает редактор; нажмите Save script, затем Run script и проверьте Run logs. Core API показывает функции текущего триггера, Ctrl+Space — подсказки. API 1 — версия контракта, а не приложения. Пример разбирает HTML только в памяти, без сети и загрузок; доступность чтения страниц для ручного скрипта — false.
+
+```lua
+-- Example: core-api
+assert(xd.api_version == 1, "This example needs Lua API 1")
+print("App:", xd.app_version, "Role:", xd.script_kind)
+local html = '<a class="download" href="/files/demo.zip">Demo</a>'
+local links = xd.html_select(html, "a.download[href]", "href")
+local url = xd.url_join("https://example.com/catalog/", links[1])
+print("Preview:", xd.to_json({ kind = "file", url = url }))
+print("Can fetch a page:", xd.supports("xd.fetch"))
+```
+
+Open examples/core-api-automation.lua or examples/custom-site-reader.lua with Editor actions → Open file…. Site reader uses public pages, Pages patterns and Direct connection; test with Test on URL before enabling its trigger. Ordinary automation cannot call xd.fetch. Import script… accepts .de-script.json as a new draft with automatic triggers and file changes off; review its code and reselect local queues. Stop script does not undo submitted downloads. Full English reference: docs/automation.md.
+
 
 ## Командная строка
 

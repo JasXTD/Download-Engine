@@ -2,12 +2,15 @@
 //! Opening copies the file once; nothing is saved until Save script.
 use super::*;
 use download_engine::script_automation::EXAMPLE;
+use download_engine::script_automation::package;
 use std::io::{Read, Write};
 
 /// A button in the editor's header was clicked.
 pub(super) enum Request {
     Open,
     Save,
+    Import,
+    Export,
 }
 
 /// Code read from a file, waiting to replace unsaved code in the editor.
@@ -16,6 +19,7 @@ pub(super) struct Loaded {
     stem: String,
     body: String,
     language: Language,
+    package: Option<package::Imported>,
 }
 
 /// The most read from disk: a 64 KiB script saved as UTF-16 with a byte-order mark.
@@ -115,6 +119,7 @@ fn read(path: &std::path::Path, reader: bool, current: Language) -> Result<Loade
         file,
         body,
         language,
+        package: None,
     })
 }
 
@@ -126,6 +131,7 @@ pub(super) fn screenshot_replace(state: &mut State) {
         stem: "other".into(),
         body: "print('other')\n".into(),
         language: Language::Lua,
+        package: None,
     });
 }
 
@@ -145,6 +151,18 @@ fn untouched(state: &State) -> bool {
 
 /// Put the file's code in the editor. A brand-new script also takes the file's name.
 fn apply(state: &mut State, loaded: Loaded) -> Notice {
+    if let Some(imported) = loaded.package {
+        let items = std::mem::take(&mut state.items);
+        let runs = std::mem::take(&mut state.runs);
+        *state = State {
+            items,
+            runs,
+            imported: Some((imported.requested_file_access, imported.needs_queue)),
+            draft: Some(imported.script),
+            ..Default::default()
+        };
+        return Notice::info(tr("Imported disabled. Review before saving.").into());
+    }
     if let Some(draft) = &mut state.draft {
         let stem = loaded.stem.trim();
         if draft.revision == 0 && draft.name == tr("New script") && !stem.is_empty() {
@@ -184,6 +202,85 @@ fn write(path: &std::path::Path, bytes: &[u8]) -> std::io::Result<()> {
 }
 
 impl Desktop {
+    pub(super) fn import_script_package(&mut self, state: &mut State) {
+        let path = match self.folder_picker.open_file(
+            tr("Import script…"),
+            &self.store.paths.downloads,
+            (tr("Script package (*.de-script.json)"), "*.de-script.json"),
+        ) {
+            Ok(Some(path)) => path,
+            Ok(None) => return,
+            Err(error) => {
+                state.error = Some(error.to_string());
+                return;
+            }
+        };
+        let result = (|| -> anyhow::Result<_> {
+            let mut bytes = Vec::new();
+            std::fs::File::open(&path)?
+                .take(package::MAX_BYTES as u64 + 1)
+                .read_to_end(&mut bytes)?;
+            package::decode(&bytes)
+        })();
+        match result {
+            Ok(imported) => {
+                let loaded = Loaded {
+                    file: String::new(),
+                    stem: String::new(),
+                    body: String::new(),
+                    language: imported.script.language,
+                    package: Some(imported),
+                };
+                if state.dirty() {
+                    state.replace = Some(loaded);
+                    self.dialog = Some(Dialog::ScriptReplace);
+                } else {
+                    self.notice = Some(apply(state, loaded));
+                }
+            }
+            Err(error) => state.error = Some(error.to_string()),
+        }
+    }
+
+    pub(super) fn export_script_package(&mut self, state: &mut State) {
+        let Some(draft) = &state.draft else { return };
+        let bytes = match package::encode(draft) {
+            Ok(bytes) => bytes,
+            Err(error) => {
+                state.error = Some(error.to_string());
+                return;
+            }
+        };
+        let name = format!(
+            "{}.{}",
+            download_engine::model::safe_filename(draft.name.trim()),
+            package::EXTENSION
+        );
+        let path = match self.folder_picker.save_file(
+            tr("Export script…"),
+            &self.store.paths.downloads,
+            &name,
+            (tr("Script package (*.de-script.json)"), "*.de-script.json"),
+            "json",
+        ) {
+            Ok(Some(path)) => path,
+            Ok(None) => return,
+            Err(error) => {
+                state.error = Some(error.to_string());
+                return;
+            }
+        };
+        match write(&path, &bytes) {
+            Ok(()) => {
+                state.error = None;
+                self.notice = Some(Notice::success(
+                    tr("Script exported. Logs and stored values are excluded.").into(),
+                ));
+            }
+            Err(error) => state.error = Some(error.to_string()),
+        }
+    }
+
     pub(super) fn open_script_file(&mut self, state: &mut State) {
         let Some(draft) = &state.draft else {
             return;
@@ -270,11 +367,16 @@ impl Desktop {
             .map_or_else(String::new, |draft| draft.name.clone());
         let mut close = false;
         let mut replace = false;
+        let package = self
+            .scripts
+            .replace
+            .as_ref()
+            .is_some_and(|loaded| loaded.package.is_some());
         let response = form_dialog::modal("script-replace-code", p).show(ctx, |ui| {
             ui.set_width(430.0);
             close = form_dialog::title(
                 ui,
-                tr("Replace the code in the editor?"),
+                if package { tr("Replace the script in the editor?") } else { tr("Replace the code in the editor?") },
                 form_dialog::Icon::Symbol("\u{e7ba}"),
                 p,
                 true,
@@ -288,7 +390,7 @@ impl Desktop {
                 .color(p.muted),
             );
             replace = form_dialog::controls(ui, |ui| {
-                form_dialog::danger_button(ui, tr("Replace code"), p).clicked()
+                form_dialog::danger_button(ui, if package { tr("Replace script") } else { tr("Replace code") }, p).clicked()
             });
         });
         if close || response.should_close() {

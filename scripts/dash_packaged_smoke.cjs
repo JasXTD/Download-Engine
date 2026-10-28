@@ -1,8 +1,8 @@
+const openProfileDatabase = require('./profile_database.cjs');
 // Actual packaged app + native host, generated local MP4 tracks and isolated DB.
 // Review/add clicks are covered by Rust UI tests; transfer seeds that reviewed state.
 const assert=require('node:assert/strict');const fs=require('node:fs');const path=require('node:path');const http=require('node:http');
-const {spawn,spawnSync}=require('node:child_process');const {once}=require('node:events');const {randomUUID,createHash}=require('node:crypto');const {DatabaseSync}=require('node:sqlite');
-const root=path.resolve(__dirname,'..'),packageRoot=path.resolve(process.argv[2]||path.join(root,'dist/IDM-EX-UnsignedDev'));
+const {spawn,spawnSync}=require('node:child_process');const {once}=require('node:events');const {randomUUID,createHash}=require('node:crypto');const root=path.resolve(__dirname,'..'),packageRoot=path.resolve(process.argv[2]||path.join(root,'dist/IDM-EX-UnsignedDev'));
 const home=path.join(root,'artifacts','dash-package-'+randomUUID().slice(0,8));fs.mkdirSync(path.join(home,'data'),{recursive:true});
 const env={...process.env,IDM_EX_HOME:home};for(const key of Object.keys(env))if(key.startsWith('IDM_EX_TEST_')||key.includes('SCREENSHOT_TO'))delete env[key];
 const ffmpeg=path.join(packageRoot,'tools/ffmpeg/ffmpeg.exe'),ffprobe=path.join(root,'artifacts/ffmpeg-tools/ffprobe.exe');
@@ -24,7 +24,7 @@ const server=http.createServer((req,res)=>{
     res.writeHead(206,{...headers,'Content-Length':end-start+1,'Content-Range':`bytes ${start}-${end}/${body.length}`});res.end(body.subarray(start,end+1));
   }else{res.writeHead(200,headers);res.end(body);}
 });
-const db=new DatabaseSync(path.join(home,'data/queue.sqlite3'));db.exec('PRAGMA busy_timeout=5000');let child;
+const db=openProfileDatabase(path.join(home,'data/queue.sqlite3'));db.exec('PRAGMA busy_timeout=5000');let child;
 const delay=ms=>new Promise(r=>setTimeout(r,ms));
 async function until(fn,label){const end=Date.now()+30000;while(Date.now()<end){const result=fn();if(result)return result;await delay(40);}throw Error('Timed out: '+label);}
 function launch(){child=spawn(path.join(packageRoot,'de.exe'),[],{env,windowsHide:true,stdio:'ignore'});}

@@ -1,10 +1,12 @@
+#[path = "../src/desktop/fixture_database.rs"]
+mod fixture_database;
 use download_engine::{
     model::{Job, Status},
     paths::AppPaths,
     queue::{MAIN_QUEUE, batch_jobs, local_schedule},
     store::Store,
 };
-use rusqlite::{Connection, params};
+use rusqlite::params;
 
 fn setup() -> (tempfile::TempDir, Store) {
     let temp = tempfile::tempdir().unwrap();
@@ -41,7 +43,7 @@ fn legacy_history_migrates_in_original_order_once() {
         downloads: temp.path().join("files"),
     };
     paths.prepare().unwrap();
-    let conn = Connection::open(paths.data.join("queue.sqlite3")).unwrap();
+    let conn = crate::fixture_database::open(paths.data.join("queue.sqlite3")).unwrap();
     conn.execute_batch(
         "CREATE TABLE jobs(id TEXT PRIMARY KEY,request_id TEXT UNIQUE,created INTEGER,data TEXT);",
     )
@@ -257,7 +259,7 @@ fn interrupted_queue_pause_recovers_without_resuming_individual_pauses() {
             MAIN_QUEUE,
         )
         .unwrap();
-    let conn = Connection::open(store.paths.data.join("queue.sqlite3")).unwrap();
+    let conn = crate::fixture_database::open(store.paths.data.join("queue.sqlite3")).unwrap();
     conn.execute(
         "UPDATE job_queues SET paused_by_queue=1 WHERE job_id=?1",
         [&queued_pause.id],
@@ -318,7 +320,7 @@ fn store_clones_keep_wal_active_without_blocking_readers_or_checkpoints() {
     // Closing each operation's connection must not take the last-connection
     // exclusive lock and checkpoint/delete/recreate WAL while the store is live.
     assert!(wal.exists(), "A live Store lost its WAL between operations");
-    let observer = Connection::open(paths.data.join("queue.sqlite3")).unwrap();
+    let observer = crate::fixture_database::open(paths.data.join("queue.sqlite3")).unwrap();
     let mode: String = observer
         .pragma_query_value(None, "journal_mode", |r| r.get(0))
         .unwrap();

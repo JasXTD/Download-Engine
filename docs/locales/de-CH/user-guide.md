@@ -8,6 +8,16 @@ Einstellungen öffnen sich jetzt als Popup mit Kategorien. Speichern übernimmt 
 
 URL hinzufügen wählen, einen direkten Dateilink einfügen, Name, Warteschlange und Ordner prüfen und starten. Stapel hinzufügen nimmt einen Link pro Zeile an. „Aus einem Muster“ erzeugt nummerierte Links wie img001…img100 aus einem Link mit *. Die Anzeigesprache ändern Sie unter Einstellungen → Darstellung → Sprache. Systemsprache folgt Windows; nicht unterstützte Sprachen verwenden Englisch.
 
+
+
+<!-- custom-themes-3.4.0 -->
+### Themensammlung
+
+Einstellungen → Darstellung → Eigene bietet Neon Courier, Reactor Night, Aurora und Moonveil. Hintergrund und Akzent anpassen oder PNG/JPEG importieren. Speichern übernimmt die Vorschau; Abbrechen stellt das bisherige Thema wieder her. Bilder bleiben lokal, werden begrenzt und im Hintergrund verarbeitet. Enthalten sind auch Profilversionsschutz und MCP-Zugriffskontrollen.
+
+PNG / JPEG · bis 16 MiB und 16 Megapixel. Kopie in diesem Profil.
+<!-- /custom-themes-3.4.0 -->
+
 ## Downloads & Wiederherstellung
 
 ### Downloads & Wiederherstellung
@@ -33,6 +43,9 @@ Unter Werkzeuge → Browsereinrichtung Chrome, Edge, Brave oder Firefox verbinde
 Unter Warteschlangen verwalten Dateien gruppieren und gleichzeitige Downloads einstellen. Neue Warteschlangen warten auf Start oder Zeitplan. Der Zeitplaner bietet Start, Pause und Wiederholungen. Die App muss geöffnet bleiben, auch im Infobereich. Automatisches Beenden, Herunterfahren, Energiesparen oder Ruhezustand muss gesondert aktiviert werden; der Countdown lässt sich abbrechen.
 
 ## Skripte
+
+Editor und geladene Skripte haben jetzt eigene Registerkarten. Skripte lassen sich in der Liste suchen und erstellen; der vollständige Editor öffnet sich im Kopfbereich des Lua- oder PowerShell-Editors. Speichern, Ausführen/Stoppen und optionale Protokolle bleiben beim Code. Dateibefehle stehen im Aktionsmenü des Editors. Beim Ansichtswechsel bleiben ungespeicherter Code, Einstellungen und Cursorposition erhalten.
+
 
 ### Skripte
 
@@ -73,6 +86,24 @@ print("Failed downloads handled:", handled)
 ```
 
 Um ein Skript in einem anderen Programm zu bearbeiten, verwenden Sie „Datei öffnen…“ und „In Datei speichern…“ in der Kopfzeile des Editors. „Datei öffnen…“ kopiert eine .lua- oder .ps1-Datei in den Editor und fragt vorher nach, wenn dabei ungespeicherter Code ersetzt würde; mit „Skript speichern“ behalten Sie sie. „In Datei speichern…“ schreibt den Code im Editor in eine Datei.
+
+### Lua Core API 1
+
+Erstelle oder öffne ein Skript unter Loaded scripts; wähle Lua und Manual only in Script settings. Full editor vergrössert den Editor. Save script speichert, Run script startet, Run logs zeigt die Ausgabe. Core API listet Funktionen für den aktuellen Auslöser; Ctrl+Space öffnet Vorschläge. API 1 bezeichnet den Vertrag, nicht die App-Version. Das Beispiel verarbeitet nur HTML im Speicher, ohne Netzwerk oder Downloads; Seitenabruf ist beim manuellen Skript false.
+
+```lua
+-- Example: core-api
+assert(xd.api_version == 1, "This example needs Lua API 1")
+print("App:", xd.app_version, "Role:", xd.script_kind)
+local html = '<a class="download" href="/files/demo.zip">Demo</a>'
+local links = xd.html_select(html, "a.download[href]", "href")
+local url = xd.url_join("https://example.com/catalog/", links[1])
+print("Preview:", xd.to_json({ kind = "file", url = url }))
+print("Can fetch a page:", xd.supports("xd.fetch"))
+```
+
+Open examples/core-api-automation.lua or examples/custom-site-reader.lua with Editor actions → Open file…. Site reader uses public pages, Pages patterns and Direct connection; test with Test on URL before enabling its trigger. Ordinary automation cannot call xd.fetch. Import script… accepts .de-script.json as a new draft with automatic triggers and file changes off; review its code and reselect local queues. Stop script does not undo submitted downloads. Full English reference: docs/automation.md.
+
 
 ## Befehlszeile
 

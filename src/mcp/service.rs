@@ -147,6 +147,7 @@ mod tests {
             Context {
                 store,
                 read_only: true,
+                permissions: Default::default(),
                 no_start: true,
                 start: |_| panic!("No desktop launch for lifecycle checks"),
             },
@@ -195,7 +196,9 @@ mod tests {
         context.read_only = false;
         server.start(context.clone(), port).unwrap();
         until(&mut server, |s| *s == ServerStatus::Running);
-        assert_eq!(check_connection(&context.store.paths, port).unwrap(), 21);
+        // Routine controls are available, but both script tools stay hidden
+        // until a script-language capability is explicitly enabled.
+        assert_eq!(check_connection(&context.store.paths, port).unwrap(), 19);
         drop(server);
         let _released = TcpListener::bind((std::net::Ipv4Addr::LOCALHOST, port)).unwrap();
     }

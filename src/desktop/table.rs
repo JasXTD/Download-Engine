@@ -370,7 +370,9 @@ mod tests {
             app.store.interface_preferences().unwrap().table_layout,
             TableLayout::default()
         );
-        let conn = rusqlite::Connection::open(app.store.paths.data.join("queue.sqlite3")).unwrap();
+        let conn =
+            crate::desktop::fixture_database::open(app.store.paths.data.join("queue.sqlite3"))
+                .unwrap();
         conn.execute_batch("CREATE TRIGGER reject_layout BEFORE UPDATE ON interface_preferences BEGIN SELECT RAISE(ABORT,'fixture save failure'); END;").unwrap();
         let output = settled(&mut app, &ctx);
         let from = heading(&output, "Size").center();

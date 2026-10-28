@@ -180,7 +180,7 @@ pub(super) fn catalog(read_only: bool) -> Vec<Value> {
     );
     add(
         "run_script",
-        "Run the current saved revision once with a manual trigger. Lua can control downloads; PowerShell can execute programs and change files. Requires user authorization in your MCP client. Returns a run ID, not completion. Use list_script_runs and get_script_log to inspect it.",
+        "Run a locally approved saved revision once. Requires this language's server permission and an exact revision approval made locally; MCP clients cannot grant approvals. PowerShell can execute programs and change files. Returns a run ID, not completion. Use list_script_runs and get_script_log to inspect it.",
         json!({"id":id()}),
         &["id"],
         true,
@@ -312,14 +312,7 @@ pub(super) fn call(
         "get_usage_guide" => return Ok(json!({"version":env!("CARGO_PKG_VERSION"),"guide":include_str!("../../docs/mcp-ai-guide.md")})),
         "list_downloads" => {
             let queue = args["queue"].as_str().map(|q| control::queue_id(store, q)).transpose()?;
-            let mut items = Vec::new();
-            for job in store.list()? {
-                ensure!(!cancelled.load(Ordering::Acquire), "Request cancelled");
-                let summary = control::job_summary(store, &job)?;
-                if queue.as_ref().is_some_and(|q| summary["queue"] != *q) || args.get("status").is_some_and(|s| summary["status"] != *s) { continue; }
-                items.push(summary);
-            }
-            return Ok(page(items, args));
+            return store.download_summaries(queue.as_deref(), args["status"].as_str(), args["offset"].as_u64().unwrap_or(0) as usize, args["limit"].as_u64().unwrap_or(50) as usize);
         }
         "get_download" => return Ok(json!({"download":control::job_summary(store, &store.get(text(args,"id"))?.context("Download not found")?)?})),
         "list_queues" => return Ok(page(control::queue_summaries(store)?.as_array().expect("queue list").clone(), args)),
@@ -332,8 +325,14 @@ pub(super) fn call(
         _ => {}
     }
     ensure!(!context.read_only, "This MCP server is read-only");
+    ensure!(
+        context.permissions.allows_tool(name),
+        "This tool is disabled by the MCP server's permissions"
+    );
     if name == "cancel_request" {
-        return Ok(json!({"receipt":store.cancel_control(text(args,"request_id"))?}));
+        return Ok(
+            json!({"receipt":store.cancel_mcp_control(text(args,"request_id"), context.permissions)?}),
+        );
     }
     let action = match name {
         "add_downloads" => {
@@ -387,14 +386,20 @@ pub(super) fn call(
             queue: text(args, "queue").into(),
             limit: args["limit"].as_u64().expect("validated limit") as usize,
         },
-        "run_script" => Action::RunScript {
-            id: text(args, "id").into(),
-        },
+        "run_script" => {
+            let script = store.approved_mcp_script(text(args, "id"))?;
+            context.permissions.check_language(script.language)?;
+            Action::RunMcpScript {
+                id: script.id,
+                revision: script.revision,
+            }
+        }
         "stop_script" => Action::StopScript {
             run_id: text(args, "run_id").into(),
         },
         _ => bail!("Unknown tool"),
     };
+    context.permissions.check_action(store, &action)?;
     if !context.no_start {
         (context.start)(&store.paths)?;
     }

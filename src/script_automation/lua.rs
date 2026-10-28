@@ -6,17 +6,10 @@ use anyhow::{Result, ensure};
 use mlua::{
     Lua, LuaSerdeExt, StdLib, Table, Value, Variadic, chunk::ChunkMode, serde::SerializeOptions,
 };
-use percent_encoding::{AsciiSet, NON_ALPHANUMERIC, utf8_percent_encode};
 use std::{io::Write, time::Duration};
 
 const MEMORY_LIMIT: usize = 64 * 1024 * 1024;
 const API: &str = include_str!("api.lua");
-/// Like encodeURIComponent: only unreserved characters stay literal.
-const COMPONENT: &AsciiSet = &NON_ALPHANUMERIC
-    .remove(b'-')
-    .remove(b'_')
-    .remove(b'.')
-    .remove(b'~');
 /// The automation functions a site reader does not get.
 const AUTOMATION_ONLY: [&str; 17] = [
     "command",
@@ -42,7 +35,7 @@ const STORE: [&str; 3] = ["get", "set", "keys"];
 const READER_REFUSAL: &str =
     "Site readers cannot see or change your downloads; use another script for that";
 
-fn to_lua(lua: &Lua, value: &impl serde::Serialize) -> mlua::Result<Value> {
+pub(super) fn to_lua(lua: &Lua, value: &impl serde::Serialize) -> mlua::Result<Value> {
     lua.to_value_with(
         value,
         SerializeOptions::new()
@@ -133,6 +126,7 @@ pub fn execute_lua(
     command: impl Fn(Vec<String>) -> Result<serde_json::Value> + 'static,
 ) -> Result<()> {
     let (lua, xd) = sandbox(source, event)?;
+    super::helpers::install(&lua, &xd, false)?;
     let command = std::rc::Rc::new(command);
     let call = command.clone();
     xd.set(
@@ -203,7 +197,7 @@ pub fn execute_lua(
     store.set(
         "set",
         lua.create_function(move |lua, (key, value): (String, Value)| {
-            let value: serde_json::Value = lua.from_value(value)?;
+            let value = super::json::from_lua(lua, value, super::MAX_STATE_VALUE_BYTES)?;
             let text = serde_json::to_string(&value).map_err(mlua::Error::external)?;
             if text.len() > super::MAX_STATE_VALUE_BYTES {
                 return Err(mlua::Error::runtime("A stored value can be at most 16 KiB"));
@@ -249,6 +243,7 @@ pub fn execute_reader(
     mut fetch: impl FnMut(FetchRequest) -> Result<FetchReply> + 'static,
 ) -> Result<serde_json::Value> {
     let (lua, xd) = sandbox(source, event)?;
+    super::helpers::install(&lua, &xd, true)?;
     let refuse = || {
         lua.create_function(|_, _: Variadic<Value>| -> mlua::Result<()> {
             Err(mlua::Error::runtime(READER_REFUSAL))
@@ -299,40 +294,115 @@ pub fn execute_reader(
             to_lua(lua, &reply)
         })?,
     )?;
-    xd.set(
-        "json",
-        lua.create_function(|lua, text: String| {
-            let value: serde_json::Value = serde_json::from_str(&text)
-                .map_err(|e| mlua::Error::runtime(format!("xd.json: invalid JSON ({e})")))?;
-            to_lua(lua, &value)
-        })?,
-    )?;
-    xd.set(
-        "to_json",
-        lua.create_function(|lua, value: Value| {
-            let value: serde_json::Value = lua.from_value(value)?;
-            serde_json::to_string(&value).map_err(mlua::Error::external)
-        })?,
-    )?;
-    xd.set(
-        "url_encode",
-        lua.create_function(|_, text: String| {
-            Ok(utf8_percent_encode(&text, COMPONENT).to_string())
-        })?,
-    )?;
     lua.globals().set("xd", xd)?;
     let value: Value = lua
         .load(source)
         .set_name("reader.lua")
         .set_mode(ChunkMode::Text)
         .eval()?;
-    Ok(lua.from_value(value)?)
+    Ok(super::json::from_lua(
+        &lua,
+        value,
+        super::reading::MAX_READING_BYTES,
+    )?)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use serde_json::json;
+    #[test]
+    fn native_conversion_rejects_expansion_depth_and_cycles_before_allocating_results() {
+        for source in [
+            "local s=string.rep('x',1024*1024); local t={}; for i=1,80 do t[i]=s end; return t",
+            "local t={}; local r=t; for i=1,100 do t.child={}; t=t.child end; return r",
+            "local t={}; t.self=t; return t",
+        ] {
+            assert!(execute_reader(source, &json!({}), |_| unreachable!()).is_err());
+        }
+        execute_lua(
+            r#"
+            local s=string.rep('x', 16384)
+            assert(not pcall(xd.store.set, 'too-large', {s,s}))
+            local t={}; t.self=t
+            assert(not pcall(xd.to_json, t))
+            assert(not pcall(xd.to_json, string.char(255)))
+            assert(not pcall(xd.json, string.rep(' ', 8*1024*1024+1)))
+            local many={}; for i=1,65536 do many[i]=true end
+            assert(not pcall(xd.to_json, many))
+            assert(not pcall(xd.to_json, {string.rep('x', 5*1024*1024), string.rep('y', 5*1024*1024)}))
+            local shared={name='ok'}
+            assert(xd.to_json({shared,shared}) == '[{"name":"ok"},{"name":"ok"}]')
+        "#,
+            &json!({}),
+            |_| panic!("Oversized stored data must not reach the command API"),
+        )
+        .unwrap();
+    }
+    #[test]
+    fn versioned_core_helpers_work_in_both_roles_and_report_the_real_contract() {
+        let common = r#"
+            assert(xd.api_version == 1 and type(xd.app_version) == 'string')
+            assert(xd.supports('xd.html_select') and xd.supports('xd.json'))
+            assert(not xd.supports('xd.execute'))
+            local data = xd.json(xd.to_json({name='Lua'}))
+            assert(data.name == 'Lua')
+            local links = xd.html_select('<a href="../f.zip?a=1&amp;b=2">File</a>', 'a[href]', 'href')
+            assert(xd.url_join('https://example.com/watch/1', links[1]) == 'https://example.com/f.zip?a=1&b=2')
+            assert(not pcall(xd.url_join, 'https://example.com', 'javascript:alert(1)'))
+            assert(not pcall(xd.url_join, 'https://example.com', 'https://user:secret@example.com'))
+            assert(os == nil and io == nil and package == nil and loadfile == nil)
+        "#;
+        for reader in [false, true] {
+            let mut source = common.to_owned();
+            source.push_str(&format!(
+                "\nassert(xd.script_kind == '{}')\n",
+                if reader { "site_reader" } else { "automation" }
+            ));
+            for function in super::super::api::FUNCTIONS {
+                source.push_str(&format!(
+                    "assert(xd.supports('{}') == {})\n",
+                    function.name,
+                    function.available(reader)
+                ));
+                if function.available(reader) {
+                    source.push_str(&format!("assert(type({}) == 'function')\n", function.name));
+                }
+            }
+            if reader {
+                source.push_str(
+                    "assert(not pcall(xd.add, 'https://example.com/file')); return {items={}}\n",
+                );
+                execute_reader(&source, &json!({}), |_| panic!("No network needed")).unwrap();
+            } else {
+                source.push_str("assert(not pcall(xd.fetch, 'https://example.com'))\n");
+                execute_lua(&source, &json!({}), |_| panic!("No command needed")).unwrap();
+            }
+        }
+    }
+
+    #[test]
+    fn custom_reader_composes_host_fetch_html_and_url_helpers_into_valid_downloads() {
+        let result = execute_reader(r#"
+            local page = xd.fetch(event.url)
+            assert(page.status == 200)
+            local items = {}
+            for _, href in ipairs(xd.html_select(page.body, 'a.download', 'href')) do
+                items[#items+1] = {kind='file', url=xd.url_join(page.url, href)}
+            end
+            return {title=xd.html_select(page.body, 'title')[1], items=items}
+        "#, &json!({"url":"https://example.com/files/"}), |request| {
+            assert_eq!(request.url, "https://example.com/files/");
+            Ok(FetchReply { status:200, url:request.url,
+                headers: Default::default(),
+                body:"<title>My files</title><a class='download' href='../one.zip'>One</a><a class='download' href='two.pdf'>Two</a>".into() })
+        }).unwrap();
+        let reading = super::super::Reading::from_value(result).unwrap();
+        assert_eq!(reading.title.as_deref(), Some("My files"));
+        assert_eq!(reading.items.len(), 2);
+        assert_eq!(reading.items[0].url, "https://example.com/one.zip");
+        assert_eq!(reading.items[1].url, "https://example.com/files/two.pdf");
+    }
     #[test]
     fn lua_supports_functions_loops_events_and_app_commands() {
         execute_lua(r#"
@@ -363,6 +433,9 @@ mod tests {
             "xd.log('unknown','x')",
             "xd.add('url',{typo=true})",
             "xd.command('batch','file')",
+            "xd.command('mcp-approve-script','id','1')",
+            "xd.command('mcp-revoke-script','id')",
+            "xd.command('scripts','run','id')",
             "xd.command()",
             "xd.command('status', 123)",
             "xd.command('status', string.rep('a', 65536))",

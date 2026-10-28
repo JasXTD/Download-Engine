@@ -1,19 +1,9 @@
-## 3.2.0 — 2026-10-28
+## 3.4.0 — 2026-10-29
 
-### Liên kết chia sẻ công khai
+### Bộ sưu tập giao diện
 
-Bổ sung hỗ trợ tệp công khai riêng lẻ trên MEGA và lượt chuyển công khai trên WeTransfer. MEGA giải mã cục bộ và kiểm tra tính toàn vẹn; tạm dừng và tiếp tục an toàn tùy thuộc vào máy chủ và danh tính tệp.
+Tùy chọn → Giao diện → Tùy chỉnh có Neon Courier, Reactor Night, Aurora và Moonveil. Điều chỉnh nền và màu nhấn hoặc nhập PNG/JPEG. Lưu giữ bản xem trước; Hủy khôi phục giao diện cũ. Ảnh chỉ lưu cục bộ, có giới hạn kích thước và được xử lý nền.
 
-Không hỗ trợ liên kết có mật khẩu, yêu cầu tài khoản, đã hết hạn hoặc thư mục MEGA.
+### Cải tiến hồ sơ và điều khiển
 
-### Tìm tệp và tích hợp trình duyệt
-
-Ứng dụng tìm liên kết tệp trên trang tải xuống; các lựa chọn không rõ ràng hoặc khác trang web cần được xem xét. Tiện ích giữ khóa MEGA và hỗ trợ thao tác tải tệp thô GitHub. Hãy tải lại tiện ích sau khi nâng cấp.
-
-### Trang web và tài liệu
-
-Trang web bổ sung thông tin hỗ trợ video, xem trước Web Grabber, chi tiết dịch vụ chia sẻ và trình chiếu ảnh.
-
-Bộ cài và bản di động tiếp tục kèm FFmpeg, mã nguồn tương ứng và giấy phép.
-
-Trợ giúp có thêm kiểm tra bản ổn định GitHub thủ công, thử lại và mở trang phát hành. Trang Giới thiệu liên kết tới kho GitHub chính thức.
+Bản này cũng có bảo vệ phiên bản hồ sơ và kiểm soát truy cập MCP.

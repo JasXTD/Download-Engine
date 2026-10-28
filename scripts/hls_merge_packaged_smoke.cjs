@@ -1,3 +1,4 @@
+const openProfileDatabase = require('./profile_database.cjs');
 // Real packaged app + pinned media tools, isolated data, and generated loopback
 // media. Review/add clicks are covered by Rust UI tests; this seeds reviewed jobs.
 const assert = require('node:assert/strict');
@@ -8,7 +9,6 @@ const { randomUUID, createHash } = require('node:crypto');
 const { spawn, spawnSync } = require('node:child_process');
 const { once } = require('node:events');
 const { setTimeout: delay } = require('node:timers/promises');
-const { DatabaseSync } = require('node:sqlite');
 
 (async () => {
   const root = path.resolve(__dirname, '..');
@@ -69,7 +69,7 @@ const { DatabaseSync } = require('node:sqlite');
       hls:{version:2,completed:[],playlist:{...v,source:url,quality:'160 × 90 · local fixture',bandwidth:800000,audio:{...a,name:'English',language:'en'}}}};
     cases.push({name,job,videoFile,audioFile});
   }
-  db=new DatabaseSync(path.join(home,'data/queue.sqlite3')); db.exec('PRAGMA busy_timeout=5000');
+  db=openProfileDatabase(path.join(home,'data/queue.sqlite3')); db.exec('PRAGMA busy_timeout=5000');
   function launch() {childError=undefined;child=spawn(path.join(packageRoot,'de.exe'),[],{env,windowsHide:true,stdio:'ignore'});child.on('error',e=>childError=e);}
   async function until(check,message) {
     const deadline=Date.now()+30000;

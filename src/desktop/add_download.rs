@@ -1,67 +1,44 @@
 //! Validate and review a new direct file download before queueing it.
 use super::*;
+pub(super) enum Added {
+    File {
+        job: Box<Job>,
+        credentials: Option<Credentials>,
+    },
+    Video {
+        url: String,
+        folder: Option<PathBuf>,
+        queue: String,
+    },
+}
 
-impl Desktop {
-    pub(super) fn open_add(&mut self) {
-        self.dialog = Some(Dialog::Add);
-        self.focus_url = true;
-        self.add_queue = Some(self.queue_id.clone());
-        self.add_login.reveal = self.add_authentication;
-        self.form_error = None;
-        self.load_download_folders();
-    }
-
-    pub(super) fn add_queue_id(&self) -> &str {
-        self.add_queue.as_deref().unwrap_or(&self.queue_id)
-    }
-
-    pub(super) fn add(&mut self) {
-        if self.add_login.request.is_some() {
-            return;
-        }
-        if self.add_authentication {
-            self.form_error = self
-                .submit_add_login()
-                .err()
-                .map(|error| format!("{error:#}"));
-            self.add_login.reveal |= self.form_error.is_some();
-            return;
-        }
-        let page = self.url.trim().to_owned();
-        if download_engine::hls::is_playlist_url(&self.url)
-            || download_engine::hls::is_site_video(&self.url)
-            || self.has_site_reader(&page)
-        {
-            let url = self.url.clone();
-            let folder = self
-                .folder_override()
-                .map(|p| p.to_string_lossy().into_owned());
-            let queue = self.add_queue_id().to_owned();
-            self.add_queue = None;
-            self.dialog = None;
-            self.open_browser_stream(&url, &queue, folder.as_deref());
-            return;
-        }
-        let result = self.prepare_add_download().and_then(|job| {
-            self.store
-                .enqueue_batch(&[job], self.add_queue_id())
-                .map(|mut jobs| jobs.remove(0))
-        });
-        match result {
-            Ok(job) => {
-                self.finish_add_download(job);
-                self.refresh();
-            }
-            Err(error) => self.form_error = Some(error.to_string()),
+struct Input {
+    url: String,
+    name: String,
+    folder: Option<PathBuf>,
+    id: String,
+    add_ftp_security: Option<download_engine::ftp::Security>,
+    add_authentication: bool,
+    expected_sha256: String,
+}
+impl Input {
+    fn capture(app: &Desktop) -> Self {
+        Self {
+            url: app.url.clone(),
+            name: app.name.clone(),
+            folder: app.folder_override(),
+            id: Uuid::new_v4().to_string(),
+            add_ftp_security: app.add_ftp_security,
+            add_authentication: app.add_authentication,
+            expected_sha256: app.expected_sha256.clone(),
         }
     }
-
-    pub(super) fn prepare_add_download(&self) -> anyhow::Result<Job> {
-        let mut job = self.store.new_download(
+    fn prepare(&self, store: &Store) -> anyhow::Result<Job> {
+        let mut job = store.new_download(
             &self.url,
             Some(&self.name),
-            self.folder_override().as_deref(),
-            Uuid::new_v4().to_string(),
+            self.folder.as_deref(),
+            self.id.clone(),
         )?;
         if let Some(ftp) = &mut job.ftp {
             if ftp.security != download_engine::ftp::Security::Plain
@@ -82,6 +59,118 @@ impl Desktop {
         }
         job.integrity.expected = download_engine::integrity::parse_expected(&self.expected_sha256)?;
         Ok(job)
+    }
+}
+
+impl Desktop {
+    pub(super) fn open_add(&mut self) {
+        self.dialog = Some(Dialog::Add);
+        self.focus_url = true;
+        self.add_queue = Some(self.queue_id.clone());
+        self.add_login.reveal = self.add_authentication;
+        self.form_error = None;
+        self.last_refresh = Instant::now() - Duration::from_secs(1);
+        self.request_snapshot(false);
+    }
+
+    pub(super) fn add_queue_id(&self) -> &str {
+        self.add_queue.as_deref().unwrap_or(&self.queue_id)
+    }
+
+    pub(super) fn add(&mut self) {
+        if self.add_request.is_some() || self.add_login.request.is_some() {
+            return;
+        }
+        if self.add_authentication {
+            self.form_error = self
+                .submit_add_login()
+                .err()
+                .map(|error| format!("{error:#}"));
+            self.add_login.reveal |= self.form_error.is_some();
+        } else if let Err(error) = self.start_add_worker(None) {
+            self.form_error = Some(error.to_string());
+        }
+    }
+
+    pub(super) fn start_add_worker(
+        &mut self,
+        credentials: Option<Credentials>,
+    ) -> anyhow::Result<()> {
+        let input = Input::capture(self);
+        let queue = self.add_queue_id().to_owned();
+        let store = self.store.clone();
+        self.add_request = Some(background_io::Task::spawn(
+            self.background_io.context.clone(),
+            move || {
+                if credentials.is_none()
+                    && (download_engine::hls::is_playlist_url(&input.url)
+                        || download_engine::hls::is_site_video(&input.url)
+                        || store.site_reader_for(input.url.trim())?.is_some())
+                {
+                    return Ok(Added::Video {
+                        url: input.url,
+                        folder: input.folder,
+                        queue,
+                    });
+                }
+                let mut job = input.prepare(&store)?;
+                if credentials.is_some() {
+                    job.status = Status::Paused;
+                }
+                let job = store.enqueue_batch(&[job], &queue)?.remove(0);
+                Ok(Added::File {
+                    job: Box::new(job),
+                    credentials,
+                })
+            },
+        )?);
+        self.form_error = None;
+        Ok(())
+    }
+
+    pub(super) fn poll_add_save(&mut self) {
+        let Some(result) = self
+            .add_request
+            .as_mut()
+            .and_then(background_io::Task::poll)
+        else {
+            return;
+        };
+        self.add_request = None;
+        match result {
+            Ok(Added::Video { url, folder, queue }) => {
+                self.add_queue = None;
+                self.dialog = None;
+                self.open_browser_stream(
+                    &url,
+                    &queue,
+                    folder.as_ref().map(|p| p.to_string_lossy()).as_deref(),
+                );
+            }
+            Ok(Added::File {
+                job,
+                credentials: Some(credentials),
+            }) => {
+                self.url.clone_from(&job.url);
+                self.add_login.job = Some((*job).clone());
+                if let Err(error) = self.request_add_credentials(*job, credentials) {
+                    self.form_error = Some(error.to_string());
+                }
+            }
+            Ok(Added::File {
+                job,
+                credentials: None,
+            }) => {
+                self.finish_add_download(*job);
+                self.force_refresh();
+            }
+            Err(error) => self.form_error = Some(format!("{error:#}")),
+        }
+    }
+
+    #[cfg(any(test, feature = "screenshot"))]
+    pub(super) fn prepare_add_download(&self) -> anyhow::Result<Job> {
+        Input::capture(self).prepare(&self.store)
     }
 
     pub(super) fn finish_add_download(&mut self, job: Job) {
@@ -109,7 +198,8 @@ impl Desktop {
     pub(super) fn add_dialog(&mut self, ctx: &egui::Context, p: Palette) {
         let focused = ctx.memory(|memory| memory.focused());
         let popup_was_open = egui::Popup::is_any_open(ctx);
-        let saving = self.add_login.request.is_some();
+        self.poll_add_save();
+        let saving = self.add_request.is_some() || self.add_login.request.is_some();
         let locked = self.add_login.job.is_some();
         let mut editing_text = false;
         let mut submit = false;
@@ -262,15 +352,19 @@ impl Desktop {
                                 }
                             }
                         });
-                    let action = if saving { tr("Saving login…") }
+                    let action = if self.add_request.is_some() { tr("Adding…") }
+                        else if saving { tr("Saving login…") }
                         else if locked { tr("Retry login") }
-                        else if self.store.new_download_starts(self.add_queue_id()).unwrap_or(false) { tr("Start download") }
+                        else if self.background_io.starts.get(self.add_queue_id()).copied().unwrap_or(false) { tr("Start download") }
                         else { tr("Add to queue") };
                     submit = form_dialog::footer(ui, action, Some(tr("Enter to add · Esc to cancel")), p);
                     submit |= editing_text && !popup_was_open && !egui::Popup::is_any_open(ctx)
                         && ui.input_mut(|input| input.consume_key(egui::Modifiers::NONE, egui::Key::Enter));
                 });
             });
+        if saving {
+            ctx.request_repaint_after(Duration::from_millis(16));
+        }
         if !saving && (cancel || response.should_close()) {
             self.add_login = add_login::Draft::default();
             self.add_queue = None;

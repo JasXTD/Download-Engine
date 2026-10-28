@@ -1,3 +1,4 @@
+const openProfileDatabase = require('./profile_database.cjs');
 // Capture the real egui renderer against isolated, paused queues. No network or packages.
 // Build first: cargo build --offline --locked --features screenshot --bin de
 const assert = require('node:assert/strict');
@@ -5,7 +6,6 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { randomUUID } = require('node:crypto');
 const { spawnSync } = require('node:child_process');
-const { DatabaseSync } = require('node:sqlite');
 const { deflateSync } = require('node:zlib');
 const root = path.resolve(__dirname, '..');
 const output = path.join(root, 'artifacts', 'download-engine-native-ui', `capture-${randomUUID().slice(0, 8)}`);
@@ -40,7 +40,7 @@ function capture(name, dark, size, view = 'downloads', empty = false, legacy = f
   const home = path.join(output, name), downloads = path.join(home, 'downloads');
   fs.mkdirSync(path.join(home, 'data'), { recursive: true });
   fs.mkdirSync(downloads);
-  const db = new DatabaseSync(path.join(home, 'data', 'queue.sqlite3'));
+  const db = openProfileDatabase(path.join(home, 'data', 'queue.sqlite3'));
   db.exec(`CREATE TABLE jobs(id TEXT PRIMARY KEY,request_id TEXT NOT NULL UNIQUE,created INTEGER NOT NULL,data TEXT NOT NULL);
     CREATE TABLE download_queues(id TEXT PRIMARY KEY,name TEXT NOT NULL UNIQUE COLLATE NOCASE,max_active INTEGER NOT NULL CHECK(max_active BETWEEN 1 AND 8),running INTEGER NOT NULL,scheduled_at INTEGER);
     INSERT INTO download_queues VALUES('main','Main queue',3,0,NULL);
@@ -52,6 +52,20 @@ function capture(name, dark, size, view = 'downloads', empty = false, legacy = f
   // Omit appearance for the default-theme capture to exercise real startup defaults.
   if (dark !== null) preferences.appearance = dark ? 'dark' : 'light';
   if (toolbar?.dropTarget) preferences.drop_target = true;
+  if (toolbar?.details === false) preferences.show_details = false;
+  if (toolbar?.ownTheme) {
+    // A synthetic white PNG checks contrast at maximum imported-image strength.
+    // No personal image or profile is read by this capture.
+    const header=Buffer.alloc(13);header.writeUInt32BE(1);header.writeUInt32BE(1,4);header[8]=8;header[9]=2;
+    const bytes=Buffer.concat([Buffer.from([137,80,78,71,13,10,26,10]),chunk('IHDR',header),chunk('IDAT',deflateSync(Buffer.from([0,255,255,255]))),chunk('IEND',Buffer.alloc(0))]);
+    const digest=require('node:crypto').createHash('sha256').update(bytes).digest();
+    preferences.appearance='custom';
+    preferences.custom_theme={preset:'own_image',strength:100,accent:[195,165,255],image:[...digest]};
+    if(toolbar.ownTheme==='white') {
+      fs.mkdirSync(path.join(home,'data','themes'),{recursive:true});
+      fs.writeFileSync(path.join(home,'data','themes',digest.toString('hex')+'.png'),bytes);
+    }
+  }
   if (legacy) {
     preferences.columns = [true,true,true,true,true,true,true];
     preferences.table_layout = {order:['number','name','status','progress','size','speed','eta','added','actions'],widths:[null,360,null,null,null,null,null,null,null]};
@@ -63,7 +77,7 @@ function capture(name, dark, size, view = 'downloads', empty = false, legacy = f
   }
   if(view.startsWith('mcp')) {
     db.exec('CREATE TABLE mcp_settings(id INTEGER PRIMARY KEY CHECK(id=1),port INTEGER NOT NULL,read_only INTEGER NOT NULL,start_with_app INTEGER NOT NULL)');
-    db.prepare('INSERT INTO mcp_settings VALUES(1,?,?,?)').run(toolbar?.mcpPort || 17842,view==='mcp-running'?0:1,view==='mcp'?0:1);
+    db.prepare('INSERT INTO mcp_settings VALUES(1,?,?,?)').run(toolbar?.mcpPort || 17842,toolbar?.mcpReadOnly ?? (view==='mcp-running'?0:1),view==='mcp'?0:1);
     if(view==='mcp-error') fs.writeFileSync(path.join(home,'data','mcp-token.dpapi'),'corrupt fixture');
   }
   const rows = empty ? [] : [
@@ -105,6 +119,7 @@ function capture(name, dark, size, view = 'downloads', empty = false, legacy = f
       ? 'local files = xd.downloads()\nfor _, file in ipairs(files) do\n    print(file.name)\nend)\n'
       : 'Write-Output "Hello"\nif ($true {\n    Write-Output "Missing closing parenthesis"\n}\n';
     if(name.includes('scripts-completion')) script.body = 'local queues = xd.que';
+    if(name.includes('scripts-core-reader') || name.includes('workspace-full-reader')) { script.name='Custom site reader'; script.trigger={kind:'site_reader',pages:['example.com/*']}; script.body=fs.readFileSync(path.join(root,'examples/custom-site-reader.lua'),'utf8'); }
     if(name.includes('scripts-manual')) { script.name='New script'; script.trigger={kind:'manual'}; }
     if(name.includes('scripts-startup')) script.trigger={kind:'startup'};
     if(name.includes('scripts-interval')) script.trigger={kind:'interval',minutes:17};
@@ -127,6 +142,16 @@ function capture(name, dark, size, view = 'downloads', empty = false, legacy = f
       }
     }
     db.prepare('INSERT INTO automation_scripts VALUES(?,?,0,NULL)').run(script.id,JSON.stringify(script));
+    if(process.argv.includes('--script-workspace')) {
+      for(const [name,language,trigger] of [
+        ['Custom site reader','lua',{kind:'site_reader',pages:['example.com/*']}],
+        ['Evening report','power_shell',{kind:'manual'}],
+        ['Retry failed downloads','lua',{kind:'download_failed',queue:null}],
+      ]) {
+        const item={...script,id:randomUUID(),name,language,trigger,enabled:false};
+        db.prepare('INSERT INTO automation_scripts VALUES(?,?,0,NULL)').run(item.id,JSON.stringify(item));
+      }
+    }
     const run={id:randomUUID(),script_id:script.id,name:script.name,revision:1,language:script.language,trigger:failure?'download_failed':'manual',context:failure?{trigger:'download_failed',downloads:[{id:randomUUID(),name:'Textures-collection.zip'}],sample:true}:{trigger:'manual',downloads:[]},queued_at:Math.floor(Date.now()/1000),started_at:Math.floor(Date.now()/1000),finished_at:Math.floor(Date.now()/1000),state:name.includes('scripts-error')?'failed':'succeeded',error:name.includes('scripts-error')?'Script exited with 1':null,exit_code:name.includes('scripts-error')?1:0};
     db.prepare('INSERT INTO script_runs(id,script_id,data,body,timeout,state) VALUES(?,?,?,?,?,?)').run(run.id,script.id,JSON.stringify(run),script.body,300,run.state);
     const lines=failure?[['info','Failed: Textures-collection.zip (Connection lost. Resume to try again.)\nWould retry Textures-collection.zip (sample run, nothing changed)\nWould show the notification Download retried · Textures-collection.zip (sample run, nothing changed)\n']]:[['info','Finished: Sample video.mp4\nQueues: 2\n'],['warn','WARNING: One file was moved after completion.\n'],...(run.error?[['error','Cannot find the requested file. Check its saved path.\n']]:[])];
@@ -167,6 +192,7 @@ function capture(name, dark, size, view = 'downloads', empty = false, legacy = f
   if(toolbar?.menu) env.IDM_EX_TEST_MENU=toolbar.menu;
   if(toolbar?.mcpBottom) env.IDM_EX_TEST_MCP_BOTTOM='1';
   if(toolbar?.startup) env.IDM_EX_TEST_STARTUP=toolbar.startup;
+  if(toolbar?.customTheme) env.IDM_EX_TEST_CUSTOM_THEME=toolbar.customTheme;
   if(view === 'preferences') env.IDM_EX_TEST_PREFERENCES = '1';
   if(['connections','offline-website','offline-website-report'].includes(view)) env.IDM_EX_TEST_FEATURE=view;
   if(view.startsWith('scan-')) env.IDM_EX_TEST_FEATURE=view;
@@ -175,6 +201,10 @@ function capture(name, dark, size, view = 'downloads', empty = false, legacy = f
   if(view.startsWith('completion-')) env.IDM_EX_TEST_FEATURE=view;
   if(toolbar?.feature) env.IDM_EX_TEST_FEATURE=toolbar.feature;
   if(process.argv.includes('--script-editor')) env.IDM_EX_TEST_EDITOR=name.includes('scripts-completion')?'completion':'editor';
+  if(process.argv.includes('--core-api')) env.IDM_EX_TEST_CORE_API='1';
+  if(name.includes('workspace-full')) env.IDM_EX_TEST_FULL_EDITOR='1';
+  if(name.includes('workspace-full-logs')) env.IDM_EX_TEST_FULL_LOGS='1';
+  if(name.includes('workspace-list')) env.IDM_EX_TEST_SCRIPT_LIBRARY='1';
   if(['add','add-error','filtered-empty','add-advanced','add-login','add-negotiate','add-token','add-login-error','add-login-saving','batch','batch-error','batch-pattern','batch-pattern-error','folders','speed-limits','columns','remove-confirmation','delete-file-confirmation','delete-files-confirmation','multi-selection','browser-videos','browser-videos-empty','youtube-qualities','youtube-preview','youtube-error','proxy','proxy-enterprise','quotas','ftps-login','scan-settings','scan-result','checksum','zip-preview','hls-audio','grabber-setup','grabber-project','grabber-schedule','grabber-discoveries','rename-queue','schedule-queue','update-link'].includes(view)) env.IDM_EX_TEST_FEATURE = view;
   const args = view === 'browser-setup' ? ['--browser-setup'] : [];
   let result;
@@ -196,7 +226,7 @@ function capture(name, dark, size, view = 'downloads', empty = false, legacy = f
     }
   } else result=spawnSync(path.join(root,'target','debug','de.exe'),args,{env,windowsHide:true,encoding:'utf8',timeout:30000});
   assert.equal(result.error,undefined,String(result.error)); assert.equal(result.status,0,result.stderr); assert(fs.existsSync(ppm),result.stderr);
-  const check=new DatabaseSync(path.join(home,'data','queue.sqlite3'));
+  const check=openProfileDatabase(path.join(home,'data','queue.sqlite3'));
   assert.equal(check.prepare('SELECT COUNT(*) n FROM jobs').get().n,rows.length);
   if(coldReview) assert.equal(check.prepare('SELECT COUNT(*) n FROM browser_video_reviews WHERE data IS NOT NULL').get().n,1);
   assert.equal(check.prepare('SELECT COUNT(*) n FROM download_queues WHERE running<>0').get().n,0);
@@ -211,6 +241,35 @@ function capture(name, dark, size, view = 'downloads', empty = false, legacy = f
   for (const event of ['started','ready','stopped']) assert(diagnostics.some(record => record.event === event), `Missing ${event} log`);
   console.log(JSON.stringify({name,screenshot}));
   return {name,screenshot,size,view,dark,legacy,compact,toolbar,queuedNetworkWork:false};
+}
+if(process.argv.includes('--release-docs')) {
+  const results=[capture('public-moonveil',true,'1280x860','downloads',false,false,false,{details:false,customTheme:'moonveil'})];
+  results.push(capture('guide-lua-860x600',true,'860x600','guide-lua'));
+  results.push(capture('guide-lua-1280x860',true,'1280x860','guide-lua'));
+  fs.writeFileSync(path.join(output,'verification.json'),JSON.stringify({results,scope:'Moonveil public documentation image without local paths, and the updated offline Lua guide at two window sizes. Isolated paused profiles; no live downloads.'},null,2));
+  console.log(`Verification: ${path.join(output,'verification.json')}`);
+  process.exit(0);
+}
+if(process.argv.includes('--readme')) {
+  // Public README/website images hide the details pane, so no local profile path appears.
+  const results=[capture('readme-downloads-dark',true,'1280x800','downloads',false,false,false,{details:false})];
+  results.push(capture('readme-custom-theme',true,'1280x800','downloads',false,false,false,{details:false,customTheme:'moonveil'}));
+  fs.writeFileSync(path.join(output,'verification.json'),JSON.stringify({results,scope:'README images: standard dark and Moonveil custom theme, 1280x800, details pane hidden. Isolated paused profiles; no live downloads.'},null,2));
+  console.log(`Verification: ${path.join(output,'verification.json')}`);
+  process.exit(0);
+}
+if(process.argv.includes('--custom-themes')) {
+  const results=[];
+  for(const preset of ['neon','reactor','aurora','moonveil']) results.push(capture(`theme-${preset}`,true,'1280x860','downloads',false,false,false,{customTheme:preset}));
+  for(const size of ['860x600','1280x860']) results.push(capture(`theme-gallery-${size}`,true,size,'preferences',false,false,false,{customTheme:'moonveil'}));
+  for(const language of ['de','ar']) results.push(capture(`theme-gallery-${language}`,true,'860x600','preferences',false,false,false,{customTheme:'aurora',language}));
+  results.push(capture('theme-add-dialog',true,'860x600','add',false,false,false,{customTheme:'reactor'}));
+  results.push(capture('theme-automation',true,'1280x860','automation-scripts',false,false,false,{customTheme:'neon'}));
+  for(const ownTheme of ['white','missing']) results.push(capture(`theme-own-${ownTheme}`,true,'860x600','downloads',false,false,false,{ownTheme}));
+  results.push(capture('theme-gallery-own',true,'860x600','preferences',false,false,false,{ownTheme:'white'}));
+  fs.writeFileSync(path.join(output,'verification.json'),JSON.stringify({results,scope:'Custom theme gallery (presets and an imported image), four presets across the whole window and opaque editor/dialog surfaces. Isolated paused profiles; no live downloads.'},null,2));
+  console.log(`Verification: ${path.join(output,'verification.json')}`);
+  process.exit(0);
 }
 if(process.argv.includes('--updates')) {
   const results=[];
@@ -322,6 +381,16 @@ if(process.argv.includes('--download-controls')) {
   fs.writeFileSync(path.join(output,'verification.json'),JSON.stringify({results,scope:'Connection settings and browser recovery dialog rendered in native egui. No browser opened, no downloads started, no shutdown action armed or executed.'},null,2));
   console.log(`Verification: ${path.join(output,'verification.json')}`);process.exit(0);
 }
+if(process.argv.includes('--mcp-access')) {
+  const results=[];
+  for(const dark of [true,false]) {
+    for(const size of ['860x600','1280x860']) results.push(capture(`mcp-access-${dark?'dark':'light'}-${size}`,dark,size,'mcp',false,false,false,{mcpBottom:true,mcpReadOnly:0}));
+    results.push(capture(`mcp-access-ar-${dark?'dark':'light'}`,dark,'860x600','mcp',false,false,false,{mcpBottom:true,mcpReadOnly:0,language:'ar'}));
+  }
+  fs.writeFileSync(path.join(output,'verification.json'),JSON.stringify({results,scope:'Editable MCP capabilities, light/dark, minimum/wide windows and Arabic. Isolated paused profiles; server stays stopped.'},null,2));
+  console.log(`Verification: ${path.join(output,'verification.json')}`);
+  return;
+}
 if(process.argv.includes('--mcp')) {
   (async()=>{
     const net=require('node:net');
@@ -403,6 +472,27 @@ if(process.argv.includes('--script-editor')) {
     }
   }
   fs.writeFileSync(path.join(output,'verification.json'),JSON.stringify({results,scope:'Live Lua/PowerShell syntax diagnostics, completion popup, line numbers and highlighting; dark/light, minimum/wide windows. Isolated paused profiles; no script execution.'},null,2));
+  console.log(`Verification: ${path.join(output,'verification.json')}`);process.exit(0);
+}
+if(process.argv.includes('--core-api')) {
+  const results=[];
+  for(const dark of [true,false]) for(const size of ['860x600','1280x860']) for(const role of ['automation','reader']) {
+    results.push(capture(`scripts-core-${role}-${dark?'dark':'light'}-${size}`,dark,size,'automation-scripts'));
+  }
+  fs.writeFileSync(path.join(output,'verification.json'),JSON.stringify({results,scope:'Shared core API reference and search, automation/site-reader roles, light/dark and minimum/wide windows; no script execution.'},null,2));
+  console.log(`Verification: ${path.join(output,'verification.json')}`);process.exit(0);
+}
+if(process.argv.includes('--script-workspace')) {
+  const results=[];
+  for(const dark of [true,false]) for(const size of ['860x600','1280x860']) {
+    for(const mode of ['editor','full','list','full-logs']) {
+      results.push(capture(`scripts-workspace-${mode}-${dark?'dark':'light'}-${size}`,dark,size,'automation-scripts'));
+    }
+  }
+  for(const dark of [true,false]) for(const kind of ['reader','powershell']) {
+    results.push(capture(`scripts-workspace-full-${kind}-${dark?'dark':'light'}`,dark,'860x600','automation-scripts'));
+  }
+  fs.writeFileSync(path.join(output,'verification.json'),JSON.stringify({results,scope:'Loaded script library and full editor, both themes/window sizes; isolated disabled scripts with no code execution.'},null,2));
   console.log(`Verification: ${path.join(output,'verification.json')}`);process.exit(0);
 }
 if(process.argv.includes('--scripts')) {

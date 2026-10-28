@@ -87,6 +87,7 @@ impl Desktop {
             {
                 Ok(()) => {
                     self.connections = None;
+                    self.note_advanced_preferences_saved();
                     self.dialog = None;
                     self.notice = Some(Notice::success(
                         tr("Connection settings saved. Pause and resume active files to apply them.")

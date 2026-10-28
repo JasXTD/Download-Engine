@@ -1,4 +1,6 @@
 //! Deterministic loopback coverage for connection handoff and persisted parts.
+#[path = "../src/desktop/fixture_database.rs"]
+mod fixture_database;
 use download_engine::{
     bandwidth::Limiter,
     engine,
@@ -584,7 +586,7 @@ async fn adaptive_failures_keep_safe_parts_and_retry_transient_responses() {
 async fn failed_split_commit_preserves_original_layout_and_files() {
     let fixture = Fixture::new(SIZE, true, 0).await;
     let (_temp, store, job) = setup(&fixture);
-    let db = rusqlite::Connection::open(store.paths.data.join("queue.sqlite3")).unwrap();
+    let db = crate::fixture_database::open(store.paths.data.join("queue.sqlite3")).unwrap();
     db.execute_batch("CREATE TRIGGER reject_split BEFORE UPDATE ON jobs WHEN json_type(NEW.data,'$.plan.segments')='object' BEGIN SELECT RAISE(FAIL,'injected split commit failure'); END;").unwrap();
     let failed = run(&store, job).await;
     assert_eq!(failed.status, Status::Failed);

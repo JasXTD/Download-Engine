@@ -196,7 +196,8 @@ fn read_stored_files(store: &Store) -> Vec<(std::path::PathBuf, Vec<u8>)> {
 #[test]
 fn credential_storage_scan_covers_database_and_wal_while_a_writer_is_active() {
     let (_temp, store) = setup();
-    let mut database = rusqlite::Connection::open(store.paths.data.join("queue.sqlite3")).unwrap();
+    let mut database =
+        crate::fixture_database::open(store.paths.data.join("queue.sqlite3")).unwrap();
     database
         .execute_batch(
             "PRAGMA wal_autocheckpoint=0;
@@ -599,14 +600,15 @@ async fn removing_jobs_cleans_only_their_own_vault_entries() {
     );
     h.store.remove(&second.id).unwrap();
     assert!(h.store.get(&second.id).unwrap().is_none());
-    let pending: Vec<String> = rusqlite::Connection::open(h.store.paths.data.join("queue.sqlite3"))
-        .unwrap()
-        .prepare("SELECT id FROM credential_cleanup")
-        .unwrap()
-        .query_map([], |r| r.get(0))
-        .unwrap()
-        .collect::<rusqlite::Result<_>>()
-        .unwrap();
+    let pending: Vec<String> =
+        crate::fixture_database::open(h.store.paths.data.join("queue.sqlite3"))
+            .unwrap()
+            .prepare("SELECT id FROM credential_cleanup")
+            .unwrap()
+            .query_map([], |r| r.get(0))
+            .unwrap()
+            .collect::<rusqlite::Result<_>>()
+            .unwrap();
     assert!(
         !vault_present(b),
         "Removed credential {b} remains; pending cleanup: {pending:?}"
@@ -619,7 +621,7 @@ async fn startup_retries_interrupted_cleanup_without_deleting_live_credentials()
     let mut job = h.save(&h.job("https://example.com/file"), basic()).await;
     let binding = job.authentication.as_ref().unwrap().id;
     drop(h.scheduler.take());
-    let conn = rusqlite::Connection::open(h.store.paths.data.join("queue.sqlite3")).unwrap();
+    let conn = crate::fixture_database::open(h.store.paths.data.join("queue.sqlite3")).unwrap();
     conn.execute(
         "INSERT INTO credential_cleanup(id) VALUES (?1)",
         [binding.to_string()],
@@ -681,7 +683,7 @@ async fn authentication_reset_refuses_cache_junctions_and_rolls_back_vault_stagi
             .authentication
             .is_none()
     );
-    let conn = rusqlite::Connection::open(h.store.paths.data.join("queue.sqlite3")).unwrap();
+    let conn = crate::fixture_database::open(h.store.paths.data.join("queue.sqlite3")).unwrap();
     assert_eq!(
         conn.query_row("SELECT COUNT(*) FROM credential_cleanup", [], |r| r
             .get::<_, i64>(0))
@@ -735,7 +737,7 @@ async fn cleanup_failure_keeps_completion_durable_and_still_removes_partial_file
     let retired = finished.authentication.as_ref().unwrap().id;
     let blocker = h.save(&h.job(&fixture.url), basic()).await;
     let live = blocker.authentication.unwrap().id;
-    let conn = rusqlite::Connection::open(h.store.paths.data.join("queue.sqlite3")).unwrap();
+    let conn = crate::fixture_database::open(h.store.paths.data.join("queue.sqlite3")).unwrap();
     conn.execute(
         "INSERT INTO credential_cleanup(id) VALUES(?1)",
         [live.to_string()],
@@ -784,7 +786,7 @@ async fn committed_replacement_link_reports_cleanup_warning_as_success() {
     let blocker = h.save(&h.job(&fixture.url), basic()).await;
     let live = blocker.authentication.unwrap().id;
     let request = h.link(&job, &public.url).await;
-    let conn = rusqlite::Connection::open(h.store.paths.data.join("queue.sqlite3")).unwrap();
+    let conn = crate::fixture_database::open(h.store.paths.data.join("queue.sqlite3")).unwrap();
     conn.execute(
         "INSERT INTO credential_cleanup(id) VALUES(?1)",
         [live.to_string()],

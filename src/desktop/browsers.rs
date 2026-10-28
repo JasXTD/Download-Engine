@@ -267,6 +267,7 @@ impl Desktop {
                                     &result,
                                     download_engine::diagnostics::Event::BrowserRegistered,
                                 );
+                                if result.is_ok() { self.note_advanced_preferences_saved(); }
                                 self.refresh_browser_registration();
                                 self.browser_notice = Some(match result {
                                     Ok(()) => (
@@ -287,6 +288,7 @@ impl Desktop {
                                     &result,
                                     download_engine::diagnostics::Event::BrowserUnregistered,
                                 );
+                                if result.is_ok() { self.note_advanced_preferences_saved(); }
                                 self.refresh_browser_registration();
                                 self.browser_notice = Some(match result {
                                     Ok(_) => (

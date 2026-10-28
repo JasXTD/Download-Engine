@@ -22,6 +22,7 @@ pub(super) fn fixture() -> (tempfile::TempDir, Context) {
         Context {
             store,
             read_only: false,
+            permissions: Default::default(),
             no_start: true,
             start: |_| panic!("Must not launch the desktop in isolated store tests"),
         },
@@ -45,6 +46,153 @@ fn call(ctx: &Context, name: &str, args: Value) -> Result<Value> {
         .clone();
     tools::validate(&schema, &args)?;
     tools::call(ctx, name, &args, &AtomicBool::new(false))
+}
+
+fn saved_script(
+    store: &Store,
+    language: crate::script_automation::Language,
+) -> crate::script_automation::Script {
+    use crate::script_automation::{Script, Trigger};
+    store
+        .save_script(&Script {
+            id: uuid::Uuid::new_v4().to_string(),
+            revision: 0,
+            name: "Reviewed script".into(),
+            language,
+            body: "print('reviewed')".into(),
+            enabled: false,
+            trigger: Trigger::Manual,
+            timeout_seconds: 30,
+            change_files: false,
+        })
+        .unwrap()
+}
+
+#[test]
+fn server_capabilities_hide_and_reject_disallowed_tools_at_both_layers() {
+    let (_temp, mut ctx) = fixture();
+    ctx.permissions = Permissions {
+        downloads: false,
+        queues: true,
+        lua: false,
+        powershell: false,
+    };
+    let listing = reply(Protocol::default().accept(modern("tools/list", json!({})), ctx.access()));
+    let tools = listing["result"]["tools"].as_array().unwrap();
+    assert!(tools.iter().any(|t| t["name"] == "create_queue"));
+    for name in ["pause_all", "add_downloads", "run_script", "stop_script"] {
+        assert!(!tools.iter().any(|t| t["name"] == name));
+        let result = reply(Protocol::default().accept(
+            modern("tools/call", json!({"name":name,"arguments":{}})),
+            ctx.access(),
+        ));
+        assert_eq!(result["result"]["isError"], true);
+        assert!(
+            call(
+                &ctx,
+                name,
+                if name == "run_script" {
+                    json!({"id":uuid::Uuid::new_v4().to_string()})
+                } else {
+                    json!({})
+                }
+            )
+            .is_err()
+        );
+    }
+    let key = uuid::Uuid::new_v4().to_string();
+    ctx.store.submit_control(&key, &Action::PauseAll).unwrap();
+    assert!(call(&ctx, "cancel_request", json!({"request_id":key})).is_err());
+    assert_eq!(ctx.store.control_receipt(&key).unwrap().state, "pending");
+    assert!(ctx.store.script_runs(None).unwrap().is_empty());
+}
+
+#[test]
+fn scripts_require_language_capability_and_local_revision_approval() {
+    use crate::script_automation::Language;
+    let (_temp, mut ctx) = fixture();
+    let script = saved_script(&ctx.store, Language::PowerShell);
+    assert!(call(&ctx, "run_script", json!({"id":script.id})).is_err());
+    ctx.permissions.lua = true;
+    assert!(call(&ctx, "run_script", json!({"id":script.id})).is_err());
+    ctx.store
+        .approve_mcp_script(&script.id, script.revision)
+        .unwrap();
+    assert!(call(&ctx, "run_script", json!({"id":script.id})).is_err());
+    ctx.permissions.powershell = true;
+    ctx.store.revoke_mcp_script(&script.id).unwrap();
+    assert!(call(&ctx, "run_script", json!({"id":script.id})).is_err());
+    assert!(ctx.store.script_runs(None).unwrap().is_empty());
+    assert!(ctx.store.claim_control().unwrap().is_none());
+}
+
+#[test]
+fn queued_mcp_script_rechecks_revision_and_revocation_before_snapshotting() {
+    use crate::script_automation::Language;
+    let (_temp, ctx) = fixture();
+    let script = saved_script(&ctx.store, Language::Lua);
+    ctx.store
+        .approve_mcp_script(&script.id, script.revision)
+        .unwrap();
+    let action = Action::RunMcpScript {
+        id: script.id.clone(),
+        revision: script.revision,
+    };
+    let request = uuid::Uuid::new_v4().to_string();
+    ctx.store.submit_control(&request, &action).unwrap();
+    let (key, accepted) = ctx.store.claim_control().unwrap().unwrap();
+    ctx.store.revoke_mcp_script(&script.id).unwrap();
+    assert!(crate::control::execute_stored(&ctx.store, &key, accepted).is_err());
+    ctx.store
+        .approve_mcp_script(&script.id, script.revision)
+        .unwrap();
+    let mut changed = script.clone();
+    changed.language = Language::PowerShell;
+    changed.body = "Write-Output 'changed'".into();
+    let changed = ctx.store.save_script(&changed).unwrap();
+    assert!(
+        ctx.store
+            .approve_mcp_script(&changed.id, script.revision)
+            .is_err()
+    );
+    assert!(crate::control::execute_stored(&ctx.store, &key, action.clone()).is_err());
+    assert!(ctx.store.script_runs(None).unwrap().is_empty());
+    ctx.store
+        .approve_mcp_script(&changed.id, changed.revision)
+        .unwrap();
+    assert!(crate::control::execute_stored(&ctx.store, &key, action).is_err());
+    let run = ctx
+        .store
+        .run_mcp_script(
+            &changed.id,
+            changed.revision,
+            &uuid::Uuid::new_v4().to_string(),
+        )
+        .unwrap();
+    assert_eq!(run.revision, changed.revision);
+    assert_eq!(run.language, Language::PowerShell);
+    assert_eq!(run.state, "queued");
+}
+
+#[test]
+fn approval_fingerprint_covers_source_permissions_and_language_even_if_revision_is_reused() {
+    use crate::script_automation::Language;
+    let (_temp, ctx) = fixture();
+    let script = saved_script(&ctx.store, Language::Lua);
+    ctx.store
+        .approve_mcp_script(&script.id, script.revision)
+        .unwrap();
+    ctx.store.connect().unwrap().execute("UPDATE automation_scripts SET data=json_set(data,'$.change_files',json('true')) WHERE id=?1",[&script.id]).unwrap();
+    assert!(
+        ctx.store
+            .run_mcp_script(
+                &script.id,
+                script.revision,
+                &uuid::Uuid::new_v4().to_string()
+            )
+            .is_err()
+    );
+    assert!(ctx.store.script_runs(None).unwrap().is_empty());
 }
 
 #[test]

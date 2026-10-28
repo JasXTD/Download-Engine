@@ -2,9 +2,43 @@ use super::*;
 use crate::desktop::interaction_tests::{click, fixture, frame, text_rect};
 
 #[test]
+fn independently_saved_folder_rules_are_reported_and_survive_parent_cancel() {
+    let (_root, mut app, ctx) = fixture();
+    app.open_preferences_window();
+    click(&mut app, &ctx, "Compact rows");
+    click(&mut app, &ctx, "Downloads");
+    click(&mut app, &ctx, "Download folders");
+    click(&mut app, &ctx, "Save folder rules");
+    let saved = app.store.download_folders().unwrap();
+    let output = frame(&mut app, &ctx, vec2(1080.0, 800.0), vec![]);
+    assert!(app.preferences_window.as_ref().unwrap().advanced_saved);
+    text_rect(
+        &output,
+        "Advanced settings saved. Cancel will not undo those changes.",
+    );
+    click(&mut app, &ctx, "Cancel");
+    assert!(!app.interface.compact_rows);
+    assert_eq!(app.store.download_folders().unwrap(), saved);
+    app.open_preferences_window();
+    click(&mut app, &ctx, "Downloads");
+    click(&mut app, &ctx, "Download folders");
+    click(&mut app, &ctx, "×");
+    frame(&mut app, &ctx, vec2(1080.0, 800.0), vec![]);
+    assert!(
+        !app.preferences_window.as_ref().unwrap().advanced_saved,
+        "Closing without saving must not report a save"
+    );
+}
+
+#[test]
 fn cancel_and_escape_discard_drafts_and_restore_theme_on_the_same_page() {
     for escape in [false, true] {
         let (_temp, mut app, ctx) = fixture();
+        // A real queue refresh must see the selected download in storage too.
+        // The shared layout fixture otherwise contains in-memory rows only.
+        for job in &app.jobs {
+            app.store.enqueue(job).unwrap();
+        }
         app.view = View::Queues;
         app.save_interface(
             &ctx,
@@ -115,7 +149,8 @@ fn atomic_save_error_keeps_both_records_and_the_draft_for_retry() {
         .unwrap()
         .behavior
         .notify_complete = false;
-    let conn = rusqlite::Connection::open(app.store.paths.data.join("queue.sqlite3")).unwrap();
+    let conn =
+        crate::desktop::fixture_database::open(app.store.paths.data.join("queue.sqlite3")).unwrap();
     conn.execute_batch("CREATE TRIGGER reject_preferences BEFORE UPDATE ON interface_preferences BEGIN SELECT RAISE(ABORT, 'fixture write failure'); END;").unwrap();
     click(&mut app, &ctx, "Save");
     assert_eq!(app.interface, before);
@@ -145,7 +180,8 @@ fn startup_failure_reports_partial_save_and_can_be_retried_without_real_registry
     app.open_preferences_window();
     click(&mut app, &ctx, "Compact rows");
     app.preferences_window.as_mut().unwrap().startup = true;
-    let conn = rusqlite::Connection::open(app.store.paths.data.join("queue.sqlite3")).unwrap();
+    let conn =
+        crate::desktop::fixture_database::open(app.store.paths.data.join("queue.sqlite3")).unwrap();
     conn.execute_batch("CREATE TRIGGER reject_startup BEFORE UPDATE ON windows_startup BEGIN SELECT RAISE(ABORT, 'fixture startup failure'); END;").unwrap();
     click(&mut app, &ctx, "Save");
     assert!(app.interface.compact_rows && app.store.interface_preferences().unwrap().compact_rows);

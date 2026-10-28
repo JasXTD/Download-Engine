@@ -1,3 +1,4 @@
+const openProfileDatabase = require('./profile_database.cjs');
 // Actual packaged executables, isolated data and loopback fixtures. The UI's
 // review/add action is tested in Rust; the transfer below seeds that reviewed state.
 const assert = require('node:assert/strict');
@@ -8,7 +9,6 @@ const { randomUUID, createHash } = require('node:crypto');
 const { spawn } = require('node:child_process');
 const { once } = require('node:events');
 const { setTimeout: delay } = require('node:timers/promises');
-const { DatabaseSync } = require('node:sqlite');
 
 (async () => {
   const root = path.resolve(__dirname, '..');
@@ -36,7 +36,7 @@ const { DatabaseSync } = require('node:sqlite');
   await once(server, 'listening');
   const base = `http://127.0.0.1:${server.address().port}`;
   const url = `${base}/index.m3u8`;
-  const db = new DatabaseSync(path.join(home, 'data', 'queue.sqlite3'));
+  const db = openProfileDatabase(path.join(home, 'data', 'queue.sqlite3'));
   db.exec('PRAGMA busy_timeout=5000');
   let child, childError;
   function launch() {

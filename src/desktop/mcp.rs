@@ -41,9 +41,13 @@ pub(super) struct State {
     saved: Settings,
     port: String,
     read_only: bool,
+    permissions: mcp::Permissions,
     start_with_app: bool,
     error: Option<String>,
     notice: Option<String>,
+    saved_notice_pending: bool,
+    advanced_open: bool,
+    advanced_reveal: bool,
 }
 
 impl State {
@@ -62,9 +66,13 @@ impl State {
             saved,
             port: saved.port.to_string(),
             read_only: saved.read_only,
+            permissions: saved.permissions,
             start_with_app: saved.start_with_app,
             error,
             notice: None,
+            saved_notice_pending: false,
+            advanced_open: false,
+            advanced_reveal: false,
         };
         if saved.start_with_app && state.error.is_none() {
             state.start(store);
@@ -83,6 +91,7 @@ impl State {
         Ok(Settings {
             port,
             read_only: self.read_only,
+            permissions: self.permissions,
             start_with_app: self.start_with_app,
         })
     }
@@ -100,6 +109,7 @@ impl State {
         let context = mcp::Context {
             store: store.clone(),
             read_only: self.saved.read_only,
+            permissions: self.saved.permissions,
             no_start: true,
             start: |_| anyhow::bail!(tr("Open Download Engine before using its controls")),
         };
@@ -125,6 +135,7 @@ impl State {
                 match completed {
                     Ok(Ok(Completed::Saved(settings, start))) => {
                         self.saved = settings;
+                        self.saved_notice_pending = true;
                         self.port = settings.port.to_string();
                         self.notice = (!start).then(|| tr("Settings saved.").into());
                         if start {

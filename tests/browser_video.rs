@@ -1,3 +1,5 @@
+#[path = "../src/desktop/fixture_database.rs"]
+mod fixture_database;
 use download_engine::{
     browser_batch::Destination,
     browser_video::{Item, Kind, Review},
@@ -177,7 +179,7 @@ fn stream_choice_only_opens_quality_preview_and_expired_reviews_cannot_be_used()
     store
         .request_browser_video_review(&second, &review())
         .unwrap();
-    let conn = rusqlite::Connection::open(store.paths.data.join("queue.sqlite3")).unwrap();
+    let conn = crate::fixture_database::open(store.paths.data.join("queue.sqlite3")).unwrap();
     conn.execute(
         "UPDATE browser_video_reviews SET created=?1 WHERE request_id=?2",
         rusqlite::params![chrono::Utc::now().timestamp() - 1801, second],

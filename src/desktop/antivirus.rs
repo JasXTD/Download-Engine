@@ -64,11 +64,41 @@ pub(super) struct State {
     // in SQLite, so visiting/removing downloads cannot retain them indefinitely.
     report: Option<Report>,
     loaded_selection: Option<String>,
+    loading_report: Option<(String, background_io::Task<Option<Report>>)>,
     batch: Option<batch::Batch>,
 }
 
 impl Desktop {
+    pub(super) fn poll_antivirus_report(&mut self) {
+        let Some((id, task)) = &mut self.antivirus.loading_report else {
+            return;
+        };
+        let Some(result) = task.poll() else {
+            return;
+        };
+        let current = self.selected.as_ref() == Some(id);
+        self.antivirus.loading_report = None;
+        if current {
+            match result {
+                Ok(report) if self.antivirus.report.is_none() => self.antivirus.report = report,
+                Ok(_) => {}
+                Err(error) => {
+                    self.notice = Some(Notice::error(tf!(
+                        "Cannot read scan history: {error}",
+                        error = error
+                    )))
+                }
+            }
+        }
+    }
+
+    #[cfg(test)]
+    pub(super) fn antivirus_report_pending(&self) -> bool {
+        self.antivirus.loading_report.is_some()
+    }
+
     pub(super) fn antivirus_background(&mut self) {
+        self.poll_antivirus_report();
         if self.exit_requested {
             self.antivirus.service.cancel_all();
             return;
@@ -130,19 +160,23 @@ impl Desktop {
         }
         self.advance_antivirus_batch();
         if self.selected != self.antivirus.loaded_selection {
-            self.antivirus.loaded_selection = self.selected.clone();
             self.antivirus.report = None;
-            if let Some(id) = &self.selected {
-                match self.store.antivirus_report(id) {
-                    Ok(Some(report)) => {
-                        self.antivirus.report = Some(report);
-                    }
-                    Ok(None) => {}
-                    Err(error) => {
-                        self.notice = Some(Notice::error(tf!(
-                            "Cannot read scan history: {error}",
-                            error = error
-                        )))
+            if self.antivirus.loading_report.is_none() {
+                self.antivirus.loaded_selection = self.selected.clone();
+                if let Some(id) = self.selected.clone() {
+                    let store = self.store.clone();
+                    let job = id.clone();
+                    match background_io::Task::spawn(
+                        self.background_io.context.clone(),
+                        move || store.antivirus_report(&job),
+                    ) {
+                        Ok(task) => self.antivirus.loading_report = Some((id, task)),
+                        Err(error) => {
+                            self.notice = Some(Notice::error(tf!(
+                                "Cannot read scan history: {error}",
+                                error = error
+                            )))
+                        }
                     }
                 }
             }
@@ -422,6 +456,7 @@ impl Desktop {
             }) {
                 Ok(_) => {
                     self.antivirus.service.cancel_all();
+                    self.note_advanced_preferences_saved();
                     self.antivirus.review = None;
                     self.antivirus.draft = None;
                     self.dialog = None;
@@ -614,7 +649,8 @@ mod tests {
             finished_at: 1_790_000_000,
         };
         let connection =
-            rusqlite::Connection::open(app.store.paths.data.join("queue.sqlite3")).unwrap();
+            crate::desktop::fixture_database::open(app.store.paths.data.join("queue.sqlite3"))
+                .unwrap();
         connection
             .execute(
                 "INSERT INTO antivirus_reports(job_id,data) VALUES(?1,?2)",
@@ -624,13 +660,16 @@ mod tests {
         drop(connection);
         app.selected = Some(job.id.clone());
         app.antivirus_background();
+        app.wait_for_io();
         assert!(app.antivirus_label(&job).contains("last scan"));
         app.selected = None;
         app.antivirus_background();
+        app.wait_for_io();
         assert!(app.antivirus.report.is_none());
         // Releasing the UI cache must not discard the persisted scan result.
         app.selected = Some(job.id.clone());
         app.antivirus_background();
+        app.wait_for_io();
         assert!(app.antivirus_label(&job).contains("last scan"));
         app.command(Command::Remove(job.id.clone()));
         let deadline = Instant::now() + Duration::from_secs(5);
@@ -638,8 +677,9 @@ mod tests {
             assert!(Instant::now() < deadline, "Removal did not settle");
             std::thread::sleep(Duration::from_millis(10));
         }
-        app.force_refresh();
+        app.refresh_and_wait();
         app.antivirus_background();
+        app.wait_for_io();
         assert!(app.store.antivirus_report(&job.id).unwrap().is_none());
         assert!(
             app.antivirus.report.is_none(),
@@ -720,7 +760,9 @@ mod tests {
     fn unreadable_settings_block_open_and_can_be_repaired_explicitly() {
         let (_temp, mut app, ctx) = fixture();
         let job = saved_job(&mut app);
-        let conn = rusqlite::Connection::open(app.store.paths.data.join("queue.sqlite3")).unwrap();
+        let conn =
+            crate::desktop::fixture_database::open(app.store.paths.data.join("queue.sqlite3"))
+                .unwrap();
         conn.execute("UPDATE antivirus_settings SET data='invalid'", [])
             .unwrap();
         app.open_file(&job);
@@ -802,6 +844,7 @@ mod tests {
             {
                 assert!(std::time::Instant::now() < deadline);
                 app.antivirus_background();
+                app.wait_for_io();
                 std::thread::sleep(std::time::Duration::from_millis(5));
             }
             assert!(

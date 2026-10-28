@@ -166,28 +166,7 @@ impl Store {
     }
 
     pub fn save_script(&self, script: &Script) -> Result<Script> {
-        crate::model::validate_job_id(&script.id)?;
-        crate::queue::queue_name(&script.name)?;
-        ensure!(!script.body.trim().is_empty(), "Enter a script");
-        ensure!(
-            script.body.len() <= MAX_SCRIPT_BYTES && !script.body.contains('\0'),
-            "Script must be at most 64 KiB and contain no NUL characters"
-        );
-        ensure!(
-            (1..=3600).contains(&script.timeout_seconds),
-            "Timeout must be 1 to 3600 seconds"
-        );
-        if let Trigger::SiteReader { pages } = &script.trigger {
-            ensure!(
-                script.language == Language::Lua,
-                "Site readers must be written in Lua"
-            );
-            ensure!(
-                !script.change_files,
-                "Site readers cannot change downloaded files"
-            );
-            site::validate_pages(pages)?;
-        }
+        script.validate()?;
         let mut conn = self.connect()?;
         let tx = conn.transaction_with_behavior(TransactionBehavior::Immediate)?;
         let old: Option<String> = tx
@@ -213,13 +192,7 @@ impl Store {
         ensure!(count < 50, "Keep at most 50 scripts");
         let now = chrono::Utc::now().timestamp();
         let next_at = match &script.trigger {
-            Trigger::Interval { minutes } => {
-                ensure!(
-                    (1..=10080).contains(minutes),
-                    "Interval must be 1 to 10080 minutes"
-                );
-                Some(now + i64::from(*minutes) * 60)
-            }
+            Trigger::Interval { minutes } => Some(now + i64::from(*minutes) * 60),
             _ => None,
         };
         let queue = match &script.trigger {
@@ -262,6 +235,12 @@ impl Store {
         Ok(())
     }
     pub fn run_script(&self, id: &str, request: &str) -> Result<Run> {
+        self.run_script_revision(id, request, None)
+    }
+    pub(crate) fn run_mcp_script(&self, id: &str, revision: u64, request: &str) -> Result<Run> {
+        self.run_script_revision(id, request, Some(revision))
+    }
+    fn run_script_revision(&self, id: &str, request: &str, approval: Option<u64>) -> Result<Run> {
         crate::model::validate_job_id(request)?;
         let mut conn = self.connect()?;
         let tx = conn.transaction_with_behavior(TransactionBehavior::Immediate)?;
@@ -275,6 +254,9 @@ impl Store {
             return Ok(run);
         }
         let script = definition(&tx, id)?;
+        if let Some(revision) = approval {
+            crate::mcp::access::check_approval(&tx, &script, revision)?;
+        }
         // A reader never runs with automation powers; it only reads pages.
         ensure!(
             !matches!(script.trigger, Trigger::SiteReader { .. }),

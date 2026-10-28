@@ -76,7 +76,7 @@ async fn quota_database_write_failure_stops_transfer_without_retrying_or_publish
             chrono::Utc::now().timestamp(),
         )
         .unwrap();
-    let conn = rusqlite::Connection::open(store.paths.data.join("queue.sqlite3")).unwrap();
+    let conn = crate::fixture_database::open(store.paths.data.join("queue.sqlite3")).unwrap();
     conn.execute_batch("CREATE TRIGGER reject_payload BEFORE UPDATE ON data_quotas WHEN NEW.hourly_used>OLD.hourly_used BEGIN SELECT RAISE(ABORT,'fixture quota write failed'); END;").unwrap();
     let stopped = run(&store, enqueue(&store, &fixture.url)).await;
     assert_eq!(stopped.status, Status::Failed);

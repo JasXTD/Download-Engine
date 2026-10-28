@@ -334,30 +334,15 @@ impl Desktop {
                         .color(p.muted),
                 );
             });
-            ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                if ui
-                    .add_enabled(
-                        !self.automation.scripts_view || !self.scripts.dirty(),
-                        primary(
-                            if self.automation.scripts_view {
-                                tr("+ New script")
-                            } else {
-                                tr("+ New rule")
-                            },
-                            p,
-                        )
-                        .min_size(egui::vec2(112.0, view::PRIMARY_HEIGHT)),
-                    )
-                    .clicked()
-                {
-                    if self.automation.scripts_view {
-                        self.scripts.new_script();
-                    } else {
+            if !self.automation.scripts_view {
+                ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+                    if ui.add(primary(tr("+ New rule"), p)
+                        .min_size(egui::vec2(112.0, view::PRIMARY_HEIGHT))).clicked() {
                         self.automation.draft = Some(Draft::new());
                         self.dialog = Some(Dialog::Automation);
                     }
-                }
-            });
+                });
+            }
         });
         ui.add_space(10.0);
 
@@ -414,6 +399,24 @@ impl Desktop {
                     .clicked()
                 {
                     self.open_guide(guide_topic);
+                }
+                if self.automation.scripts_view {
+                    if ui
+                        .add_enabled(
+                            self.scripts.can_export(),
+                            egui::Button::new(RichText::new(tr("Export script…")).size(12.5)),
+                        )
+                        .clicked()
+                    {
+                        self.scripts.package_action = Some(false);
+                    }
+                    if ui
+                        .button(RichText::new(tr("Import script…")).size(12.5))
+                        .on_hover_text(tr("Lua automation and site readers"))
+                        .clicked()
+                    {
+                        self.scripts.package_action = Some(true);
+                    }
                 }
             });
         });

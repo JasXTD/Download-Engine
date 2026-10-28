@@ -40,6 +40,89 @@ pub(super) struct State {
     windows: BTreeMap<String, Window>,
     pending: HashSet<String>,
     auto_close_on_complete: bool,
+    added: HashSet<String>,
+    cancelled: HashSet<String>,
+    refresh: Option<background_io::Task<Batch>>,
+    revision: u64,
+}
+
+struct Snapshot {
+    job: Option<Job>,
+    queue_id: String,
+    queue: String,
+    running: bool,
+    limits: bandwidth::Limits,
+    phase: Option<Phase>,
+    segments: Vec<SegmentSnapshot>,
+    media: Vec<download_engine::transfer_activity::MediaSnapshot>,
+    disk_segments: Vec<u64>,
+}
+
+impl Snapshot {
+    fn load(store: &Store, id: &str) -> anyhow::Result<Self> {
+        let job = store.get(id)?;
+        let queue_id = store.job_queue(id)?;
+        let queue = store
+            .queues()?
+            .into_iter()
+            .find(|queue| Some(&queue.id) == queue_id.as_ref());
+        let running = queue.as_ref().is_some_and(|queue| queue.running)
+            || store.immediate_downloads()?.iter().any(|job| job == id);
+        let segments = store.activity.segments(id);
+        let disk_segments = if let Some(plan) = job
+            .as_ref()
+            .and_then(|job| job.plan.as_ref())
+            .filter(|_| segments.is_empty())
+        {
+            let root = store.paths.parts(id)?;
+            (0..plan.segments.len())
+                .map(|i| {
+                    std::fs::metadata(root.join(format!("segment-{i}.part")))
+                        .map(|m| m.len())
+                        .unwrap_or(0)
+                })
+                .collect()
+        } else {
+            Vec::new()
+        };
+        Ok(Self {
+            job,
+            queue_id: queue_id.unwrap_or_else(|| MAIN_QUEUE.into()),
+            queue: queue.map(|queue| queue.name).unwrap_or_default(),
+            running,
+            limits: store.bandwidth_limits()?,
+            phase: store.activity.get(id),
+            segments,
+            media: store.activity.media_parts(id),
+            disk_segments,
+        })
+    }
+}
+
+struct Batch {
+    revision: u64,
+    receipts: anyhow::Result<Vec<String>>,
+    snapshots: HashMap<String, anyhow::Result<Snapshot>>,
+}
+
+impl Batch {
+    fn load(store: &Store, mut ids: HashSet<String>, revision: u64) -> Self {
+        let receipts = store.take_download_status_requests();
+        if let Ok(receipts) = &receipts {
+            ids.extend(receipts.iter().cloned());
+        }
+        Self {
+            revision,
+            receipts,
+            snapshots: ids
+                .into_iter()
+                .map(|id| {
+                    let snapshot = Snapshot::load(store, &id);
+                    (id, snapshot)
+                })
+                .collect(),
+        }
+    }
 }
 
 struct Window {
@@ -99,34 +182,26 @@ impl Window {
         }
     }
 
-    fn refresh(&mut self, store: &Store) -> Option<Action> {
+    fn apply(&mut self, result: anyhow::Result<Snapshot>) -> Option<Action> {
         let Some(previous) = &self.job else {
             return None;
         };
         let was_active = matches!(previous.status, Status::Downloading | Status::Queued);
-        let result = (|| -> anyhow::Result<_> {
-            let job = store.get(&previous.id)?;
-            let queue_id = store.job_queue(&previous.id)?;
-            let queues = store.queues()?;
-            let queue = queues
-                .into_iter()
-                .find(|q| Some(&q.id) == queue_id.as_ref());
-            let running = queue.as_ref().is_some_and(|q| q.running)
-                || store.immediate_downloads()?.contains(&previous.id);
-            let limits = store.bandwidth_limits()?;
-            Ok((
-                job,
-                queue_id.unwrap_or_else(|| MAIN_QUEUE.into()),
-                queue.map(|q| q.name).unwrap_or_default(),
+        match result {
+            Ok(Snapshot {
+                mut job,
+                queue_id,
+                queue,
                 running,
                 limits,
-            ))
-        })();
-        match result {
-            Ok((mut job, queue_id, queue, running, limits)) => {
-                self.phase = store.activity.get(&previous.id);
-                self.live_segments = store.activity.segments(&previous.id);
-                self.live_media_parts = store.activity.media_parts(&previous.id);
+                phase,
+                segments,
+                media,
+                disk_segments,
+            }) => {
+                self.phase = phase;
+                self.live_segments = segments;
+                self.live_media_parts = media;
                 self.live_media = self.live_media_parts.first().copied();
                 if let Some(ref mut current) = job
                     && current.status == Status::Downloading
@@ -147,25 +222,7 @@ impl Window {
                     let live_sum: u64 = self.live_segments.iter().map(|s| s.downloaded).sum();
                     current.downloaded = current.downloaded.max(live_sum);
                 }
-                if let Some(ref current) = job
-                    && let Some(ref plan) = current.plan
-                    && self.live_segments.is_empty()
-                {
-                    if (self.disk_segments.len() != plan.segments.len()
-                        || current.downloaded != previous.downloaded)
-                        && let Ok(root) = store.paths.parts(&current.id)
-                    {
-                        self.disk_segments = (0..plan.segments.len())
-                            .map(|i| {
-                                std::fs::metadata(root.join(format!("segment-{i}.part")))
-                                    .map(|m| m.len())
-                                    .unwrap_or(0)
-                            })
-                            .collect();
-                    }
-                } else {
-                    self.disk_segments.clear();
-                }
+                self.disk_segments = disk_segments;
                 if !self.speed_initialized && self.speed_request.is_none() {
                     self.file_speed = SpeedField::new(limits.downloads.get(&previous.id).copied());
                     self.global_speed = SpeedField::new(limits.global);
@@ -335,7 +392,35 @@ enum Action {
 }
 
 impl Desktop {
+    pub(super) fn cached_status_job(&self, id: &str) -> Option<Job> {
+        self.download_status
+            .windows
+            .get(id)
+            .and_then(|window| window.job.clone())
+    }
+
+    pub(super) fn status_folder_result(
+        &mut self,
+        directory: &std::path::Path,
+        error: Option<&str>,
+    ) {
+        for window in self.download_status.windows.values_mut() {
+            if window
+                .job
+                .as_ref()
+                .is_some_and(|job| job.directory == directory)
+                && window.notice.as_deref() == Some(tr("Opening folder…"))
+            {
+                window.notice = error.map(str::to_owned);
+            }
+        }
+    }
+    #[cfg(test)]
+    pub(super) fn status_refresh_pending(&self) -> bool {
+        self.download_status.refresh.is_some()
+    }
     pub(super) fn open_download_status(&mut self, job: &Job) {
+        self.download_status.revision = self.download_status.revision.wrapping_add(1);
         self.download_status.pending.remove(&job.id);
         let auto_close = self.download_status.auto_close_on_complete;
         let window = self
@@ -348,54 +433,47 @@ impl Desktop {
                 window
             });
         window.focus = true;
-        let _ = window.refresh(&self.store);
+        self.last_refresh = Instant::now() - Duration::from_secs(1);
     }
 
     /// Called only for an explicitly started single file. Existing jobs, batches,
     /// CLI commands, scripts and queue starts do not open windows implicitly.
     pub(super) fn expect_download_status(&mut self, id: &str) {
         if self.interface.auto_download_status {
+            self.download_status.cancelled.remove(id);
             self.download_status.pending.insert(id.into());
         }
     }
 
     pub(super) fn expect_added_status(&mut self, id: &str) {
-        let result = (|| -> anyhow::Result<bool> {
-            let queue = self.store.job_queue(id)?;
-            Ok(self
-                .store
-                .queues()?
-                .iter()
-                .any(|q| Some(&q.id) == queue.as_ref() && q.running)
-                || self
-                    .store
-                    .immediate_downloads()?
-                    .iter()
-                    .any(|job| job == id))
-        })();
-        match result {
-            Ok(true) => self.expect_download_status(id),
-            Ok(false) => {}
-            Err(error) => {
-                self.notice = Some(Notice::error(tf!(
-                    "Cannot open download status: {error}",
-                    error = error
-                )))
-            }
+        if self.interface.auto_download_status {
+            self.download_status.cancelled.remove(id);
+            self.download_status.added.insert(id.into());
         }
     }
 
     pub(super) fn cancel_status_request(&mut self, command: &Command) {
+        self.download_status.revision = self.download_status.revision.wrapping_add(1);
         match command {
             Command::Pause(id) | Command::Remove(id) => {
                 self.download_status.pending.remove(id);
+                self.download_status.added.remove(id);
+                self.download_status.cancelled.insert(id.clone());
             }
-            Command::PauseAll | Command::PauseQueue(_) => self.download_status.pending.clear(),
+            Command::PauseAll | Command::PauseQueue(_) => {
+                self.download_status
+                    .cancelled
+                    .extend(self.download_status.pending.drain());
+                self.download_status
+                    .cancelled
+                    .extend(self.download_status.added.drain());
+            }
             _ => {}
         }
     }
 
     pub(super) fn stop_selected_downloads(&mut self) {
+        self.download_status.revision = self.download_status.revision.wrapping_add(1);
         for job in self.selected_jobs() {
             if !matches!(job.status, Status::Downloading | Status::Queued) {
                 continue;
@@ -403,6 +481,8 @@ impl Desktop {
             match self.scheduler.send(Command::Pause(job.id.clone())) {
                 Ok(()) => {
                     self.download_status.pending.remove(&job.id);
+                    self.download_status.added.remove(&job.id);
+                    self.download_status.cancelled.insert(job.id.clone());
                     self.download_status.windows.remove(&job.id);
                 }
                 Err(error) => self.notice = Some(Notice::error(error.to_string())),
@@ -411,10 +491,17 @@ impl Desktop {
     }
 
     pub(super) fn stop_all_downloads(&mut self) {
+        self.download_status.revision = self.download_status.revision.wrapping_add(1);
         // Individual pauses also stop immediate downloads and clear automatic
         // queue-resume ownership. Command::Stop would shut down the scheduler.
         match self.scheduler.send(Command::PauseAll) {
             Ok(()) => {
+                self.download_status
+                    .cancelled
+                    .extend(self.download_status.pending.drain());
+                self.download_status
+                    .cancelled
+                    .extend(self.download_status.added.drain());
                 self.download_status.pending.clear();
                 self.download_status.windows.retain(|_, window| {
                     window
@@ -428,12 +515,54 @@ impl Desktop {
     }
 
     pub(super) fn refresh_download_status(&mut self) {
-        match self.store.take_download_status_requests() {
-            Ok(ids) => {
-                for id in ids {
-                    self.expect_added_status(&id);
-                }
+        self.poll_download_status();
+        if self.download_status.refresh.is_some() {
+            return;
+        }
+        let ids = self
+            .download_status
+            .windows
+            .keys()
+            .chain(&self.download_status.pending)
+            .chain(&self.download_status.added)
+            .cloned()
+            .collect();
+        let store = self.store.clone();
+        let revision = self.download_status.revision;
+        match background_io::Task::spawn(self.background_io.context.clone(), move || {
+            Ok(Batch::load(&store, ids, revision))
+        }) {
+            Ok(task) => self.download_status.refresh = Some(task),
+            Err(error) => self.notice = Some(Notice::error(error.to_string())),
+        }
+    }
+
+    pub(super) fn poll_download_status(&mut self) {
+        let Some(result) = self
+            .download_status
+            .refresh
+            .as_mut()
+            .and_then(background_io::Task::poll)
+        else {
+            return;
+        };
+        self.download_status.refresh = None;
+        let mut data = match result {
+            Ok(data) => data,
+            Err(error) => {
+                self.notice = Some(Notice::error(error.to_string()));
+                return;
             }
+        };
+        let consumed_receipts = data.receipts.is_ok();
+        match data.receipts {
+            Ok(ids) if self.interface.auto_download_status => {
+                self.download_status.added.extend(
+                    ids.into_iter()
+                        .filter(|id| !self.download_status.cancelled.contains(id)),
+                );
+            }
+            Ok(_) => {}
             Err(error) => {
                 self.notice = Some(Notice::error(tf!(
                     "Cannot read browser status requests: {error}",
@@ -443,40 +572,69 @@ impl Desktop {
         }
         if !self.interface.auto_download_status {
             self.download_status.pending.clear();
+            self.download_status.added.clear();
+        }
+        // These tombstones only guard receipts in this batch; consumed
+        // requests cannot reappear on the next refresh.
+        if consumed_receipts {
+            self.download_status.cancelled.clear();
+        }
+        // Receipts survive a changed command/window, but its older job sample
+        // cannot acknowledge that newer action or restore a closed window.
+        if data.revision != self.download_status.revision {
+            return;
+        }
+        let added: Vec<_> = self.download_status.added.iter().cloned().collect();
+        for id in added {
+            if let Some(Ok(snapshot)) = data.snapshots.get(&id) {
+                self.download_status.added.remove(&id);
+                if snapshot.running {
+                    self.download_status.pending.insert(id);
+                }
+            } else if let Some(Err(error)) = data.snapshots.get(&id) {
+                self.notice = Some(Notice::error(tf!(
+                    "Cannot open download status: {error}",
+                    error = error
+                )));
+            }
         }
         let pending: Vec<_> = self.download_status.pending.iter().cloned().collect();
         for id in pending {
-            match self.store.get(&id) {
-                Ok(Some(job))
-                    if job.status == Status::Complete
-                        && self.download_status.auto_close_on_complete =>
-                {
-                    self.download_status.pending.remove(&id);
-                }
-                Ok(Some(job))
-                    if matches!(
-                        job.status,
-                        Status::Downloading | Status::Complete | Status::Failed
-                    ) =>
-                {
-                    self.open_download_status(&job);
-                }
-                Ok(Some(_)) => {}
-                Ok(None) => {
-                    self.download_status.pending.remove(&id);
-                }
-                Err(error) => {
-                    self.download_status.pending.remove(&id);
+            match data.snapshots.get(&id) {
+                Some(Ok(snapshot)) => match snapshot.job.as_ref() {
+                    Some(job)
+                        if job.status == Status::Complete
+                            && self.download_status.auto_close_on_complete =>
+                    {
+                        self.download_status.pending.remove(&id);
+                    }
+                    Some(job)
+                        if matches!(
+                            job.status,
+                            Status::Downloading | Status::Complete | Status::Failed
+                        ) =>
+                    {
+                        self.open_download_status(&job.clone())
+                    }
+                    None => {
+                        self.download_status.pending.remove(&id);
+                    }
+                    _ => {}
+                },
+                Some(Err(error)) => {
                     self.notice = Some(Notice::error(tf!(
                         "Cannot open download status: {error}",
                         error = error
-                    )));
+                    )))
                 }
+                None => {}
             }
         }
         let mut auto_actions = Vec::new();
         for (id, window) in &mut self.download_status.windows {
-            if let Some(action) = window.refresh(&self.store) {
+            if let Some(snapshot) = data.snapshots.remove(id)
+                && let Some(action) = window.apply(snapshot)
+            {
                 auto_actions.push((id.clone(), action));
             }
         }
@@ -490,7 +648,9 @@ impl Desktop {
     }
 
     pub(super) fn status_command_failed(&mut self, error: &str) {
+        self.download_status.revision = self.download_status.revision.wrapping_add(1);
         self.download_status.pending.clear();
+        self.download_status.added.clear();
         for window in self.download_status.windows.values_mut() {
             if window.waiting.take().is_some() {
                 window.notice = Some(error.into());
@@ -579,7 +739,7 @@ impl Desktop {
                     let had_input = ui.ctx().input(|i| !i.events.is_empty());
                     let prev_tab = window.tab;
                     let prev_details = window.details;
-                    let p = Palette::new(ui.visuals().dark_mode);
+                    let p = Palette::for_context(ui.ctx());
                     if class == egui::ViewportClass::EmbeddedWindow {
                         form_dialog::frame(p).show(ui, |ui| {
                             action = window.body(ui, p, false, current_watch, power_states)
@@ -640,7 +800,10 @@ impl Desktop {
 
     fn status_action(&mut self, id: &str, window: &mut Window, action: Option<Action>) -> bool {
         if action == Some(Action::Hide) {
+            self.download_status.revision = self.download_status.revision.wrapping_add(1);
             self.download_status.pending.remove(id);
+            self.download_status.added.remove(id);
+            self.download_status.cancelled.insert(id.to_owned());
             return false;
         }
         let Some(job) = window.job.clone().filter(|_| window.error.is_none()) else {
@@ -709,6 +872,7 @@ impl Desktop {
             None | Some(Action::Hide) => None,
         };
         if let Some((command, status)) = command {
+            self.cancel_status_request(&command);
             match self.scheduler.send(command) {
                 Ok(()) => {
                     window.waiting = Some(status);
@@ -1058,105 +1222,87 @@ impl Window {
             .map(|v| format!("{:.0}%", v * 100.0))
             .unwrap_or_else(|| tr("Size unknown").into());
 
-        // Main summary card
+        // Keep the summary focused on transfer metrics; progress belongs beside its bar.
         egui::Frame::new()
             .fill(p.background)
             .stroke(Stroke::new(1.0, p.border))
-            .corner_radius(6)
-            .inner_margin(egui::Margin::symmetric(8, 4))
+            .corner_radius(8)
+            .inner_margin(12)
             .show(ui, |ui| {
-                ui.set_min_width(ui.available_width());
-                ui.horizontal(|ui| {
-                    let url_width = (ui.available_width() - 120.0).max(80.0);
-                    ui.allocate_ui_with_layout(
-                        vec2(url_width, 15.0),
-                        Layout::left_to_right(Align::Center),
-                        |ui| {
-                            ui.set_max_width(url_width);
-                            ui.add(
-                                egui::Label::new(
-                                    RichText::new(&job.url).size(11.0).color(p.text).strong(),
-                                )
-                                .truncate(),
-                            )
-                            .on_hover_text(&job.url);
-                        },
-                    );
-                    ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                        ui.label(RichText::new(pct_badge).size(13.5).strong().color(p.accent));
-                    });
-                });
-                ui.add_space(1.0);
-                let file_size_value = job
-                    .total
-                    .map(bytes)
-                    .unwrap_or_else(|| tr("Size unknown").into());
-                let downloaded_value = job
-                    .total
-                    .map(|n| {
-                        let pct = (job.downloaded as f64 / n.max(1) as f64) * 100.0;
-                        tf!("{} ({pct:.2}%)", bytes(job.downloaded), pct = pct)
-                    })
-                    .unwrap_or_else(|| bytes(job.downloaded));
-                let rate_value = if job.status == Status::Downloading && self.rate > 0.0 {
+                ui.set_width(ui.available_width());
+                if self.waiting.is_some()
+                    || job.status != Status::Downloading
+                    || self.phase.is_some_and(|phase| phase != Phase::Downloading)
+                {
+                    ui.add(
+                        egui::Label::new(RichText::new(&status_text).color(p.status(job.status)))
+                            .truncate(),
+                    )
+                    .on_hover_text(&status_text);
+                }
+                let rate = if job.status == Status::Downloading && self.rate > 0.0 {
                     tf!("{}/sec", bytes(self.rate as u64))
                 } else {
                     "—".into()
                 };
-                let resume_cap = if job.plan.is_some() || job.hls.is_some() || job.ftp.is_some() {
-                    (tr("Supported"), p.accent)
-                } else if job.total.is_some() && job.downloaded > 0 {
-                    (tr("Starts from the beginning"), p.warning)
-                } else {
-                    (tr("Checked when downloading"), p.text)
-                };
-
-                ui.spacing_mut().interact_size.y = 15.0;
-                egui::Grid::new("status-summary-grid")
-                    .num_columns(2)
-                    .min_row_height(15.0)
-                    .spacing([14.0, 1.5])
-                    .show(ui, |ui| {
-                        ui.label(RichText::new(tr("Status")).size(11.0).color(p.muted));
-                        ui.label(
-                            RichText::new(&status_text)
-                                .size(11.0)
-                                .strong()
-                                .color(p.status(job.status)),
-                        );
-                        ui.end_row();
-
-                        ui.label(RichText::new(tr("Size")).size(11.0).color(p.muted));
-                        ui.label(RichText::new(&file_size_value).size(11.0));
-                        ui.end_row();
-
-                        ui.label(RichText::new(tr("Downloaded")).size(11.0).color(p.muted));
-                        ui.label(RichText::new(&downloaded_value).size(11.0));
-                        ui.end_row();
-
-                        ui.label(RichText::new(tr("Speed")).size(11.0).color(p.muted));
-                        ui.label(RichText::new(&rate_value).size(11.0));
-                        ui.end_row();
-
-                        ui.label(RichText::new(tr("Time left")).size(11.0).color(p.muted));
-                        ui.label(RichText::new(eta(job, self.rate)).size(11.0));
-                        ui.end_row();
-
-                        ui.label(RichText::new(tr("Resume")).size(11.0).color(p.muted));
-                        ui.label(RichText::new(resume_cap.0).size(11.0).color(resume_cap.1))
-                            .on_hover_text(resume_description(job));
-                        ui.end_row();
-                    });
+                ui.columns(3, |columns| {
+                    for (column, (label, value)) in columns.iter_mut().zip([
+                        (tr("Downloaded"), bytes(job.downloaded)),
+                        (tr("Speed"), rate),
+                        (tr("Time left"), eta(job, self.rate)),
+                    ]) {
+                        column.label(RichText::new(label).size(11.0).color(p.muted));
+                        column
+                            .add(
+                                egui::Label::new(RichText::new(&value).size(18.0).strong())
+                                    .truncate(),
+                            )
+                            .on_hover_text(value);
+                    }
+                });
+                ui.add_space(6.0);
+                ui.horizontal_wrapped(|ui| {
+                    ui.label(RichText::new(tr("Size")).small().color(p.muted));
+                    ui.label(
+                        job.total
+                            .map(bytes)
+                            .unwrap_or_else(|| tr("Size unknown").into()),
+                    );
+                    ui.add_space(12.0);
+                    ui.label(RichText::new(tr("Resume")).small().color(p.muted));
+                    let supported = job.plan.is_some() || job.hls.is_some() || job.ftp.is_some();
+                    ui.label(
+                        RichText::new(if supported {
+                            tr("Supported")
+                        } else if job.total.is_some() && job.downloaded > 0 {
+                            tr("Starts from the beginning")
+                        } else {
+                            tr("Checked when downloading")
+                        })
+                        .small()
+                        .color(if supported { p.accent } else { p.muted }),
+                    )
+                    .on_hover_text(resume_description(job));
+                });
+                ui.add(
+                    egui::Label::new(RichText::new(&job.url).size(11.0).color(p.muted)).truncate(),
+                )
+                .on_hover_text(&job.url);
             });
 
         ui.add_space(4.0);
-        ui.scope(|ui| {
-            ui.visuals_mut().extreme_bg_color = p.track;
-            ui.add(
-                egui::ProgressBar::new(progress(job).unwrap_or(0.0))
-                    .desired_height(8.0)
-                    .fill(p.accent),
-            );
+        ui.horizontal(|ui| {
+            ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+                ui.label(RichText::new(&pct_badge).color(p.accent));
+                ui.visuals_mut().extreme_bg_color = p.track;
+                ui.add(
+                    egui::ProgressBar::new(progress(job).unwrap_or(0.0))
+                        .desired_width(ui.available_width())
+                        .desired_height(12.0)
+                        .fill(p.accent),
+                )
+                .on_hover_text(&status_text);
+            });
         });
 
         // Action bar right below the progress bar:

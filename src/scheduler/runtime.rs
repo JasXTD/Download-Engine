@@ -8,6 +8,7 @@ pub(super) struct Events {
     pub authentication: mpsc::Sender<auth::Event>,
     pub bandwidth: mpsc::Sender<bandwidth::Event>,
     pub quota: mpsc::Sender<quota::Event>,
+    pub quota_status: tokio::sync::watch::Sender<Result<quota::Status, String>>,
     pub finished: mpsc::Sender<Finished>,
     pub script_notices: mpsc::Sender<ScriptNotice>,
 }
@@ -19,6 +20,7 @@ struct Runtime {
     links: link_recovery::Controller,
     grabber: crate::grabber_schedule::Controller,
     scripts: crate::script_automation::Controller,
+    files: file_operations::Controller,
     tasks: JoinSet<(String, Result<()>)>,
     worker_ids: HashMap<tokio::task::Id, String>,
     limiter: bandwidth::Limiter,
@@ -40,11 +42,15 @@ pub(super) async fn run(
         queue_turn: 0,
         grabber: crate::grabber_schedule::Controller::default(),
         scripts: crate::script_automation::Controller::default(),
+        files: file_operations::Controller::default(),
         tasks: JoinSet::new(),
         worker_ids: HashMap::new(),
         limiter,
         events,
     };
+    if let Err(error) = state.files.recover(&state.store) {
+        state.report(format!("File operation recovery: {error:#}"));
+    }
     let mut interval = tokio::time::interval(Duration::from_millis(500));
     loop {
         tokio::select! {
@@ -59,6 +65,11 @@ pub(super) async fn run(
             result = state.tasks.join_next_with_id(), if !state.tasks.is_empty() => {
                 if let Some(result) = result { state.finish(result); }
             }
+            result = state.files.next(), if state.files.running() => {
+                if let Some(result) = result {
+                    state.files.complete(&state.store, result, &state.events.errors);
+                }
+            }
             _ = interval.tick() => state.tick().await,
         }
     }
@@ -70,7 +81,7 @@ impl Runtime {
         &mut self,
         request: &str,
         action: crate::control::Action,
-    ) -> Result<serde_json::Value> {
+    ) -> Result<Option<serde_json::Value>> {
         use crate::control::{self, Action};
         // A script's file actions need its permission before anything changes.
         control::check_script_files(&self.store, &action)?;
@@ -148,7 +159,7 @@ impl Runtime {
                     title: title.clone(),
                     text: text.clone(),
                 });
-                return Ok(serde_json::json!({"title":title,"text":text}));
+                return Ok(Some(serde_json::json!({"title":title,"text":text})));
             }
             Action::PauseAll => (Command::PauseAll, None),
             Action::StartQueue { queue } => (
@@ -163,8 +174,11 @@ impl Runtime {
                 Command::SetQueueLimit(control::queue_id(&self.store, &queue)?, limit),
                 None,
             ),
-            other => return control::execute_stored(&self.store, request, other),
+            other => return control::execute_stored(&self.store, request, other).map(Some),
         };
+        if self.files.check(&self.store, &command)? {
+            return Ok(Some(serde_json::json!({"accepted":true})));
+        }
         if let Some(id) = &job {
             anyhow::ensure!(self.store.get(id)?.is_some(), "Download not found");
             anyhow::ensure!(
@@ -182,16 +196,22 @@ impl Runtime {
             &self.events.finished,
         )
         .await;
+        if matches!(
+            command,
+            Command::RenameFile { .. } | Command::MoveFile { .. }
+        ) {
+            anyhow::ensure!(
+                !job.as_ref().is_some_and(|id| self.active.contains_key(id)),
+                "Pause the download before changing it"
+            );
+            self.files
+                .start(&self.store, command, Some(request.to_owned()))?;
+            return Ok(None); // The worker completes this running receipt.
+        }
         if let Some(id) = &script_retry {
             self.store.count_script_retry(id)?;
         }
-        // A move to another drive copies the file. Download tasks keep running
-        // on other threads meanwhile.
-        let result = if matches!(command, Command::MoveFile { .. }) {
-            tokio::task::block_in_place(|| apply(&self.store, &mut self.active, command))
-        } else {
-            apply(&self.store, &mut self.active, command)
-        };
+        let result = apply(&self.store, &mut self.active, command);
         if let Err(error) = result {
             if let Some(id) = &script_retry {
                 let _ = self.store.uncount_script_retry(id);
@@ -200,15 +220,16 @@ impl Runtime {
         }
         if let Some(id) = removed {
             self.limiter.forget(&id);
-            return Ok(serde_json::json!({"removed":id}));
+            return Ok(Some(serde_json::json!({"removed":id})));
         }
         if let Some(id) = job {
             control::job_summary(
                 &self.store,
                 &self.store.get(&id)?.context("Download was removed")?,
             )
+            .map(Some)
         } else {
-            Ok(serde_json::json!({"accepted":true}))
+            Ok(Some(serde_json::json!({"accepted":true})))
         }
     }
 
@@ -230,6 +251,14 @@ impl Runtime {
     }
 
     async fn command(&mut self, command: Command) {
+        match self.files.check(&self.store, &command) {
+            Ok(true) => return,
+            Err(error) => {
+                self.report(format!("{error:#}"));
+                return;
+            }
+            Ok(false) => {}
+        }
         settle_before_command(
             &self.store,
             &command,
@@ -242,8 +271,11 @@ impl Runtime {
         .await;
         match command {
             Command::Link(command) => {
-                self.links
-                    .handle(&self.store, command, |id| self.active.contains_key(id));
+                self.links.handle(&self.store, command, |id| {
+                    self.active.contains_key(id)
+                        || self.files.busy(id)
+                        || crate::file_relocation::is_pending(&self.store, id).unwrap_or(true)
+                });
             }
             Command::Bandwidth(update) => {
                 let result = self.store.set_bandwidth_limits(&update).and_then(|limits| {
@@ -257,6 +289,10 @@ impl Runtime {
             }
             Command::Quota(update) => {
                 let result = self.limiter.set_quota_limits(update.limits).await;
+                let _ = self
+                    .events
+                    .quota_status
+                    .send_replace(result.as_ref().cloned().map_err(|e| format!("{e:#}")));
                 let _ = self.events.quota.send(quota::Event {
                     request: update.request,
                     result: result.map_err(|e| format!("{e:#}")),
@@ -297,6 +333,20 @@ impl Runtime {
                     self.report("Finish or cancel the link check before changing this download.");
                     return;
                 }
+                if matches!(
+                    command,
+                    Command::RenameFile { .. } | Command::MoveFile { .. }
+                ) {
+                    let result = if id.is_some_and(|id| self.active.contains_key(id)) {
+                        Err(anyhow::anyhow!("Pause the download before changing it"))
+                    } else {
+                        self.files.start(&self.store, command, None)
+                    };
+                    if let Err(error) = result {
+                        self.report(format!("{error:#}"));
+                    }
+                    return;
+                }
                 let removed = match &command {
                     Command::Remove(id) | Command::DeleteFile { id, .. } => Some(id.clone()),
                     _ => None,
@@ -324,7 +374,11 @@ impl Runtime {
         for _ in 0..8 {
             match self.store.claim_control() {
                 Ok(Some((id, action))) => {
-                    let result = self.control(&id, action).await;
+                    let result = match self.control(&id, action).await {
+                        Ok(None) => continue,
+                        Ok(Some(value)) => Ok(value),
+                        Err(error) => Err(error),
+                    };
                     if let Err(error) = self.store.finish_control(&id, result) {
                         self.report(error);
                     }
@@ -347,9 +401,18 @@ impl Runtime {
         {
             self.report(format!("Scheduled website scan: {error:#}"));
         }
-        if let Err(error) = self.limiter.quota_status().await {
-            self.report(format!("Data quota accounting is unavailable: {error:#}"));
-            return;
+        match self.limiter.quota_status().await {
+            Ok(status) => {
+                let _ = self.events.quota_status.send_replace(Ok(status));
+            }
+            Err(error) => {
+                let _ = self
+                    .events
+                    .quota_status
+                    .send_replace(Err(format!("{error:#}")));
+                self.report(format!("Data quota accounting is unavailable: {error:#}"));
+                return;
+            }
         }
         let jobs = match ready_jobs(&self.store, &self.active, &mut self.queue_turn) {
             Ok(jobs) => jobs,
@@ -376,7 +439,7 @@ impl Runtime {
             }
         }
         for (queue, mut job) in jobs {
-            if self.links.busy(&job.id) {
+            if self.links.busy(&job.id) || self.files.busy(&job.id) {
                 continue;
             }
             job.status = Status::Downloading;
@@ -414,6 +477,7 @@ impl Runtime {
         for worker in self.active.values() {
             worker.token.cancel();
         }
+        self.files.shutdown(&self.store, &self.events.errors).await;
         if let Err(error) = self.grabber.shutdown(&self.store).await {
             self.report(format!("Scheduled website scan: {error:#}"));
         }

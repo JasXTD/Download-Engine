@@ -271,7 +271,7 @@ fn logs_search_shortcuts_do_not_change_download_filters_or_selection() {
     assert!(app.logs.search.is_empty());
     assert_eq!(app.search, "first");
     assert_eq!(app.selected, selected);
-    click(&mut app, &ctx, "All downloads");
+    click(&mut app, &ctx, "Download list");
     assert_eq!(app.view, View::Downloads);
     assert_eq!(app.search, "first");
 }

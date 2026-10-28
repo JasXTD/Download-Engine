@@ -30,6 +30,8 @@ pub(super) struct State {
     jump: Option<usize>,
     layout: Option<(String, Language, bool, egui::text::LayoutJob)>,
     popup_rect: Option<egui::Rect>,
+    #[cfg(test)]
+    pub(super) viewport: Option<egui::Rect>,
     #[cfg(feature = "screenshot")]
     capture_started: bool,
     #[cfg(feature = "screenshot")]
@@ -38,6 +40,9 @@ pub(super) struct State {
     capture_stable: u8,
 }
 impl State {
+    pub(super) fn completion_open(&self) -> bool {
+        self.choices.is_some()
+    }
     #[cfg(feature = "screenshot")]
     pub(super) fn capture_ready(&self) -> bool {
         self.checked && (std::env::var("IDM_EX_TEST_EDITOR").is_err() || self.capture_stable >= 3)
@@ -133,6 +138,16 @@ fn replace_with_completion(
 }
 
 pub(super) fn show(ui: &mut egui::Ui, draft: &mut Script, state: &mut State, p: Palette) {
+    show_sized(ui, draft, state, p, None);
+}
+
+pub(super) fn show_sized(
+    ui: &mut egui::Ui,
+    draft: &mut Script,
+    state: &mut State,
+    p: Palette,
+    height: Option<f32>,
+) {
     let id = egui::Id::new(("script-editor", &draft.id));
     #[cfg(feature = "screenshot")]
     if std::env::var("IDM_EX_TEST_EDITOR").is_ok() {
@@ -241,115 +256,123 @@ pub(super) fn show(ui: &mut egui::Ui, draft: &mut Script, state: &mut State, p: 
         .corner_radius(8)
         .inner_margin(8)
         .show(ui, |ui| {
-            egui::Resize::default()
-                .id_salt("script-editor-resize")
+            let resize = egui::Resize::default()
+                .id_salt(("script-editor-resize", height.is_some()))
                 .default_width(ui.available_width())
                 .default_height(130.0)
                 .min_height(80.0)
                 .max_height(480.0)
                 .resizable([false, true])
-                .with_stroke(false)
-                .show(ui, |ui| {
-                    egui::ScrollArea::both()
-                        .id_salt("script-code-scroll")
-                        .max_height(ui.available_height())
-                        .min_scrolled_height(80.0)
-                        .auto_shrink([false, false])
-                        .show(ui, |ui| {
-                            ui.horizontal_top(|ui| {
-                                let left = ui.cursor().min.x;
-                                let gutter = 16.0
-                                    + (draft.body.bytes().filter(|b| *b == b'\n').count() + 1)
-                                        .to_string()
-                                        .len() as f32
-                                        * 8.0;
-                                ui.add_space(gutter);
-                                let mut layouter =
-                                    |ui: &egui::Ui, text: &dyn egui::TextBuffer, _: f32| {
-                                        let text = text.as_str();
-                                        if state.layout.as_ref().is_none_or(
-                                            |(old, language, theme, _)| {
-                                                old != text
-                                                    || *language != draft.language
-                                                    || *theme != dark
-                                            },
-                                        ) {
-                                            state.layout = Some((
-                                                text.into(),
-                                                draft.language,
-                                                dark,
-                                                highlight::layout(text, draft.language, dark),
-                                            ));
-                                        }
-                                        ui.fonts_mut(|f| {
-                                            f.layout_job(state.layout.as_ref().unwrap().3.clone())
-                                        })
-                                    };
-                                let edit = egui::TextEdit::multiline(&mut draft.body)
-                                    .id(id)
-                                    .code_editor()
-                                    .font(egui::FontId::monospace(13.0))
-                                    .frame(egui::Frame::NONE)
-                                    .margin(egui::Margin::ZERO)
-                                    .desired_width(ui.available_width())
-                                    .desired_rows(7)
-                                    .char_limit(MAX_SCRIPT_BYTES)
-                                    .layouter(&mut layouter)
-                                    .show(ui);
-                                if jumping && let Some(range) = edit.cursor_range {
-                                    ui.scroll_to_rect(
-                                        edit.galley
-                                            .pos_from_cursor(range.primary)
-                                            .translate(edit.galley_pos.to_vec2()),
-                                        Some(egui::Align::Center),
-                                    );
-                                }
-                                // Both gutter and markers use the actual galley positions,
-                                // so horizontal/vertical scrolling and font fallback align.
-                                let mut character = 0;
-                                for (row, line) in draft.body.split('\n').enumerate() {
-                                    let rect = edit
-                                        .galley
-                                        .pos_from_cursor(CCursor::new(character))
-                                        .translate(edit.galley_pos.to_vec2());
-                                    if rect.bottom() >= edit.text_clip_rect.top()
-                                        && rect.top() <= edit.text_clip_rect.bottom()
-                                    {
-                                        let error =
-                                            state.diagnostics.iter().any(|d| d.line == row + 1);
-                                        let color = if error { p.warning } else { p.muted };
-                                        ui.painter().text(
-                                            egui::pos2(left + gutter - 6.0, rect.center().y),
-                                            egui::Align2::RIGHT_CENTER,
-                                            (row + 1).to_string(),
-                                            egui::FontId::monospace(12.0),
-                                            color,
-                                        );
-                                        if error {
-                                            let right = edit
-                                                .galley
-                                                .pos_from_cursor(CCursor::new(
-                                                    character + line.chars().count(),
-                                                ))
-                                                .translate(edit.galley_pos.to_vec2());
-                                            let mark = egui::Rect::from_min_max(
-                                                egui::pos2(rect.left(), rect.bottom() - 1.0),
-                                                egui::pos2(
-                                                    right.left().max(rect.left() + 8.0),
-                                                    rect.bottom(),
-                                                ),
-                                            );
-                                            ui.painter()
-                                                .with_clip_rect(edit.text_clip_rect)
-                                                .rect_filled(mark, 0, p.warning);
-                                        }
+                .with_stroke(false);
+            let resize = if let Some(height) = height {
+                resize.fixed_size(egui::vec2(ui.available_width(), height))
+            } else {
+                resize
+            };
+            resize.show(ui, |ui| {
+                let _scroll = egui::ScrollArea::both()
+                    .id_salt("script-code-scroll")
+                    .max_height(ui.available_height())
+                    .min_scrolled_height(80.0)
+                    .auto_shrink([false, false])
+                    .show(ui, |ui| {
+                        ui.horizontal_top(|ui| {
+                            let left = ui.cursor().min.x;
+                            let gutter = 16.0
+                                + (draft.body.bytes().filter(|b| *b == b'\n').count() + 1)
+                                    .to_string()
+                                    .len() as f32
+                                    * 8.0;
+                            ui.add_space(gutter);
+                            let mut layouter =
+                                |ui: &egui::Ui, text: &dyn egui::TextBuffer, _: f32| {
+                                    let text = text.as_str();
+                                    if state.layout.as_ref().is_none_or(
+                                        |(old, language, theme, _)| {
+                                            old != text
+                                                || *language != draft.language
+                                                || *theme != dark
+                                        },
+                                    ) {
+                                        state.layout = Some((
+                                            text.into(),
+                                            draft.language,
+                                            dark,
+                                            highlight::layout(text, draft.language, dark),
+                                        ));
                                     }
-                                    character += line.chars().count() + 1;
+                                    ui.fonts_mut(|f| {
+                                        f.layout_job(state.layout.as_ref().unwrap().3.clone())
+                                    })
+                                };
+                            let edit = egui::TextEdit::multiline(&mut draft.body)
+                                .id(id)
+                                .code_editor()
+                                .font(egui::FontId::monospace(13.0))
+                                .frame(egui::Frame::NONE)
+                                .margin(egui::Margin::ZERO)
+                                .desired_width(ui.available_width())
+                                .desired_rows(7)
+                                .char_limit(MAX_SCRIPT_BYTES)
+                                .layouter(&mut layouter)
+                                .show(ui);
+                            if jumping && let Some(range) = edit.cursor_range {
+                                ui.scroll_to_rect(
+                                    edit.galley
+                                        .pos_from_cursor(range.primary)
+                                        .translate(edit.galley_pos.to_vec2()),
+                                    Some(egui::Align::Center),
+                                );
+                            }
+                            // Both gutter and markers use the actual galley positions,
+                            // so horizontal/vertical scrolling and font fallback align.
+                            let mut character = 0;
+                            for (row, line) in draft.body.split('\n').enumerate() {
+                                let rect = edit
+                                    .galley
+                                    .pos_from_cursor(CCursor::new(character))
+                                    .translate(edit.galley_pos.to_vec2());
+                                if rect.bottom() >= edit.text_clip_rect.top()
+                                    && rect.top() <= edit.text_clip_rect.bottom()
+                                {
+                                    let error = state.diagnostics.iter().any(|d| d.line == row + 1);
+                                    let color = if error { p.warning } else { p.muted };
+                                    ui.painter().text(
+                                        egui::pos2(left + gutter - 6.0, rect.center().y),
+                                        egui::Align2::RIGHT_CENTER,
+                                        (row + 1).to_string(),
+                                        egui::FontId::monospace(12.0),
+                                        color,
+                                    );
+                                    if error {
+                                        let right = edit
+                                            .galley
+                                            .pos_from_cursor(CCursor::new(
+                                                character + line.chars().count(),
+                                            ))
+                                            .translate(edit.galley_pos.to_vec2());
+                                        let mark = egui::Rect::from_min_max(
+                                            egui::pos2(rect.left(), rect.bottom() - 1.0),
+                                            egui::pos2(
+                                                right.left().max(rect.left() + 8.0),
+                                                rect.bottom(),
+                                            ),
+                                        );
+                                        ui.painter()
+                                            .with_clip_rect(edit.text_clip_rect)
+                                            .rect_filled(mark, 0, p.warning);
+                                    }
                                 }
-                                output = Some(edit);
-                            });
+                                character += line.chars().count() + 1;
+                            }
+                            output = Some(edit);
                         });
-                });
+                    });
+                #[cfg(test)]
+                {
+                    state.viewport = Some(_scroll.inner_rect);
+                }
+            });
         });
     let edit = output.expect("script editor output");
     let changed = state.source != draft.body;

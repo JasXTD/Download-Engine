@@ -90,7 +90,7 @@ fn settings_trailing_controls_share_one_right_edge() {
             let output = settled(&mut app, &ctx, size);
             let mut edges = vec![
                 frame_around(&output, top(&output, language.native_name())).right(),
-                frame_around(&output, top(&output, &translated(language, "Dark"))).right(),
+                frame_around(&output, top(&output, &translated(language, "Custom"))).right(),
             ];
             let switches: Vec<_> = rects(&output)
                 .into_iter()
@@ -171,7 +171,7 @@ fn long_queue_names_stop_before_the_card_actions() {
         let (_temp, mut app, ctx) = fixture();
         dark(&mut app, &ctx, language);
         app.store.create_queue(&"W".repeat(64)).unwrap();
-        app.force_refresh();
+        app.refresh_and_wait();
         app.view = View::Queues;
         let output = settled(&mut app, &ctx, WIDE);
         let states = texts(&output, &format!("• {}", translated(language, "Paused")));
@@ -290,12 +290,13 @@ fn video_review_rows_and_destination_labels_line_up() {
 }
 
 #[test]
-fn script_name_row_ends_at_the_editor_edge() {
+fn script_name_row_ends_at_the_code_frame_edge() {
     let (_temp, mut app, ctx) = fixture();
     dark(&mut app, &ctx, Language::English);
     app.view = View::Automation;
     click(&mut app, &ctx, "Scripts");
     click(&mut app, &ctx, "+ New script");
+    app.scripts.settings_open = true;
     let output = settled(&mut app, &ctx, SMALL);
     let value = *texts_where(&output, |text| text.trim().starts_with("300"))
         .last()
@@ -311,12 +312,25 @@ fn script_name_row_ends_at_the_editor_edge() {
             panic!("No Timeout value among {shown:?}")
         });
     let timeout = frame_around(&output, value);
-    let counter = *texts_where(&output, |text| text.ends_with("/ 64 KiB"))
+    let code = *texts_where(&output, |text| text.starts_with("-- Write your own Lua:"))
         .last()
-        .expect("Editor size counter");
+        .expect("Lua starter code");
+    // The code can scroll beyond its panel. Locate its visible border, ignoring
+    // the unbordered text/scroll backgrounds inside it.
+    let editor = output
+        .shapes
+        .iter()
+        .filter_map(|clipped| match &clipped.shape {
+            Shape::Rect(shape) if shape.stroke.width > 0.0 && shape.rect.contains(code.min) => {
+                Some(shape.rect)
+            }
+            _ => None,
+        })
+        .min_by(|a, b| a.area().total_cmp(&b.area()))
+        .expect("Bordered code panel");
     same(
-        &[timeout.right(), counter.right()],
-        "Timeout field and editor edges",
+        &[timeout.right(), editor.right()],
+        "Timeout field and code frame edges",
     );
 }
 
@@ -532,8 +546,8 @@ fn toolbar_labels_share_one_size_and_top_line() {
                 })
                 .collect();
             assert!(
-                labels.len() >= 15,
-                "{language:?}: expected 15 toolbar labels"
+                labels.len() >= 6 && labels.len() <= 16,
+                "{language:?}: expected readable toolbar actions and More"
             );
             let what = format!("{language:?} {size:?}");
             same(
@@ -576,6 +590,7 @@ fn checkbox_labels_wrap_as_a_whole_in_wrapping_rows() {
     app.view = View::Automation;
     click(&mut app, &ctx, "Scripts");
     click(&mut app, &ctx, "+ New script");
+    app.scripts.settings_open = true;
     // A queue choice fills the row, so the checkbox has to move to the next one.
     click(&mut app, &ctx, "Manual only");
     click(&mut app, &ctx, "Download completed");

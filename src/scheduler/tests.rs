@@ -156,6 +156,116 @@ fn setup() -> (tempfile::TempDir, Store) {
 
 #[cfg(windows)]
 #[test]
+fn slow_file_copy_keeps_commands_receipts_and_shutdown_responsive() {
+    use crate::{control::Action, file_relocation::tests::Gate};
+    let (_temp, store) = setup();
+    store.set_queue_running(MAIN_QUEUE, false).unwrap();
+    let mut jobs = add(&store, MAIN_QUEUE, 2);
+    store.set_queue_running(MAIN_QUEUE, false).unwrap();
+    let mut complete = jobs.remove(0);
+    let waiting = jobs.remove(0);
+    let original = store.paths.downloads.join("completed.bin");
+    std::fs::write(&original, vec![0x67; 700_000]).unwrap();
+    complete.status = Status::Complete;
+    complete.saved_path = Some(original.clone());
+    store.save(&complete).unwrap();
+    let gate = Gate::copying(&complete.id);
+    let scheduler = Scheduler::start(store.clone()).unwrap();
+    let moving = uuid::Uuid::new_v4().to_string();
+    let script = store
+        .save_script(&crate::script_automation::Script {
+            id: uuid::Uuid::new_v4().to_string(),
+            revision: 0,
+            name: "Controlled timeout".into(),
+            language: crate::script_automation::Language::PowerShell,
+            body: "Start-Sleep 60".into(),
+            enabled: false,
+            trigger: crate::script_automation::Trigger::Manual,
+            timeout_seconds: 1,
+            change_files: false,
+        })
+        .unwrap();
+    let script_run = store
+        .run_script(&script.id, &uuid::Uuid::new_v4().to_string())
+        .unwrap();
+    store
+        .submit_control(
+            &moving,
+            &Action::Rename {
+                id: complete.id.clone(),
+                name: "moved.bin".into(),
+                script_run: None,
+            },
+        )
+        .unwrap();
+    gate.wait();
+    assert_eq!(store.control_receipt(&moving).unwrap().state, "running");
+    let until = std::time::Instant::now() + Duration::from_secs(5);
+    while store.script_run(&script_run.id).unwrap().active() {
+        assert!(
+            std::time::Instant::now() < until,
+            "Script deadline was blocked by the copy"
+        );
+        std::thread::sleep(Duration::from_millis(20));
+    }
+    assert_eq!(store.script_run(&script_run.id).unwrap().state, "timed_out");
+
+    let rejected = uuid::Uuid::new_v4().to_string();
+    let pause = uuid::Uuid::new_v4().to_string();
+    store
+        .submit_control(
+            &rejected,
+            &Action::Remove {
+                id: complete.id.clone(),
+                delete_file: true,
+                script_run: None,
+            },
+        )
+        .unwrap();
+    store
+        .submit_control(
+            &pause,
+            &Action::Pause {
+                id: waiting.id.clone(),
+            },
+        )
+        .unwrap();
+    let until = std::time::Instant::now() + Duration::from_secs(3);
+    while store.control_receipt(&pause).unwrap().state != "done" {
+        assert!(
+            std::time::Instant::now() < until,
+            "Unrelated pause blocked by the copy"
+        );
+        std::thread::sleep(Duration::from_millis(20));
+    }
+    assert_eq!(
+        store.get(&waiting.id).unwrap().unwrap().status,
+        Status::Paused
+    );
+    assert_eq!(store.control_receipt(&rejected).unwrap().state, "failed");
+    assert_eq!(store.control_receipt(&moving).unwrap().state, "running");
+    // No gate release: shutdown must reach and cancel the copy itself.
+    let (finished, received) = mpsc::channel();
+    let thread = std::thread::spawn(move || {
+        drop(scheduler);
+        let _ = finished.send(());
+    });
+    let outcome = received.recv_timeout(Duration::from_secs(3));
+    gate.release();
+    thread.join().unwrap();
+    assert!(outcome.is_ok(), "Shutdown waited for the full copy");
+    assert_eq!(store.control_receipt(&moving).unwrap().state, "failed");
+    assert_eq!(std::fs::read(&original).unwrap(), vec![0x67; 700_000]);
+    assert!(!store.paths.downloads.join("moved.bin").exists());
+    assert!(crate::file_relocation::pending(&store).unwrap().is_empty());
+    assert_eq!(
+        store.get(&complete.id).unwrap().unwrap().saved_path,
+        Some(original)
+    );
+}
+
+#[cfg(windows)]
+#[test]
 fn delete_file_removes_only_the_confirmed_file_and_its_history() {
     let (_temp, store) = setup();
     let mut job = add(&store, MAIN_QUEUE, 1).remove(0);

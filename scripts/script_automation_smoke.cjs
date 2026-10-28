@@ -1,8 +1,9 @@
+const openProfileDatabase = require('./profile_database.cjs');
 // Real desktop, CLI, Lua, PowerShell, loopback downloads and cancellation.
 // Each invocation owns its profile, server and child desktop; no user data is used.
 const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
 const http=require('node:http'),{spawn}=require('node:child_process'),{once}=require('node:events');
-const {randomUUID,createHash}=require('node:crypto'),{DatabaseSync}=require('node:sqlite');
+const {randomUUID,createHash}=require('node:crypto');
 const {setTimeout:delay}=require('node:timers/promises');
 const root=path.resolve(__dirname,'..'),binary=path.resolve(process.argv[2]||path.join(root,'dist/IDM-EX-UnsignedDev'));
 const home=path.join(root,'artifacts',`script-automation-smoke-${randomUUID().slice(0,8)}`);
@@ -120,8 +121,15 @@ async function checkLuaGuide(url) {
   server.listen(0,'127.0.0.1');await once(server,'listening');const url=`http://127.0.0.1:${server.address().port}/script-fixture.bin`;
   try {
     assert.deepEqual(await cli(['scripts','list']),[]);
-    db=new DatabaseSync(path.join(home,'data/queue.sqlite3'));db.exec('PRAGMA busy_timeout=5000;UPDATE download_queues SET running=0;');
+    db=openProfileDatabase(path.join(home,'data/queue.sqlite3'));db.exec('PRAGMA busy_timeout=5000;UPDATE download_queues SET running=0;');
     await launch();
+
+    const core=await saveLua(fs.readFileSync(path.join(root,'examples/core-api-automation.lua'),'utf8'),{kind:'manual'},false,'Core API example');
+    const coreRun=await cli(['scripts','run',core.id]);
+    assert.equal((await finished(coreRun.id)).state,'succeeded',output(coreRun.id));
+    assert(output(coreRun.id).includes('Lua API\t1')&&output(coreRun.id).includes('Download counts:'),output(coreRun.id));
+    await cli(['scripts','remove',core.id]);
+    mark('Packaged Lua API version, capability checks, JSON helpers and read-only queue/status example work');
 
     if(process.argv.includes('--guide-only')) {
       const guide=await checkLuaGuide(url);
@@ -218,14 +226,22 @@ async function checkLuaGuide(url) {
     const timedRun=await until(()=>runs(timer.id).find(terminal),'real interval trigger',75000);assert.equal(timedRun.state,'succeeded',output(timedRun.id));await cli(['scripts','disable',timer.id]);
     mark('Real one-minute interval fired without clock manipulation');
     const luaTimerRun=await until(()=>runs(luaTimer.id).find(terminal),'real Lua interval',75000);assert.equal(luaTimerRun.state,'succeeded',output(luaTimerRun.id));await cli(['scripts','disable',luaTimer.id]);
+    // A slow test run may span more than one valid interval. Once disabled,
+    // settle existing runs and assert that restart adds no new run IDs.
+    const intervalRuns=new Map();
+    for(const definition of [timer,luaTimer]) {
+      const settled=await until(()=>{const all=runs(definition.id);return all.length>0&&all.every(terminal)&&all;},'disabled interval settled');
+      assert(settled.every(r=>r.state==='succeeded'));
+      intervalRuns.set(definition.id,settled.map(r=>r.id));
+    }
     const luaCrash=await cli(['scripts','run',luaLoop.id]);await until(()=>output(luaCrash.id).includes('Lua loop started'),'Lua crash worker running');
     assert.equal(runs(startup.id).length,0);
     const crash=await cli(['scripts','run',long.id]);const crashChild=await childOf(crash.id);await stop();await until(()=>!alive(crashChild),'crash child');childPids.delete(crashChild);
     await launch();await until(()=>run(crash.id).state==='interrupted','crash recovery');
     await until(()=>run(luaCrash.id).state==='interrupted','Lua crash recovery');
-    const luaBoot=await until(()=>runs(luaStartup.id).find(terminal),'Lua startup');assert.equal(luaBoot.state,'succeeded',output(luaBoot.id));assert.equal(runs(luaStartup.id).length,1);assert.equal(runs(luaWatcher.id).length,1);assert.equal(runs(luaQueueWatch.id).length,1);assert.equal(runs(luaTimer.id).length,1);
+    const luaBoot=await until(()=>runs(luaStartup.id).find(terminal),'Lua startup');assert.equal(luaBoot.state,'succeeded',output(luaBoot.id));assert.equal(runs(luaStartup.id).length,1);assert.equal(runs(luaWatcher.id).length,1);assert.equal(runs(luaQueueWatch.id).length,1);assert.deepEqual(runs(luaTimer.id).map(r=>r.id),intervalRuns.get(luaTimer.id));
     const boot=await until(()=>runs(startup.id).find(terminal),'startup trigger');assert.equal(boot.state,'succeeded',output(boot.id));
-    await delay(1100);assert.equal(runs(startup.id).length,1);assert.equal(runs(watcher.id).length,1);assert.equal(runs(queueWatch.id).length,1);assert.equal(runs(timer.id).length,1);assert.equal(hash(Buffer.from(output(floodRun.id))),hash(Buffer.from(persisted.map(l=>l.text).join(''))),'Retained UTF-8 output hash');
+    await delay(1100);assert.equal(runs(startup.id).length,1);assert.equal(runs(watcher.id).length,1);assert.equal(runs(queueWatch.id).length,1);assert.deepEqual(runs(timer.id).map(r=>r.id),intervalRuns.get(timer.id));assert.equal(hash(Buffer.from(output(floodRun.id))),hash(Buffer.from(persisted.map(l=>l.text).join(''))),'Retained UTF-8 output hash');
     assert(!fs.existsSync(path.join(home,'data/script-runtime',crash.id)));
     mark('Desktop crash kills children; restart marks interrupted without replay, cleans temporary source and preserves logs; startup fires once');
     await cli(['scripts','remove',failed.id]);assert((await cli(['scripts','runs'])).some(r=>r.id===failure.id));assert((await cli(['scripts','logs',failure.id])).length>0);

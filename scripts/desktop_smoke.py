@@ -7,7 +7,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
 import os
 from pathlib import Path
-import sqlite3
+from profile_database import open_profile_database
 import struct
 import subprocess
 import threading
@@ -107,23 +107,23 @@ def main():
     stderr=(run_root/"desktop.log").open("w",encoding="utf-8")
     initial_data=run_root/"data"
     initial_data.mkdir()
-    with sqlite3.connect(initial_data/"queue.sqlite3") as conn:
+    with open_profile_database(initial_data/"queue.sqlite3") as conn:
         # Unrelated transfer fixtures should not place notifications on the desktop.
         conn.execute("CREATE TABLE desktop_preferences(id INTEGER PRIMARY KEY CHECK(id=1),close_to_tray INTEGER NOT NULL,notify_complete INTEGER NOT NULL,notify_failed INTEGER NOT NULL)")
         conn.execute("INSERT INTO desktop_preferences VALUES(1,0,0,0)")
     if args.bandwidth:
-        with sqlite3.connect(initial_data/"queue.sqlite3") as conn:
+        with open_profile_database(initial_data/"queue.sqlite3") as conn:
             conn.execute("CREATE TABLE bandwidth_settings(id INTEGER PRIMARY KEY CHECK(id=1),bytes_per_second INTEGER CHECK(bytes_per_second BETWEEN 1024 AND 1073741824))")
             conn.execute("INSERT INTO bandwidth_settings VALUES(1,2097152)")
     if args.quotas:
-        with sqlite3.connect(initial_data/"queue.sqlite3") as conn:
+        with open_profile_database(initial_data/"queue.sqlite3") as conn:
             conn.execute("CREATE TABLE data_quotas(id INTEGER PRIMARY KEY,hourly_limit INTEGER,daily_limit INTEGER,hourly_used INTEGER NOT NULL,daily_used INTEGER NOT NULL,hour_start INTEGER,day_start INTEGER)")
             conn.execute("INSERT INTO data_quotas VALUES(1,1048576,33554432,0,0,?,?)",(int(time.time()),int(time.time())))
     if has_antivirus:
         scan_settings={"enabled":True,"provider":"malwarebytes" if args.antivirus_malwarebytes else "defender" if args.antivirus_defender else "custom","timeout_seconds":10}
         if args.antivirus_scanner:
             scan_settings.update(executable=str(Path(args.antivirus_scanner).resolve()),arguments=[args.antivirus_mode,"{file}"],clean_exit=0,detected_exit=1,custom_confirmed=True)
-        with sqlite3.connect(initial_data/"queue.sqlite3") as conn:
+        with open_profile_database(initial_data/"queue.sqlite3") as conn:
             conn.execute("CREATE TABLE antivirus_settings(id INTEGER PRIMARY KEY CHECK(id=1),data TEXT NOT NULL)")
             conn.execute("INSERT INTO antivirus_settings VALUES(1,?)",(json.dumps(scan_settings),))
     expected_folder=run_root/"downloads"/"Other"
@@ -131,7 +131,7 @@ def main():
     if args.folders:
         expected_folder=run_root/"custom documents"
         filename="desktop-test.pdf"
-        with sqlite3.connect(initial_data/"queue.sqlite3") as conn:
+        with open_profile_database(initial_data/"queue.sqlite3") as conn:
             conn.execute("CREATE TABLE download_folders(id INTEGER PRIMARY KEY CHECK(id=1),data TEXT NOT NULL)")
             conn.execute("INSERT INTO download_folders VALUES(1,?)",(json.dumps({"organize":True,"overrides":{"documents":str(expected_folder)}}),))
     desktop=subprocess.Popen([str(binaries/"de.exe")],env=env,stdin=subprocess.DEVNULL,stdout=stderr,stderr=stderr,startupinfo=startup)
@@ -140,7 +140,7 @@ def main():
         deadline=time.monotonic()+25
         def database_ready():
             if not database.exists(): return False
-            with sqlite3.connect(database) as conn:
+            with open_profile_database(database) as conn:
                 return conn.execute("SELECT count(*) FROM sqlite_master WHERE type='table' AND name='jobs'").fetchone()[0] == 1
         while not database_ready():
             if desktop.poll() is not None: raise RuntimeError("Desktop exited before opening its queue")
@@ -157,7 +157,7 @@ def main():
             assert prepare_host.returncode==0,prepare_host.stderr.decode()
             prepare_reply=json.loads(prepare_host.stdout[4:])
             assert prepare_reply["ok"] and prepare_reply["capture_state"]=="prepared",prepare_reply
-            with sqlite3.connect(database) as conn:
+            with open_profile_database(database) as conn:
                 assert conn.execute("SELECT count(*) FROM jobs").fetchone()[0]==0
             request=dict(action="capture_commit",request_id=capture_id)
         data=json.dumps(request).encode()
@@ -172,7 +172,7 @@ def main():
         retry_state=None
         quota_hold=None
         while time.monotonic()<deadline:
-            with sqlite3.connect(database) as conn:
+            with open_profile_database(database) as conn:
                 row=conn.execute("SELECT data FROM jobs WHERE id=?",(reply["job_id"],)).fetchone()
             if row:
                 job=json.loads(row[0])
@@ -189,7 +189,7 @@ def main():
                     time.sleep(.65)  # Observe a scheduler tick while the quota is exhausted.
                     assert len(requests)==count,"Quota hold restarted before reset"
                     assert all(hashlib.sha256(p.read_bytes()).hexdigest()==digest for p,digest in saved.items())
-                    with sqlite3.connect(database) as conn:
+                    with open_profile_database(database) as conn:
                         used=conn.execute("SELECT hourly_used,daily_used FROM data_quotas").fetchone()
                         assert used[0] >= 1048576 and used[0]==used[1],used
                         # Expire only this isolated fixture's hour; the desktop must
@@ -202,7 +202,7 @@ def main():
         if args.quotas:
             assert quota_hold,"The download never reached its data quota"
             assert not job.get("quota_waiting"),job
-            with sqlite3.connect(database) as conn:
+            with open_profile_database(database) as conn:
                 quota_usage=conn.execute("SELECT hourly_used,daily_used FROM data_quotas").fetchone()
             assert quota_usage[0]==len(payload)-quota_hold["saved_bytes"],quota_usage
             assert quota_usage[1]==quota_hold["used_before_reset"]+quota_usage[0],quota_usage
@@ -212,7 +212,7 @@ def main():
             payload_seconds=time.monotonic()-min(payload_started)
             assert payload_seconds >= len(payload)/(2*1024*1024)-.10,payload_seconds
             assert len(job["plan"]["segments"])==4,job
-            with sqlite3.connect(database) as conn:
+            with open_profile_database(database) as conn:
                 assert conn.execute("SELECT bytes_per_second FROM bandwidth_settings WHERE id=1").fetchone()[0]==2097152
         if args.adaptive:
             layout=job["plan"]["segments"]
@@ -235,7 +235,7 @@ def main():
         if has_antivirus:
             scan_deadline=time.monotonic()+25
             while time.monotonic()<scan_deadline:
-                with sqlite3.connect(database) as conn:
+                with open_profile_database(database) as conn:
                     row=conn.execute("SELECT data FROM antivirus_reports WHERE job_id=?",(job["id"],)).fetchone()
                 if row:
                     scan_report=json.loads(row[0])
@@ -303,7 +303,7 @@ def main():
             queue_id=str(uuid.uuid4())
             # Seed only the closed, isolated fixture profile. The desktop itself
             # must prepare/run each scheduled check and commit its result.
-            with sqlite3.connect(database) as conn:
+            with open_profile_database(database) as conn:
                 conn.execute("INSERT INTO download_queues(id,name,max_active,running) VALUES(?,?,2,0)",(queue_id,"Synchronization smoke"))
                 conn.execute("INSERT INTO synchronization_queues(queue_id) VALUES(?)",(queue_id,))
                 conn.execute("UPDATE job_queues SET queue_id=? WHERE job_id=?",(queue_id,job["id"]))
@@ -312,13 +312,13 @@ def main():
                     payload=original_bytes+b"\nupdated synchronization fixture\n"
                     version='"desktop-smoke-v2"'
                 sync_failure=expected=="failed"
-                with sqlite3.connect(database) as conn:
+                with open_profile_database(database) as conn:
                     conn.execute("UPDATE download_queues SET running=0,scheduled_at=? WHERE id=?",(int(time.time())-1,queue_id))
                 desktop=subprocess.Popen([str(binaries/"de.exe")],env=env,stdin=subprocess.DEVNULL,stdout=stderr,stderr=stderr,startupinfo=startup)
                 sync_deadline=time.monotonic()+25
                 while time.monotonic()<sync_deadline:
                     assert desktop.poll() is None,"Desktop exited during synchronization"
-                    with sqlite3.connect(database) as conn:
+                    with open_profile_database(database) as conn:
                         current=json.loads(conn.execute("SELECT data FROM jobs WHERE id=?",(job["id"],)).fetchone()[0])
                     sync=current.get("synchronization",{})
                     if expected=="failed" and current["status"]=="failed": break
@@ -336,7 +336,7 @@ def main():
                     else: assert current_path==updated_path,"Unchanged file was duplicated"
                     if has_antivirus:
                         while time.monotonic()<sync_deadline:
-                            with sqlite3.connect(database) as conn:
+                            with open_profile_database(database) as conn:
                                 row=conn.execute("SELECT data FROM antivirus_reports WHERE job_id=?",(job["id"],)).fetchone()
                             current_report=json.loads(row[0]) if row else None
                             if current_report and Path(current_report["path"])==current_path: break
@@ -358,7 +358,7 @@ def main():
             assert updated_path.read_bytes()==payload,"A failed check changed the latest saved copy"
         result={"protocol":"automatic" if args.automatic else "manual","native_handoff":True,"desktop_completed":True,"normal_shutdown":True,"native_cold_start":True,"internet_origin_marker":True,"bytes":job["downloaded"],"sha256":job["integrity"]["actual"],"data_root":str(run_root)}
         if args.quotas:
-            with sqlite3.connect(database) as conn:
+            with open_profile_database(database) as conn:
                 assert conn.execute("SELECT hourly_used,daily_used FROM data_quotas").fetchone()==quota_usage
             result["quotas"]={**quota_hold,"resumed_after_controlled_reset":True,"usage_persisted_after_cold_start":True,"hourly_used":quota_usage[0],"daily_used":quota_usage[1]}
         if synchronization: result["synchronization"]=synchronization
@@ -369,7 +369,7 @@ def main():
             result["automatic_retry"]={"attempts":retry_state["attempts"],"observed_delay_ms":requests[1]-requests[0],"deadline_respected":True}
         if args.bandwidth:
             result["bandwidth"]={"global_bytes_per_second":2097152,"transfer_seconds":round(transfer_seconds,3),"payload_seconds":round(payload_seconds,3),"connections":4,"cap_respected":True}
-            with sqlite3.connect(database) as conn:
+            with open_profile_database(database) as conn:
                 assert conn.execute("SELECT bytes_per_second FROM bandwidth_settings WHERE id=1").fetchone()[0]==2097152
         if args.adaptive:
             result["adaptive"]={"parts":len(job["plan"]["segments"]["parts"]),"requests":len(requests),"sha256_verified":True,"transfer_seconds":round(transfer_seconds,3)}

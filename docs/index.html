@@ -4,24 +4,28 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#0b111a">
   <meta name="referrer" content="strict-origin-when-cross-origin">
   <title>Download Engine — Free Windows Download Manager</title>
-  <meta name="description" content="A free Windows download manager with support for public YouTube, Bilibili, TikTok and Twitch videos, HLS and DASH streams, Web Grabber and browser integration.">
+  <meta name="description" content="A free Windows download manager with custom themes, support for public YouTube, Bilibili, TikTok and Twitch videos, HLS and DASH streams, Web Grabber, scripting and browser integration.">
   <link rel="canonical" href="https://jasxtd.github.io/Download-Engine/">
   <link rel="icon" type="image/png" href="images/download-engine-logo.png">
   <meta property="og:type" content="website">
   <meta property="og:locale" content="en_US">
   <meta property="og:site_name" content="Download Engine">
   <meta property="og:title" content="Download Engine — Download more. Keep control.">
-  <meta property="og:description" content="Files, supported YouTube, Bilibili, TikTok and Twitch videos, and offline websites. One free, open-source Windows app.">
+  <meta property="og:description" content="Files, supported YouTube, Bilibili, TikTok and Twitch videos, and offline websites. Now with custom themes. One free, open-source Windows app.">
   <meta property="og:url" content="https://jasxtd.github.io/Download-Engine/">
-  <meta property="og:image" content="https://jasxtd.github.io/Download-Engine/images/downloads-dark.png">
-  <meta property="og:image:alt" content="Download Engine desktop interface with example downloads">
+  <meta property="og:image" content="https://jasxtd.github.io/Download-Engine/images/social-preview.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Download Engine with the Aurora theme and example downloads">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="Download Engine — Download more. Keep control.">
-  <meta name="twitter:description" content="Download supported YouTube, Bilibili, TikTok and Twitch videos, HLS and DASH streams, and files. Free and open source for Windows.">
-  <meta name="twitter:image" content="https://jasxtd.github.io/Download-Engine/images/downloads-dark.png">
+  <meta name="twitter:description" content="Download supported YouTube, Bilibili, TikTok and Twitch videos, HLS and DASH streams, and files. Custom themes, scripting and browser integration. Free and open source for Windows.">
+  <meta name="twitter:image" content="https://jasxtd.github.io/Download-Engine/images/social-preview.jpg">
   <link rel="stylesheet" href="site.css">
+  <script src="site.js" defer></script>
   <script src="slideshow.js" defer></script>
   <script type="application/ld+json">
   {
@@ -29,13 +33,13 @@
     "@type": "SoftwareApplication",
     "name": "Download Engine",
     "url": "https://jasxtd.github.io/Download-Engine/",
-    "description": "Free, open-source Windows download manager for files, supported public YouTube, Bilibili, TikTok and Twitch videos, and compatible HLS and DASH streams, with a website grabber and automation.",
+    "description": "Free, open-source Windows download manager for files, supported public YouTube, Bilibili, TikTok and Twitch videos, and compatible HLS and DASH streams, with a website grabber, custom themes and automation.",
     "operatingSystem": "Windows x64",
     "applicationCategory": "UtilitiesApplication",
-    "softwareVersion": "3.2.0",
+    "softwareVersion": "3.4.0",
     "image": "https://jasxtd.github.io/Download-Engine/images/download-engine-logo.png",
-    "screenshot": "https://jasxtd.github.io/Download-Engine/images/downloads-dark.png",
-    "downloadUrl": "https://github.com/JasXTD/Download-Engine/releases/tag/v3.2.0",
+    "screenshot": "https://jasxtd.github.io/Download-Engine/images/theme-aurora.webp",
+    "downloadUrl": "https://github.com/JasXTD/Download-Engine/releases/tag/v3.4.0",
     "license": "https://github.com/JasXTD/Download-Engine/blob/main/LICENSE",
     "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
   }
@@ -43,54 +47,106 @@
 </head>
 <body>
   <a class="skip-link" href="#main">Skip to content</a>
-  <header class="site-header shell">
-    <a class="brand" href="./" aria-label="Download Engine home"><img src="images/download-engine-logo.png" width="36" height="36" alt=""><span>Download Engine</span></a>
-    <nav aria-label="Main navigation">
-      <a href="#video">Video support</a><a href="#grabber">Web Grabber</a><a href="#hosting">Hosting support</a><a href="https://github.com/JasXTD/Download-Engine">GitHub <span aria-hidden="true">↗</span></a>
+  <header class="site-header" data-site-header>
+    <div class="shell header-inner">
+      <a class="brand" href="./" aria-label="Download Engine home"><img src="images/download-engine-logo.png" width="36" height="36" alt=""><span>Download Engine</span></a>
+      <nav class="site-nav" aria-label="Main navigation">
+        <a href="#themes">Themes</a><a href="#video">Video</a><a href="#grabber">Web Grabber</a><a href="#hosting">Hosting</a><a href="#scripting">Scripting</a><a href="https://github.com/JasXTD/Download-Engine">GitHub <span aria-hidden="true">↗</span></a>
+      </nav>
       <a class="nav-download" href="#download">Download <span aria-hidden="true">↓</span></a>
-    </nav>
+    </div>
   </header>
 
   <main id="main" tabindex="-1">
     <section class="hero shell" aria-labelledby="hero-title">
       <div class="hero-copy">
-        <p class="eyebrow"><span class="status-dot" aria-hidden="true"></span> Open source. Made for Windows.</p>
+        <a class="release-badge" href="#themes"><span class="badge-new">New in 3.4</span><span>Custom themes with whole-window artwork</span><span class="badge-arrow" aria-hidden="true">→</span></a>
         <h1 id="hero-title">Download more.<br><span>Keep control.</span></h1>
-        <p class="hero-description">Files, supported videos and offline websites.<br class="desktop-break"> Bring them together in one download manager that puts you in charge.</p>
+        <p class="hero-description">Files, supported videos and offline websites.<br class="desktop-break"> Bring them together in one download manager that puts you in charge, and now looks the way you like.</p>
         <a class="hero-video-sites" href="#video">YouTube <span>·</span> Bilibili <span>·</span> TikTok <span>·</span> Twitch <span>·</span> HLS &amp; DASH <span aria-hidden="true">↗</span></a>
-        <div class="hero-actions"><a class="button button-primary" href="https://github.com/JasXTD/Download-Engine/releases/download/v3.2.0/DownloadEngine-3.2.0-UnsignedSetup.exe"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M4 15v6h16v-6"/></svg>Download for Windows</a><a class="button button-secondary" href="https://github.com/JasXTD/Download-Engine/releases/download/v3.2.0/DownloadEngine-3.2.0-Unsigned-windows-x64.zip">Get the portable ZIP <span aria-hidden="true">↗</span></a></div>
-        <p class="hero-version">Stable v3.2.0 <span aria-hidden="true">·</span> Windows x64 <span aria-hidden="true">·</span> Free under MIT</p>
-        <a class="source-notice" href="#hosting"><span class="source-label">Latest source</span><span>MEGA, WeTransfer &amp; smarter link discovery</span><span aria-hidden="true">↗</span></a>
+        <div class="hero-actions"><a class="button button-primary" href="https://github.com/JasXTD/Download-Engine/releases/download/v3.4.0/DownloadEngine-3.4.0-UnsignedSetup.exe"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M4 15v6h16v-6"/></svg>Download for Windows</a><a class="button button-secondary" href="https://github.com/JasXTD/Download-Engine/releases/download/v3.4.0/DownloadEngine-3.4.0-Unsigned-windows-x64.zip">Get the portable ZIP <span aria-hidden="true">↗</span></a></div>
+        <p class="hero-version">Stable v3.4.0 <span aria-hidden="true">·</span> Windows x64 <span aria-hidden="true">·</span> Free under MIT</p>
       </div>
-      <figure class="app-preview">
-        <div class="preview-chrome" aria-hidden="true"><span class="window-dots"><i></i><i></i><i></i></span><span>YOUR DOWNLOADS, ORGANIZED</span><span>↙</span></div>
-        <a href="images/downloads-dark.png" target="_blank" rel="noopener" aria-label="Open the desktop example screenshot at full size in a new tab"><img src="images/downloads-dark.png" width="1280" height="800" fetchpriority="high" alt="Download Engine dark interface with file downloads, progress, queues and pause and resume controls"></a>
-        <figcaption><span>Real desktop UI · example downloads</span><span>View full size <span aria-hidden="true">↗</span></span></figcaption>
+      <figure class="theme-stack" data-theme-stack>
+        <div class="stack-frames">
+          <div class="stack-frame" data-pos="0" data-theme="Aurora" data-glow="#1c5a8a66"><img src="images/theme-aurora.webp" width="1280" height="860" fetchpriority="high" alt="Download Engine with the Aurora theme: northern-lights artwork behind the translucent toolbar, sidebar and a list of example downloads"></div>
+          <div class="stack-frame" data-pos="1" data-theme="Neon Courier" data-glow="#5c2a8a66" aria-hidden="true"><img src="images/theme-neon-courier.webp" width="1280" height="860" decoding="async" alt="Download Engine with the Neon Courier theme: a violet and cyan night city behind example downloads"></div>
+          <div class="stack-frame" data-pos="2" data-theme="Reactor Night" data-glow="#1a6a5066" aria-hidden="true"><img src="images/theme-reactor-night.webp" width="1280" height="860" decoding="async" alt="Download Engine with the Reactor Night theme: an emerald industrial city behind example downloads"></div>
+          <div class="stack-frame" data-pos="3" data-theme="Moonveil" data-glow="#592f8066" aria-hidden="true"><img src="images/theme-moonveil.webp" width="1280" height="860" decoding="async" alt="Download Engine with the Moonveil theme: silver-haired lunar sorceress artwork behind example downloads"></div>
+        </div>
+        <figcaption>
+          <div class="stack-controls" role="group" aria-label="Preview a theme" hidden>
+            <button class="stack-chip" type="button" aria-pressed="true"><img src="images/theme-art-aurora.webp" width="480" height="270" alt="">Aurora</button><button class="stack-chip" type="button" aria-pressed="false"><img src="images/theme-art-neon-courier.webp" width="480" height="270" alt="">Neon Courier</button><button class="stack-chip" type="button" aria-pressed="false"><img src="images/theme-art-reactor-night.webp" width="480" height="270" alt="">Reactor Night</button><button class="stack-chip" type="button" aria-pressed="false"><img src="images/theme-art-moonveil.webp" width="480" height="270" alt="">Moonveil</button>
+            <button class="stack-toggle" type="button" aria-label="Pause theme preview"><span data-stack-toggle-label>Pause</span></button>
+          </div>
+          <span class="stack-caption"><span>Real desktop UI · example downloads · <span data-stack-name>Aurora</span> theme</span><a href="images/theme-aurora.webp" target="_blank" rel="noopener" data-stack-full aria-label="Open the Aurora theme screenshot at full size in a new tab">View full size <span aria-hidden="true">↗</span></a></span>
+        </figcaption>
       </figure>
     </section>
 
-    <div class="capability-strip shell" aria-label="Core capabilities"><span>Parallel downloads</span><span>Pause &amp; recovery</span><span>Web Grabber</span><span>Browser integration</span><span>Lua &amp; PowerShell</span></div>
+    <nav class="highlights shell reveal" aria-label="New since version 3.2">
+      <a href="#themes"><span class="highlight-version">3.4</span><strong>Custom themes</strong><span>Artwork behind translucent panels</span></a>
+      <a href="#scripting"><span class="highlight-version">3.3</span><strong>Scripting workspace</strong><span>Editor, Loaded scripts and full editor</span></a>
+      <a href="#whats-new"><span class="highlight-version">3.3</span><strong>Responsive actions</strong><span>Slow storage no longer holds up clicks</span></a>
+      <a href="#hosting"><span class="highlight-version">3.2</span><strong>MEGA &amp; WeTransfer</strong><span>Plus Help → Check for updates</span></a>
+    </nav>
+
+    <section class="themes-section section-space" id="themes" aria-labelledby="themes-title">
+      <div class="shell">
+        <div class="split-heading reveal"><div><p class="eyebrow">New in 3.4 · Custom themes</p><h2 id="themes-title">Make it yours.<br>Down to the backdrop.</h2></div><p class="themes-intro">Choose artwork that fills the whole window behind translucent toolbar, sidebar and details panels. Changes preview instantly; Save keeps them and Cancel restores your previous look.</p></div>
+        <fieldset class="theme-demo reveal">
+          <legend class="visually-hidden">Preview an included theme</legend>
+          <input class="demo-radio visually-hidden" type="radio" name="theme-preview" id="theme-aurora" checked>
+          <input class="demo-radio visually-hidden" type="radio" name="theme-preview" id="theme-neon">
+          <input class="demo-radio visually-hidden" type="radio" name="theme-preview" id="theme-reactor">
+          <input class="demo-radio visually-hidden" type="radio" name="theme-preview" id="theme-moonveil">
+          <div class="theme-panel">
+            <div class="demo-heading"><span class="demo-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 0 18c1.3 0 2-.8 2-1.8 0-1.3-1-1.6-1-2.7 0-1 .8-1.5 1.8-1.5H17a4 4 0 0 0 4-4c0-4.4-4-8-9-8Z"/><circle cx="7.5" cy="11" r="1"/><circle cx="10" cy="7" r="1"/><circle cx="15" cy="7.5" r="1"/></svg></span><div><strong>Theme collection</strong><span>Preferences → Appearance → Custom</span></div></div>
+            <div class="theme-cards">
+              <label class="theme-card" for="theme-aurora"><img src="images/theme-art-aurora.webp" width="480" height="270" loading="lazy" decoding="async" alt=""><span>Aurora</span></label>
+              <label class="theme-card" for="theme-neon"><img src="images/theme-art-neon-courier.webp" width="480" height="270" loading="lazy" decoding="async" alt=""><span>Neon Courier</span></label>
+              <label class="theme-card" for="theme-reactor"><img src="images/theme-art-reactor-night.webp" width="480" height="270" loading="lazy" decoding="async" alt=""><span>Reactor Night</span></label>
+              <label class="theme-card" for="theme-moonveil"><img src="images/theme-art-moonveil.webp" width="480" height="270" loading="lazy" decoding="async" alt=""><span>Moonveil</span></label>
+              <div class="theme-card own-card"><span class="own-placeholder" aria-hidden="true">+</span><span>Your image</span></div>
+            </div>
+            <div class="theme-strength" aria-hidden="true"><span>Background strength</span><span class="strength-bar"><i></i></span><span>80%</span></div>
+            <ul class="theme-points">
+              <li><strong>Your image.</strong> Choose a PNG or JPEG up to 16 MiB. A resized copy stays in your profile and is never uploaded; Remove image deletes it when you save.</li>
+              <li><strong>Background strength</strong> works the same for every picture. Bright images get a darker overlay, so text stays readable.</li>
+              <li><strong>Accent color</strong> for controls. Very dark accents are lifted to a readable shade.</li>
+            </ul>
+          </div>
+          <div class="theme-viewer">
+            <img class="theme-shot aurora-shot" src="images/theme-aurora.webp" width="1280" height="860" loading="lazy" decoding="async" alt="Download Engine downloads view with the Aurora theme and example downloads">
+            <img class="theme-shot neon-shot" src="images/theme-neon-courier.webp" width="1280" height="860" loading="lazy" decoding="async" alt="Download Engine downloads view with the Neon Courier theme and example downloads">
+            <img class="theme-shot reactor-shot" src="images/theme-reactor-night.webp" width="1280" height="860" loading="lazy" decoding="async" alt="Download Engine downloads view with the Reactor Night theme and example downloads">
+            <img class="theme-shot moonveil-shot" src="images/theme-moonveil.webp" width="1280" height="860" loading="lazy" decoding="async" alt="Download Engine downloads view with the Moonveil theme and example downloads">
+          </div>
+        </fieldset>
+        <div class="themes-bottom"><p class="visual-caption">Real screenshots with example downloads; the collection panel is an illustration. Included artwork is bundled and works offline. System, Light and Dark remain available.</p><a class="text-link" href="https://github.com/JasXTD/Download-Engine/blob/main/docs/user-guide.md#custom-themes">Custom themes guide <span aria-hidden="true">↗</span></a></div>
+      </div>
+    </section>
 
     <section class="video-section shell section-space" id="video" aria-labelledby="video-title">
-      <div class="split-heading"><div><p class="eyebrow">Supported video sites &amp; formats</p><h2 id="video-title">Your videos.<br>Your choice of quality.</h2></div><p class="video-intro">Built-in readers for popular video sites. Preview the available quality and audio, then send your selection to the queue. FFmpeg is included for supported merging.</p></div>
-      <div class="video-sites">
-        <a class="video-site" href="https://github.com/JasXTD/Download-Engine/blob/main/docs/reference.md#youtube-video-downloads"><span class="video-mark youtube-mark" aria-hidden="true">▶</span><h3>YouTube</h3><p>Public, finished videos when a supported HLS response is available.</p><span class="video-detail">YouTube support &amp; limits <span aria-hidden="true">↗</span></span></a>
-        <a class="video-site" href="https://github.com/JasXTD/Download-Engine/blob/main/docs/reference.md#bilibili-video-downloads"><span class="video-mark bilibili-mark" aria-hidden="true">B</span><h3>Bilibili</h3><p>Public videos and accessible Bangumi episodes. Anonymous quality up to 480p.</p><span class="video-detail">Bilibili support &amp; limits <span aria-hidden="true">↗</span></span></a>
-        <a class="video-site" href="https://github.com/JasXTD/Download-Engine/blob/main/docs/reference.md#tiktok-video-downloads"><span class="video-mark tiktok-mark" aria-hidden="true">♪</span><h3>TikTok</h3><p>Public video pages with available MP4 qualities, including audio.</p><span class="video-detail">TikTok support &amp; limits <span aria-hidden="true">↗</span></span></a>
-        <a class="video-site" href="https://github.com/JasXTD/Download-Engine/blob/main/docs/reference.md#twitch-video-downloads"><span class="video-mark twitch-mark" aria-hidden="true">Tw</span><h3>Twitch</h3><p>Public past broadcasts, highlights and uploads. Live channels and clips are unsupported.</p><span class="video-detail">Twitch support &amp; limits <span aria-hidden="true">↗</span></span></a>
+      <div class="split-heading reveal"><div><p class="eyebrow">Supported video sites &amp; formats</p><h2 id="video-title">Your videos.<br>Your choice of quality.</h2></div><p class="video-intro">Built-in readers for popular video sites. Preview the available quality and audio, then send your selection to the queue. FFmpeg is included for supported merging.</p></div>
+      <div class="video-sites reveal-group">
+        <a class="video-site reveal" href="https://github.com/JasXTD/Download-Engine/blob/main/docs/reference.md#youtube-video-downloads"><span class="video-mark youtube-mark" aria-hidden="true">▶</span><h3>YouTube</h3><p>Public, finished videos when a supported HLS response is available.</p><span class="video-detail">YouTube support &amp; limits <span aria-hidden="true">↗</span></span></a>
+        <a class="video-site reveal" href="https://github.com/JasXTD/Download-Engine/blob/main/docs/reference.md#bilibili-video-downloads"><span class="video-mark bilibili-mark" aria-hidden="true">B</span><h3>Bilibili</h3><p>Public videos and accessible Bangumi episodes. Anonymous quality up to 480p.</p><span class="video-detail">Bilibili support &amp; limits <span aria-hidden="true">↗</span></span></a>
+        <a class="video-site reveal" href="https://github.com/JasXTD/Download-Engine/blob/main/docs/reference.md#tiktok-video-downloads"><span class="video-mark tiktok-mark" aria-hidden="true">♪</span><h3>TikTok</h3><p>Public video pages with available MP4 qualities, including audio.</p><span class="video-detail">TikTok support &amp; limits <span aria-hidden="true">↗</span></span></a>
+        <a class="video-site reveal" href="https://github.com/JasXTD/Download-Engine/blob/main/docs/reference.md#twitch-video-downloads"><span class="video-mark twitch-mark" aria-hidden="true">Tw</span><h3>Twitch</h3><p>Public past broadcasts, highlights and uploads. Live channels and clips are unsupported.</p><span class="video-detail">Twitch support &amp; limits <span aria-hidden="true">↗</span></span></a>
       </div>
-      <div class="video-streams"><div><h3>Other sites &amp; stream links</h3><p>Save compatible finished, unencrypted HLS streams and static DASH streams from other websites. Availability depends on the page and stream format.</p></div><div class="stream-links"><a href="https://github.com/JasXTD/Download-Engine/blob/main/docs/reference.md#hls-video-downloads"><strong>HLS</strong><span>.m3u8</span><span aria-hidden="true">↗</span></a><a href="https://github.com/JasXTD/Download-Engine/blob/main/docs/reference.md#dash-video-downloads"><strong>DASH</strong><span>.mpd</span><span aria-hidden="true">↗</span></a></div></div>
+      <div class="video-streams reveal"><div><h3>Other sites &amp; stream links</h3><p>Save compatible finished, unencrypted HLS streams and static DASH streams from other websites. Availability depends on the page and stream format.</p></div><div class="stream-links"><a href="https://github.com/JasXTD/Download-Engine/blob/main/docs/reference.md#hls-video-downloads"><strong>HLS</strong><span>.m3u8</span><span aria-hidden="true">↗</span></a><a href="https://github.com/JasXTD/Download-Engine/blob/main/docs/reference.md#dash-video-downloads"><strong>DASH</strong><span>.mpd</span><span aria-hidden="true">↗</span></a></div></div>
       <p class="video-limits">No DRM or live recording. Sign-in requirements, region restrictions and website changes can limit availability. <a href="https://github.com/JasXTD/Download-Engine#supported-video-sites-and-formats">Read the full support table <span aria-hidden="true">↗</span></a></p>
     </section>
 
     <section class="grabber shell section-space" id="grabber" aria-labelledby="grabber-title">
-      <div class="grabber-copy"><p class="eyebrow">Built-in Web Grabber</p><h2 id="grabber-title">Collect the files.<br>Keep the website.</h2><p class="section-intro">Skip copying links one by one. Discover the files you need, or take a supported static website with you.</p>
+      <div class="grabber-copy reveal"><p class="eyebrow">Built-in Web Grabber</p><h2 id="grabber-title">Collect the files.<br>Keep the website.</h2><p class="section-intro">Skip copying links one by one. Discover the files you need, or take a supported static website with you.</p>
         <div class="workflow-description"><span class="step-number">01</span><div><h3>Find downloadable files</h3><p>Scan a page, filter by file type and review the results. Select the files you want, then add them to a queue.</p></div></div>
         <div class="workflow-description"><span class="step-number">02</span><div><h3>Save a website offline</h3><p>Capture supported pages, images and styles with local links. Open the saved site in your browser, without a connection.</p></div></div>
         <p class="fine-print">Choose scan depth and limits, save projects and schedule scans. Offline copies are static; scripts, sign-in flows and interactive apps do not keep working.</p>
         <a class="text-link" href="https://github.com/JasXTD/Download-Engine/blob/main/docs/user-guide.md#find-files-on-a-website">Explore the grabber guide <span aria-hidden="true">↗</span></a>
       </div>
-      <div class="grabber-visual">
+      <div class="grabber-visual reveal">
         <fieldset class="grabber-demo">
           <legend class="visually-hidden">Preview the two Web Grabber workflows</legend>
           <input class="demo-radio visually-hidden" type="radio" name="grabber-preview" id="demo-files" checked>
@@ -117,9 +173,9 @@
 
     <section class="hosting-section section-space" id="hosting" aria-labelledby="hosting-title">
       <div class="shell">
-        <div class="section-heading split-heading"><div><p class="eyebrow">Beyond direct file links</p><h2 id="hosting-title">More links.<br>One download queue.</h2></div><div class="hosting-intro"><span class="development-tag">New in version 3.2.0</span><p>Dedicated support for MEGA and WeTransfer, plus discovery for pages that expose downloadable files.</p></div></div>
-        <p class="availability-note"><strong>Availability:</strong> these hosting integrations and GitHub capture changes are <strong>included in the v3.2.0 installer, portable ZIP and extension ZIPs</strong> linked below. Reload your browser extension after upgrading.</p>
-        <div class="hosting-grid">
+        <div class="section-heading split-heading reveal"><div><p class="eyebrow">Beyond direct file links</p><h2 id="hosting-title">More links.<br>One download queue.</h2></div><div class="hosting-intro"><span class="development-tag">Since version 3.2.0</span><p>Dedicated support for MEGA and WeTransfer, plus discovery for pages that expose downloadable files.</p></div></div>
+        <p class="availability-note reveal"><strong>Availability:</strong> these hosting integrations and GitHub capture changes are <strong>included in the v3.4.0 installer, portable ZIP and extension ZIPs</strong> linked below. Reload your browser extension after upgrading.</p>
+        <div class="hosting-grid reveal">
           <article class="hosting-card"><div class="hosting-brand"><span class="host-monogram mega-mark" aria-hidden="true">M</span><div><h3>MEGA</h3><span>Public file links</span></div></div><p>Paste the complete file link, including its <code>#</code> key. Download Engine decrypts locally and verifies the file before completing it.</p><ul><li>Parallel transfers and pause/resume</li><li>Local decryption and integrity verification</li><li>Individual public files; no folder or account downloads</li></ul><a class="text-link" href="https://github.com/JasXTD/Download-Engine/blob/main/docs/mega.md">MEGA support &amp; limits <span aria-hidden="true">↗</span></a></article>
           <article class="hosting-card"><div class="hosting-brand"><span class="host-monogram transfer-mark" aria-hidden="true">we</span><div><h3>WeTransfer</h3><span>Public transfers</span></div></div><p>Use a <code>we.tl</code> short link or a full transfer link. Save the file or whole bundle supplied by WeTransfer.</p><ul><li>Single files or a complete transfer archive</li><li>Resume when the file server supports it</li><li>No password or identity-verification transfers</li></ul><a class="text-link" href="https://github.com/JasXTD/Download-Engine/blob/main/docs/wetransfer.md">WeTransfer support &amp; limits <span aria-hidden="true">↗</span></a></article>
           <article class="hosting-card"><div class="hosting-brand"><span class="host-monogram page-mark" aria-hidden="true">↗</span><div><h3>Other download pages</h3><span>File-link discovery</span></div></div><p>If a link opens an HTML page, the app can look for exposed file links and let you choose what to download.</p><ul><li>One explicit same-site link can continue automatically</li><li>Review ambiguous or external file links</li><li>GitHub raw-file discovery and browser capture</li></ul><a class="text-link" href="https://github.com/JasXTD/Download-Engine/blob/main/docs/user-guide.md#find-files-on-a-website">How link discovery works <span aria-hidden="true">↗</span></a></article>
@@ -129,17 +185,37 @@
     </section>
 
     <section class="features shell section-space" id="features" aria-labelledby="features-title">
-      <div class="section-heading"><p class="eyebrow">The everyday essentials, too</p><h2 id="features-title">Built around the way<br>you download.</h2></div>
-      <div class="feature-grid">
-        <article><span class="feature-symbol" aria-hidden="true">↓</span><h3>Faster transfers. Less starting over.</h3><p>Parallel connections for supported HTTP, HTTPS, FTP and FTPS files. Pause, resume and recover unfinished downloads after restarting the app.</p><p class="fine-print">Resume depends on the server and the file remaining compatible.</p></article>
-        <article><span class="feature-symbol" aria-hidden="true">▷</span><h3>Video, with a choice.</h3><p>Built-in YouTube, Bilibili, TikTok and Twitch readers, plus compatible HLS and DASH streams. Review quality and audio before downloading.</p><a class="text-link" href="#video">Explore video support <span aria-hidden="true">↑</span></a></article>
-        <article><span class="feature-symbol" aria-hidden="true">≡</span><h3>A queue for every plan.</h3><p>Add links in batches, organize downloads and schedule when they run. Set connection counts, speed limits, quotas and folders.</p><a class="text-link" href="https://github.com/JasXTD/Download-Engine/blob/main/docs/user-guide.md">Explore download controls <span aria-hidden="true">↗</span></a></article>
-        <article><span class="feature-symbol" aria-hidden="true">✓</span><h3>Check what you save.</h3><p>Verify a publisher’s SHA-256 checksum, use your configured antivirus for single or batch scans, and inspect progress in a download status window.</p><p class="fine-print">Antivirus scanning requires a supported scanner installed on your PC.</p></article>
+      <div class="section-heading reveal"><p class="eyebrow">The everyday essentials, too</p><h2 id="features-title">Built around the way<br>you download.</h2></div>
+      <div class="feature-grid reveal-group">
+        <article class="reveal"><span class="feature-symbol" aria-hidden="true">↓</span><h3>Faster transfers. Less starting over.</h3><p>Parallel connections for supported HTTP, HTTPS, FTP and FTPS files. Pause, resume and recover unfinished downloads after restarting the app.</p><p class="fine-print">Resume depends on the server and the file remaining compatible.</p></article>
+        <article class="reveal"><span class="feature-symbol" aria-hidden="true">▷</span><h3>Video, with a choice.</h3><p>Built-in YouTube, Bilibili, TikTok and Twitch readers, plus compatible HLS and DASH streams. Review quality and audio before downloading.</p><a class="text-link" href="#video">Explore video support <span aria-hidden="true">↑</span></a></article>
+        <article class="reveal"><span class="feature-symbol" aria-hidden="true">≡</span><h3>A queue for every plan.</h3><p>Add links in batches, organize downloads and schedule when they run. Set connection counts, speed limits, quotas and folders.</p><a class="text-link" href="https://github.com/JasXTD/Download-Engine/blob/main/docs/user-guide.md">Explore download controls <span aria-hidden="true">↗</span></a></article>
+        <article class="reveal"><span class="feature-symbol" aria-hidden="true">✓</span><h3>Check what you save.</h3><p>Verify a publisher’s SHA-256 checksum, use your configured antivirus for single or batch scans, and follow progress, speed and time remaining in a compact status window.</p><p class="fine-print">Antivirus scanning requires a supported scanner installed on your PC.</p></article>
       </div>
     </section>
 
+    <section class="scripting shell section-space" id="scripting" aria-labelledby="scripting-title">
+      <div class="scripting-copy reveal">
+        <p class="eyebrow">Less repetition. More possibility.</p>
+        <h2 id="scripting-title">Make it part of<br>your workflow.</h2>
+        <p class="section-intro">Route files with rules. Write Lua or PowerShell scripts. Use the CLI, or connect a compatible AI client through the optional local MCP server.</p>
+        <ul class="check-list">
+          <li><strong>A focused workspace.</strong> Editor and Loaded scripts have their own tabs. Full editor gives code the window while Save, Run and logs stay close.</li>
+          <li><strong>One core API.</strong> Automation scripts and custom site readers share autocomplete and a searchable Core API reference.</li>
+          <li><strong>Share scripts with their settings.</strong> <code>.de-script.json</code> packages import as disabled drafts with file access off, ready for review.</li>
+          <li><strong>Explicit AI access.</strong> MCP is off by default, with View only selected. Allow download, queue and script controls separately; scripts need approval of their exact saved revision.</li>
+        </ul>
+        <div class="inline-links"><a class="text-link" href="https://github.com/JasXTD/Download-Engine/blob/main/docs/automation.md">Scripting &amp; automation <span aria-hidden="true">↗</span></a><a class="text-link" href="https://github.com/JasXTD/Download-Engine/blob/main/docs/mcp.md">Local MCP guide <span aria-hidden="true">↗</span></a></div>
+      </div>
+      <figure class="scripting-preview reveal">
+        <div class="preview-chrome" aria-hidden="true"><span class="window-dots"><i></i><i></i><i></i></span><span>SCRIPTING · EDITOR</span><span class="chrome-tag">LUA</span></div>
+        <a href="images/scripting-workspace.webp" target="_blank" rel="noopener" aria-label="Open the scripting workspace screenshot at full size in a new tab"><img src="images/scripting-workspace.webp" width="1280" height="860" loading="lazy" decoding="async" alt="Download Engine Scripting page with Editor and Loaded scripts tabs, a Lua script, Full editor and Core API buttons and a successful run log"></a>
+        <figcaption><span>Scripting workspace · Neon Courier theme · example script</span><span>View full size <span aria-hidden="true">↗</span></span></figcaption>
+      </figure>
+    </section>
+
     <section class="browser-section shell section-space" id="browser" aria-labelledby="browser-title">
-      <div class="browser-preview screenshot-carousel" role="region" aria-roledescription="carousel" aria-label="Browser integration screenshots" data-slideshow>
+      <div class="browser-preview screenshot-carousel reveal" role="region" aria-roledescription="carousel" aria-label="Browser integration screenshots" data-slideshow>
         <div class="slideshow-track" aria-live="off">
           <figure class="screenshot-slide" role="group" aria-roledescription="slide" aria-label="1 of 3: Browser link selection">
             <a href="images/browser-links.png" target="_blank" rel="noopener" aria-label="Open the browser link selection example at full size in a new tab"><img src="images/browser-links.png" width="1280" height="800" loading="lazy" decoding="async" alt="Download Engine browser extension selecting example files from a page to add to a queue"></a>
@@ -161,31 +237,39 @@
         </div>
         <p class="slideshow-message" role="status" hidden></p>
       </div>
-      <div class="browser-copy"><p class="eyebrow">From your browser to your queue</p><h2 id="browser-title">See it.<br>Send it. Save it.</h2><p class="section-intro">Capture clicked file downloads, detect supported media and select multiple links from a page. Let the desktop app handle the transfer.</p><p class="browser-names">Chrome <span>·</span> Edge <span>·</span> Brave <span>·</span> Firefox</p><a class="button button-secondary" href="https://github.com/JasXTD/Download-Engine/blob/main/docs/reference.md#connect-a-browser">Connect your browser <span aria-hidden="true">↗</span></a><p class="fine-print">Requires the Windows app. Current packages use manual installation. Firefox’s temporary add-on must be reloaded after a browser restart. Screenshot details may vary by release.</p></div>
+      <div class="browser-copy reveal"><p class="eyebrow">From your browser to your queue</p><h2 id="browser-title">See it.<br>Send it. Save it.</h2><p class="section-intro">Capture clicked file downloads, detect supported media and select multiple links from a page. Let the desktop app handle the transfer.</p><p class="browser-names">Chrome <span>·</span> Edge <span>·</span> Brave <span>·</span> Firefox</p><a class="button button-secondary" href="https://github.com/JasXTD/Download-Engine/blob/main/docs/reference.md#connect-a-browser">Connect your browser <span aria-hidden="true">↗</span></a><p class="fine-print">Requires the Windows app. Current packages use manual installation. Firefox’s temporary add-on must be reloaded after a browser restart. Screenshot details may vary by release.</p></div>
     </section>
 
-    <section class="automation shell" aria-labelledby="automation-title"><div class="automation-symbol" aria-hidden="true">&gt;_</div><div><p class="eyebrow">Less repetition. More possibility.</p><h2 id="automation-title">Make it part of your workflow.</h2><p>Route files with rules. Write Lua or PowerShell scripts. Use the CLI, or connect a compatible AI client through the optional local MCP server.</p><div class="inline-links"><a class="text-link" href="https://github.com/JasXTD/Download-Engine/blob/main/docs/automation.md">Scripting &amp; automation <span aria-hidden="true">↗</span></a><a class="text-link" href="https://github.com/JasXTD/Download-Engine/blob/main/docs/mcp.md">Local MCP guide <span aria-hidden="true">↗</span></a></div></div></section>
+    <section class="whats-new shell section-space" id="whats-new" aria-labelledby="whats-new-title">
+      <div class="split-heading reveal"><div><p class="eyebrow">Release highlights</p><h2 id="whats-new-title">What’s new since 3.2.</h2></div><a class="text-link" href="https://github.com/JasXTD/Download-Engine/blob/main/CHANGELOG.md">Read the full changelog <span aria-hidden="true">↗</span></a></div>
+      <div class="release-grid reveal-group">
+        <article class="release-card reveal"><span class="release-version">3.4.0</span><h3>Themes and safer profiles</h3><ul><li>Theme collection, your own image, background strength and accent</li><li>Profile version guards and transactional upgrades; older builds refuse to write to an upgraded profile</li><li>MCP capability controls and exact-revision script approvals</li><li>Database pagination for large download histories</li></ul></article>
+        <article class="release-card reveal"><span class="release-version">3.3.3</span><h3>Focused scripting, responsive actions</h3><ul><li>Separate Editor and Loaded scripts tabs, with Full editor in the editor header</li><li>File commands and sample runs grouped under Editor actions</li><li>Queue refreshes, browser video intake and submissions run in the background</li><li>Add dialogs show progress and keep your draft if saving fails</li></ul></article>
+        <article class="release-card reveal"><span class="release-version">3.3.0 – 3.3.2</span><h3>One core API, clearer controls</h3><ul><li>A documented Lua core API with autocomplete and a searchable reference</li><li>Share scripts as <code>.de-script.json</code> packages</li><li>Toolbar More menu with pinned commands and a resizable details panel</li><li>Simpler download status with the percentage beside the bar</li></ul></article>
+      </div>
+    </section>
 
     <section class="downloads shell section-space" id="download" aria-labelledby="download-title">
-      <div class="download-heading"><div><p class="eyebrow">Free. Open source. Yours.</p><h2 id="download-title">Your next download<br>starts here.</h2></div><a class="release-pill" href="https://github.com/JasXTD/Download-Engine/releases/tag/v3.2.0"><span class="status-dot" aria-hidden="true"></span> Stable v3.2.0 <span aria-hidden="true">↗</span></a></div>
-      <div class="download-options">
-        <article class="download-option recommended"><div class="option-top"><svg class="platform-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m3 5 8-1v7H3Zm10-1 8-1v8h-8ZM3 13h8v7l-8-1Zm10 0h8v8l-8-1Z"/></svg><span class="option-label">Everyday use</span></div><h3>Windows installer</h3><p>Install for your Windows account and keep Download Engine ready to use.</p><a class="button button-primary" href="https://github.com/JasXTD/Download-Engine/releases/download/v3.2.0/DownloadEngine-3.2.0-UnsignedSetup.exe">Download installer <span aria-hidden="true">↓</span></a><span class="package-detail">Windows x64 · .exe · Version 3.2.0</span></article>
-        <article class="download-option"><div class="option-top"><svg class="platform-icon folder-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5h7l2 2h9v13H3Z"/></svg><span class="option-label">Take it with you</span></div><h3>Portable ZIP</h3><p>Extract the whole folder somewhere writable, then open <code>de.exe</code>.</p><a class="button button-secondary" href="https://github.com/JasXTD/Download-Engine/releases/download/v3.2.0/DownloadEngine-3.2.0-Unsigned-windows-x64.zip">Download portable ZIP <span aria-hidden="true">↓</span></a><span class="package-detail">Windows x64 · .zip · Version 3.2.0</span></article>
+      <div class="download-heading reveal"><div><p class="eyebrow">Free. Open source. Yours.</p><h2 id="download-title">Your next download<br>starts here.</h2></div><a class="release-pill" href="https://github.com/JasXTD/Download-Engine/releases/tag/v3.4.0"><span class="status-dot pulse" aria-hidden="true"></span> Stable v3.4.0 <span aria-hidden="true">↗</span></a></div>
+      <div class="download-options reveal-group">
+        <article class="download-option recommended reveal"><div class="option-top"><svg class="platform-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m3 5 8-1v7H3Zm10-1 8-1v8h-8ZM3 13h8v7l-8-1Zm10 0h8v8l-8-1Z"/></svg><span class="option-label">Everyday use</span></div><h3>Windows installer</h3><p>Install for your Windows account and keep Download Engine ready to use.</p><a class="button button-primary" href="https://github.com/JasXTD/Download-Engine/releases/download/v3.4.0/DownloadEngine-3.4.0-UnsignedSetup.exe">Download installer <span aria-hidden="true">↓</span></a><span class="package-detail">Windows x64 · .exe · Version 3.4.0</span></article>
+        <article class="download-option reveal"><div class="option-top"><svg class="platform-icon folder-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5h7l2 2h9v13H3Z"/></svg><span class="option-label">Take it with you</span></div><h3>Portable ZIP</h3><p>Extract the whole folder somewhere writable, then open <code>de.exe</code>.</p><a class="button button-secondary" href="https://github.com/JasXTD/Download-Engine/releases/download/v3.4.0/DownloadEngine-3.4.0-Unsigned-windows-x64.zip">Download portable ZIP <span aria-hidden="true">↓</span></a><span class="package-detail">Windows x64 · .zip · Version 3.4.0</span></article>
       </div>
-      <div class="download-note"><span aria-hidden="true">ⓘ</span><p>Both packages include FFmpeg and its source and license files. Windows binaries are currently unsigned. <a href="https://github.com/JasXTD/Download-Engine/releases/download/v3.2.0/SHA256SUMS-3.2.0">Check the SHA-256 checksums</a> against your download.</p></div>
-      <div class="additional-downloads"><div><h3>Browser extensions</h3><p>Version 3.2.0 · Manual installation</p><div class="inline-links"><a href="https://github.com/JasXTD/Download-Engine/releases/download/v3.2.0/download-engine-chrome-3.2.0.zip">Chrome ZIP <span aria-hidden="true">↓</span></a><a href="https://github.com/JasXTD/Download-Engine/releases/download/v3.2.0/download-engine-edge-3.2.0.zip">Edge ZIP <span aria-hidden="true">↓</span></a><a href="https://github.com/JasXTD/Download-Engine/releases/download/v3.2.0/download-engine-firefox-3.2.0.zip">Firefox ZIP <span aria-hidden="true">↓</span></a></div></div><div><h3>Explore the source.</h3><p>Get the matching v3.2.0 source archive, or explore ongoing development on GitHub.</p><div class="inline-links"><a href="https://github.com/JasXTD/Download-Engine">Latest source <span aria-hidden="true">↗</span></a><a href="https://github.com/JasXTD/Download-Engine/releases/download/v3.2.0/DownloadEngine-3.2.0-Source.zip">v3.2.0 source ZIP <span aria-hidden="true">↓</span></a><a href="https://github.com/JasXTD/Download-Engine/releases/latest">Latest release <span aria-hidden="true">↗</span></a></div></div></div>
+      <div class="download-note"><span aria-hidden="true">ⓘ</span><p>Both packages include FFmpeg and its source and license files. Windows binaries are currently unsigned. <a href="https://github.com/JasXTD/Download-Engine/releases/download/v3.4.0/SHA256SUMS-3.4.0">Check the SHA-256 checksums</a> against your download.</p></div>
+      <div class="additional-downloads"><div><h3>Browser extensions</h3><p>Version 3.4.0 · Manual installation</p><div class="inline-links"><a href="https://github.com/JasXTD/Download-Engine/releases/download/v3.4.0/download-engine-chrome-3.4.0.zip">Chrome ZIP <span aria-hidden="true">↓</span></a><a href="https://github.com/JasXTD/Download-Engine/releases/download/v3.4.0/download-engine-edge-3.4.0.zip">Edge ZIP <span aria-hidden="true">↓</span></a><a href="https://github.com/JasXTD/Download-Engine/releases/download/v3.4.0/download-engine-firefox-3.4.0.zip">Firefox ZIP <span aria-hidden="true">↓</span></a></div></div><div><h3>Explore the source.</h3><p>Get the matching v3.4.0 source archive, or explore ongoing development on GitHub.</p><div class="inline-links"><a href="https://github.com/JasXTD/Download-Engine">Latest source <span aria-hidden="true">↗</span></a><a href="https://github.com/JasXTD/Download-Engine/releases/download/v3.4.0/DownloadEngine-3.4.0-Source.zip">v3.4.0 source ZIP <span aria-hidden="true">↓</span></a><a href="https://github.com/JasXTD/Download-Engine/releases/latest">Latest release <span aria-hidden="true">↗</span></a></div></div></div>
     </section>
 
-    <section class="getting-started shell" aria-labelledby="start-title"><div><p class="eyebrow">A few clicks, then you’re off</p><h2 id="start-title">Your first download.</h2></div><ol class="steps"><li><span>01</span><h3>Open the app</h3><p>Install it, or extract the portable ZIP and open <code>de.exe</code>.</p></li><li><span>02</span><h3>Add your link</h3><p>Select <strong>Add URL</strong>, paste a file link and choose where to save it.</p></li><li><span>03</span><h3>Take control</h3><p>Start your download, organize a queue or connect your browser.</p></li></ol><a class="text-link" href="https://github.com/JasXTD/Download-Engine/blob/main/docs/user-guide.md">Read the full user guide <span aria-hidden="true">↗</span></a></section>
+    <section class="getting-started shell reveal" aria-labelledby="start-title"><div><p class="eyebrow">A few clicks, then you’re off</p><h2 id="start-title">Your first download.</h2></div><ol class="steps"><li><span>01</span><h3>Open the app</h3><p>Install it, or extract the portable ZIP and open <code>de.exe</code>.</p></li><li><span>02</span><h3>Add your link</h3><p>Select <strong>Add URL</strong>, paste a file link and choose where to save it.</p></li><li><span>03</span><h3>Take control</h3><p>Start your download, organize a queue, connect your browser or pick a theme.</p></li></ol><a class="text-link" href="https://github.com/JasXTD/Download-Engine/blob/main/docs/user-guide.md">Read the full user guide <span aria-hidden="true">↗</span></a></section>
 
-    <section class="faq shell section-space" aria-labelledby="faq-title"><div><p class="eyebrow">Good to know</p><h2 id="faq-title">A little clarity.</h2></div><div class="faq-items">
+    <section class="faq shell section-space" aria-labelledby="faq-title"><div class="reveal"><p class="eyebrow">Good to know</p><h2 id="faq-title">A little clarity.</h2></div><div class="faq-items reveal">
       <details><summary>Is Download Engine free?<span aria-hidden="true">+</span></summary><p>Yes. The application is free and open source under the MIT license. Bundled components, including FFmpeg, have their own licenses, available in About and the repository.</p></details>
-      <details><summary>Which hosting sites are supported?<span aria-hidden="true">+</span></summary><p>Version 3.2.0 supports individual MEGA public files and public WeTransfer transfers. It also discovers exposed links on supported download pages, including GitHub raw files. These features are included in the release packages. Password-protected transfers, account-only links and browser challenges are outside the supported workflows. <a href="#hosting">See the hosting support details.</a></p></details>
+      <details><summary>Can I use my own background image?<span aria-hidden="true">+</span></summary><p>Yes. Open Preferences → Appearance → Custom and choose <strong>Choose image…</strong>. PNG and JPEG files up to 16 MiB and 16 megapixels are supported. The app keeps a resized copy in your local profile; images are never uploaded. Your picture gets its own card next to the presets, and Remove image deletes the copy when you save. <a href="https://github.com/JasXTD/Download-Engine/blob/main/docs/user-guide.md#custom-themes">Read the custom themes guide.</a></p></details>
+      <details><summary>Which hosting sites are supported?<span aria-hidden="true">+</span></summary><p>Since version 3.2.0, Download Engine supports individual MEGA public files and public WeTransfer transfers. It also discovers exposed links on supported download pages, including GitHub raw files. These features are included in the release packages. Password-protected transfers, account-only links and browser challenges are outside the supported workflows. <a href="#hosting">See the hosting support details.</a></p></details>
       <details><summary>Can Web Grabber save any website?<span aria-hidden="true">+</span></summary><p>It can discover downloadable files and save supported static pages with their assets and local links. A saved copy does not reproduce server-side features, forms, sign-in flows or JavaScript applications. Site structure and access restrictions affect what can be saved.</p></details>
       <details><summary>Can it download every video?<span aria-hidden="true">+</span></summary><p>No. Built-in readers support selected public YouTube, Bilibili, TikTok and Twitch videos, plus compatible finished, unencrypted HLS and DASH streams from other sites. Live recording and DRM are unsupported. Website changes and access restrictions can affect availability. <a href="#video">Check supported sites and limits.</a></p></details>
       <details><summary>Does it work on macOS or Linux?<span aria-hidden="true">+</span></summary><p>Current packages support Windows x64. macOS, Linux and Android packages are not provided.</p></details>
       <details><summary>Is this Internet Download Manager?<span aria-hidden="true">+</span></summary><p>Download Engine is an independent project inspired by Internet Download Manager (IDM). It is not affiliated with IDM and does not offer complete IDM feature parity.</p></details>
-      <details><summary>How do I update?<span aria-hidden="true">+</span></summary><p>Check the <a href="https://github.com/JasXTD/Download-Engine/releases/latest">latest GitHub release</a>. Close the app before upgrading. Preserve your data and downloads when updating a portable copy, and keep desktop and extension versions aligned. There is no automatic updater.</p></details>
+      <details><summary>How do I update?<span aria-hidden="true">+</span></summary><p>Choose Help → Check for updates to compare your version with the <a href="https://github.com/JasXTD/Download-Engine/releases/latest">latest GitHub release</a>, then open the release page to download it; installation stays manual. Close the app before upgrading. Preserve your data and downloads when updating a portable copy, and keep desktop and extension versions aligned. Older builds cannot write to a profile upgraded by version 3.4.0, so keep a backup if you may need to go back.</p></details>
     </div></section>
   </main>
 

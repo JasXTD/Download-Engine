@@ -1,12 +1,13 @@
+const openProfileDatabase = require('./profile_database.cjs');
 // Actual desktop-owned HTTP lifecycle. All processes, data and downloads are isolated.
 const assert = require('node:assert/strict'), fs = require('node:fs'), path = require('node:path');
 const {spawn} = require('node:child_process'), {once} = require('node:events');
-const {randomUUID,createHash} = require('node:crypto'), {DatabaseSync} = require('node:sqlite');
+const {randomUUID,createHash} = require('node:crypto');
 const {setTimeout:delay} = require('node:timers/promises'), http = require('node:http');
 const root=path.resolve(__dirname,'..'),binary=path.resolve(process.argv[2]||'dist/IDM-EX-UnsignedDev');
 const home=path.join(root,'artifacts',`mcp-desktop-smoke-${randomUUID().slice(0,8)}`);
 fs.mkdirSync(home,{recursive:true});
-const env={...process.env,IDM_EX_HOME:home};
+const env={...process.env,DOWNLOAD_ENGINE_HOME:home,IDM_EX_HOME:home};
 for(const key of Object.keys(env)) if(key.startsWith('IDM_EX_TEST_')||key.startsWith('IDM_EX_SCRIPT_')||key.includes('SCREENSHOT_TO')) delete env[key];
 const version=/^version = "([^"]+)"/m.exec(fs.readFileSync(path.join(root,'Cargo.toml'),'utf8'))[1];
 const checks=[],children=[];let db,app,config,port;
@@ -20,7 +21,14 @@ async function command(exe,args){
 }
 const cli=args=>command(path.join(binary,'de-cli.exe'),args).then(JSON.parse);
 function mark(text){checks.push(text);console.log(text);}
-const logs=()=>fs.existsSync(path.join(home,'data/logs/desktop.log'))?fs.readFileSync(path.join(home,'data/logs/desktop.log'),'utf8').trim().split(/\r?\n/).map(JSON.parse):[];
+function logs(){
+  const file=path.join(home,'data/logs/desktop.log');
+  if(!fs.existsSync(file))return [];
+  const text=fs.readFileSync(file,'utf8');
+  // A concurrent append may end halfway through a JSON record. Parse only
+  // newline-terminated records; malformed complete records must still fail.
+  return text.slice(0,text.lastIndexOf('\n')+1).split(/\r?\n/).filter(Boolean).map(JSON.parse);
+}
 async function launch(){
   app=spawn(path.join(binary,'de.exe'),[],{env,windowsHide:true,stdio:['ignore','pipe','pipe']});children.push(app);
   app.completion=once(app,'exit');app.completion.catch(()=>{});
@@ -30,8 +38,11 @@ async function launch(){
 }
 async function close(){
   const ownedPid=app.pid;
-  await command('powershell.exe',['-NoProfile','-NonInteractive','-Command',
-    `$ErrorActionPreference='Stop'; $owned=Get-Process -Id ${ownedPid}; $deadline=[DateTime]::UtcNow.AddSeconds(10); do { $owned.Refresh(); if($owned.MainWindowHandle -ne 0){break}; Start-Sleep -Milliseconds 50 } while([DateTime]::UtcNow -lt $deadline); if(-not $owned.CloseMainWindow()){throw 'Could not close the owned test window'}`]);
+  // The ready log precedes native GUI initialization. Close the owned window
+  // only once its native automation provider reports it ready for interaction.
+  const windowState=await command('powershell.exe',['-NoProfile','-NonInteractive','-Command',
+    `$ErrorActionPreference='Stop'; Add-Type -AssemblyName UIAutomationClient; Add-Type -AssemblyName UIAutomationTypes; $owned=Get-Process -Id ${ownedPid}; $deadline=[DateTime]::UtcNow.AddSeconds(10); $ready=$false; do { $owned.Refresh(); if($owned.MainWindowHandle -ne 0 -and $owned.MainWindowTitle -eq 'Download Engine'){ $element=[System.Windows.Automation.AutomationElement]::FromHandle($owned.MainWindowHandle); if($element.Current.ProcessId -ne ${ownedPid}){throw 'Window owner changed'}; $pattern=$element.GetCurrentPattern([System.Windows.Automation.WindowPattern]::Pattern); $ready=$pattern.Current.WindowInteractionState -eq [System.Windows.Automation.WindowInteractionState]::ReadyForUserInteraction; if($ready){break} }; Start-Sleep -Milliseconds 50 } while([DateTime]::UtcNow -lt $deadline); if(-not $ready){throw 'Owned application window did not become interactive'}; [pscustomobject]@{title=$element.Current.Name;class=$element.Current.ClassName;state=$pattern.Current.WindowInteractionState.ToString()} | ConvertTo-Json -Compress; $pattern.Close()`]);
+  console.log(`Closed owned app window: ${windowState.trim()}`);
   await until(()=>app.exitCode!==null||app.signalCode!==null,'desktop clean exit',20000);
   const [code,signal]=await app.completion;assert.equal(code,0,app.output);assert.equal(signal,null);
   assert(logs().some(l=>l.pid===ownedPid&&l.event==='stopped'));
@@ -57,7 +68,7 @@ async function stop(server){server.closeAllConnections();await new Promise(resol
     const encryptedHash=()=>createHash('sha256').update(fs.readFileSync(path.join(home,'data/mcp-token.dpapi'))).digest('hex');
     const originalTokenFile=encryptedHash();
     await cli(['queues']);
-    db=new DatabaseSync(path.join(home,'data/queue.sqlite3'));db.exec('PRAGMA busy_timeout=5000');
+    db=openProfileDatabase(path.join(home,'data/queue.sqlite3'));db.exec('PRAGMA busy_timeout=5000');
     db.prepare('UPDATE desktop_preferences SET close_to_tray=0,notify_complete=0,notify_failed=0').run();
     db.prepare('UPDATE mcp_settings SET port=?').run(port);
     await launch();
@@ -74,7 +85,9 @@ async function stop(server){server.closeAllConnections();await new Promise(resol
 
     db.exec('UPDATE mcp_settings SET read_only=0');
     await launch();await until(()=>logs().some(l=>l.pid===app.pid&&l.event==='mcp_started'),'control startup');
-    catalog=(await request('tools/list')).result.tools;assert.equal(catalog.length,21);
+    catalog=(await request('tools/list')).result.tools;assert.equal(catalog.length,19);
+    assert(!catalog.some(t=>t.name==='run_script'||t.name==='stop_script'));
+    await tool('run_script',{id:randomUUID()},true);
     assert.equal((await request('server/discover')).result._meta['io.modelcontextprotocol/serverInfo'].version,version);
     const queue=await tool('create_queue',{name:'Desktop MCP test',request_id:randomUUID()});assert.equal(queue.receipt.state,'done');
     const fixturePort=await listening(fixture);

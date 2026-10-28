@@ -1,3 +1,4 @@
+const openProfileDatabase = require('./profile_database.cjs');
 // Offline native screenshots using isolated databases; no packages required.
 // Build first: cargo build --offline --locked --features screenshot
 const assert = require('node:assert/strict');
@@ -5,7 +6,6 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { randomUUID } = require('node:crypto');
 const { spawnSync } = require('node:child_process');
-const { DatabaseSync } = require('node:sqlite');
 const { deflateSync } = require('node:zlib');
 
 const root = path.resolve(__dirname, '..');
@@ -54,7 +54,7 @@ function capture(name, feature, width, height, dark, existing) {
   const home = existing || path.join(output, name);
   fs.mkdirSync(path.join(home, 'data'), { recursive: true });
   if (!existing) {
-    const db = new DatabaseSync(path.join(home, 'data', 'queue.sqlite3'));
+    const db = openProfileDatabase(path.join(home, 'data', 'queue.sqlite3'));
     db.exec('CREATE TABLE interface_preferences(id INTEGER PRIMARY KEY CHECK(id=1),data TEXT NOT NULL)');
     db.prepare('INSERT INTO interface_preferences VALUES(1,?)').run(JSON.stringify({ appearance: dark ? 'dark' : 'light', compact_rows: false, show_details: true, sidebar_labels: true }));
     db.close();
@@ -69,7 +69,7 @@ function capture(name, feature, width, height, dark, existing) {
   assert.equal(result.error, undefined, String(result.error));
   assert.equal(result.status, 0, result.stderr);
   assert(fs.existsSync(ppm), result.stderr);
-  const db = new DatabaseSync(path.join(home, 'data', 'queue.sqlite3'));
+  const db = openProfileDatabase(path.join(home, 'data', 'queue.sqlite3'));
   assert.equal(db.prepare('SELECT COUNT(*) AS n FROM jobs').get().n, 0);
   assert.equal(db.prepare('SELECT COUNT(*) AS n FROM grabber_projects').get().n, hls ? 0 : 1);
   const pending = db.prepare('SELECT COUNT(*) AS n FROM grabber_pending').get().n;

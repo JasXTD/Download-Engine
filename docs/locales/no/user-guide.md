@@ -8,6 +8,16 @@ Innstillinger åpnes i et vindu med kategorier. Lagre bruker endringene; Avbryt,
 
 Velg Legg til URL, lim inn en direkte fillenke, kontroller navn, kø og mappe og start. Legg til gruppe tar én lenke per linje. Fra et mønster lager nummererte lenker som img001…img100 fra én lenke med *. Bytt språk i Innstillinger → Utseende → Språk. Systemspråk følger Windows; språk som ikke støttes bruker engelsk.
 
+
+
+<!-- custom-themes-3.4.0 -->
+### Temasamling
+
+Innstillinger → Utseende → Eget tilbyr Neon Courier, Reactor Night, Aurora og Moonveil. Juster bakgrunn og aksent eller importer PNG/JPEG. Lagre beholder forhåndsvisningen; Avbryt gjenoppretter forrige tema. Bilder forblir lokale med størrelsesgrenser og bakgrunnsbehandling. Beskyttelse av profilversjoner og MCP-tilgangskontroller er også inkludert.
+
+PNG / JPEG · opptil 16 MiB og 16 megapiksler. Kopieres til profilen.
+<!-- /custom-themes-3.4.0 -->
+
 ## Nedlastinger og gjenoppretting
 
 ### Nedlastinger og gjenoppretting
@@ -33,6 +43,9 @@ Innsamling finner fillenker eller lagrer et nettsted frakoblet. Velg URL, dybde,
 Administrer køer grupperer filer og begrenser samtidige nedlastinger. Nye køer venter på start eller tidsplan. Planleggeren har start, pause og gjentakelse. Appen må være åpen, også i systemstatusfeltet. Automatisk avslutning, avslåing, hvilemodus og dvalemodus aktiveres separat; nedtellingen kan avbrytes.
 
 ## Skript
+
+Redigereren og innlastede skript har nå egne faner. Søk etter eller opprett skript i listen, og åpne den fullstendige redigereren fra overskriften for Lua eller PowerShell. Lagre, kjør/stopp og valgfrie logger vises sammen med koden. Filkommandoer ligger i redigererens handlingsmeny. Bytte av visning bevarer ulagret kode, innstillinger og markørposisjon.
+
 
 ### Skript
 
@@ -73,6 +86,24 @@ print("Failed downloads handled:", handled)
 ```
 
 For å redigere et skript i et annet program bruker du Åpne fil… og Lagre til fil… i redigeringsprogrammets overskrift. Åpne fil… kopierer en .lua- eller .ps1-fil inn i redigeringsprogrammet og spør først hvis den ville erstatte kode som ikke er lagret; velg Lagre skript for å beholde den. Lagre til fil… skriver koden i redigeringsprogrammet til en fil.
+
+### Lua Core API 1
+
+Opprett eller åpne et skript i Loaded scripts; velg Lua og Manual only i Script settings. Full editor gir mer kodeplass. Velg Save script, Run script og les Run logs. Core API viser funksjoner for gjeldende utløser; Ctrl+Space åpner forslag. API 1 er kontraktversjonen, ikke appversjonen. Eksemplet tolker bare HTML i minnet, uten nettverk eller nedlastinger; sidehenting er false for et manuelt skript.
+
+```lua
+-- Example: core-api
+assert(xd.api_version == 1, "This example needs Lua API 1")
+print("App:", xd.app_version, "Role:", xd.script_kind)
+local html = '<a class="download" href="/files/demo.zip">Demo</a>'
+local links = xd.html_select(html, "a.download[href]", "href")
+local url = xd.url_join("https://example.com/catalog/", links[1])
+print("Preview:", xd.to_json({ kind = "file", url = url }))
+print("Can fetch a page:", xd.supports("xd.fetch"))
+```
+
+Open examples/core-api-automation.lua or examples/custom-site-reader.lua with Editor actions → Open file…. Site reader uses public pages, Pages patterns and Direct connection; test with Test on URL before enabling its trigger. Ordinary automation cannot call xd.fetch. Import script… accepts .de-script.json as a new draft with automatic triggers and file changes off; review its code and reselect local queues. Stop script does not undo submitted downloads. Full English reference: docs/automation.md.
+
 
 ## Kommandolinje
 

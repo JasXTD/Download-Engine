@@ -41,9 +41,12 @@ The familiar layout is inspired by **Internet Download Manager (IDM)**. Download
 Engine is an independent project, is not affiliated with IDM, and does not claim
 complete IDM feature parity.
 
-> **New in v3.2.0:** MEGA public files, public WeTransfer transfers, hosting-page
-> file discovery and GitHub raw-download capture are included in the
-> [installer, portable ZIP and browser extensions](https://github.com/JasXTD/Download-Engine/releases/tag/v3.2.0).
+> **New in v3.4.0:** custom themes with artwork across the whole window or your own
+> picture, a customizable toolbar, a focused scripting workspace with a versioned
+> core API and shareable script packages, and download actions that stay responsive
+> on slow storage. Get the
+> [installer, portable ZIP and browser extensions](https://github.com/JasXTD/Download-Engine/releases/tag/v3.4.0);
+> the [changelog](CHANGELOG.md) lists everything since v3.2.0.
 
 ## Features
 
@@ -91,13 +94,24 @@ complete IDM feature parity.
 
 ### Desktop controls and automation
 
-- Switch between light and dark themes, customize the download table, and keep
-  transfers running in the system tray.
+- Follow Windows or pick Light, Dark or a **custom theme**: bundled artwork such as
+  Aurora, Neon Courier, Reactor Night and Moonveil, or your own PNG/JPEG, shown behind the
+  whole window with adjustable strength and accent color. Bright pictures are
+  darkened automatically so text stays readable, and everything works offline.
+- Pin the toolbar actions you use under **More → Customize toolbar**, resize the
+  details panel, customize the download table, and keep transfers running in the
+  system tray.
 - Choose from **19 interface languages**, with Windows language detection and
   English fallback; read the bundled guide offline with **F1**.
 - Verify SHA-256 checksums and optionally scan files with a configured antivirus.
-- Build routing rules, write **Lua or PowerShell** scripts in the editor, or
-  control the app through its **CLI** and optional local **MCP server**.
+- Build routing rules, or write **Lua or PowerShell** scripts in a focused editor
+  with autocomplete, a searchable core API reference and a full-window mode. Share
+  scripts as packages with their settings, or control the app through its **CLI**
+  and optional local **MCP server**.
+
+![Download Engine with the Moonveil custom theme: artwork behind the toolbar, sidebar and download list](docs/images/readme-custom-theme.jpg)
+
+<p align="center"><em>The Moonveil custom theme, with sample downloads.</em></p>
 
 ## Supported video sites and formats
 
@@ -169,8 +183,9 @@ macOS, Linux, and Android packages are not provided by this release workflow.
    group you want to schedule together.
 
 Open **Preferences** to adjust appearance, folders, connections, scanning, and tray
-behavior. Change the interface language under **Appearance → Language**, then
-select **Save**. Open **Help → Guide** or press **F1** for the offline walkthrough.
+behavior. Change the interface language under **Appearance → Language**, or pick
+**Appearance → Theme → Custom** for a themed background, then select **Save**. Open
+**Help → Guide** or press **F1** for the offline walkthrough.
 
 ## Browser integration
 
@@ -217,7 +232,7 @@ Choose the level of automation you need:
 | **Routing rules** | Send new files to a queue by site/file type, set a speed limit, or start another queue after completion. |
 | **Lua scripting** | Inspect queues, perform supported app actions, and react to download events using the built-in Lua runtime. |
 | **PowerShell scripting** | Run trusted Windows automation under your own account. This has normal file and program access. |
-| **Lua site readers** | Extend video-page support through a separate, restricted page-fetching API. |
+| **Lua site readers** | Extend file/video-page support in the same editor and core API, with restricted page-fetching permissions. |
 | **`de-cli.exe`** | Inspect and manage downloads from a terminal or existing script, with structured JSON results. |
 | **Local MCP** | Let a compatible AI client inspect or control this app through an authenticated Streamable HTTP connection. |
 
@@ -236,8 +251,10 @@ changes. Keep its access token private. See the [MCP setup guide](docs/mcp.md) a
 [AI usage guide](docs/mcp-ai-guide.md) before connecting a client.
 
 The scripting editor includes syntax checks, line numbers, highlighting, and
-autocomplete. Read the [automation reference](docs/automation.md) for script
-permissions, events, timeouts, cancellation, and CLI examples.
+autocomplete and a searchable core API reference. Import/export script packages
+with their triggers and settings; imported scripts start disabled for review.
+Read the [automation reference](docs/automation.md#core-api-and-shared-scripts)
+for API helpers, permissions, events, timeouts, cancellation and examples.
 
 ## Data and security
 

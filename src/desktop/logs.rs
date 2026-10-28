@@ -653,6 +653,7 @@ impl State {
                     let spans = &self.spans;
                     let mut layouter = |ui: &egui::Ui, text: &dyn egui::TextBuffer, width: f32| {
                         let dark = ui.visuals().dark_mode;
+                        let p = Palette::for_context(ui.ctx());
                         let mut job = egui::text::LayoutJob {
                             text: text.as_str().to_owned(),
                             ..Default::default()
@@ -664,7 +665,7 @@ impl State {
                                 leading_space: 0.0,
                                 byte_range: egui::text::ByteIndex(range.start)
                                     ..egui::text::ByteIndex(range.end),
-                                format: span_format(*role, dark),
+                                format: span_format(*role, p, dark),
                             })
                             .collect();
                         ui.fonts_mut(|fonts| fonts.layout_job(job))
@@ -684,8 +685,8 @@ impl State {
     }
 }
 
-fn span_format(role: SpanRole, dark: bool) -> egui::TextFormat {
-    let p = Palette::new(dark);
+/// `p` follows a custom theme; `dark` picks the level colours that suit its base.
+fn span_format(role: SpanRole, p: Palette, dark: bool) -> egui::TextFormat {
     let font_id = egui::FontId::monospace(12.0);
     match role {
         SpanRole::Timestamp => egui::TextFormat {

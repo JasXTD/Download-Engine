@@ -1,3 +1,7 @@
+#[path = "../src/desktop/fixture_database.rs"]
+mod fixture_database;
+#[path = "support/legacy_profile.rs"]
+mod legacy_profile;
 use download_engine::{
     paths::AppPaths,
     quota::{DAY, HOUR, Limits, MAX_LIMIT, MIN_LIMIT},
@@ -161,15 +165,16 @@ fn quota_table_migrates_without_changing_old_jobs_or_other_settings() {
     )
     .unwrap();
     store.enqueue(&job).unwrap();
-    let conn = rusqlite::Connection::open(store.paths.data.join("queue.sqlite3")).unwrap();
+    let conn = crate::fixture_database::open(store.paths.data.join("queue.sqlite3")).unwrap();
     let before: String = conn
         .query_row("SELECT data FROM jobs", [], |r| r.get(0))
         .unwrap();
     conn.execute("DROP TABLE data_quotas", []).unwrap();
+    legacy_profile::unversioned_fixture(&conn);
     drop(conn);
     let reopened = Store::open(store.paths.clone()).unwrap();
     assert_eq!(reopened.quota_status().unwrap().limits, Limits::default());
-    let conn = rusqlite::Connection::open(store.paths.data.join("queue.sqlite3")).unwrap();
+    let conn = crate::fixture_database::open(store.paths.data.join("queue.sqlite3")).unwrap();
     let after: String = conn
         .query_row("SELECT data FROM jobs", [], |r| r.get(0))
         .unwrap();

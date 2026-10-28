@@ -4,6 +4,14 @@ Download Engine's original code is Copyright (c) 2026 Xetro and licensed under
 [MIT](LICENSE). That license does not replace the licenses of the components
 below. Their copyright notices, licenses and source terms remain in effect.
 
+## Theme artwork
+
+The bundled backgrounds were generated for Download Engine with OpenAI ImageGen.
+The collection includes Neon Courier, Reactor Night, Aurora and Moonveil, a
+redesigned lunar sorceress. These are app theme illustrations, not official
+artwork or endorsements from a game franchise.
+Asset provenance is documented in `assets/themes/README.md` in the source package.
+
 ## FFmpeg and x264
 
 The separate `tools/ffmpeg/ffmpeg.exe` helper is distributed under GPL version 3.

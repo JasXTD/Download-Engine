@@ -63,9 +63,14 @@ pub(super) fn choices(
     let mut items = Vec::new();
     let mut add = |name: &str, args: Option<&str>| items.push(Suggestion::new(name, args));
     if language == Language::Lua {
+        use download_engine::script_automation::api;
+        for function in api::FUNCTIONS.iter().filter(|f| f.available(reader)) {
+            add(function.name, Some(function.arguments));
+        }
+        for property in api::PROPERTIES {
+            add(property, None);
+        }
         for (name, args) in [
-            ("xd.log", "level, message"),
-            ("xd.sleep", "milliseconds"),
             ("print", "..."),
             ("ipairs", "table"),
             ("pairs", "table"),
@@ -79,40 +84,8 @@ pub(super) fn choices(
             add(name, Some(args));
         }
         if reader {
-            for (name, args) in [
-                ("xd.fetch", "url, options"),
-                ("xd.json", "text"),
-                ("xd.to_json", "value"),
-                ("xd.url_encode", "text"),
-            ] {
-                add(name, Some(args));
-            }
             add("event.url", None);
         } else {
-            for (name, args) in [
-                ("xd.downloads", ""),
-                ("xd.status", "id"),
-                ("xd.queues", ""),
-                ("xd.add", "url, options"),
-                ("xd.create_queue", "name"),
-                ("xd.start_queue", "queue"),
-                ("xd.pause_queue", "queue"),
-                ("xd.pause", "id"),
-                ("xd.resume", "id"),
-                ("xd.pause_all", ""),
-                ("xd.retry", "id"),
-                ("xd.restart", "id"),
-                ("xd.rename", "id, name"),
-                ("xd.move", "id, folder"),
-                ("xd.remove", "id, options"),
-                ("xd.notify", "title, text"),
-                ("xd.command", "..."),
-                ("xd.store.get", "key"),
-                ("xd.store.set", "key, value"),
-                ("xd.store.keys", ""),
-            ] {
-                add(name, Some(args));
-            }
             for name in [
                 "event.trigger",
                 "event.downloads",

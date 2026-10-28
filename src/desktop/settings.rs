@@ -112,6 +112,7 @@ impl Desktop {
             match self.store.save_download_folders(&rules) {
                 Ok(()) => {
                     self.download_folders = Some(rules);
+                    self.note_advanced_preferences_saved();
                     self.folders_draft = None;
                     self.dialog = None;
                     self.form_error = None;

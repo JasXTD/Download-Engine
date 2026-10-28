@@ -7653,5 +7653,315 @@
     "仅在请求时检查 GitHub。请从发行页面下载并安装更新。",
     "僅在要求時檢查 GitHub。請從發行頁面下載並安裝更新。",
     "GitHub disemak hanya apabila diminta. Muat turun dan pasang kemas kini dari halaman keluaran."
+  ],
+  "Import script…": [
+    "导入脚本…",
+    "匯入指令碼…",
+    "Import skrip…"
+  ],
+  "Export script…": [
+    "导出脚本…",
+    "匯出指令碼…",
+    "Eksport skrip…"
+  ],
+  "Core API": [
+    "核心 API",
+    "核心 API",
+    "API teras"
+  ],
+  "Script package (*.de-script.json)": [
+    "脚本包 (*.de-script.json)",
+    "指令碼套件 (*.de-script.json)",
+    "Pakej skrip (*.de-script.json)"
+  ],
+  "Replace the script in the editor?": [
+    "替换编辑器中的脚本？",
+    "取代編輯器中的指令碼？",
+    "Gantikan skrip dalam editor?"
+  ],
+  "Replace script": [
+    "替换脚本",
+    "取代指令碼",
+    "Gantikan skrip"
+  ],
+  "Choose a queue": [
+    "选择队列",
+    "選擇佇列",
+    "Pilih giliran"
+  ],
+  "Lua automation and site readers": [
+    "Lua 自动化与网站读取器",
+    "Lua 自動化與網站讀取器",
+    "Automasi Lua dan pembaca laman"
+  ],
+  "Imported disabled. Review before saving.": [
+    "导入后已禁用。保存前请检查。",
+    "匯入後已停用。儲存前請檢查。",
+    "Import dinyahdayakan. Semak sebelum menyimpan."
+  ],
+  "File access is off. Review before enabling.": [
+    "文件访问已关闭。启用前请检查。",
+    "檔案存取已關閉。啟用前請檢查。",
+    "Akses fail dimatikan. Semak sebelum mengaktifkan."
+  ],
+  "Choose a local queue before saving.": [
+    "保存前请选择本地队列。",
+    "儲存前請選擇本機佇列。",
+    "Pilih giliran tempatan sebelum menyimpan."
+  ],
+  "Script exported. Logs and stored values are excluded.": [
+    "脚本已导出，不含日志和存储值。",
+    "指令碼已匯出，不含記錄和儲存值。",
+    "Skrip dieksport. Log dan nilai tersimpan tidak disertakan."
+  ],
+  "Functions depend on the trigger and permissions.": [
+    "可用函数取决于触发器和权限。",
+    "可用函式取決於觸發條件和權限。",
+    "Fungsi bergantung pada pencetus dan kebenaran."
+  ],
+  "Search": [
+    "搜索",
+    "搜尋",
+    "Cari"
+  ],
+  "Copy": [
+    "复制",
+    "複製",
+    "Salin"
+  ],
+  "Loaded scripts": [
+    "已加载脚本",
+    "已載入指令碼",
+    "Skrip dimuatkan"
+  ],
+  "Search scripts": [
+    "搜索脚本",
+    "搜尋指令碼",
+    "Cari skrip"
+  ],
+  "Full editor": [
+    "完整编辑器",
+    "完整編輯器",
+    "Editor penuh"
+  ],
+  "Back to scripts": [
+    "返回脚本",
+    "返回指令碼",
+    "Kembali ke skrip"
+  ],
+  "Save or discard edits before switching scripts.": [
+    "切换脚本前请保存或放弃修改。",
+    "切換指令碼前請儲存或捨棄修改。",
+    "Simpan atau buang perubahan sebelum menukar skrip."
+  ],
+  "No saved scripts yet.": [
+    "尚无已保存的脚本。",
+    "尚無已儲存的指令碼。",
+    "Belum ada skrip disimpan."
+  ],
+  "No matching scripts.": [
+    "没有匹配的脚本。",
+    "沒有符合的指令碼。",
+    "Tiada skrip sepadan."
+  ],
+  "Disabled": [
+    "已禁用",
+    "已停用",
+    "Dilumpuhkan"
+  ],
+  "Clear completed history": [
+    "清除已完成记录",
+    "清除已完成記錄",
+    "Kosongkan sejarah selesai"
+  ],
+  "More": [
+    "更多",
+    "更多",
+    "Lagi"
+  ],
+  "Customize toolbar": [
+    "自定义工具栏",
+    "自訂工具列",
+    "Sesuaikan bar alat"
+  ],
+  "Pinned actions appear when space allows.": [
+    "固定的操作会在空间足够时显示。",
+    "釘選的操作會在空間足夠時顯示。",
+    "Tindakan dipinkan dipaparkan jika ruang mencukupi."
+  ],
+  "Script settings": [
+    "脚本设置",
+    "指令碼設定",
+    "Tetapan skrip"
+  ],
+  "Automatic trigger off": [
+    "自动触发已关闭",
+    "自動觸發已關閉",
+    "Pencetus automatik dimatikan"
+  ],
+  "Automatic trigger on": [
+    "自动触发已开启",
+    "自動觸發已開啟",
+    "Pencetus automatik dihidupkan"
+  ],
+  "Manual": [
+    "手动",
+    "手動",
+    "Manual"
+  ],
+  "Drag to resize details": [
+    "拖动以调整详情区域大小",
+    "拖曳以調整詳細資料區域大小",
+    "Seret untuk ubah saiz butiran"
+  ],
+  "Advanced settings": [
+    "高级设置",
+    "進階設定",
+    "Tetapan lanjutan"
+  ],
+  "Enter a valid port in Advanced settings": [
+    "请在高级设置中输入有效端口",
+    "請在進階設定中輸入有效連接埠",
+    "Masukkan port sah dalam Tetapan lanjutan"
+  ],
+  "Advanced settings saved. Cancel will not undo those changes.": [
+    "高级设置已保存。取消不会撤销这些更改。",
+    "進階設定已儲存。取消不會復原這些變更。",
+    "Tetapan lanjutan disimpan. Batal tidak membatalkan perubahan itu."
+  ],
+  "Save and Cancel apply to edits in this window. Separate dialogs save independently.": [
+    "保存和取消仅适用于此窗口中的修改。其他对话框独立保存。",
+    "儲存和取消僅適用於此視窗中的修改。其他對話框獨立儲存。",
+    "Simpan dan Batal terpakai pada tetingkap ini. Dialog lain menyimpan secara berasingan."
+  ],
+  "Editor": [
+    "编辑器",
+    "編輯器",
+    "Editor"
+  ],
+  "Exit full editor": [
+    "退出完整编辑器",
+    "退出完整編輯器",
+    "Keluar editor penuh"
+  ],
+  "Editor actions": [
+    "编辑器操作",
+    "編輯器操作",
+    "Tindakan editor"
+  ],
+  "Choose New script in Loaded scripts to start from a working example.": [
+    "在“已加载脚本”中选择“新建脚本”，从可运行的示例开始。",
+    "在「已載入指令碼」中選擇「新增指令碼」，從可執行的範例開始。",
+    "Pilih Skrip baharu dalam Skrip dimuatkan untuk bermula dengan contoh yang berfungsi."
+  ],
+  "Opening folder…": [
+    "正在打开文件夹…",
+    "正在開啟資料夾…",
+    "Membuka folder…"
+  ],
+  "Start requested.": [
+    "启动请求已发送。",
+    "已送出啟動要求。",
+    "Permintaan mula dihantar."
+  ],
+  "Download controls": [
+    "下载控制",
+    "下載控制",
+    "Kawalan muat turun"
+  ],
+  "Queue controls": [
+    "队列控制",
+    "佇列控制",
+    "Kawalan baris gilir"
+  ],
+  "Approved Lua scripts": [
+    "已批准的 Lua 脚本",
+    "已核准的 Lua 指令碼",
+    "Skrip Lua yang diluluskan"
+  ],
+  "Approved PowerShell scripts": [
+    "已批准的 PowerShell 脚本",
+    "已核准的 PowerShell 指令碼",
+    "Skrip PowerShell yang diluluskan"
+  ],
+  "Choose allowed controls. Scripts need local approval of their saved revision.": [
+    "选择允许的控制功能。脚本的已保存修订版本需要在本机批准。",
+    "選擇允許的控制功能。指令碼儲存的修訂版本需要在本機核准。",
+    "Pilih kawalan yang dibenarkan. Semakan skrip yang disimpan memerlukan kelulusan setempat."
+  ],
+  "Approve revisions locally with the CLI. Editing a script invalidates approval. See the MCP guide.": [
+    "使用命令行在本机批准修订版本。编辑脚本会使批准失效。请参阅 MCP 指南。",
+    "使用命令列在本機核准修訂版本。編輯指令碼會使核准失效。請參閱 MCP 指南。",
+    "Luluskan semakan secara setempat melalui CLI. Mengedit skrip membatalkan kelulusan. Lihat panduan MCP."
+  ],
+  "Custom": [
+    "自定义",
+    "自訂",
+    "Tersuai"
+  ],
+  "Theme collection": [
+    "主题集",
+    "主題集",
+    "Koleksi tema"
+  ],
+  "Preview a theme. Save to keep it, or Cancel to go back.": [
+    "预览主题。保存以保留，或取消以恢复。",
+    "預覽主題。儲存以保留，或取消以還原。",
+    "Pratonton tema. Simpan untuk kekalkan, atau Batal untuk kembali."
+  ],
+  "Choose image…": [
+    "选择图片…",
+    "選擇圖片…",
+    "Pilih imej…"
+  ],
+  "Remove image": [
+    "移除图片",
+    "移除圖片",
+    "Buang imej"
+  ],
+  "Lightened for readability": [
+    "已调亮以便阅读",
+    "已調亮以便閱讀",
+    "Dicerahkan supaya mudah dibaca"
+  ],
+  "Choose theme image": [
+    "选择主题图片",
+    "選擇主題圖片",
+    "Pilih imej tema"
+  ],
+  "PNG or JPEG images": [
+    "PNG 或 JPEG 图片",
+    "PNG 或 JPEG 圖片",
+    "Imej PNG atau JPEG"
+  ],
+  "Your image": [
+    "你的图片",
+    "你的圖片",
+    "Imej anda"
+  ],
+  "Loading image…": [
+    "正在加载图片…",
+    "正在載入圖片…",
+    "Memuatkan imej…"
+  ],
+  "PNG / JPEG · up to 16 MiB and 16 megapixels. Copied to this profile.": [
+    "PNG / JPEG · 最大 16 MiB、1600 万像素。复制到当前配置。",
+    "PNG / JPEG · 最大 16 MiB、1600 萬像素。複製到目前設定檔。",
+    "PNG / JPEG · hingga 16 MiB dan 16 megapiksel. Disalin ke profil ini."
+  ],
+  "Background strength": [
+    "背景强度",
+    "背景強度",
+    "Keamatan latar"
+  ],
+  "Accent": [
+    "强调色",
+    "強調色",
+    "Warna aksen"
+  ],
+  "Background unavailable. Choose another image in Preferences.": [
+    "背景不可用。请在偏好设置中选择其他图片。",
+    "背景無法使用。請在偏好設定中選擇其他圖片。",
+    "Latar tidak tersedia. Pilih imej lain dalam Keutamaan."
   ]
 }

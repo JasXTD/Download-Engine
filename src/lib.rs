@@ -40,6 +40,7 @@ mod queue_start;
 mod queue_store;
 
 mod download_file;
+mod file_relocation;
 
 pub mod browser_batch;
 pub mod browser_recovery;

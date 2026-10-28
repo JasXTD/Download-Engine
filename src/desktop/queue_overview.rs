@@ -12,7 +12,7 @@ pub(super) struct Summary {
     pub unknown: usize,
 }
 impl Summary {
-    fn from_jobs(jobs: &[Job]) -> Self {
+    pub(super) fn from_jobs(jobs: &[Job]) -> Self {
         let mut summary = Self {
             files: jobs.len(),
             ..Self::default()
@@ -35,17 +35,9 @@ impl Summary {
 
 impl Desktop {
     pub(super) fn refresh_queue_summaries(&mut self) {
-        self.queue_summaries
-            .retain(|id, _| self.queues.iter().any(|queue| &queue.id == id));
-        for queue in &self.queues {
-            self.queue_summaries.insert(
-                queue.id.clone(),
-                self.store
-                    .queue_jobs(&queue.id)
-                    .map(|jobs| Summary::from_jobs(&jobs))
-                    .map_err(|error| error.to_string()),
-            );
-        }
+        self.background_io.need_summaries = true;
+        self.last_refresh = Instant::now() - Duration::from_secs(1);
+        self.request_snapshot(false);
     }
 
     pub(super) fn overview(&mut self, ui: &mut egui::Ui, p: Palette) {
@@ -500,7 +492,7 @@ impl Desktop {
         if ui
             .add_enabled(
                 summary.is_some_and(|value| value.complete > 0),
-                egui::Button::new(tr("Clear finished")),
+                egui::Button::new(tr("Clear completed history")),
             )
             .clicked()
         {

@@ -5,6 +5,7 @@ use anyhow::{Context, Result, ensure};
 use rusqlite::{OptionalExtension, TransactionBehavior, params};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
+use sha2::{Digest, Sha256};
 use std::path::PathBuf;
 #[cfg(test)]
 mod tests;
@@ -54,6 +55,11 @@ pub enum Action {
     },
     RunScript {
         id: String,
+    },
+    /// The approval is rechecked while the exact revision is snapshotted.
+    RunMcpScript {
+        id: String,
+        revision: u64,
     },
     /// Run an event script now with downloads you choose; changes are simulated.
     RunScriptSample {
@@ -200,7 +206,9 @@ pub fn simulated(store: &Store, action: &Action) -> String {
         Action::RemoveRule { id } => format!("remove the rule {id}"),
         Action::SaveScript { script } => format!("save the script {}", script.name),
         Action::RemoveScript { id } => format!("remove the script {id}"),
-        Action::RunScript { id } => format!("run the script {id}"),
+        Action::RunScript { id } | Action::RunMcpScript { id, .. } => {
+            format!("run the script {id}")
+        }
         Action::RunScriptSample { id, .. } => format!("run the script {id} with a sample"),
         Action::StopScript { run_id } => format!("stop the run {run_id}"),
         Action::ClearScriptValues { id } => format!("clear the stored values of {id}"),
@@ -223,6 +231,18 @@ pub(crate) fn initialize(conn: &rusqlite::Connection) -> Result<()> {
         state TEXT NOT NULL, result TEXT, error TEXT);
         CREATE INDEX IF NOT EXISTS control_pending ON control_requests(state);",
     )?;
+    conn.execute_batch("CREATE TABLE IF NOT EXISTS control_request_ids(id TEXT PRIMARY KEY, action_hash BLOB NOT NULL CHECK(length(action_hash)=32)) WITHOUT ROWID;")?;
+    // Seed every receipt still present at upgrade. Earlier, already-pruned IDs
+    // cannot be recovered. Never discard a recorded ID merely to prune results.
+    let existing = conn.prepare("SELECT id,action FROM control_requests WHERE id NOT IN (SELECT id FROM control_request_ids)")?
+        .query_map([], |row| Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?)))?
+        .collect::<rusqlite::Result<Vec<_>>>()?;
+    for (id, action) in existing {
+        conn.execute(
+            "INSERT INTO control_request_ids VALUES(?1,?2)",
+            params![id, Sha256::digest(action.as_bytes()).as_slice()],
+        )?;
+    }
     Ok(())
 }
 
@@ -233,16 +253,17 @@ impl Store {
         ensure!(data.len() <= 1_000_000, "Command is too large");
         let mut conn = self.connect()?;
         let tx = conn.transaction_with_behavior(TransactionBehavior::Immediate)?;
-        let existing: Option<String> = tx
+        let hash = Sha256::digest(data.as_bytes());
+        let existing: Option<Vec<u8>> = tx
             .query_row(
-                "SELECT action FROM control_requests WHERE id=?1",
+                "SELECT action_hash FROM control_request_ids WHERE id=?1",
                 [id],
                 |r| r.get(0),
             )
             .optional()?;
         if let Some(existing) = existing {
             ensure!(
-                existing == data,
+                existing == hash.as_slice(),
                 "Request ID already belongs to another command"
             );
         } else {
@@ -255,6 +276,10 @@ impl Store {
                 pending < 100,
                 "Too many pending commands; wait for the app to catch up"
             );
+            tx.execute(
+                "INSERT INTO control_request_ids VALUES(?1,?2)",
+                params![id, hash.as_slice()],
+            )?;
             tx.execute(
                 "INSERT INTO control_requests(id,action,expires,state) VALUES(?1,?2,?3,'pending')",
                 params![id, data, chrono::Utc::now().timestamp() + 30],
@@ -269,12 +294,14 @@ impl Store {
         let (state, result, error): (String, Option<String>, Option<String>) = self
             .connect()?
             .query_row(
-                "SELECT state,result,error FROM control_requests WHERE id=?1",
+                "SELECT state,result,error FROM control_requests WHERE id=?1
+                 UNION ALL SELECT 'retired',NULL,'This request was already accepted; its detailed receipt has expired. Inspect current state before using a new request ID.'
+                 FROM control_request_ids WHERE id=?1 AND NOT EXISTS(SELECT 1 FROM control_requests WHERE id=?1)",
                 [id],
                 |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
             )
             .optional()?
-            .context("Request not found (only the latest 1,000 receipts are retained)")?;
+            .context("Request ID was not recorded by this profile")?;
         Ok(Receipt {
             request_id: id.into(),
             state,
@@ -340,9 +367,11 @@ pub fn queue_id(store: &Store, value: &str) -> Result<String> {
 }
 
 pub fn job_summary(store: &Store, job: &Job) -> Result<Value> {
-    Ok(
-        json!({"id":job.id,"name":job.name,"status":job.status,"downloaded":job.downloaded,"total":job.total,"queue":store.job_queue(&job.id)?,"directory":job.directory,"error":job.error}),
-    )
+    Ok(job_summary_in_queue(job, store.job_queue(&job.id)?))
+}
+
+pub(crate) fn job_summary_in_queue(job: &Job, queue: Option<String>) -> Value {
+    json!({"id":job.id,"name":job.name,"status":job.status,"downloaded":job.downloaded,"total":job.total,"queue":queue,"directory":job.directory,"error":job.error})
 }
 
 pub fn queue_summaries(store: &Store) -> Result<Value> {
@@ -416,6 +445,9 @@ pub(crate) fn execute_stored(store: &Store, request: &str, action: Action) -> Re
             Ok(json!({"removed":id}))
         }
         Action::RunScript { id } => Ok(serde_json::to_value(store.run_script(&id, request)?)?),
+        Action::RunMcpScript { id, revision } => Ok(serde_json::to_value(
+            store.run_mcp_script(&id, revision, request)?,
+        )?),
         Action::RunScriptSample { id, downloads } => Ok(serde_json::to_value(
             store.run_script_sample(&id, request, &downloads)?,
         )?),

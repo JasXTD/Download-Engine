@@ -2,6 +2,68 @@
 
 Release notes are available offline in Help → Changelog. Newest releases appear first.
 
+## 3.4.0 — 2026-10-29
+
+### Custom themes
+
+- Preferences → Appearance → Custom opens a theme collection with Aurora, Neon Courier, Reactor Night and Moonveil, generated for Download Engine. The artwork fills the whole window behind translucent toolbar, sidebar and details panels. Adjust the background strength and accent, or choose your own PNG/JPEG.
+- Theme changes preview immediately. Save keeps the selection; Cancel restores the previous appearance. System, Light and Dark remain available. Artwork is bundled and works offline.
+- Image imports run in the background, enforce file and pixel limits, and copy the image into the local profile. Cancelled imports are cleaned up. Menus, dialogs and editor surfaces remain readable.
+- Your image has its own card next to the presets, and Remove image deletes the profile copy on Save. Background strength works the same for every picture; bright images get a darker overlay instead of fading out. The color picker notes when a dark accent is lightened. The bundled artwork adds about 1 MB to the installer.
+
+- The offline Lua guide now walks through Core API 1, the current editor, custom site readers, script packages, triggers and Stop, with a no-download example.
+
+### Profile and control improvements
+
+- Includes the completed profile version guards, transactional upgrades and durable request-ID history. Older builds refuse to write to an upgraded profile.
+- MCP capability controls and exact-revision script approvals make access explicit; download lists use database pagination to reduce work on large histories.
+
+## 3.3.3 — 2026-10-28
+
+### A focused scripting workspace
+
+- Editor and Loaded scripts now have separate tabs. Search saved scripts and create a New script in Loaded scripts; selecting a script opens it without running it.
+- Full editor lives in the Lua or PowerShell editor header. The expanded view keeps code, Save, Run/Stop and optional logs together, with Exit full editor to return. Loaded scripts and New script stay out of the expanded view.
+- File commands, sample runs, reload/discard and removal are grouped under Editor actions. Switching views preserves unsaved code, settings and cursor position; Escape dismisses completion before leaving full editor.
+
+### More responsive download actions
+
+- Queue and download-status refreshes, browser video intake and download submissions run in the background so slow storage does not hold up clicks. Add dialogs show progress, prevent duplicate submissions, and keep the draft if saving fails. Folder launches also run in the background, and stale queue refreshes cannot replace a newer selection.
+
+## 3.3.2 — 2026-10-28
+
+### Simpler download status
+
+Removed the oversized Downloading heading from the status summary. The percentage now sits beside the progress bar. Paused, failed, starting and processing messages remain visible as compact status text.
+
+## 3.3.1 — 2026-10-28
+
+### Clearer controls and more room for content
+
+- Toolbar labels stay readable at smaller window sizes. Commands that do not fit appear in More, with persistent pin choices under Customize toolbar.
+- Scripting and Logs use compact navigation without the download sidebar. Script settings collapse to leave room for code, and the script list distinguishes manual runs from automatic triggers being on or off.
+- Drag the top edge of the download details panel to resize it; the height is remembered. Short windows start with a compact summary. The status window emphasizes progress, speed and time remaining.
+- Preferences explains which edits Save and Cancel affect and reports when a separate advanced dialog has saved changes.
+- MCP keeps its server status and Start/Stop action visible, places the server URL and Copy near the top, and groups port/access/startup options under Advanced settings.
+- Both Grabber modes use the same dialog frame so switching modes keeps its position and size stable.
+- Clear finished is now Clear completed history. It removes completed queue entries while keeping saved files.
+
+## 3.3.0 — 2026-10-28
+
+### One scripting system and a versioned core API
+
+Lua automation and custom site readers now share a documented core API, contextual autocomplete and a searchable Core API reference in the existing Scripting editor. API version, application version, script role and function availability are exposed to scripts without changing existing xd.* calls.
+
+Added bounded HTML/CSS selection and relative URL resolution. JSON and URL encoding helpers are available to both script roles. Readers can combine these helpers with xd.fetch to return custom file and video links without rebuilding the app. Network, file-permission, timeout and Stop boundaries remain enforced; external downloader programs and DRM integrations are not included.
+
+### Share scripts with their settings
+
+Import and export .de-script.json packages in the same Scripting page. Packages include code, language, trigger, timeout and requested file access, with format/API compatibility checks. Imports create new disabled drafts with file access off, preserve existing saved scripts, and protect unsaved edits. Queue-specific triggers require a local queue selection. Logs, stored values and saved script IDs are excluded; review source code before sharing because literals in code are included.
+
+The guide and examples cover custom site readers, core API calls and package sharing. Existing Lua/PowerShell code-file import and export remain available.
+
+A searchable Loaded scripts list shows each saved script's language, trigger and enabled/running status. Wide windows dock the list beside the editor; compact windows and the full editor open it from a button. Unsaved edits must be saved or discarded before switching scripts. Full editor gives code the window space while retaining Save, Run, Stop, the core API reference and optional run logs. Back to scripts preserves the current draft and cursor.
+
 ## 3.2.0 — 2026-10-28
 
 ### Public hosting links

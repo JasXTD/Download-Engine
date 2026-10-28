@@ -389,7 +389,7 @@ mod tests {
                 }
             }
         }
-        click(&mut app, &ctx, "All downloads");
+        click(&mut app, &ctx, "Download list");
         assert_eq!(app.view, View::Downloads);
         assert_eq!(app.search, "first");
         assert_eq!(app.selected, selected);
@@ -424,7 +424,7 @@ mod tests {
         assert!(output.platform_output.commands.iter().any(|command| {
             matches!(command, egui::OutputCommand::CopyText(text) if text.starts_with(".\\de-cli.exe --help\n") && text.ends_with(".\\de-cli.exe list"))
         }));
-        click(&mut app, &ctx, "All downloads");
+        click(&mut app, &ctx, "Download list");
         assert_eq!(app.view, View::Downloads);
         assert_eq!(app.search, "first");
         assert_eq!(app.selected, selected);

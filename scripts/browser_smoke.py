@@ -13,7 +13,7 @@ import json
 import os
 from pathlib import Path
 import shutil
-import sqlite3
+from profile_database import open_profile_database
 import subprocess
 import sys
 import threading
@@ -129,7 +129,7 @@ def main():
     data = app / 'data'
     data.mkdir()
     database = data / 'queue.sqlite3'
-    with sqlite3.connect(database) as conn:
+    with open_profile_database(database) as conn:
         conn.executescript('CREATE TABLE desktop_preferences(id INTEGER PRIMARY KEY,close_to_tray INTEGER NOT NULL,notify_complete INTEGER NOT NULL,notify_failed INTEGER NOT NULL); INSERT INTO desktop_preferences VALUES(1,0,0,0);')
     if args.page_links:
         # Initialize only this disposable database through the actual native API.
@@ -137,12 +137,12 @@ def main():
         body = json.dumps({'action':'batch_options'}).encode()
         initialized = subprocess.run([str(app/'de-host.exe')], input=struct.pack('<I',len(body))+body, capture_output=True, timeout=15)
         assert initialized.returncode == 0 and json.loads(initialized.stdout[4:])['ok']
-        with sqlite3.connect(database) as conn:
+        with open_profile_database(database) as conn:
             conn.execute("INSERT INTO download_queues(id,name,max_active,running) VALUES('page-links-test','Page links test',2,0)")
     payload = bytes(range(256)) * 16384
     requests = []
     def state():
-        with sqlite3.connect(database) as conn:
+        with open_profile_database(database) as conn:
             if not conn.execute("SELECT count(*) FROM sqlite_master WHERE name='jobs'").fetchone()[0]:
                 return {'jobs': [], 'captures': []}
             jobs = [json.loads(row[0]) for row in conn.execute('SELECT data FROM jobs')]
@@ -157,16 +157,16 @@ def main():
                 job['bytes_verified'] = True
         batches = []
         if args.page_links:
-            with sqlite3.connect(database) as conn:
+            with open_profile_database(database) as conn:
                 batches = [json.loads(row[0]) for row in conn.execute('SELECT job_ids FROM browser_batches')]
         sessions = None
         if args.browser_login:
-            with sqlite3.connect(database) as conn:
+            with open_profile_database(database) as conn:
                 exists = conn.execute("SELECT count(*) FROM sqlite_master WHERE name='browser_sessions'").fetchone()[0]
                 sessions = conn.execute("SELECT count(*) FROM browser_sessions").fetchone()[0] if exists else 0
         video_reviews = []
         if args.videos:
-            with sqlite3.connect(database) as conn:
+            with open_profile_database(database) as conn:
                 exists = conn.execute("SELECT count(*) FROM sqlite_master WHERE name='browser_video_reviews'").fetchone()[0]
                 if exists:
                     video_reviews = [json.loads(row[0]) for row in conn.execute('SELECT data FROM browser_video_reviews WHERE data IS NOT NULL')]
@@ -246,7 +246,7 @@ def main():
                 pass
         def do_POST(self):
             if args.page_links and self.path == '/_start-page-queue':
-                with sqlite3.connect(database) as conn:
+                with open_profile_database(database) as conn:
                     conn.execute("UPDATE download_queues SET running=1 WHERE id='page-links-test'")
                 self.reply(b'{}', 'application/json')
             else:

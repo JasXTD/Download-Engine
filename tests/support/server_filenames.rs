@@ -91,7 +91,7 @@ async fn server_filenames_preserve_explicit_browser_and_legacy_names() {
     let job = add_unnamed(&store, &fixture.url);
     let mut old = serde_json::to_value(&job).unwrap();
     old.as_object_mut().unwrap().remove("server_name_pending");
-    let conn = rusqlite::Connection::open(store.paths.data.join("queue.sqlite3")).unwrap();
+    let conn = crate::fixture_database::open(store.paths.data.join("queue.sqlite3")).unwrap();
     conn.execute(
         "UPDATE jobs SET data=?1 WHERE id=?2",
         rusqlite::params![old.to_string(), job.id],

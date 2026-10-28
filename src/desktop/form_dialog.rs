@@ -141,7 +141,10 @@ pub(super) fn body(ui: &mut egui::Ui, id: &'static str, content: impl FnOnce(&mu
 }
 
 fn mark(ui: &egui::Ui, rect: Rect, icon: Icon) {
-    let (fill, ink) = if ui.visuals().dark_mode {
+    let (fill, ink) = if theme::custom(ui.ctx()).is_some() {
+        let p = Palette::for_context(ui.ctx());
+        (p.selected, p.accent)
+    } else if ui.visuals().dark_mode {
         (
             Color32::from_rgb(28, 60, 50),
             Color32::from_rgb(122, 226, 184),
@@ -157,7 +160,14 @@ fn mark(ui: &egui::Ui, rect: Rect, icon: Icon) {
     painter.rect_stroke(
         rect,
         9,
-        Stroke::new(1.0, VIOLET.gamma_multiply(0.55)),
+        Stroke::new(
+            1.0,
+            if theme::custom(ui.ctx()).is_some() {
+                Palette::for_context(ui.ctx()).accent.gamma_multiply(0.55)
+            } else {
+                VIOLET.gamma_multiply(0.55)
+            },
+        ),
         StrokeKind::Inside,
     );
     let point = |x, y| rect.min + vec2(x, y);
@@ -218,10 +228,15 @@ fn mark(ui: &egui::Ui, rect: Rect, icon: Icon) {
 }
 
 pub(super) fn primary_button(ui: &mut egui::Ui, label: &str) -> egui::Response {
+    let custom = theme::custom(ui.ctx()).is_some();
+    let p = Palette::for_context(ui.ctx());
+    let ink = if custom {
+        p.accent_text
+    } else {
+        Color32::WHITE
+    };
     let font = FontId::proportional(13.0);
-    let text = ui
-        .painter()
-        .layout_no_wrap(label.to_owned(), font, Color32::WHITE);
+    let text = ui.painter().layout_no_wrap(label.to_owned(), font, ink);
     let width = (text.size().x + 28.0).max(130.0);
     let (rect, response) =
         ui.allocate_exact_size(vec2(width, view::PRIMARY_HEIGHT), Sense::click());
@@ -229,7 +244,19 @@ pub(super) fn primary_button(ui: &mut egui::Ui, label: &str) -> egui::Response {
         egui::WidgetInfo::labeled(egui::WidgetType::Button, response.enabled(), label)
     });
     // White label text keeps at least 4.5:1 contrast against every gradient stop.
-    let (top, bottom) = if response.is_pointer_button_down_on() {
+    let (top, bottom) = if custom {
+        let factor = if response.is_pointer_button_down_on() {
+            0.84
+        } else if response.hovered() {
+            1.0
+        } else {
+            0.95
+        };
+        (
+            p.accent.gamma_multiply(factor),
+            p.accent.gamma_multiply(factor - 0.04),
+        )
+    } else if response.is_pointer_button_down_on() {
         (
             Color32::from_rgb(20, 110, 80),
             Color32::from_rgb(16, 92, 66),
@@ -251,11 +278,15 @@ pub(super) fn primary_button(ui: &mut egui::Ui, label: &str) -> egui::Response {
         7,
         Stroke::new(
             if response.has_focus() { 2.0 } else { 1.0 },
-            Color32::from_rgb(118, 224, 185),
+            if custom {
+                p.accent
+            } else {
+                Color32::from_rgb(118, 224, 185)
+            },
         ),
         StrokeKind::Inside,
     );
     let text_rect = Align2::CENTER_CENTER.anchor_size(rect.center(), text.size());
-    ui.painter().galley(text_rect.min, text, Color32::WHITE);
+    ui.painter().galley(text_rect.min, text, ink);
     response.on_hover_cursor(egui::CursorIcon::PointingHand)
 }

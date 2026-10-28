@@ -4,7 +4,7 @@ import json
 import time
 import os
 from pathlib import Path
-import sqlite3
+from profile_database import open_profile_database
 import subprocess
 import uuid
 import struct
@@ -55,7 +55,7 @@ if args.synchronize:
     names = [("Catalog.zip", "complete", 0, 0, False),
              ("Release-notes.txt", "complete", 0, 0, False),
              ("Protected-archive.bin", "failed", 0, 0, False)]
-with sqlite3.connect(data / "queue.sqlite3") as conn:
+with open_profile_database(data / "queue.sqlite3") as conn:
     conn.execute("CREATE TABLE jobs (id TEXT PRIMARY KEY, request_id TEXT NOT NULL UNIQUE, created INTEGER NOT NULL, data TEXT NOT NULL)")
     for index, (name, status, total, done, resumable) in enumerate(names):
         total *= 1024 * 1024
@@ -87,7 +87,7 @@ with sqlite3.connect(data / "queue.sqlite3") as conn:
         conn.execute("INSERT INTO jobs VALUES (?,?,?,?)", (job_id, job_id, job["created"], json.dumps(job)))
 
 # Keep all sample files offline; the native app migrates their memberships.
-with sqlite3.connect(data / "queue.sqlite3") as conn:
+with open_profile_database(data / "queue.sqlite3") as conn:
     conn.execute("CREATE TABLE download_queues(id TEXT PRIMARY KEY,name TEXT NOT NULL UNIQUE COLLATE NOCASE,max_active INTEGER NOT NULL CHECK(max_active BETWEEN 1 AND 8),running INTEGER NOT NULL,scheduled_at INTEGER)")
     conn.execute("INSERT INTO download_queues VALUES('main','Main queue',3,?,NULL)", (int(args.retry),))
     conn.execute("INSERT INTO download_queues VALUES('later','Later',2,0,NULL)")
@@ -103,12 +103,12 @@ with sqlite3.connect(data / "queue.sqlite3") as conn:
         conn.execute("INSERT INTO queue_schedules VALUES('later',127,0,420,1)")
 
 if args.bandwidth:
-    with sqlite3.connect(data / "queue.sqlite3") as conn:
+    with open_profile_database(data / "queue.sqlite3") as conn:
         conn.execute("CREATE TABLE bandwidth_settings(id INTEGER PRIMARY KEY CHECK(id=1),bytes_per_second INTEGER CHECK(bytes_per_second BETWEEN 1024 AND 1073741824))")
         conn.execute("INSERT INTO bandwidth_settings VALUES(1,2097152)")
         conn.execute("CREATE TABLE bandwidth_downloads(job_id TEXT PRIMARY KEY REFERENCES jobs(id) ON DELETE CASCADE,bytes_per_second INTEGER NOT NULL CHECK(bytes_per_second BETWEEN 1024 AND 1073741824))")
         conn.execute("INSERT INTO bandwidth_downloads SELECT id,262144 FROM jobs WHERE json_extract(data,'$.status') != 'complete'")
-with sqlite3.connect(data / "queue.sqlite3") as conn:
+with open_profile_database(data / "queue.sqlite3") as conn:
     conn.execute("CREATE TABLE interface_preferences(id INTEGER PRIMARY KEY CHECK(id=1),data TEXT NOT NULL)")
     preferences = dict(appearance="dark" if args.dark else "light", compact_rows=args.compact,
                        show_details=not args.hide_details, sidebar_labels=True)
@@ -118,7 +118,7 @@ with sqlite3.connect(data / "queue.sqlite3") as conn:
             widths=[None, 420, None, None, 120, None, None, None, None])
     conn.execute("INSERT INTO interface_preferences VALUES(1,?)", (json.dumps(preferences),))
 if args.quota_reached:
-    with sqlite3.connect(data / "queue.sqlite3") as conn:
+    with open_profile_database(data / "queue.sqlite3") as conn:
         conn.execute("CREATE TABLE data_quotas(id INTEGER PRIMARY KEY,hourly_limit INTEGER,daily_limit INTEGER,hourly_used INTEGER NOT NULL,daily_used INTEGER NOT NULL,hour_start INTEGER,day_start INTEGER)")
         conn.execute("INSERT INTO data_quotas VALUES(1,1073741824,4294967296,1073741824,2147483648,?,?)", (int(time.time()),int(time.time())))
 screenshot = run_root / "native-ui.ppm"
@@ -146,7 +146,7 @@ result = subprocess.run([str(root / "target" / "debug" / "de.exe")],
 assert result.returncode == 0, result.stderr.decode(errors="replace")
 assert screenshot.exists() and screenshot.stat().st_size > 0
 if args.retry:
-    with sqlite3.connect(data / "queue.sqlite3") as conn:
+    with open_profile_database(data / "queue.sqlite3") as conn:
         saved = json.loads(conn.execute("SELECT data FROM jobs").fetchone()[0])
     assert saved["status"] == "queued" and saved["retry"]["attempts"] == 2
     assert saved["retry"]["next_at"] > time.time_ns() // 1_000_000

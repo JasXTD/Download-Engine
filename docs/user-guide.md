@@ -5,11 +5,44 @@ is included in the application and works offline. Choose a topic to get started.
 
 ## Getting started
 
+### Toolbar and details
+
+Commands that do not fit on the toolbar appear under More. Choose More → Customize toolbar to pin the optional actions you use; pinned actions remain in More when the window is too narrow. Your choices are remembered. Scripting, Logs and guide pages use compact navigation; Download list returns to your files without changing selection or filters.
+
+Drag the top edge of the download details panel to adjust its height. The app remembers your choice and keeps room for the file list. On short windows, the default details panel shows a compact summary. Open the download status window for larger progress, speed and time remaining.
+
 ### Preferences
 
 Open Preferences from the toolbar, Tools → Preferences or the tray menu. The popup has six categories and leaves your current page in place. Appearance includes the theme, language and table layout; Downloads has status-window, folder and transfer-limit choices; Connection has proxy and per-site connection settings; Browser & AI has browser setup, clipboard capture and MCP; Antivirus selects a scanner; Startup & tray controls Windows startup and notifications.
 
-Use Save to apply pending changes, or Cancel, × or Escape to discard them. Themes preview while you edit. Changing the language takes effect after Save. Reset restores defaults for the current category only and also waits for Save. Table-column edits return to the parent draft. Detailed folder, connection, speed, quota, browser, MCP and antivirus editors have their own explicit saves; closing them returns to Preferences without losing your draft. Cancelling Preferences does not undo a change already saved in one of those editors.
+Use Save to apply pending changes, or Cancel, × or Escape to discard them. Themes preview while you edit. Changing the language takes effect after Save. Reset restores defaults for the current category only and also waits for Save. Table-column edits return to the parent draft. Detailed folder, connection, speed, quota, browser, MCP and antivirus editors have their own explicit saves; closing them returns to Preferences without losing your draft. Cancelling Preferences does not undo a change already saved in one of those editors. A notice in Preferences confirms when an advanced dialog has saved its changes.
+
+### Custom themes
+
+Open **Preferences → Appearance → Custom**. Choose **Aurora**, **Neon
+Courier**, **Reactor Night**, or **Moonveil**. The artwork fills the whole window,
+behind the toolbar, sidebar and download list. The selected theme previews
+immediately; **Save** keeps it and **Cancel** restores your previous appearance.
+**Reset** restores the category defaults only after you save.
+
+Use **Background strength** to soften the artwork and **Accent** to choose a
+control color. Strength works the same for included and imported pictures; bright
+pictures get a darker overlay so text stays readable. Very dark accents are lifted
+to a readable shade, and the color picker notes when that happens. Menus, dialogs
+and code editors retain solid surfaces. System, Light and Dark work as before.
+
+**Choose image…** imports a PNG or JPEG, up to 16 MiB and 16 megapixels (at most
+8192 pixels on either side). The app resizes large images to at most 2048 pixels
+per side and stores a copy under the active profile's `data/themes` folder. You
+can move the original afterward. The picture appears as the **Your image** card,
+so you can return to it after trying a preset. **Remove image** clears it; Save
+then deletes the app-owned copy. Imports stay local; no images are uploaded.
+Cancelled imports are removed, and replacing a saved image removes the old
+app-owned copy. A missing or damaged image falls back to the dark surface
+and shows a message to select another image.
+
+All four included backgrounds work offline. Moonveil features a lunar sorceress
+with silver hair and violet magic. The illustrations are bundled with the app.
 
 ### Your first download
 
@@ -220,7 +253,7 @@ Notify and Exit remain separate choices. Exit uses a 15-second countdown and clo
 
 A synchronization queue checks its source again on later runs. Previous copies are kept when a replacement is needed. Use it for files you want to check repeatedly, rather than for a one-time download.
 
-Download at once in a queue's three-dot menu accepts a typed number from 1 to 32. Click Set or press Enter. The scheduler runs at most 32 files across all queues, including Start immediately. Higher limits use more CPU, memory and network connections; the default queue limits are unchanged. Clear finished removes completed entries from that queue's history and keeps their saved files.
+Download at once in a queue's three-dot menu accepts a typed number from 1 to 32. Click Set or press Enter. The scheduler runs at most 32 files across all queues, including Start immediately. Higher limits use more CPU, memory and network connections; the default queue limits are unchanged. Clear completed history removes completed entries from that queue's history and keeps their saved files.
 
 ## Scripting
 
@@ -262,7 +295,13 @@ Rules run only while Download Engine is open, including in the tray. They perfor
 
 ### Write and run a script
 
-Open Scripting → Scripts → New script. The editor starts with a working example. Give it a name, choose Save script, then Run script. Run logs appear below the editor; scroll down in a small window. The fixed Save, Run and Stop bar remains accessible. Information is blue, errors are red and warnings are light red. Copy log copies the output, and All scripts includes history from removed scripts.
+Open Scripting → Scripts → Loaded scripts → New script. The editor starts with a working example. Give it a name, choose Save script, then Run script. Run logs appear below the editor; scroll down in a small window. The Save and Run/Stop buttons stay in the editor header while the code and logs scroll. Information is blue, errors are red and warnings are light red. Copy log copies the output, and All scripts includes history from removed scripts.
+
+Expand **Script settings** to edit the name, language, trigger, timeout and permissions. Collapse it to make more room for code. **Manual** means a script runs on request; **Automatic trigger off** means its saved trigger will not run automatically, but you can still run it yourself.
+
+**Loaded scripts** lists saved scripts, including disabled ones, with their language, trigger and current status. Search by name, language or trigger. Open the **Loaded scripts** tab to manage scripts and create a **New script**. The **Editor** tab keeps the current draft. Selecting a script opens it without running it. Save or discard unsaved changes before selecting another script.
+
+Choose **Full editor** in the Lua or PowerShell editor header to use the window for code. Save, Run/Stop, Core API and Editor actions remain in the editor header. Loaded scripts and New script are hidden in full view. Toggle **Run logs** to show output below the code. For a site reader, enter its test page in the Address field and choose Test on URL. **Exit full editor** returns to trigger/settings controls without losing your draft or cursor; opening or closing the full editor never saves or runs a script. Escape closes completion suggestions first, then leaves the full editor on the next press.
 
 New scripts use built-in Lua 5.4. No installation is needed. The Language picker also offers Windows PowerShell 5.1. Both support your own variables, functions, loops and conditions. Changing language keeps custom code; only an unchanged starter example is replaced. Existing PowerShell scripts keep their language.
 
@@ -309,7 +348,7 @@ After a crash or app exit, unfinished runs are marked interrupted and are not au
 
 ### Run your first Lua script
 
-1. Open Scripting in the top toolbar → Scripts → + New script. Keep Language set to Lua and Trigger set to Manual only. Lua is built in; nothing needs installing.
+1. Open Scripting in the top toolbar → Scripts → Loaded scripts → + New script. Keep Language set to Lua and Trigger set to Manual only. Lua is built in; nothing needs installing.
 
 2. Name it Hello Lua. Copy this script, replace the editor's contents, then choose Save script → Run script. This example only reads your queues.
 
@@ -323,6 +362,64 @@ end
 ```
 
 3. Scroll to Run logs below the editor. Expect Succeeded, Hello from Lua!, Trigger: manual, and your queue names. Print separates values with tabs. Copy log copies the displayed output.
+
+### Try the upgraded Core API without downloading anything
+
+1. Open **Scripting → Scripts → Loaded scripts → New script**. In **Script settings**, choose **Lua** and **Manual only**. Keep file-changing permission off.
+2. Paste the example below. Syntax checks run automatically; **Ctrl+Space** opens completion. **Core API** in the editor header lists the functions available for the selected trigger.
+3. Choose **Save script**, then **Run script**. Use **Full editor** if you need more room, and show **Run logs** to see the result. This example only parses the text inside the script; it makes no web request or download.
+
+```lua
+-- Example: core-api
+assert(xd.api_version == 1, "This example needs Lua API 1")
+print("App:", xd.app_version, "Role:", xd.script_kind)
+local html = '<a class="download" href="/files/demo.zip">Demo</a>'
+local links = xd.html_select(html, "a.download[href]", "href")
+local url = xd.url_join("https://example.com/catalog/", links[1])
+print("Preview:", xd.to_json({ kind = "file", url = url }))
+print("Can fetch a page:", xd.supports("xd.fetch"))
+```
+
+Expect **Succeeded**, your app version, role **automation**, a preview URL ending in **/files/demo.zip**, and **false** for page fetching. Lua API **1** is the API contract, not the app's **3.4.0** version. A supported function can still require a permission or a suitable trigger.
+
+For a longer read-only example, choose **Editor actions → Open file…** and open **examples/core-api-automation.lua** from the app folder. Save it as a manual script before running; it reports queues and download counts. Use **Import script…** for a **.de-script.json** package, not a plain Lua file.
+
+### Build a custom site reader in the same editor
+
+1. Create a separate Lua script. Set **Trigger: Site reader**, add a **Pages** pattern for a public site you control or can access, and leave its automatic trigger off while testing.
+2. Open **examples/custom-site-reader.lua** with **Editor actions → Open file…**. Adapt **a.download[href]** to that site's HTML. Set **Preferences → Connection → Proxy → Direct connection**; custom readers refuse system/custom proxies.
+3. Save, enter the public page in the **Address** field and choose **Test on URL**. Inspect the returned links before enabling **Automatic trigger enabled** and saving again. Testing runs the reader but does not queue its returned files.
+
+Readers use **xd.fetch**, **xd.html_select**, **xd.url_join** and JSON helpers, then return a title and file/HLS/DASH items. They cannot call the automation download/queue controls, do not execute a page's JavaScript, and cannot access localhost or private-network URLs. Built-in site readers take priority. Plain automation scripts cannot call **xd.fetch**.
+
+### Triggers, Stop and sharing
+
+**Run script** uses the saved definition; save edited code before running. Automatic startup, interval and completion/failure triggers require the app open or in the tray. **Stop script** cancels its queued run or stops its worker; already submitted downloads continue. Turning an automatic trigger off prevents future events and does not stop a running script. A manual run has an empty **event.downloads** list; use **Editor actions → Run with sample…** for completion/failure examples.
+
+**Export script…** saves code/settings in **.de-script.json**. Import creates a new unsaved draft with automatic triggers and file-changing permission off; choose any queue again, review the code, then save. Source literals are shared, but logs, stored values, identity and automatic enablement are not. Lua file operations require **Can change downloaded files**; PowerShell remains optional and runs with your Windows account's access.
+
+### Core API and shared scripts
+
+Use **Scripting → Scripts** for both automation and custom site readers. There is no separate plugin editor. The trigger decides which operations are available: ordinary scripts control downloads and queues; Site reader scripts resolve matching pages and return links for the normal download engine.
+
+Choose **Core API** in the Lua editor header to search available functions and copy their signatures. Autocomplete uses the same catalog. `xd.api_version` is currently **1**, `xd.app_version` is the installed app version, and `xd.script_kind` is `automation` or `site_reader`. Check `xd.supports("xd.fetch")` for function availability; this is not a permission grant. Existing `xd.add`, queue, file and stored-value functions retain their contracts.
+
+Both roles can use these pure core functions, which perform no networking or file access:
+
+| Function | Result and limits |
+| --- | --- |
+| `xd.json(text)` / `xd.to_json(value)` | Decode/encode JSON. |
+| `xd.url_encode(text)` | Encode one URL component. |
+| `xd.url_join(base, relative)` | Resolve an HTTP(S) URL; reject embedded credentials and URLs over 16 KiB. Network destination checks still happen when fetched or downloaded. |
+| `xd.html_select(html, selector, attribute)` | CSS selection returning a list of strings. Omit attribute for element text; use `"href"` or `"src"` for links. HTML entities are decoded and whitespace at the ends is trimmed. It does not execute JavaScript or follow the document's base element automatically. Limits: 2 MiB HTML, 512-byte selector, 1,000 results, 1 MiB total result text. Exceeding a limit raises an error. |
+
+For example, a Site reader can call `xd.fetch(event.url)`, select `a.download[href]` with `xd.html_select`, resolve each link against the reply's final `url` with `xd.url_join`, and return `{items={{kind="file",url=...}}}`. Set matching Pages, use Test on URL, and inspect the results before enabling its automatic trigger. Built-in site precedence, public-network-only checks and Direct connection requirements still apply.
+
+**Import script…** opens a `.de-script.json` package as a new unsaved, disabled draft. Review the code, choose a local queue for queue-specific triggers, and explicitly enable file access if appropriate. Save before running or enabling the trigger. Import never overwrites a saved script, copies stored values, or runs the code. Unknown package/API versions and invalid definitions are refused. Unsaved editor changes are protected by a replacement question.
+
+**Export script…** writes the current code and settings, including unsaved edits, to a package. Logs, stored values, saved identities and automatic enablement are excluded. Code literals are included: remove any private URLs, tokens or passwords before sharing. Open file… and Save to file… remain available for plain .lua/.ps1 code. PowerShell retains its existing full Windows access; importing it does not make it restricted Lua.
+
+Working examples are included as `examples/core-api-automation.lua` (read-only queue/status reporting) and `examples/custom-site-reader.lua` (adapt its CSS selector to a public site). Script API 1 is separate from the app version; compatible additions keep API 1, while a future incompatible contract needs a new API version. Sharing scripts does not install external programs or add unsupported protocols.
 
 To edit a script in another program, use Open file… and Save to file… in the editor's header. Open file… copies a .lua or .ps1 file into the editor and asks first if it would replace unsaved code; choose Save script to keep it. Save to file… writes the editor's code to a file.
 
@@ -469,7 +566,7 @@ Run disabled: save changed code first and wait for the current run to finish. No
 
 A site reader is a Lua script that teaches Download Engine a video site it does not know.
 
-1. Open Scripting → Scripts → + New script. Keep Language set to Lua and choose Trigger → Site reader. The editor switches to a starter reader.
+1. Open Scripting → Scripts → Loaded scripts → + New script. Keep Language set to Lua and choose Trigger → Site reader. The editor switches to a starter reader.
 2. Under Pages, add the pages it reads, such as `example.com/watch/*`, and choose Add page. `*` matches anything; `*.example.com` covers every subdomain. Leave Automatic trigger enabled checked.
 3. Write the reader. `event.url` is the page. Read it, or the site's own API, with `xd.fetch`, and return what you found:
 
@@ -538,7 +635,7 @@ queue pause followed by a queue name pauses it; queue start starts it. pause or 
 
 Commands that change state launch the desktop if needed. Read commands do not. Both use the same local data as that copy of the app. The CLI is not a separate download service.
 
-Exit code 0 means success, 1 means failure or rejection, and 2 means the request is still running or has an uncertain outcome. Check the exit code and command receipt before retrying. Reuse --request-id with the same UUID and command to avoid duplicate submissions while the receipt is retained.
+Exit code 0 means success, 1 means failure or rejection, and 2 means the request is still running or has an uncertain outcome. Check the exit code and command receipt before retrying. Reuse --request-id with the same UUID and command to avoid duplicate submissions. After the detailed receipt is pruned, a compact record still prevents replay and returns retired; inspect current state before choosing a new operation.
 
 Direct HTTP, HTTPS, FTP and FTPS file URLs are supported. Use the browser or desktop video review for YouTube, Bilibili, TikTok, Twitch and HLS/DASH quality selection. Keep passwords and private tokens out of command lines and shell history. The packaged docs/automation.md contains the full command and receipt reference.
 
@@ -548,7 +645,7 @@ Direct HTTP, HTTPS, FTP and FTPS file URLs are supported. Use the browser or des
 
 MCP lets a compatible AI client inspect and control Download Engine through named tools. It uses localhost HTTP and keeps running when clients disconnect. Open the MCP popup on the top toolbar, Tools → MCP control, or Preferences → Browser & AI → AI connection (MCP). Close it with × or Escape to return to the same page or Preferences draft. Closing the popup keeps the server running and retains pending MCP edits for the next time you open it; use Save settings or Start server to apply them.
 
-Keep port 17842 or choose an unused port. Select View only for inspection, or Allow changes for download, queue and saved-script controls. Click Start server; this also saves your settings. Wait for Running, then click Check connection to verify authenticated access. This checks the local server; your AI client still needs to connect separately.
+Keep port 17842 or choose an unused port. Select View only for inspection, or Allow changes and then choose Download controls, Queue controls, Approved Lua scripts, and Approved PowerShell scripts independently. Scripts start disabled and also require local approval of their exact saved revision. Click Start server; this also saves your settings. Wait for Running, then click Check connection to verify authenticated access. This checks the local server; your AI client still needs to connect separately.
 
 Once running, click Copy client config and paste into your AI client's MCP settings. For manual setup, choose Streamable HTTP, use the copy button beside Server URL, add a header named Authorization, and use Copy access header for its value. The URL can be copied before starting; configuration and access-header copying and connection checks appear when running. The configuration contains a private token; keep it out of chat and public files. The AI client must run on this computer and support HTTP headers. Client formats vary; the app does not modify client settings for you. Click the suggested first prompt to copy it. Scroll inside the popup at smaller window sizes to reach the lower controls. Setup guide and Open logs stay below the scrolling area when opened from the toolbar or Tools menu.
 
@@ -578,13 +675,13 @@ Ask your AI: Read Download Engine's get_usage_guide, then show my queues and pau
 
 With Allow changes enabled, ask: Create a paused queue named MCP practice and add this direct file URL to it. Replace the URL with one you want to download. Review the proposed tool calls in your client. Ask it to start MCP practice when ready, then check until the file is complete. A successful command receipt means the command was accepted; it does not mean the file has finished downloading.
 
-For Lua: save a script under Scripting → Scripts first. Ask the client to list your scripts and show the script you want to run. After reviewing its source, ask it to run that saved script once and read its run logs. Manual runs have no completed-download event files. PowerShell scripts can access files and execute programs, so authorize those calls with that behavior in mind. MCP does not provide a tool to upload or edit scripts, delete downloads, or open downloaded programs.
+For Lua: save a script under Scripting → Scripts first, review its source and permissions, then approve the exact revision locally with de-cli mcp-approve-script SCRIPT_ID REVISION. Enable Approved Lua scripts on the server before asking the client to run it and read its logs. Editing or resaving invalidates approval; de-cli mcp-revoke-script SCRIPT_ID revokes it. PowerShell needs its separate server permission and revision approval, and can access files and execute programs. An approved script retains its own automation capabilities; the direct download/queue tool switches do not sandbox it. MCP cannot grant approvals or upload/edit scripts. Manual runs have no completed-download event files.
 
 ### Profiles, retries and cancellation
 
 Use the CLI beside the app whose history you want to control. It follows portable.json or the installed profile. An absolute DOWNLOAD_ENGINE_HOME selects a test profile; set it in both terminals before generating configuration and starting the server. Use a separate port for each simultaneous profile. Tokens are encrypted for your Windows account in the profile's mcp-token.dpapi file.
 
-Changing tools accept request_id, a UUID your client can reuse for the same operation after a lost reply. The MCP JSON-RPC ID is a separate transport identifier. get_request checks a saved command receipt. Do not blindly submit a second add with a new UUID: it can create another download. Receipts retain the latest 1,000 commands; safe retry depends on that receipt still being retained.
+Changing tools accept request_id, a UUID your client can reuse for the same operation after a lost reply. The MCP JSON-RPC ID is a separate transport identifier. get_request checks a saved command receipt. Do not blindly submit a second add with a new UUID: it can create another download. Detailed receipts retain the latest 1,000 commands; compact ID records continue to prevent replay and return retired after result removal. Requests already pruned by older versions before this protection was introduced cannot be recovered.
 
 Cancelling a call can cancel a command still waiting; work already claimed by the desktop is not undone. Use pause_download or pause_queue to stop transfers, and stop_script for a running script. Inspect the returned receipt and actual state before retrying. Modern clients cancel by closing the response stream; older clients send a cancellation notification. List tools support offset and limit, up to 100 items per page.
 

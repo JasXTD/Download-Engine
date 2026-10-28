@@ -239,7 +239,7 @@ fn dispatch(
                 "Modern requests use server/discover",
             )));
         }
-        let dispatch = Protocol::default().accept(message, state.context.read_only);
+        let dispatch = Protocol::default().accept(message, state.context.access());
         // Modern requests are independent; identical JSON-RPC IDs from different
         // clients must not collide or cancel each other.
         return Ok((dispatch, String::new(), None));
@@ -271,7 +271,7 @@ fn dispatch(
             )));
         }
         let mut protocol = Protocol::default();
-        let dispatch = protocol.accept(message, state.context.read_only);
+        let dispatch = protocol.accept(message, state.context.access());
         if let Dispatch::Reply(value) = &dispatch
             && let Some(version) = value["result"]["protocolVersion"].as_str()
         {
@@ -304,7 +304,7 @@ fn dispatch(
     }
     session.used = Instant::now();
     Ok((
-        session.protocol.accept(message, state.context.read_only),
+        session.protocol.accept(message, state.context.access()),
         session_id.into(),
         None,
     ))

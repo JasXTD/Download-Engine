@@ -283,7 +283,7 @@ pub(super) fn close_button(ui: &mut egui::Ui, side: f32, hover: &str) -> egui::R
 /// Paints the shared × for a click response the caller already owns (for example
 /// one with a stable id). Hover, press, focus and disabled states follow egui buttons.
 pub(super) fn paint_close(ui: &egui::Ui, response: &egui::Response) {
-    let p = Palette::new(ui.visuals().dark_mode);
+    let p = Palette::for_context(ui.ctx());
     let visuals = ui.style().interact(response);
     let stroke =
         if response.hovered() || response.has_focus() || response.is_pointer_button_down_on() {
@@ -342,16 +342,18 @@ pub(super) fn dialog_header_enabled(ui: &mut egui::Ui, title: &str, enabled: boo
 
 impl Desktop {
     pub fn configure_appearance(&self, ctx: &egui::Context) {
-        let appearance = self
+        let interface = self
             .preferences_window
             .as_ref()
-            .map_or(self.interface.appearance, |state| {
-                state.interface.appearance
-            });
-        ctx.set_theme(match appearance {
+            .map_or(self.interface, |state| state.interface);
+        theme::apply_custom(
+            ctx,
+            (interface.appearance == Appearance::Custom).then_some(interface.custom_theme),
+        );
+        ctx.set_theme(match interface.appearance {
             Appearance::System => egui::ThemePreference::System,
             Appearance::Light => egui::ThemePreference::Light,
-            Appearance::Dark => egui::ThemePreference::Dark,
+            Appearance::Dark | Appearance::Custom => egui::ThemePreference::Dark,
         });
     }
     pub(super) fn save_interface(&mut self, ctx: &egui::Context, value: InterfacePreferences) {
@@ -401,6 +403,10 @@ impl Desktop {
     }
     fn keyboard_shortcuts(&mut self, ctx: &egui::Context) {
         if self.dialog.is_some() || egui::Popup::is_any_open(ctx) {
+            return;
+        }
+        if self.view == View::Automation && self.scripts.full_editor() {
+            self.scripts.exit_full_editor(ctx);
             return;
         }
         if ctx.input_mut(|input| input.consume_key(egui::Modifiers::NONE, egui::Key::F1)) {
@@ -453,11 +459,25 @@ impl Desktop {
         if self.dialog.is_some() || self.view != View::Downloads {
             self.table.cancel();
         }
-        let p = Palette::new(ui.visuals().dark_mode);
-        self.footer(ui, p);
-        self.menu_bar(ui, p);
-        self.toolbar(ui, p);
-        self.sidebar(ui, p);
+        let p = Palette::for_context(ui.ctx());
+        #[cfg(feature = "screenshot")]
+        if std::env::var("IDM_EX_TEST_FULL_EDITOR").as_deref() == Ok("1") {
+            self.scripts.full_editor = true;
+        }
+        let full_editor = self.view == View::Automation && self.scripts.full_editor();
+        // Painted first so every panel, including the translucent chrome, sits on the art.
+        if let Some(custom) = theme::custom(ui.ctx()) {
+            self.theme_assets
+                .backdrop(ui, ui.max_rect(), custom, &self.store.paths.data, p);
+        }
+        if !full_editor {
+            self.footer(ui, p);
+            self.menu_bar(ui, p);
+            self.toolbar(ui, p);
+            if matches!(self.view, View::Downloads | View::Queues | View::Scheduler) {
+                self.sidebar(ui, p);
+            }
+        }
         if self.view == View::Downloads
             && self.interface.show_details
             && let Some(job) = self
@@ -468,8 +488,13 @@ impl Desktop {
         {
             self.details(ui, &job, p);
         }
+        let content = if p.backdrop {
+            Color32::TRANSPARENT
+        } else {
+            p.surface
+        };
         egui::CentralPanel::default()
-            .frame(egui::Frame::new().fill(p.surface).inner_margin(18))
+            .frame(egui::Frame::new().fill(content).inner_margin(18))
             .show(ui, |ui| {
                 if ui.ctx().content_rect().height() < 700.0 {
                     ui.spacing_mut().item_spacing.y = 4.0;
@@ -485,6 +510,10 @@ impl Desktop {
                     View::Downloads => self.content(ui, p),
                     View::Queues | View::Scheduler => self.overview(ui, p),
                     View::Logs => self.logs_page(ui, p),
+                    View::Automation if full_editor => {
+                        self.notice(ui, p);
+                        self.scripts_page(ui, p);
+                    }
                     View::Automation => self.automation_page(ui, p),
                     View::Guide => self.guide_page(ui, p),
                     View::Changelog => self.changelog_page(ui, p),
@@ -628,6 +657,13 @@ impl Desktop {
             .collect();
         if jobs.is_empty() {
             ui.add_space(25.0);
+            if self.queue_loading() {
+                ui.vertical_centered(|ui| {
+                    ui.spinner();
+                    ui.label(tr("Loading…"));
+                });
+                return;
+            }
             ui.vertical_centered(|ui| {
                 ui.label(
                     RichText::new(if self.jobs.is_empty() {
@@ -661,7 +697,11 @@ impl Desktop {
             return;
         }
         egui::Frame::new()
-            .fill(p.surface)
+            .fill(if theme::custom(ui.ctx()).is_some() {
+                Color32::from_rgba_unmultiplied(17, 21, 32, 145)
+            } else {
+                p.surface
+            })
             .stroke(Stroke::new(1.0, p.border))
             .corner_radius(0)
             .show(ui, |ui| {
@@ -810,6 +850,8 @@ impl Desktop {
             0.0,
             if self.is_selected(&job.id) {
                 p.selected
+            } else if theme::custom(ui.ctx()).is_some() {
+                Color32::TRANSPARENT
             } else {
                 p.surface
             },
@@ -1510,13 +1552,57 @@ impl Desktop {
         }
     }
     fn details(&mut self, ui: &mut egui::Ui, job: &Job, p: Palette) {
-        let has_error = job.error.is_some();
+        let available = ui.available_rect_before_wrap();
+        let maximum = (available.height() - 220.0).clamp(80.0, 400.0);
+        let preferred = self
+            .interface
+            .details_height
+            .map(f32::from)
+            .unwrap_or_else(|| {
+                if ui.ctx().content_rect().height() < 700.0 {
+                    if job.error.is_some() { 140.0 } else { 96.0 }
+                } else if job.error.is_some() {
+                    206.0
+                } else {
+                    162.0
+                }
+            });
+        let id = egui::Id::new("details-resize");
+        let mut height = ui
+            .ctx()
+            .data(|d| d.get_temp::<f32>(id))
+            .unwrap_or(preferred)
+            .clamp(80.0, maximum);
+        let edge = egui::Rect::from_min_max(
+            egui::pos2(available.left(), available.bottom() - height - 4.0),
+            egui::pos2(available.right(), available.bottom() - height + 4.0),
+        );
+        let resize = ui
+            .interact(edge, id, egui::Sense::drag())
+            .on_hover_text(tr("Drag to resize details"));
+        if (resize.dragged() || resize.drag_stopped())
+            && let Some(pointer) = resize.interact_pointer_pos()
+        {
+            height = (available.bottom() - pointer.y).clamp(80.0, maximum);
+            ui.ctx().data_mut(|d| d.insert_temp(id, height));
+        }
+        if resize.hovered() || resize.dragged() {
+            ui.ctx().set_cursor_icon(egui::CursorIcon::ResizeVertical);
+        }
+        if resize.drag_stopped() {
+            let mut value = self.interface;
+            value.details_height = Some(height.round() as u16);
+            if value != self.interface {
+                self.save_interface(ui.ctx(), value);
+            }
+            ui.ctx().data_mut(|d| d.remove::<f32>(id));
+        }
         egui::Panel::bottom("file-details")
-            .exact_size(if has_error { 206.0 } else { 162.0 })
+            .exact_size(height)
             .resizable(false)
             .frame(
                 egui::Frame::new()
-                    .fill(p.surface)
+                    .fill(p.panel(p.surface))
                     .inner_margin(egui::Margin::symmetric(18, 12)),
             )
             .show(ui, |ui| {
@@ -1558,98 +1644,164 @@ impl Desktop {
                         });
                     },
                 );
-                let width = (ui.available_width() - 26.0) / 2.0;
-                let queue_name = self
-                    .queues
-                    .iter()
-                    .find(|q| q.id == self.queue_id)
-                    .map(|q| display_queue_name(&q.id, &q.name))
-                    .unwrap_or(tr("Main queue"));
-                ui.columns(2, |cols| {
-                    for (col, values) in [
-                        vec![
-                            (
-                                tr("Save to"),
-                                job.saved_path
-                                    .as_ref()
-                                    .and_then(|p| p.parent())
-                                    .unwrap_or(&job.directory)
-                                    .to_string_lossy()
-                                    .into_owned(),
-                            ),
-                            (tr("Source"), job.url.clone()),
-                            (tr("Resume"), resume_description(job).into()),
-                        ],
-                        vec![
-                            (
-                                tr("Downloaded"),
-                                job.total
-                                    .map(|n| tf!("{} of {}", bytes(job.downloaded), bytes(n)))
-                                    .unwrap_or_else(|| bytes(job.downloaded)),
-                            ),
-                            (tr("Queue"), queue_name.into()),
-                            (
-                                tr("Status"),
-                                status_label(
-                                    job,
-                                    self.queues
-                                        .iter()
-                                        .any(|q| q.id == self.queue_id && q.running)
-                                        || self.immediate_downloads.contains(&job.id),
-                                    chrono::Utc::now().timestamp_millis(),
-                                ),
-                            ),
-                        ],
-                    ]
-                    .into_iter()
-                    .enumerate()
-                    {
-                        egui::Grid::new(("file-metadata", col))
-                            .spacing([12.0, 7.0])
-                            .show(&mut cols[col], |ui| {
-                                for (label, value) in values {
-                                    ui.label(RichText::new(label).small().color(p.muted));
-                                    ui.allocate_ui_with_layout(
-                                        vec2(width - 85.0, 18.0),
-                                        Layout::left_to_right(Align::Center),
-                                        |ui| {
-                                            ui.add(
-                                                egui::Label::new(RichText::new(&value).small())
-                                                    .truncate(),
-                                            )
-                                        },
-                                    )
-                                    .inner
-                                    .on_hover_text(value);
-                                    ui.end_row();
-                                }
-                            });
-                    }
-                });
-                if job.status == Status::Complete {
-                    ui.label(
-                        RichText::new(self.antivirus_label(job))
-                            .small()
-                            .color(p.muted),
-                    );
-                }
-                if let Some(error) = &job.error {
-                    egui::ScrollArea::vertical()
-                        .id_salt("download-error")
-                        .max_height(60.0)
-                        .show(ui, |ui| {
-                            if let Some(description) = retry_description(
+                if height <= 150.0 {
+                    ui.horizontal(|ui| {
+                        ui.label(
+                            RichText::new(status_label(
                                 job,
                                 self.queues
                                     .iter()
                                     .any(|q| q.id == self.queue_id && q.running)
                                     || self.immediate_downloads.contains(&job.id),
-                            ) {
-                                ui.label(RichText::new(description).small().color(p.accent));
-                            }
-                            ui.label(RichText::new(error).small().color(p.warning));
-                        });
+                                chrono::Utc::now().timestamp_millis(),
+                            ))
+                            .color(p.status(job.status)),
+                        );
+                        ui.label(
+                            job.total
+                                .map(|n| tf!("{} of {}", bytes(job.downloaded), bytes(n)))
+                                .unwrap_or_else(|| bytes(job.downloaded)),
+                        );
+                    });
+                    if let Some(error) = &job.error {
+                        if let Some(retry) = retry_description(
+                            job,
+                            self.queues
+                                .iter()
+                                .any(|q| q.id == self.queue_id && q.running)
+                                || self.immediate_downloads.contains(&job.id),
+                        ) {
+                            ui.add(
+                                egui::Label::new(RichText::new(&retry).small().color(p.blue))
+                                    .truncate(),
+                            )
+                            .on_hover_text(retry);
+                        }
+                        ui.add(
+                            egui::Label::new(RichText::new(error).small().color(p.warning))
+                                .truncate(),
+                        )
+                        .on_hover_text(error);
+                    }
+                    return;
                 }
+                egui::ScrollArea::vertical()
+                    .id_salt("file-metadata-scroll")
+                    .auto_shrink([false, false])
+                    .show(ui, |ui| {
+                        let width = (ui.available_width() - 26.0) / 2.0;
+                        let queue_name = self
+                            .queues
+                            .iter()
+                            .find(|q| q.id == self.queue_id)
+                            .map(|q| display_queue_name(&q.id, &q.name))
+                            .unwrap_or(tr("Main queue"));
+                        ui.columns(2, |cols| {
+                            for (col, values) in [
+                                vec![
+                                    (
+                                        tr("Save to"),
+                                        job.saved_path
+                                            .as_ref()
+                                            .and_then(|p| p.parent())
+                                            .unwrap_or(&job.directory)
+                                            .to_string_lossy()
+                                            .into_owned(),
+                                    ),
+                                    (tr("Source"), job.url.clone()),
+                                    (tr("Resume"), resume_description(job).into()),
+                                ],
+                                vec![
+                                    (
+                                        tr("Downloaded"),
+                                        job.total
+                                            .map(|n| {
+                                                tf!("{} of {}", bytes(job.downloaded), bytes(n))
+                                            })
+                                            .unwrap_or_else(|| bytes(job.downloaded)),
+                                    ),
+                                    (tr("Queue"), queue_name.into()),
+                                    (
+                                        tr("Status"),
+                                        status_label(
+                                            job,
+                                            self.queues
+                                                .iter()
+                                                .any(|q| q.id == self.queue_id && q.running)
+                                                || self.immediate_downloads.contains(&job.id),
+                                            chrono::Utc::now().timestamp_millis(),
+                                        ),
+                                    ),
+                                ],
+                            ]
+                            .into_iter()
+                            .enumerate()
+                            {
+                                egui::Grid::new(("file-metadata", col))
+                                    .spacing([12.0, 7.0])
+                                    .show(&mut cols[col], |ui| {
+                                        for (label, value) in values {
+                                            ui.label(RichText::new(label).small().color(p.muted));
+                                            // A truncated label already shows its full text on hover.
+                                            ui.allocate_ui_with_layout(
+                                                vec2(width - 85.0, 18.0),
+                                                Layout::left_to_right(Align::Center),
+                                                |ui| {
+                                                    ui.add(
+                                                        egui::Label::new(
+                                                            RichText::new(&value).small(),
+                                                        )
+                                                        .truncate(),
+                                                    );
+                                                },
+                                            );
+                                            ui.end_row();
+                                        }
+                                    });
+                            }
+                        });
+                        if job.status == Status::Complete {
+                            ui.label(
+                                RichText::new(self.antivirus_label(job))
+                                    .small()
+                                    .color(p.muted),
+                            );
+                        }
+                        if let Some(error) = &job.error {
+                            egui::ScrollArea::vertical()
+                                .id_salt("download-error")
+                                .max_height(60.0)
+                                .show(ui, |ui| {
+                                    if let Some(description) = retry_description(
+                                        job,
+                                        self.queues
+                                            .iter()
+                                            .any(|q| q.id == self.queue_id && q.running)
+                                            || self.immediate_downloads.contains(&job.id),
+                                    ) {
+                                        ui.label(
+                                            RichText::new(description).small().color(p.accent),
+                                        );
+                                    }
+                                    ui.label(RichText::new(error).small().color(p.warning));
+                                });
+                        }
+                    });
             });
+        let y = available.bottom() - height;
+        ui.painter().line_segment(
+            [
+                egui::pos2(available.left(), y),
+                egui::pos2(available.right(), y),
+            ],
+            egui::Stroke::new(
+                1.0,
+                if resize.hovered() || resize.dragged() {
+                    p.blue
+                } else {
+                    p.border
+                },
+            ),
+        );
     }
 }

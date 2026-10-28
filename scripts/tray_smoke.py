@@ -13,7 +13,7 @@ import json
 import msvcrt
 import os
 from pathlib import Path
-import sqlite3
+from profile_database import open_profile_database
 import struct
 import subprocess
 import threading
@@ -80,7 +80,7 @@ def main():
     data = run / "data"
     data.mkdir(parents=True)
     database = data / "queue.sqlite3"
-    with sqlite3.connect(database) as conn:
+    with open_profile_database(database) as conn:
         conn.executescript("CREATE TABLE desktop_preferences(id INTEGER PRIMARY KEY,close_to_tray INTEGER NOT NULL,notify_complete INTEGER NOT NULL,notify_failed INTEGER NOT NULL); INSERT INTO desktop_preferences VALUES(1,1,0,0); CREATE TABLE bandwidth_settings(id INTEGER PRIMARY KEY,bytes_per_second INTEGER); INSERT INTO bandwidth_settings VALUES(1,524288);")
     payload = bytes(range(256)) * 16384
     class Handler(BaseHTTPRequestHandler):
@@ -122,7 +122,7 @@ def main():
         reply=json.loads(host.stdout[4:]); assert reply["ok"],reply
         return reply["job_id"]
     def job(identity):
-        with sqlite3.connect(database) as conn:
+        with open_profile_database(database) as conn:
             row = conn.execute("SELECT data FROM jobs WHERE id=?",(identity,)).fetchone()
         return json.loads(row[0])
     try:
@@ -172,7 +172,7 @@ def main():
             msvcrt.locking(lock.fileno(),msvcrt.LK_NBLCK,1)
             msvcrt.locking(lock.fileno(),msvcrt.LK_UNLCK,1)
         # Default close exits safely even if the native tray context menu is open.
-        with sqlite3.connect(database) as conn:
+        with open_profile_database(database) as conn:
             conn.execute("UPDATE desktop_preferences SET close_to_tray=0")
         process=launch()
         main_window,tray=wait_for(handles,"relaunch after exit")

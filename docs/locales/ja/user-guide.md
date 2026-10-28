@@ -8,6 +8,16 @@
 
 ツールバーの「URL を追加」を選び、ファイルの直接リンクを貼り付け、名前・キュー・保存先を確認して開始します。「一括追加」は 1 行に 1 リンクです。「パターンから」を選ぶと、* を 1 つ含むリンクから img001…img100 のような連番リンクを作れます。設定 → 表示 → 言語で変更できます。システムの言語は Windows に従い、未対応なら英語になります。
 
+
+
+<!-- custom-themes-3.4.0 -->
+### テーマコレクション
+
+環境設定 → 外観 → カスタムで Neon Courier、Reactor Night、Aurora、Moonveilを選べます。背景の強さやアクセントを調整し、PNG/JPEG も取り込めます。保存で適用し、キャンセルで元に戻します。画像はサイズ制限付きでバックグラウンド処理され、ローカルに保存されます。プロファイルのバージョン保護と MCP アクセス制御も含まれます。
+
+PNG / JPEG · 16 MiB、1600万画素まで。このプロファイルにコピーします。
+<!-- /custom-themes-3.4.0 -->
+
 ## ダウンロードと復旧
 
 ### ダウンロードと復旧
@@ -33,6 +43,9 @@
 キュー管理でファイルをまとめ、同時ダウンロード数を設定できます。新規キューは開始または予約するまで待機します。スケジューラーで開始、停止、繰り返しを設定します。アプリはトレイを含め起動している必要があります。終了・シャットダウン・スリープ・休止状態は別途有効化し、カウントダウンを取り消せます。
 
 ## スクリプト
+
+エディターと読み込み済みスクリプトを別々のタブに分けました。スクリプト一覧で検索と新規作成ができ、Lua または PowerShell エディターのヘッダーから全画面編集を開けます。保存、実行・停止、任意のログ表示をコードとまとめ、ファイル操作をエディター操作メニューに移しました。表示を切り替えても未保存のコード、設定、カーソル位置を保持します。
+
 
 ### スクリプト
 
@@ -73,6 +86,24 @@ print("Failed downloads handled:", handled)
 ```
 
 別のプログラムでスクリプトを編集するには、エディターの見出しにある「ファイルを開く…」と「ファイルに保存…」を使います。「ファイルを開く…」は .lua または .ps1 ファイルをエディターにコピーし、未保存のコードを置き換える場合は先に確認します。残すには「スクリプトを保存」を選びます。「ファイルに保存…」はエディターのコードをファイルに書き出します。
+
+### Lua Core API 1
+
+Loaded scripts でスクリプトを作成または開き、Script settings で Lua と Manual only を選びます。Full editor で編集領域を広げ、Save script の後に Run script を押し、Run logs を確認します。Core API は現在のトリガーで使える関数、Ctrl+Space は補完を表示します。API 1 はアプリのバージョンとは別の契約番号です。以下はメモリ内の HTML だけを解析し、通信やダウンロードを行いません。手動スクリプトのページ取得対応は false です。
+
+```lua
+-- Example: core-api
+assert(xd.api_version == 1, "This example needs Lua API 1")
+print("App:", xd.app_version, "Role:", xd.script_kind)
+local html = '<a class="download" href="/files/demo.zip">Demo</a>'
+local links = xd.html_select(html, "a.download[href]", "href")
+local url = xd.url_join("https://example.com/catalog/", links[1])
+print("Preview:", xd.to_json({ kind = "file", url = url }))
+print("Can fetch a page:", xd.supports("xd.fetch"))
+```
+
+Open examples/core-api-automation.lua or examples/custom-site-reader.lua with Editor actions → Open file…. Site reader uses public pages, Pages patterns and Direct connection; test with Test on URL before enabling its trigger. Ordinary automation cannot call xd.fetch. Import script… accepts .de-script.json as a new draft with automatic triggers and file changes off; review its code and reselect local queues. Stop script does not undo submitted downloads. Full English reference: docs/automation.md.
+
 
 ## コマンドライン
 

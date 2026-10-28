@@ -50,6 +50,7 @@ impl Category {
 }
 
 pub(super) struct State {
+    pub(super) session: Uuid,
     pub(super) category: Category,
     pub(super) interface: InterfacePreferences,
     pub(super) behavior: Preferences,
@@ -60,11 +61,13 @@ pub(super) struct State {
     original_startup: bool,
     original_start_hidden: bool,
     pub(super) error: Option<String>,
+    pub(super) advanced_saved: bool,
 }
 
 impl State {
     fn new(app: &Desktop) -> Self {
         Self {
+            session: Uuid::new_v4(),
             category: Category::Appearance,
             interface: app.interface,
             original_interface: app.interface,
@@ -75,6 +78,7 @@ impl State {
             start_hidden: app.startup.start_hidden(),
             original_start_hidden: app.startup.start_hidden(),
             error: None,
+            advanced_saved: false,
         }
     }
 
@@ -89,8 +93,10 @@ impl State {
         let defaults = InterfacePreferences::default();
         match self.category {
             Category::Appearance => {
+                self.session = Uuid::new_v4();
                 self.interface.language = defaults.language;
                 self.interface.appearance = defaults.appearance;
+                self.interface.custom_theme = defaults.custom_theme;
                 self.interface.compact_rows = defaults.compact_rows;
                 self.interface.show_details = defaults.show_details;
                 self.interface.sidebar_labels = defaults.sidebar_labels;
@@ -131,6 +137,7 @@ impl State {
             original_interface,
             language,
             appearance,
+            custom_theme,
             compact_rows,
             show_details,
             sidebar_labels,
@@ -167,6 +174,12 @@ pub(super) enum Editor {
 }
 
 impl Desktop {
+    /// Called only after a separate settings editor confirms a successful save.
+    pub(super) fn note_advanced_preferences_saved(&mut self) {
+        if let Some(state) = &mut self.preferences_window {
+            state.advanced_saved = true;
+        }
+    }
     pub(super) fn open_preferences_window(&mut self) {
         if self.dialog.is_some() {
             return;
@@ -178,6 +191,8 @@ impl Desktop {
     }
 
     pub(super) fn close_preferences_window(&mut self, ctx: &egui::Context) {
+        self.theme_assets
+            .discard_imports(self.interface.custom_theme.image);
         self.preferences_window = None;
         self.dialog = None;
         self.form_error = None;
@@ -211,7 +226,15 @@ impl Desktop {
         {
             self.notice = Some(Notice::error(error.to_string()));
         }
+        self.theme_assets.replace_saved_image(
+            &self.store.paths.data,
+            self.interface.custom_theme.image,
+            interface.custom_theme.image,
+        );
         self.interface = interface;
+        // The database is committed even if a later startup-setting write fails.
+        self.theme_assets
+            .discard_imports(interface.custom_theme.image);
         self.preferences = behavior;
         state.interface = interface;
         state.original_interface = interface;
@@ -291,9 +314,11 @@ impl Desktop {
         let mut save = false;
         let mut editor = None;
         let width = (ctx.content_rect().width() - 64.0).clamp(360.0, 780.0);
-        let height =
-            (ctx.content_rect().height() - 188.0 - if state.error.is_some() { 64.0 } else { 0.0 })
-                .clamp(220.0, 430.0);
+        let height = (ctx.content_rect().height()
+            - 216.0
+            - if state.error.is_some() { 64.0 } else { 0.0 }
+            - if state.advanced_saved { 34.0 } else { 0.0 })
+        .clamp(220.0, 430.0);
         let response = form_dialog::modal("preferences-window", p).show(ctx, |ui| {
             ui.set_width(width);
             cancel = form_dialog::title(
@@ -305,6 +330,9 @@ impl Desktop {
             );
             if let Some(error) = &state.error {
                 ui.label(RichText::new(error).color(p.warning));
+            }
+            if state.advanced_saved {
+                ui.label(RichText::new(tr("Advanced settings saved. Cancel will not undo those changes.")).color(p.success));
             }
             ui.separator();
             ui.add_space(8.0);
@@ -396,6 +424,7 @@ impl Desktop {
             });
             ui.add_space(8.0);
             ui.separator();
+            ui.label(RichText::new(tr("Save and Cancel apply to edits in this window. Separate dialogs save independently.")).size(11.0).color(p.muted));
             // Explicit Save / Cancel / Reset order matches the approved mockup.
             ui.horizontal(|ui| {
                 ui.label(
@@ -419,7 +448,7 @@ impl Desktop {
                         state.reset_category();
                     }
                     cancel |= form_dialog::secondary_button(ui, tr("Cancel")).clicked();
-                    save = form_dialog::primary_enabled(ui, state.dirty(), tr("Save")).clicked();
+                    save = form_dialog::primary_enabled(ui, state.dirty() && !self.theme_assets.importing(), tr("Save")).clicked();
                 });
             });
         });

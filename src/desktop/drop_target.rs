@@ -18,10 +18,10 @@ pub(super) struct State {
     pending: Option<String>,
 }
 
-/// Box colors for the theme. The light palette's border suits surfaces inside the
-/// window; the box sits on any desktop, so it gets a stronger edge.
-fn look(dark: bool) -> Look {
-    let p = Palette::new(dark);
+/// Box colors for the theme, including a custom theme's palette. The light palette's
+/// border suits surfaces inside the window; the box sits on any desktop, so it gets
+/// a stronger edge.
+fn look(p: Palette, dark: bool) -> Look {
     let rgb = |color: Color32| [color.r(), color.g(), color.b()];
     Look {
         fill: rgb(if dark { p.background } else { p.surface }),
@@ -72,7 +72,7 @@ impl Desktop {
             self.drop_target.language = None;
             return;
         }
-        let look = look(ctx.theme() == egui::Theme::Dark);
+        let look = look(Palette::for_context(ctx), ctx.theme() == egui::Theme::Dark);
         let language = self.interface.language;
         #[cfg(windows)]
         {
@@ -368,12 +368,18 @@ mod tests {
 
     #[test]
     fn box_colors_follow_the_theme() {
-        let dark = look(true);
-        let light = look(false);
+        let dark = look(Palette::new(true), true);
+        let light = look(Palette::new(false), false);
         assert_eq!(dark.fill, [38, 42, 45]);
         assert_eq!(light.fill, [255, 255, 255]);
         assert_ne!(dark.hover_border, light.hover_border);
-        for look in [dark, light] {
+        let ctx = egui::Context::default();
+        let custom = download_engine::preferences::CustomTheme::default();
+        theme::apply_custom(&ctx, Some(custom));
+        let themed = look(Palette::for_context(&ctx), true);
+        assert_eq!(themed.fill, [17, 21, 32]);
+        assert_ne!(themed.hover_fill, dark.hover_fill);
+        for look in [dark, light, themed] {
             assert_ne!(look.fill, look.hover_fill);
             assert_ne!(look.border, look.hover_border);
         }

@@ -1,3 +1,5 @@
+#[path = "../src/desktop/fixture_database.rs"]
+mod fixture_database;
 use download_engine::{
     engine,
     model::{Job, Status, safe_filename, validate_url},
@@ -491,7 +493,7 @@ async fn pause_wait_reports_worker_store_error_without_waiting_for_timeout() {
     let fixture = Fixture::new(256 * 1024, 0, false).await;
     let (_temp, store) = setup();
     let job = enqueue(&store, &fixture.url);
-    rusqlite::Connection::open(store.paths.data.join("queue.sqlite3")).unwrap()
+    crate::fixture_database::open(store.paths.data.join("queue.sqlite3")).unwrap()
         .execute_batch("CREATE TRIGGER reject_update BEFORE UPDATE ON jobs BEGIN SELECT RAISE(FAIL, 'injected queue write failure'); END;").unwrap();
     let error = try_pause_midway(&store, job, &fixture).await.unwrap_err();
     assert!(error.starts_with("Download worker failed:"), "{error}");
@@ -882,7 +884,7 @@ async fn scheduler_recovers_a_failed_completion_commit_without_stuck_state_or_du
     let mut job = enqueue(&store, &fixture.url);
     job.status = Status::Queued;
     store.save(&job).unwrap();
-    let connection = rusqlite::Connection::open(store.paths.data.join("queue.sqlite3")).unwrap();
+    let connection = crate::fixture_database::open(store.paths.data.join("queue.sqlite3")).unwrap();
     connection
         .execute_batch(
             "CREATE TRIGGER reject_completion BEFORE UPDATE ON jobs

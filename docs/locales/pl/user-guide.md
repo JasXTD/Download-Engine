@@ -8,6 +8,16 @@ Preferencje otwierają się w oknie z kategoriami. Zapisz stosuje zmiany; Anuluj
 
 Wybierz Dodaj URL, wklej bezpośredni link do pliku, sprawdź nazwę, kolejkę i folder, a następnie rozpocznij. Dodaj grupę przyjmuje jeden link w wierszu. Z wzorca tworzy numerowane linki, np. img001…img100, z jednego linku z *. Język wybierzesz w Ustawienia → Wygląd → Język. Język systemu korzysta z Windows; nieobsługiwany język zastępuje angielski.
 
+
+
+<!-- custom-themes-3.4.0 -->
+### Kolekcja motywów
+
+Preferencje → Wygląd → Własny oferuje Neon Courier, Reactor Night, Aurora i Moonveil. Dostosuj tło i akcent lub zaimportuj PNG/JPEG. Zapisz zachowuje podgląd; Anuluj przywraca wygląd. Obrazy pozostają lokalne, mają limity rozmiaru i są przetwarzane w tle. Wersja zawiera też ochronę wersji profilu i kontrolę dostępu MCP.
+
+PNG / JPEG · do 16 MiB i 16 megapikseli. Kopia w tym profilu.
+<!-- /custom-themes-3.4.0 -->
+
 ## Pobieranie i odzyskiwanie
 
 ### Pobieranie i odzyskiwanie
@@ -33,6 +43,9 @@ Otwórz Narzędzia → Ustawienia przeglądarki, aby połączyć Chrome, Edge, B
 Zarządzaj kolejkami, aby grupować pliki i ustawiać liczbę jednoczesnych pobrań. Nowe kolejki czekają na uruchomienie lub harmonogram. Harmonogram obsługuje start, zatrzymanie i powtarzanie. Aplikacja musi działać, także w zasobniku. Zakończenie aplikacji oraz wyłączenie, uśpienie lub hibernacja komputera wymagają osobnego włączenia; odliczanie można anulować.
 
 ## Skrypty
+
+Edytor i wczytane skrypty mają teraz osobne karty. Skrypty można wyszukiwać i tworzyć na liście, a pełny edytor otworzyć z nagłówka Lua lub PowerShell. Zapis, uruchamianie/zatrzymywanie i opcjonalne dzienniki znajdują się przy kodzie. Polecenia plików przeniesiono do menu działań edytora. Zmiana widoku zachowuje niezapisany kod, ustawienia i pozycję kursora.
+
 
 ### Skrypty
 
@@ -73,6 +86,24 @@ print("Failed downloads handled:", handled)
 ```
 
 Aby edytować skrypt w innym programie, użyj przycisków Otwórz plik… i Zapisz do pliku… w nagłówku edytora. Otwórz plik… kopiuje plik .lua lub .ps1 do edytora i pyta najpierw, jeśli zastąpiłby niezapisany kod; wybierz Zapisz skrypt, aby go zachować. Zapisz do pliku… zapisuje kod z edytora do pliku.
+
+### Lua Core API 1
+
+Utwórz lub otwórz skrypt w Loaded scripts; w Script settings wybierz Lua i Manual only. Full editor powiększa edytor; wybierz Save script, Run script i sprawdź Run logs. Core API pokazuje funkcje bieżącego wyzwalacza, a Ctrl+Space podpowiedzi. API 1 oznacza kontrakt, nie wersję aplikacji. Przykład analizuje tylko HTML w pamięci, bez sieci i pobierania; obsługa odczytu strony w skrypcie ręcznym wynosi false.
+
+```lua
+-- Example: core-api
+assert(xd.api_version == 1, "This example needs Lua API 1")
+print("App:", xd.app_version, "Role:", xd.script_kind)
+local html = '<a class="download" href="/files/demo.zip">Demo</a>'
+local links = xd.html_select(html, "a.download[href]", "href")
+local url = xd.url_join("https://example.com/catalog/", links[1])
+print("Preview:", xd.to_json({ kind = "file", url = url }))
+print("Can fetch a page:", xd.supports("xd.fetch"))
+```
+
+Open examples/core-api-automation.lua or examples/custom-site-reader.lua with Editor actions → Open file…. Site reader uses public pages, Pages patterns and Direct connection; test with Test on URL before enabling its trigger. Ordinary automation cannot call xd.fetch. Import script… accepts .de-script.json as a new draft with automatic triggers and file changes off; review its code and reselect local queues. Stop script does not undo submitted downloads. Full English reference: docs/automation.md.
+
 
 ## Wiersz poleceń
 

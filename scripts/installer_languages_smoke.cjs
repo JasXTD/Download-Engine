@@ -1,9 +1,9 @@
+const openProfileDatabase = require('./profile_database.cjs');
 // Isolated real Setup install/upgrade/uninstall. Never registers browsers or launches protection/shutdown actions.
 const fs=require('node:fs');
 const path=require('node:path');
 const assert=require('node:assert/strict');
 const {spawnSync}=require('node:child_process');
-const {DatabaseSync}=require('node:sqlite');
 const {randomUUID,createHash}=require('node:crypto');
 const root=path.resolve(__dirname,'..');
 const languages=JSON.parse(fs.readFileSync(path.join(root,'locales/languages.json'),'utf8')).map(language=>language.code);
@@ -68,7 +68,7 @@ try {
     const queues=run(cli,['queues'],env,15000);assert.equal(queues.status,0,queues.stderr);
     const reply=JSON.parse(queues.stdout);assert.equal(reply.ok,true);assert(Array.isArray(reply.result));assert(reply.result.some(queue=>queue.id==='main'));
     const database=path.join(profile,'Download Engine','queue.sqlite3');
-    let db=new DatabaseSync(database);
+    let db=openProfileDatabase(database);
     const preferences=()=>JSON.parse(db.prepare('SELECT data FROM interface_preferences WHERE id=1').get().data);
     assert.equal(preferences().language,lang,'Fresh profile follows Setup');
     const saved={...preferences(),language:'system',compact_rows:true,localization_sentinel:'preserve'};
@@ -81,7 +81,7 @@ try {
     assert.equal(setup(next,lang+'-upgrade').status,0);
     assert.equal(JSON.parse(fs.readFileSync(path.join(program,'installer-language.json'),'utf8')),next);
     assert.equal(run(cli,['queues'],env,15000).status,0);
-    db=new DatabaseSync(database);assert.deepEqual(preferences(),saved);db.close();
+    db=openProfileDatabase(database);assert.deepEqual(preferences(),saved);db.close();
     // First install: its own entry is removed. Second: another copy's entry is kept.
     const startupCheck=index<2;
     if(startupCheck) plantStartup(`"${index===0?path.join(program,'de.exe'):path.join(workspace,'Other copy','de.exe')}" --autostart`);

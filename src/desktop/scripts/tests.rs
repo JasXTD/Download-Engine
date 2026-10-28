@@ -1,6 +1,336 @@
 use super::super::interaction_tests::{click, fixture, frame, text_rect};
 use super::*;
 
+fn editor_menu(app: &mut Desktop, ctx: &egui::Context, label: &str) {
+    click(app, ctx, "Editor actions");
+    click(app, ctx, label);
+}
+
+#[test]
+fn compact_editor_is_visible_and_collapsing_settings_preserves_the_draft() {
+    let (_root, mut app, ctx) = fixture();
+    app.view = View::Automation;
+    app.automation.show_scripts();
+    app.scripts.new_script();
+    app.scripts.draft.as_mut().unwrap().body = "print('visible editor')".into();
+    let before = app.scripts.draft.clone();
+    let size = egui::vec2(860.0, 600.0);
+    frame(&mut app, &ctx, size, vec![]);
+    let output = frame(&mut app, &ctx, size, vec![]);
+    let code = rendered(&output, "print('visible editor')");
+    assert!(!code.is_empty());
+    for (rect, clip) in code {
+        assert!(clip.contains_rect(rect) && rect.bottom() < size.y);
+    }
+    assert!(rendered(&output, "All downloads").is_empty());
+    click(&mut app, &ctx, "Script settings");
+    assert!(app.scripts.settings_open);
+    click(&mut app, &ctx, "Script settings");
+    assert!(!app.scripts.settings_open);
+    assert_eq!(app.scripts.draft, before);
+}
+
+#[test]
+fn loaded_scripts_search_switches_saved_scripts_and_protects_unsaved_edits() {
+    let (_temp, mut app, ctx) = fixture();
+    app.view = View::Automation;
+    app.automation.show_scripts();
+    for name in ["Alpha report", "Beta reader"] {
+        app.scripts.new_script();
+        app.scripts.settings_open = true;
+        let draft = app.scripts.draft.as_mut().unwrap();
+        draft.name = name.into();
+        draft.body = "print('test')".into();
+        if name == "Beta reader" {
+            draft.trigger = Trigger::SiteReader {
+                pages: vec!["example.com/*".into()],
+            };
+        }
+        app.store.save_script(draft).unwrap();
+    }
+    app.scripts.draft = None;
+    app.scripts.baseline = None;
+    app.refresh_automation();
+    click(&mut app, &ctx, "Loaded scripts (2)");
+    app.scripts.library_search = "SITE READER".into();
+    let size = egui::vec2(1080.0, 800.0);
+    let out = frame(&mut app, &ctx, size, vec![]);
+    text_rect(&out, "Beta reader");
+    click(&mut app, &ctx, "Beta reader");
+    assert_eq!(app.scripts.draft.as_ref().unwrap().name, "Beta reader");
+    assert!(app.store.script_runs(None).unwrap().is_empty());
+
+    app.scripts
+        .draft
+        .as_mut()
+        .unwrap()
+        .body
+        .push_str("\n-- unsaved");
+    app.scripts.library_search.clear();
+    click(&mut app, &ctx, "Loaded scripts (2)");
+    click(&mut app, &ctx, "Alpha report");
+    assert_eq!(app.scripts.draft.as_ref().unwrap().name, "Beta reader");
+    assert!(
+        app.scripts
+            .draft
+            .as_ref()
+            .unwrap()
+            .body
+            .ends_with("-- unsaved")
+    );
+    text_rect(
+        &frame(&mut app, &ctx, size, vec![]),
+        "Save or discard edits before switching scripts.",
+    );
+    app.scripts.library_search = "not found".into();
+    text_rect(&frame(&mut app, &ctx, size, vec![]), "No matching scripts.");
+    click(&mut app, &ctx, "Editor");
+    click(&mut app, &ctx, "Save script");
+    app.scripts.library_search.clear();
+    click(&mut app, &ctx, "Loaded scripts (2)");
+    click(&mut app, &ctx, "Alpha report");
+    assert_eq!(app.scripts.draft.as_ref().unwrap().name, "Alpha report");
+    assert_eq!(app.store.scripts().unwrap().len(), 2);
+    assert!(app.store.script_runs(None).unwrap().is_empty());
+}
+
+#[test]
+fn library_has_its_own_tab_and_new_script_never_appears_in_the_editor() {
+    let (_temp, mut app, ctx) = fixture();
+    app.view = View::Automation;
+    app.automation.show_scripts();
+    app.scripts.new_script();
+    app.scripts.draft.as_mut().unwrap().name = "Saved report".into();
+    let saved = app
+        .store
+        .save_script(app.scripts.draft.as_ref().unwrap())
+        .unwrap();
+    app.scripts.select(saved);
+    app.refresh_automation();
+    for size in [egui::vec2(860.0, 600.0), egui::vec2(1280.0, 860.0)] {
+        frame(&mut app, &ctx, size, vec![]);
+        let out = frame(&mut app, &ctx, size, vec![]);
+        text_rect(&out, "Lua editor");
+        assert!(rendered(&out, "+ New script").is_empty());
+        assert!(rendered(&out, "Search scripts").is_empty());
+        let title = text_rect(&out, "Lua editor");
+        let expand = text_rect(&out, "Full editor");
+        assert!((title.center().y - expand.center().y).abs() < 2.0);
+        click(&mut app, &ctx, "Loaded scripts (1)");
+        let out = frame(&mut app, &ctx, size, vec![]);
+        assert!(rendered(&out, "Lua editor").is_empty());
+        text_rect(&out, "+ New script");
+        text_rect(&out, "Saved report");
+        click(&mut app, &ctx, "Editor");
+        assert!(app.store.script_runs(None).unwrap().is_empty());
+    }
+    click(&mut app, &ctx, "Full editor");
+    let out = frame(&mut app, &ctx, egui::vec2(860.0, 600.0), vec![]);
+    for hidden in [
+        "Loaded scripts (1)",
+        "+ New script",
+        "Editor",
+        "Back to scripts",
+    ] {
+        assert!(
+            rendered(&out, hidden).is_empty(),
+            "full editor showed {hidden}"
+        );
+    }
+    text_rect(&out, "Exit full editor");
+}
+
+#[test]
+fn full_editor_keeps_the_buffer_cursor_and_unsaved_settings_on_return() {
+    let (_temp, mut app, ctx) = fixture();
+    app.view = View::Automation;
+    app.automation.show_scripts();
+    app.scripts.new_script();
+    app.scripts.settings_open = true;
+    let draft = app.scripts.draft.as_mut().unwrap();
+    draft.name = "My draft".into();
+    draft.body = "print('hello')\n".into();
+    draft.trigger = Trigger::Interval { minutes: 17 };
+    let before = draft.clone();
+    let id = egui::Id::new(("script-editor", &draft.id));
+    let size = egui::vec2(1080.0, 800.0);
+    frame(&mut app, &ctx, size, vec![]);
+    let mut edit = egui::TextEdit::load_state(&ctx, id).unwrap();
+    edit.cursor
+        .set_char_range(Some(egui::text::CCursorRange::one(
+            egui::text::CCursor::new(7),
+        )));
+    edit.store(&ctx, id);
+    click(&mut app, &ctx, "Full editor");
+    assert!(app.scripts.full_editor());
+    assert_eq!(app.scripts.draft.as_ref().unwrap(), &before);
+    assert_eq!(
+        usize::from(
+            egui::TextEdit::load_state(&ctx, id)
+                .unwrap()
+                .cursor
+                .char_range()
+                .unwrap()
+                .primary
+                .index
+        ),
+        7
+    );
+    ctx.memory_mut(|m| m.request_focus(id));
+    frame(&mut app, &ctx, size, vec![egui::Event::Text("new ".into())]);
+    assert_eq!(
+        app.scripts.draft.as_ref().unwrap().body,
+        "print('new hello')\n"
+    );
+    click(&mut app, &ctx, "Run logs");
+    assert!(app.scripts.show_full_logs);
+    click(&mut app, &ctx, "Exit full editor");
+    assert!(!app.scripts.full_editor());
+    assert_eq!(
+        app.scripts.draft.as_ref().unwrap().body,
+        "print('new hello')\n"
+    );
+    assert_eq!(app.scripts.draft.as_ref().unwrap().trigger, before.trigger);
+    assert!(app.scripts.dirty());
+    assert!(app.store.scripts().unwrap().is_empty());
+    assert!(app.store.script_runs(None).unwrap().is_empty());
+}
+
+#[test]
+fn full_editor_fits_controls_and_gives_code_more_room_in_every_language() {
+    for language in download_engine::i18n::Language::ALL {
+        let (_temp, mut app, ctx) = fixture();
+        app.interface.language = language;
+        app.configure_appearance(&ctx);
+        let _scope = download_engine::i18n::scope(language);
+        app.view = View::Automation;
+        app.automation.show_scripts();
+        app.scripts.new_script();
+        app.scripts.settings_open = true;
+        for size in [egui::vec2(860.0, 600.0), egui::vec2(1280.0, 860.0)] {
+            app.scripts.full_editor = true;
+            frame(&mut app, &ctx, size, vec![]);
+            let out = frame(&mut app, &ctx, size, vec![]);
+            let screen = egui::Rect::from_min_size(egui::Pos2::ZERO, size);
+            for label in [
+                "Exit full editor",
+                "Save script",
+                "Run script",
+                "Core API",
+                "Run logs",
+            ] {
+                let rendered = rendered(&out, tr(label));
+                assert!(!rendered.is_empty(), "{language:?}: missing {label}");
+                for (rect, clip) in rendered {
+                    assert!(
+                        screen.contains_rect(rect) && clip.expand(1.0).contains_rect(rect),
+                        "{language:?} {size}: {label} clipped"
+                    );
+                }
+            }
+            // The actual code viewport, not a surrounding card, must grow.
+            let viewport = app.scripts.editor.viewport.unwrap();
+            assert!(
+                viewport.height() >= 280.0,
+                "{language:?} {size}: {viewport:?}; controls: {:?}",
+                out.shapes
+                    .iter()
+                    .filter_map(|s| match &s.shape {
+                        egui::Shape::Text(t) if t.pos.y < viewport.top() =>
+                            Some((&t.galley.job.text, t.galley.rect.translate(t.pos.to_vec2()))),
+                        _ => None,
+                    })
+                    .collect::<Vec<_>>()
+            );
+            assert!(screen.contains_rect(viewport));
+        }
+    }
+}
+
+#[test]
+fn core_api_reference_search_matches_the_script_role_without_editing_code() {
+    let (_temp, mut app, ctx) = fixture();
+    app.view = View::Automation;
+    click(&mut app, &ctx, "Scripts");
+    click(&mut app, &ctx, "+ New script");
+    if !app.scripts.settings_open {
+        click(&mut app, &ctx, "Script settings");
+    }
+    let code = app.scripts.draft.as_ref().unwrap().body.clone();
+    app.scripts.api_search = "html_select".into();
+    click(&mut app, &ctx, "Core API");
+    let out = frame(&mut app, &ctx, egui::vec2(860.0, 600.0), vec![]);
+    text_rect(&out, "xd.html_select(html, selector, attribute)");
+    assert_eq!(app.scripts.draft.as_ref().unwrap().body, code);
+    app.scripts.api_search = "xd.fetch".into();
+    let out = frame(&mut app, &ctx, egui::vec2(1280.0, 860.0), vec![]);
+    assert!(rendered(&out, "xd.fetch(url, options)").is_empty());
+    app.scripts.draft.as_mut().unwrap().trigger = Trigger::SiteReader {
+        pages: vec!["example.com/*".into()],
+    };
+    let out = frame(&mut app, &ctx, egui::vec2(1280.0, 860.0), vec![]);
+    text_rect(&out, "xd.fetch(url, options)");
+}
+
+#[test]
+fn packages_import_as_disabled_drafts_export_and_preserve_unsaved_edits() {
+    use download_engine::script_automation::package;
+    let (temp, mut app, ctx) = fixture();
+    app.view = View::Automation;
+    click(&mut app, &ctx, "Scripts");
+    let original = Script {
+        id: uuid::Uuid::new_v4().to_string(),
+        revision: 8,
+        name: "Shared reader".into(),
+        language: Language::Lua,
+        body: "return {items={}}".into(),
+        enabled: true,
+        trigger: Trigger::SiteReader {
+            pages: vec!["example.com/*".into()],
+        },
+        timeout_seconds: 30,
+        change_files: false,
+    };
+    let path = temp.path().join("reader.de-script.json");
+    std::fs::write(&path, package::encode(&original).unwrap()).unwrap();
+    app.folder_picker.response = Some(Ok(Some(path.to_string_lossy().into_owned())));
+    click(&mut app, &ctx, "Import script…");
+    assert!(app.dialog.is_none());
+    let imported = app.scripts.draft.clone().unwrap();
+    assert_eq!(imported.body, original.body);
+    assert_eq!(imported.trigger, original.trigger);
+    assert_ne!(imported.id, original.id);
+    assert!(!imported.enabled && !imported.change_files);
+    assert!(app.scripts.dirty());
+    assert!(app.store.scripts().unwrap().is_empty());
+    click(&mut app, &ctx, "Save script");
+    assert_eq!(app.store.scripts().unwrap().len(), 1);
+    let export = temp.path().join("export.de-script.json");
+    app.folder_picker.response = Some(Ok(Some(export.to_string_lossy().into_owned())));
+    click(&mut app, &ctx, "Export script…");
+    let roundtrip = package::decode(&std::fs::read(&export).unwrap()).unwrap();
+    assert_eq!(roundtrip.script.body, original.body);
+    assert_eq!(roundtrip.script.trigger, original.trigger);
+    app.scripts.draft.as_mut().unwrap().name = "Unsaved edit".into();
+    let before = app.scripts.draft.clone();
+    app.folder_picker.response = Some(Ok(Some(path.to_string_lossy().into_owned())));
+    click(&mut app, &ctx, "Import script…");
+    assert!(matches!(app.dialog, Some(Dialog::ScriptReplace)));
+    click(&mut app, &ctx, "×");
+    assert_eq!(app.scripts.draft, before);
+    app.folder_picker.response = Some(Ok(Some(path.to_string_lossy().into_owned())));
+    click(&mut app, &ctx, "Import script…");
+    click(&mut app, &ctx, "Replace script");
+    assert_ne!(app.scripts.draft.as_ref().unwrap().id, imported.id);
+    assert_eq!(app.store.scripts().unwrap().len(), 1);
+    std::fs::write(&path, "{\"format_version\":99}").unwrap();
+    let before = app.scripts.draft.clone();
+    app.folder_picker.response = Some(Ok(Some(path.to_string_lossy().into_owned())));
+    click(&mut app, &ctx, "Import script…");
+    assert_eq!(app.scripts.draft, before);
+    assert!(app.scripts.error.is_some());
+}
+
 #[test]
 fn script_guides_follow_language_and_preserve_unsaved_code() {
     let (_temp, mut app, ctx) = fixture();
@@ -11,6 +341,9 @@ fn script_guides_follow_language_and_preserve_unsaved_code() {
     assert_eq!(app.view, View::Guide);
     click(&mut app, &ctx, "Scripting");
     click(&mut app, &ctx, "+ New script");
+    if !app.scripts.settings_open {
+        click(&mut app, &ctx, "Script settings");
+    }
     app.scripts.draft.as_mut().unwrap().body = "print('My unsaved script')".into();
     let draft = app.scripts.draft.clone();
     click(&mut app, &ctx, "Lua guide");
@@ -40,6 +373,9 @@ fn language_picker_replaces_only_the_untouched_example() {
     app.view = View::Automation;
     click(&mut app, &ctx, "Scripts");
     click(&mut app, &ctx, "+ New script");
+    if !app.scripts.settings_open {
+        click(&mut app, &ctx, "Script settings");
+    }
     assert_eq!(app.scripts.draft.as_ref().unwrap().language, Language::Lua);
     click(&mut app, &ctx, "Lua");
     click(&mut app, &ctx, "PowerShell");
@@ -100,6 +436,9 @@ fn editor_accepts_keyboard_input_and_escape_releases_focus() {
     app.view = View::Automation;
     click(&mut app, &ctx, "Scripts");
     click(&mut app, &ctx, "+ New script");
+    if !app.scripts.settings_open {
+        click(&mut app, &ctx, "Script settings");
+    }
     let id = egui::Id::new(("script-editor", &app.scripts.draft.as_ref().unwrap().id));
     ctx.memory_mut(|m| m.request_focus(id));
     frame(
@@ -137,6 +476,9 @@ fn editor_saves_runs_stops_and_keeps_the_control_bar_visible() {
     app.view = View::Automation;
     click(&mut app, &ctx, "Scripts");
     click(&mut app, &ctx, "+ New script");
+    if !app.scripts.settings_open {
+        click(&mut app, &ctx, "Script settings");
+    }
     assert!(app.scripts.dirty());
     assert!(!app.scripts.draft.as_ref().unwrap().enabled);
     assert_eq!(app.scripts.draft.as_ref().unwrap().language, Language::Lua);
@@ -149,6 +491,7 @@ fn editor_saves_runs_stops_and_keeps_the_control_bar_visible() {
     click(&mut app, &ctx, "Save script");
     assert!(!app.scripts.dirty());
     assert_eq!(app.store.scripts().unwrap().len(), 1);
+    click(&mut app, &ctx, "Full editor");
     click(&mut app, &ctx, "Run script");
     let runs = app.store.script_runs(None).unwrap();
     assert_eq!(runs.len(), 1);
@@ -160,6 +503,7 @@ fn editor_saves_runs_stops_and_keeps_the_control_bar_visible() {
         std::thread::sleep(std::time::Duration::from_millis(40));
     }
     assert_eq!(app.store.script_run(&runs[0].id).unwrap().state, "stopped");
+    click(&mut app, &ctx, "Exit full editor");
     app.refresh_automation();
     for dark in [true, false] {
         ctx.set_visuals(if dark {
@@ -170,13 +514,7 @@ fn editor_saves_runs_stops_and_keeps_the_control_bar_visible() {
         for size in [egui::vec2(860.0, 600.0), egui::vec2(1280.0, 860.0)] {
             frame(&mut app, &ctx, size, vec![]);
             let out = frame(&mut app, &ctx, size, vec![]);
-            for label in [
-                "Save script",
-                "Run script",
-                "Stop script",
-                "Reload / discard edits",
-                "Remove script",
-            ] {
+            for label in ["Save script", "Run script", "Full editor", "Editor actions"] {
                 assert!(
                     egui::Rect::from_min_size(egui::Pos2::ZERO, size)
                         .contains_rect(text_rect(&out, label)),
@@ -185,7 +523,7 @@ fn editor_saves_runs_stops_and_keeps_the_control_bar_visible() {
             }
         }
     }
-    click(&mut app, &ctx, "Remove script");
+    editor_menu(&mut app, &ctx, "Remove script");
     assert!(app.store.scripts().unwrap().is_empty());
     assert_eq!(app.store.script_runs(None).unwrap().len(), 1);
 }
@@ -196,6 +534,9 @@ fn editor_preserves_unsaved_text_rejects_stale_save_and_reloads_the_new_revision
     app.view = View::Automation;
     click(&mut app, &ctx, "Scripts");
     click(&mut app, &ctx, "+ New script");
+    if !app.scripts.settings_open {
+        click(&mut app, &ctx, "Script settings");
+    }
     click(&mut app, &ctx, "Save script");
     let mut saved = app.store.scripts().unwrap().remove(0);
     app.scripts.draft.as_mut().unwrap().body = "Write-Output 'my unsaved work'".into();
@@ -215,11 +556,15 @@ fn editor_preserves_unsaved_text_rejects_stale_save_and_reloads_the_new_revision
             .contains("changed elsewhere")
     );
     assert_eq!(app.store.script(&saved.id).unwrap().body, saved.body);
-    click(&mut app, &ctx, "Reload / discard edits");
+    editor_menu(&mut app, &ctx, "Reload / discard edits");
     assert!(!app.scripts.dirty());
     assert_eq!(app.scripts.draft.as_ref().unwrap(), &saved);
+    click(&mut app, &ctx, "Loaded scripts (1)");
     click(&mut app, &ctx, "+ New script");
-    click(&mut app, &ctx, "Reload / discard edits");
+    if !app.scripts.settings_open {
+        click(&mut app, &ctx, "Script settings");
+    }
+    editor_menu(&mut app, &ctx, "Reload / discard edits");
     assert_eq!(app.store.scripts().unwrap().len(), 1);
     assert!(!app.scripts.dirty());
 }
@@ -228,6 +573,7 @@ fn editor_preserves_unsaved_text_rejects_stale_save_and_reloads_the_new_revision
 fn log_refresh_follows_latest_unless_an_older_run_is_pinned() {
     let (_temp, mut app, _ctx) = fixture();
     app.scripts.new_script();
+    app.scripts.settings_open = true;
     let saved = app
         .store
         .save_script(app.scripts.draft.as_ref().unwrap())
@@ -279,6 +625,9 @@ fn script_form_labels_share_control_centers_and_leading_columns() {
     app.view = View::Automation;
     click(&mut app, &ctx, "Scripts");
     click(&mut app, &ctx, "+ New script");
+    if !app.scripts.settings_open {
+        click(&mut app, &ctx, "Script settings");
+    }
     for dark in [true, false] {
         ctx.set_visuals(if dark {
             egui::Visuals::dark()
@@ -294,15 +643,29 @@ fn script_form_labels_share_control_centers_and_leading_columns() {
             ] {
                 let center = text_rect(&out, labels[0]).center().y;
                 for label in labels {
-                    let rect = text_rect(&out, label);
+                    let rect = rendered(&out, label)
+                        .into_iter()
+                        .map(|(rect, _)| rect)
+                        .min_by(|a, b| {
+                            (a.center().y - center)
+                                .abs()
+                                .total_cmp(&(b.center().y - center).abs())
+                        })
+                        .unwrap_or_else(|| panic!("Missing form value {label}"));
                     assert!(
                         (rect.center().y - center).abs() <= 1.0,
                         "{label} is off its row center: {rect:?}, expected {center}"
                     );
                 }
             }
+            let name_center = text_rect(&out, "Name").center().y;
+            let name_field = rendered(&out, "New script")
+                .into_iter()
+                .map(|(rect, _)| rect)
+                .find(|rect| (rect.center().y - name_center).abs() <= 1.0)
+                .unwrap();
             assert!(
-                (text_rect(&out, "New script").left() - text_rect(&out, "Lua").left()).abs() <= 5.0,
+                (name_field.left() - text_rect(&out, "Lua").left()).abs() <= 5.0,
                 "Leading fields do not share a column"
             );
         }
@@ -352,6 +715,9 @@ fn choosing_the_current_trigger_preserves_its_interval_and_queue() {
     app.view = View::Automation;
     click(&mut app, &ctx, "Scripts");
     click(&mut app, &ctx, "+ New script");
+    if !app.scripts.settings_open {
+        click(&mut app, &ctx, "Script settings");
+    }
     for trigger in [
         Trigger::Interval { minutes: 17 },
         Trigger::DownloadCompleted {
@@ -372,6 +738,9 @@ fn removed_download_trigger_queue_is_not_shown_as_all_queues() {
     app.view = View::Automation;
     click(&mut app, &ctx, "Scripts");
     click(&mut app, &ctx, "+ New script");
+    if !app.scripts.settings_open {
+        click(&mut app, &ctx, "Script settings");
+    }
     app.scripts.draft.as_mut().unwrap().trigger = Trigger::DownloadCompleted {
         queue: Some("removed-queue".into()),
     };
@@ -390,6 +759,9 @@ fn long_script_and_queue_names_stay_within_the_workbench() {
     app.view = View::Automation;
     click(&mut app, &ctx, "Scripts");
     click(&mut app, &ctx, "+ New script");
+    if !app.scripts.settings_open {
+        click(&mut app, &ctx, "Script settings");
+    }
     let draft = app.scripts.draft.as_mut().unwrap();
     draft.name = format!("Long script {}", "W".repeat(48));
     draft.trigger = Trigger::DownloadCompleted {
@@ -430,7 +802,8 @@ fn long_script_and_queue_names_stay_within_the_workbench() {
 /// its log. The test app's own scheduler also claims the run and, with no worker
 /// next to the test binary, fails it at once; wait for that, then replace it.
 fn finish_run(app: &Desktop, result: Option<serde_json::Value>, error: Option<&str>) {
-    let conn = rusqlite::Connection::open(app.store.paths.data.join("queue.sqlite3")).unwrap();
+    let conn =
+        crate::desktop::fixture_database::open(app.store.paths.data.join("queue.sqlite3")).unwrap();
     let id: String = conn
         .query_row(
             "SELECT id FROM script_runs ORDER BY rowid DESC LIMIT 1",
@@ -496,6 +869,9 @@ fn a_site_reader_is_built_tested_and_explained_in_the_editor() {
     app.view = View::Automation;
     click(&mut app, &ctx, "Scripts");
     click(&mut app, &ctx, "+ New script");
+    if !app.scripts.settings_open {
+        click(&mut app, &ctx, "Script settings");
+    }
     click(&mut app, &ctx, "Manual only");
     click(&mut app, &ctx, "Site reader");
     let draft = app.scripts.draft.clone().unwrap();
@@ -615,6 +991,9 @@ fn failure_trigger_swaps_only_the_starter_example_and_every_trigger_name_fits() 
     app.view = View::Automation;
     click(&mut app, &ctx, "Scripts");
     click(&mut app, &ctx, "+ New script");
+    if !app.scripts.settings_open {
+        click(&mut app, &ctx, "Script settings");
+    }
     click(&mut app, &ctx, trigger_name(&Trigger::Manual));
     choose_visible_popup_option(&mut app, &ctx, "Download failed");
     let draft = app.scripts.draft.as_ref().unwrap();
@@ -694,6 +1073,9 @@ fn sample_runs_start_from_event_scripts_and_are_labelled_in_run_logs() {
     app.view = View::Automation;
     click(&mut app, &ctx, "Scripts");
     click(&mut app, &ctx, "+ New script");
+    if !app.scripts.settings_open {
+        click(&mut app, &ctx, "Script settings");
+    }
     // A manual script has no event to sample.
     click(&mut app, &ctx, "Save script");
     let out = frame(&mut app, &ctx, egui::vec2(1280.0, 860.0), vec![]);
@@ -701,7 +1083,7 @@ fn sample_runs_start_from_event_scripts_and_are_labelled_in_run_logs() {
     click(&mut app, &ctx, trigger_name(&Trigger::Manual));
     choose_visible_popup_option(&mut app, &ctx, "Download failed");
     click(&mut app, &ctx, "Save script");
-    click(&mut app, &ctx, "Run with sample…");
+    editor_menu(&mut app, &ctx, "Run with sample…");
     assert!(matches!(app.dialog, Some(Dialog::ScriptSample)));
     let out = frame(&mut app, &ctx, egui::vec2(1080.0, 800.0), vec![]);
     text_rect(&out, &job.name);
@@ -731,7 +1113,7 @@ fn sample_runs_start_from_event_scripts_and_are_labelled_in_run_logs() {
         std::thread::sleep(std::time::Duration::from_millis(50));
     }
     scripts::refresh(&app.store, &mut app.scripts);
-    click(&mut app, &ctx, "Run with sample…");
+    editor_menu(&mut app, &ctx, "Run with sample…");
     click(&mut app, &ctx, "×");
     assert!(app.dialog.is_none() && app.scripts.sample.is_none());
     assert_eq!(app.store.script_runs(None).unwrap().len(), 1);
@@ -743,6 +1125,9 @@ fn stored_values_and_the_files_switch_live_in_one_row_and_readers_have_neither()
     app.view = View::Automation;
     click(&mut app, &ctx, "Scripts");
     click(&mut app, &ctx, "+ New script");
+    if !app.scripts.settings_open {
+        click(&mut app, &ctx, "Script settings");
+    }
     let out = frame(&mut app, &ctx, egui::vec2(1280.0, 860.0), vec![]);
     text_rect(&out, "none");
     click(&mut app, &ctx, "Can change downloaded files");
@@ -823,6 +1208,15 @@ fn clicking_a_script_notification_opens_its_run_log() {
         other => panic!("Unexpected run state: {other}"),
     };
     text_rect(&out, badge);
+    app.scripts.full_editor = true;
+    app.scripts.show_full_logs = false;
+    app.tray_action(crate::tray::Action::ScriptRun(run.id), &ctx);
+    assert!(app.scripts.show_full_logs);
+    frame(&mut app, &ctx, egui::vec2(1280.0, 860.0), vec![]);
+    let out = frame(&mut app, &ctx, egui::vec2(1280.0, 860.0), vec![]);
+    for (rect, clip) in rendered(&out, badge) {
+        assert!(clip.expand(1.0).contains_rect(rect));
+    }
 }
 
 #[test]
@@ -897,9 +1291,12 @@ fn open_file_loads_code_names_new_scripts_and_asks_before_replacing_unsaved_code
     app.view = View::Automation;
     click(&mut app, &ctx, "Scripts");
     click(&mut app, &ctx, "+ New script");
+    if !app.scripts.settings_open {
+        click(&mut app, &ctx, "Script settings");
+    }
     // An untouched starter example is replaced without a question.
     choose(&mut app, &ps1);
-    click(&mut app, &ctx, "Open file…");
+    editor_menu(&mut app, &ctx, "Open file…");
     assert!(app.dialog.is_none());
     let draft = app.scripts.draft.clone().unwrap();
     assert_eq!(draft.language, Language::PowerShell);
@@ -916,7 +1313,7 @@ fn open_file_loads_code_names_new_scripts_and_asks_before_replacing_unsaved_code
     );
     // Unsaved code asks first; × keeps it.
     choose(&mut app, &lua);
-    click(&mut app, &ctx, "Open file…");
+    editor_menu(&mut app, &ctx, "Open file…");
     assert!(matches!(app.dialog, Some(Dialog::ScriptReplace)));
     let out = frame(&mut app, &ctx, egui::vec2(1080.0, 800.0), vec![]);
     text_rect(&out, "Replace the code in the editor?");
@@ -927,7 +1324,7 @@ fn open_file_loads_code_names_new_scripts_and_asks_before_replacing_unsaved_code
         "Write-Output 'hi'\n"
     );
     choose(&mut app, &lua);
-    click(&mut app, &ctx, "Open file…");
+    editor_menu(&mut app, &ctx, "Open file…");
     click(&mut app, &ctx, "Replace code");
     let draft = app.scripts.draft.clone().unwrap();
     assert_eq!(draft.body, "print('other')\n");
@@ -938,20 +1335,20 @@ fn open_file_loads_code_names_new_scripts_and_asks_before_replacing_unsaved_code
     assert_eq!(app.store.scripts().unwrap()[0].body, "print('other')\n");
     std::fs::write(&lua, "print('edited elsewhere')\n").unwrap();
     choose(&mut app, &lua);
-    click(&mut app, &ctx, "Open file…");
+    editor_menu(&mut app, &ctx, "Open file…");
     assert!(app.dialog.is_none());
     assert_eq!(
         app.scripts.draft.as_ref().unwrap().body,
         "print('edited elsewhere')\n"
     );
     assert_eq!(app.store.scripts().unwrap()[0].body, "print('other')\n");
-    click(&mut app, &ctx, "Reload / discard edits");
+    editor_menu(&mut app, &ctx, "Reload / discard edits");
     assert_eq!(app.scripts.draft.as_ref().unwrap().body, "print('other')\n");
     // A failed open changes nothing and says why.
     let large = folder.join("big-script.lua");
     std::fs::write(&large, "-".repeat(MAX_SCRIPT_BYTES + 1)).unwrap();
     choose(&mut app, &large);
-    click(&mut app, &ctx, "Open file…");
+    editor_menu(&mut app, &ctx, "Open file…");
     assert_eq!(
         app.scripts.error.as_deref(),
         Some("big-script.lua is larger than 64 KiB.")
@@ -959,7 +1356,7 @@ fn open_file_loads_code_names_new_scripts_and_asks_before_replacing_unsaved_code
     let binary = folder.join("notes.lua");
     std::fs::write(&binary, b"\x89PNG\r\n\x1a\n\0\0").unwrap();
     choose(&mut app, &binary);
-    click(&mut app, &ctx, "Open file…");
+    editor_menu(&mut app, &ctx, "Open file…");
     assert_eq!(
         app.scripts.error.as_deref(),
         Some("notes.lua is not a text file. Save it as UTF-8 and try again.")
@@ -968,7 +1365,7 @@ fn open_file_loads_code_names_new_scripts_and_asks_before_replacing_unsaved_code
         pages: vec!["example.com/watch/*".into()],
     };
     choose(&mut app, &ps1);
-    click(&mut app, &ctx, "Open file…");
+    editor_menu(&mut app, &ctx, "Open file…");
     assert_eq!(
         app.scripts.error.as_deref(),
         Some("Site readers are Lua only. Open a .lua file.")
@@ -976,7 +1373,7 @@ fn open_file_loads_code_names_new_scripts_and_asks_before_replacing_unsaved_code
     assert_eq!(app.scripts.draft.as_ref().unwrap().language, Language::Lua);
     // Cancelling the picker does nothing.
     app.folder_picker.response = Some(Ok(None));
-    click(&mut app, &ctx, "Open file…");
+    editor_menu(&mut app, &ctx, "Open file…");
     assert_eq!(app.scripts.draft.as_ref().unwrap().body, "print('other')\n");
 }
 
@@ -986,12 +1383,15 @@ fn save_to_file_writes_the_editor_code_with_the_right_encoding() {
     app.view = View::Automation;
     click(&mut app, &ctx, "Scripts");
     click(&mut app, &ctx, "+ New script");
+    if !app.scripts.settings_open {
+        click(&mut app, &ctx, "Script settings");
+    }
     let draft = app.scripts.draft.as_mut().unwrap();
     draft.language = Language::PowerShell;
     draft.body = "Write-Output 'héllo'\n".into();
     let target = temp.path().join("Retry failed.ps1");
     app.folder_picker.response = Some(Ok(Some(target.to_string_lossy().into_owned())));
-    click(&mut app, &ctx, "Save to file…");
+    editor_menu(&mut app, &ctx, "Save to file…");
     let mut expected = b"\xEF\xBB\xBF".to_vec();
     expected.extend_from_slice("Write-Output 'héllo'\n".as_bytes());
     assert_eq!(std::fs::read(&target).unwrap(), expected);
@@ -1010,7 +1410,7 @@ fn save_to_file_writes_the_editor_code_with_the_right_encoding() {
     let lua = temp.path().join("two.lua");
     std::fs::write(&lua, "old").unwrap();
     app.folder_picker.response = Some(Ok(Some(lua.to_string_lossy().into_owned())));
-    click(&mut app, &ctx, "Save to file…");
+    editor_menu(&mut app, &ctx, "Save to file…");
     assert_eq!(std::fs::read(&lua).unwrap(), b"print('two')\n");
     let leftovers: Vec<_> = std::fs::read_dir(temp.path())
         .unwrap()
@@ -1025,7 +1425,7 @@ fn save_to_file_writes_the_editor_code_with_the_right_encoding() {
             .to_string_lossy()
             .into_owned(),
     )));
-    click(&mut app, &ctx, "Save to file…");
+    editor_menu(&mut app, &ctx, "Save to file…");
     assert!(
         app.scripts
             .error
@@ -1054,8 +1454,11 @@ fn file_results_show_on_the_scripting_page() {
     app.view = View::Automation;
     click(&mut app, &ctx, "Scripts");
     click(&mut app, &ctx, "+ New script");
+    if !app.scripts.settings_open {
+        click(&mut app, &ctx, "Script settings");
+    }
     app.folder_picker.response = Some(Ok(Some(lua.to_string_lossy().into_owned())));
-    click(&mut app, &ctx, "Open file…");
+    editor_menu(&mut app, &ctx, "Open file…");
     let loaded = "Loaded other.lua. Choose Save script to keep it.";
     shown(&frame(&mut app, &ctx, size, vec![]), loaded);
     click(&mut app, &ctx, "Dismiss");
@@ -1063,40 +1466,126 @@ fn file_results_show_on_the_scripting_page() {
     assert!(rendered(&frame(&mut app, &ctx, size, vec![]), loaded).is_empty());
     let target = temp.path().join("copy.lua");
     app.folder_picker.response = Some(Ok(Some(target.to_string_lossy().into_owned())));
-    click(&mut app, &ctx, "Save to file…");
+    editor_menu(&mut app, &ctx, "Save to file…");
     shown(&frame(&mut app, &ctx, size, vec![]), "Saved copy.lua.");
 }
 
 #[test]
-fn file_buttons_sit_in_the_editor_header_before_the_size_counter() {
+fn editor_header_and_file_menu_fit_in_every_language() {
     for language in download_engine::i18n::Language::ALL {
         let (_temp, mut app, ctx) = fixture();
         app.interface.language = language;
         app.configure_appearance(&ctx);
         let _scope = download_engine::i18n::scope(language);
-        // German uses one word for the Scripting page and its Scripts tab.
         app.view = View::Automation;
         app.automation.show_scripts();
         app.scripts.new_script();
-        // Tall windows keep the header in view where the settings rows wrap more.
-        for size in [egui::vec2(860.0, 1000.0), egui::vec2(1280.0, 1000.0)] {
+        for size in [egui::vec2(860.0, 600.0), egui::vec2(1280.0, 860.0)] {
             frame(&mut app, &ctx, size, vec![]);
             let out = frame(&mut app, &ctx, size, vec![]);
             let title = text_rect(&out, &tf!("{} editor", "Lua"));
-            let open = text_rect(&out, tr("Open file…"));
-            let save = text_rect(&out, tr("Save to file…"));
-            let size_label = text_rect(&out, "1 / 64 KiB");
-            assert!(
-                title.right() < open.left(),
-                "{language:?} {size:?}: buttons overlap the title"
-            );
-            assert!(open.right() < save.left() && save.right() < size_label.left());
-            for rect in [open, save, size_label] {
-                assert!(
-                    (rect.center().y - title.center().y).abs() <= 1.0,
-                    "{language:?} {size:?}: one header row"
-                );
+            for label in [
+                "Save script",
+                "Run script",
+                "Full editor",
+                "Core API",
+                "Editor actions",
+            ] {
+                let controls = rendered(&out, tr(label));
+                assert!(!controls.is_empty(), "{language:?}: {label}");
+                for (rect, clip) in controls {
+                    assert!(
+                        clip.expand(1.0).contains_rect(rect) && rect.bottom() < size.y,
+                        "{language:?}: {label} clipped"
+                    );
+                    assert!(
+                        rect.top() >= title.top() - 3.0,
+                        "{label} left the editor header"
+                    );
+                }
             }
+            assert!(rendered(&out, tr("Open file…")).is_empty());
+            click(&mut app, &ctx, tr("Editor actions"));
+            let out = frame(&mut app, &ctx, size, vec![]);
+            for label in [
+                "Open file…",
+                "Save to file…",
+                "Reload / discard edits",
+                "Remove script",
+            ] {
+                let controls = rendered(&out, tr(label));
+                assert!(
+                    !controls.is_empty(),
+                    "{language:?}: missing menu action {label}"
+                );
+                for (rect, clip) in controls {
+                    assert!(
+                        clip.expand(1.0).contains_rect(rect)
+                            && rect.right() <= size.x
+                            && rect.bottom() <= size.y,
+                        "{language:?}: menu clipped {label}"
+                    );
+                }
+            }
+            egui::Popup::close_all(&ctx);
         }
     }
+}
+
+#[test]
+fn escape_exits_full_editor_and_preserves_the_unsaved_draft() {
+    let (_temp, mut app, ctx) = fixture();
+    app.view = View::Automation;
+    app.automation.show_scripts();
+    app.scripts.new_script();
+    app.scripts.draft.as_mut().unwrap().body = "print('keep my draft')".into();
+    let draft = app.scripts.draft.clone();
+    app.scripts.full_editor = true;
+    frame(
+        &mut app,
+        &ctx,
+        egui::vec2(1080.0, 800.0),
+        vec![egui::Event::Key {
+            key: egui::Key::Escape,
+            physical_key: None,
+            pressed: true,
+            repeat: false,
+            modifiers: egui::Modifiers::NONE,
+        }],
+    );
+    assert!(!app.scripts.full_editor());
+    assert_eq!(app.scripts.draft, draft);
+    assert!(app.scripts.dirty());
+    assert!(app.store.scripts().unwrap().is_empty());
+    assert!(app.store.script_runs(None).unwrap().is_empty());
+}
+
+#[test]
+fn escape_dismisses_completion_before_leaving_full_editor() {
+    let (_temp, mut app, ctx) = fixture();
+    app.view = View::Automation;
+    app.automation.show_scripts();
+    app.scripts.new_script();
+    let draft = app.scripts.draft.as_mut().unwrap();
+    draft.body.clear();
+    let id = egui::Id::new(("script-editor", &draft.id));
+    app.scripts.full_editor = true;
+    let size = egui::vec2(1080.0, 800.0);
+    frame(&mut app, &ctx, size, vec![]);
+    ctx.memory_mut(|memory| memory.request_focus(id));
+    frame(&mut app, &ctx, size, vec![egui::Event::Text("xd.".into())]);
+    assert!(app.scripts.editor.completion_open());
+    let escape = egui::Event::Key {
+        key: egui::Key::Escape,
+        physical_key: None,
+        pressed: true,
+        repeat: false,
+        modifiers: egui::Modifiers::NONE,
+    };
+    frame(&mut app, &ctx, size, vec![escape.clone()]);
+    assert!(app.scripts.full_editor());
+    assert!(!app.scripts.editor.completion_open());
+    frame(&mut app, &ctx, size, vec![escape]);
+    assert!(!app.scripts.full_editor());
+    assert_eq!(app.scripts.draft.as_ref().unwrap().body, "xd.");
 }

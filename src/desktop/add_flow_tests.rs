@@ -274,7 +274,7 @@ fn add_batch_generates_numbered_links_into_the_selected_queue() {
     with_app(|app, ctx, root| {
         let photos = app.store.create_queue("Photos").unwrap();
         app.queue_id = photos.id.clone();
-        app.force_refresh();
+        app.refresh_and_wait();
         app.batch = "https://example.test/list.zip".into();
         app.open_queue_dialog(Dialog::Batch);
         click(app, ctx, "From a pattern");

@@ -177,7 +177,7 @@ pub(super) fn show(
                 }
                 Trigger::DownloadCompleted { queue } | Trigger::DownloadFailed { queue } => {
                     field(ui, tr("Queue"), 36.0, queue_width, p, |ui| {
-                        let label = queue.as_deref().map_or_else(|| tr("All queues").into(), |id| automation::queue_label(queues, id));
+                        let label = queue.as_deref().map_or_else(|| tr("All queues").into(), |id| if id.is_empty() { tr("Choose a queue").into() } else { automation::queue_label(queues, id) });
                         egui::ComboBox::from_id_salt("script-queue")
                             .width(queue_width)
                             .truncate()
@@ -192,7 +192,7 @@ pub(super) fn show(
                 }
                 Trigger::QueueCompleted { queue } => {
                     field(ui, tr("Queue"), 36.0, queue_width, p, |ui| {
-                        let label = automation::queue_label(queues, queue);
+                        let label = if queue.is_empty() { tr("Choose a queue").into() } else { automation::queue_label(queues, queue) };
                         egui::ComboBox::from_id_salt("script-queue")
                             .width(queue_width)
                             .truncate()

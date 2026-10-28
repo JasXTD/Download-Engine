@@ -1,3 +1,4 @@
+const openProfileDatabase = require('./profile_database.cjs');
 // A real local HTTP download, native-host handoff and owned native windows.
 // No browser profile, personal queue, registration or computer shutdown is touched.
 const assert = require('node:assert/strict');
@@ -6,12 +7,11 @@ const path = require('node:path');
 const http = require('node:http');
 const {spawn, spawnSync} = require('node:child_process');
 const {randomUUID, createHash} = require('node:crypto');
-const {DatabaseSync} = require('node:sqlite');
 const root = path.resolve(__dirname,'..');
 const binaries = path.resolve(process.argv[2] || path.join(root,'dist','IDM-EX-UnsignedDev'));
 const home = path.join(root,'artifacts','download-status-20261017','packaged-'+randomUUID().slice(0,8));
 fs.mkdirSync(path.join(home,'data'),{recursive:true});
-const db = new DatabaseSync(path.join(home,'data','queue.sqlite3'));
+const db = openProfileDatabase(path.join(home,'data','queue.sqlite3'));
 db.exec(`CREATE TABLE desktop_preferences(id INTEGER PRIMARY KEY,close_to_tray INTEGER NOT NULL,notify_complete INTEGER NOT NULL,notify_failed INTEGER NOT NULL);
 INSERT INTO desktop_preferences VALUES(1,0,0,0);`);
 const body = Buffer.alloc(16*1024*1024,42), requests=[];

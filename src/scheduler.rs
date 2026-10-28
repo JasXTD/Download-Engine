@@ -1,4 +1,5 @@
 mod commands;
+mod file_operations;
 mod runtime;
 #[cfg(test)]
 use commands::ready_jobs_at;
@@ -77,6 +78,7 @@ pub struct Scheduler {
     pub auth_events: mpsc::Receiver<auth::Event>,
     pub bandwidth_events: mpsc::Receiver<bandwidth::Event>,
     pub quota_events: mpsc::Receiver<quota::Event>,
+    quota_status: tokio::sync::watch::Receiver<Result<quota::Status, String>>,
     pub finished: mpsc::Receiver<Finished>,
     /// Notifications scripts asked to show.
     pub script_notices: mpsc::Receiver<ScriptNotice>,
@@ -93,6 +95,8 @@ impl Scheduler {
         let (auth_tx, auth_events) = mpsc::channel();
         let (bandwidth_tx, bandwidth_events) = mpsc::channel();
         let (quota_tx, quota_events) = mpsc::channel();
+        let (quota_status_tx, quota_status) =
+            tokio::sync::watch::channel(Ok(store.quota_status()?));
         let (finished_tx, finished) = mpsc::channel();
         let (script_notices_tx, script_notices) = mpsc::channel();
         let limiter = bandwidth::Limiter::new(&store.bandwidth_limits()?)?.with_store(&store)?;
@@ -112,6 +116,7 @@ impl Scheduler {
             authentication: auth_tx,
             bandwidth: bandwidth_tx,
             quota: quota_tx,
+            quota_status: quota_status_tx,
             finished: finished_tx,
             script_notices: script_notices_tx,
         };
@@ -127,6 +132,7 @@ impl Scheduler {
             auth_events,
             bandwidth_events,
             quota_events,
+            quota_status,
             finished,
             script_notices,
         })
@@ -135,6 +141,13 @@ impl Scheduler {
         self.sender
             .send(command)
             .context("Download scheduler is unavailable")
+    }
+    /// A bounded, latest-value snapshot; UI callers never wait on SQLite or the meter mutex.
+    pub fn quota_snapshot(&self) -> Result<quota::Status> {
+        self.quota_status
+            .borrow()
+            .clone()
+            .map_err(anyhow::Error::msg)
     }
 }
 impl Drop for Scheduler {

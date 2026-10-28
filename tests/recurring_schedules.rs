@@ -1,3 +1,5 @@
+#[path = "../src/desktop/fixture_database.rs"]
+mod fixture_database;
 use chrono::{FixedOffset, Local, LocalResult, NaiveDate, NaiveDateTime, TimeZone, Utc};
 use download_engine::{
     paths::AppPaths,
@@ -347,7 +349,7 @@ fn invalid_schedule_updates_leave_existing_rules_and_queue_state_intact() {
     );
     assert!(store.schedule_queue(MAIN_QUEUE, at - 1, at).is_err());
     assert_eq!(store.queues().unwrap(), saved);
-    let conn = rusqlite::Connection::open(store.paths.data.join("queue.sqlite3")).unwrap();
+    let conn = crate::fixture_database::open(store.paths.data.join("queue.sqlite3")).unwrap();
     assert!(
         conn.execute("UPDATE queue_schedules SET days=128", [])
             .is_err()

@@ -130,13 +130,17 @@ impl State {
                 }
                 ui.label(RichText::new(self.label()).color(color));
                 ui.label(
-                    RichText::new(if running && !self.saved.read_only {
-                        tr("·  Allow changes  ·  This computer only")
-                    } else if running {
-                        tr("·  View only  ·  This computer only")
-                    } else {
-                        tr("·  This computer only")
-                    })
+                    RichText::new(
+                        if !(if active {
+                            self.saved.read_only
+                        } else {
+                            self.read_only
+                        }) {
+                            tr("·  Allow changes  ·  This computer only")
+                        } else {
+                            tr("·  View only  ·  This computer only")
+                        },
+                    )
                     .small()
                     .color(p.muted),
                 );
@@ -183,6 +187,17 @@ impl State {
             if let ServerStatus::Failed(error) = &self.status {
                 ui.colored_label(p.warning, error);
             }
+        });
+        action
+    }
+
+    fn advanced_settings(&mut self, ui: &mut egui::Ui, p: Palette) -> Option<Action> {
+        let mut action = None;
+        let active = self.status.active();
+        let busy = self.pending.is_some();
+        let advanced = egui::CollapsingHeader::new(tr("Advanced settings")).id_salt("mcp-advanced")
+            .open(Some(self.advanced_open)).show(ui, |ui| {
+            card(ui, p, |ui| {
             ui.separator();
             ui.add_enabled_ui(!active && !busy, |ui| {
                 ui.horizontal(|ui| {
@@ -202,7 +217,7 @@ impl State {
                 ui.spacing_mut().icon_width_inner = 10.0;
                 ui.spacing_mut().icon_spacing = 8.0;
                 ui.horizontal_top(|ui| {
-                    field_label(ui, tr("AI access"), Some(tr("View only permits inspection. Allow changes can manage downloads and queues, and run saved Lua or PowerShell scripts.")), p);
+                    field_label(ui, tr("AI access"), Some(tr("Choose allowed controls. Scripts need local approval of their saved revision.")), p);
                     ui.allocate_ui(vec2(ui.available_width().min(720.0), 0.0), |ui| {
                         ui.columns(2, |columns| {
                             access_option(&mut columns[0], &mut self.read_only, true, p);
@@ -210,6 +225,15 @@ impl State {
                         });
                     });
                 });
+                if !self.read_only {
+                    ui.horizontal_wrapped(|ui| {
+                        ui.square_checkbox(&mut self.permissions.downloads, tr("Download controls"));
+                        ui.square_checkbox(&mut self.permissions.queues, tr("Queue controls"));
+                        ui.square_checkbox(&mut self.permissions.lua, tr("Approved Lua scripts"));
+                        ui.square_checkbox(&mut self.permissions.powershell, tr("Approved PowerShell scripts"));
+                    });
+                    ui.label(RichText::new(tr("Approve revisions locally with the CLI. Editing a script invalidates approval. See the MCP guide.")).small().color(p.muted));
+                }
                 ui.spacing_mut().item_spacing.y = 4.0;
                 ui.square_checkbox(&mut self.start_with_app, tr("Start with Download Engine"));
                 ui.horizontal(|ui| {
@@ -239,7 +263,20 @@ impl State {
                     .color(p.muted),
                 );
             });
+            });
         });
+        if advanced.header_response.clicked() {
+            self.advanced_open = !self.advanced_open;
+            self.advanced_reveal = self.advanced_open;
+        }
+        // Wait until the expanded body has its full bounds before scrolling.
+        if self.advanced_reveal
+            && advanced.fully_open()
+            && let Some(body) = &advanced.body_response
+        {
+            body.scroll_to_me(Some(Align::BOTTOM));
+            self.advanced_reveal = false;
+        }
         action
     }
 
@@ -260,7 +297,9 @@ impl State {
                 let width = (ui.available_width() - CONTROL_HEIGHT - ui.spacing().item_spacing.x)
                     .max(100.0);
                 // An immutable buffer permits selecting/copying the URL, without editing it.
-                let mut display = url.as_deref().unwrap_or(tr("Enter a valid port above"));
+                let mut display = url
+                    .as_deref()
+                    .unwrap_or(tr("Enter a valid port in Advanced settings"));
                 ui.add_sized(
                     [width, CONTROL_HEIGHT],
                     view::line_edit(&mut display)
@@ -358,6 +397,9 @@ impl Desktop {
 
     fn mcp_controls(&mut self, ui: &mut egui::Ui, p: Palette) {
         self.mcp.poll(&self.store, ui.ctx());
+        if std::mem::take(&mut self.mcp.saved_notice_pending) {
+            self.note_advanced_preferences_saved();
+        }
         let mut action = None;
         let nested = self.preferences_window.is_some();
         ui.label(
@@ -367,14 +409,24 @@ impl Desktop {
             .color(p.muted),
         );
         ui.add_space(10.0);
+        let top = ui.cursor().top();
+        action = self.mcp.settings_card(ui, p).or(action);
+        let summary_height = ui.cursor().top() - top;
+        ui.add_space(8.0);
+        #[cfg(feature = "screenshot")]
+        if std::env::var_os("IDM_EX_SCREENSHOT_TO").is_some()
+            && std::env::var_os("IDM_EX_TEST_MCP_BOTTOM").is_some()
+        {
+            self.mcp.advanced_open = true;
+        }
         egui::ScrollArea::vertical()
             .id_salt("mcp-control-body")
             .auto_shrink([false, false])
-            .max_height((ui.ctx().content_rect().height() - if nested { 210.0 } else { 250.0 }).clamp(200.0, 560.0))
+            .max_height((ui.ctx().content_rect().height() - if nested { 210.0 } else { 250.0 } - summary_height).clamp(200.0, 560.0))
             .show(ui, |ui| {
-                action = self.mcp.settings_card(ui, p).or(action);
-                ui.add_space(10.0);
                 action = self.mcp.connection_card(ui, p).or(action);
+                ui.add_space(8.0);
+                action = self.mcp.advanced_settings(ui, p).or(action);
                 ui.add_space(8.0);
                 ui.horizontal_wrapped(|ui| {
                     ui.label(RichText::new(tr("Runs while the app is open, including in the tray.")).small().color(p.muted));

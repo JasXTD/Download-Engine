@@ -11,7 +11,7 @@ import hashlib
 import json
 import os
 from pathlib import Path
-import sqlite3
+from profile_database import open_profile_database
 import struct
 import subprocess
 import time
@@ -149,7 +149,7 @@ def main():
         close_app(app)
         app = None
         checks.append("running installed app blocks upgrade and uninstall without being killed")
-        with sqlite3.connect(database) as connection:
+        with open_profile_database(database) as connection:
             connection.execute("CREATE TABLE install_test_sentinel (value TEXT)")
             connection.execute("INSERT INTO install_test_sentinel VALUES ('preserve queue data')")
         sentinel = runtime / "downloads/keep.txt"
@@ -159,7 +159,7 @@ def main():
         (program / "README.md").write_text("old installed copy", encoding="utf-8")
         assert setup("upgrade") == 0
         check_payload()
-        with sqlite3.connect(database) as connection:
+        with open_profile_database(database) as connection:
             assert connection.execute("SELECT value FROM install_test_sentinel").fetchone()[0] == "preserve queue data"
         checks.append("upgrade replaces program files and preserves existing queue data")
         # A missing cleanup helper aborts before removing program files.
@@ -186,7 +186,7 @@ def main():
         assert not (program / "de.exe").exists()
         assert sentinel.read_text(encoding="utf-8") == "preserve downloaded content"
         assert untracked.read_text(encoding="utf-8") == "preserve untracked content"
-        with sqlite3.connect(database) as connection:
+        with open_profile_database(database) as connection:
             assert connection.execute("SELECT value FROM install_test_sentinel").fetchone()[0] == "preserve queue data"
         for view in VIEWS:
             assert registry_value(APP_KEY, "InstallLocation", view) is None

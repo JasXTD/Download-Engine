@@ -4,12 +4,15 @@ mod add_download;
 mod add_login;
 mod authentication;
 mod automation;
+mod background_io;
 mod browser_video;
 mod browsers;
 mod clipboard;
 mod diagnostics;
 mod download_status;
 mod drop_target;
+#[cfg(any(test, feature = "screenshot"))]
+mod fixture_database;
 mod folder_picker;
 mod form_dialog;
 mod formatting;
@@ -26,10 +29,13 @@ mod new_queue;
 mod preferences_window;
 mod queue_overview;
 mod queues;
+#[cfg(test)]
+mod responsiveness_tests;
 mod settings;
 mod settings_page;
 mod speed_limits;
 mod theme;
+mod theme_assets;
 mod updates;
 use formatting::*;
 use theme::Palette;
@@ -298,6 +304,8 @@ pub struct Desktop {
     link_fallback: link_fallback::State,
     hls: Option<hls::State>,
     browser_video: Option<browser_video::State>,
+    browser_video_requests: browser_video::Requests,
+    hls_requests: hls::Requests,
     proxy: Option<proxy::Form>,
     connections: Option<connections::Form>,
     zip_preview: Option<zip_preview::State>,
@@ -346,6 +354,7 @@ pub struct Desktop {
     add_authentication: bool,
     add_queue: Option<String>,
     add_login: add_login::Draft,
+    add_request: Option<background_io::Task<add_download::Added>>,
     settings_summary: settings_page::Summary,
     preferences_window: Option<preferences_window::State>,
     queue_summaries: HashMap<String, Result<queue_overview::Summary, String>>,
@@ -370,6 +379,8 @@ pub struct Desktop {
     diagnostics: diagnostics::State,
     list_transfer: list_transfer::State,
     logs: logs::State,
+    background_io: background_io::State,
+    theme_assets: theme_assets::State,
     last_refresh: Instant,
     rates: HashMap<String, (u64, f64)>,
     #[cfg(feature = "screenshot")]
@@ -416,6 +427,8 @@ impl Desktop {
             link_fallback: link_fallback::State::default(),
             hls: None,
             browser_video: None,
+            browser_video_requests: browser_video::Requests::default(),
+            hls_requests: hls::Requests::default(),
             proxy: None,
             connections: None,
             zip_preview: None,
@@ -465,6 +478,7 @@ impl Desktop {
             add_authentication: false,
             add_queue: None,
             add_login: add_login::Draft::default(),
+            add_request: None,
             settings_summary: settings_page::Summary::default(),
             preferences_window: None,
             queue_summaries: HashMap::new(),
@@ -490,13 +504,15 @@ impl Desktop {
             diagnostics: diagnostics::State::default(),
             list_transfer: list_transfer::State::default(),
             logs: logs::State::default(),
+            background_io: background_io::State::default(),
+            theme_assets: theme_assets::State::default(),
             last_refresh: Instant::now() - Duration::from_secs(1),
             rates: HashMap::new(),
             #[cfg(feature = "screenshot")]
             screenshot_requested: false,
             _lock: lock,
         };
-        app.refresh();
+        app.initialize_snapshot();
         #[cfg(feature = "screenshot")]
         if std::env::var_os("IDM_EX_SCREENSHOT_TO").is_some()
             && let Ok(state) = std::env::var("IDM_EX_TEST_LINK_DIALOG")
@@ -664,6 +680,24 @@ impl Desktop {
                     Appearance::Dark
                 };
             }
+            if let Ok(preset) = std::env::var("IDM_EX_TEST_CUSTOM_THEME") {
+                use download_engine::preferences::{CustomTheme, ThemePreset};
+                let preset = match preset.as_str() {
+                    "reactor" => ThemePreset::ReactorNight,
+                    "aurora" => ThemePreset::Aurora,
+                    "moonveil" => ThemePreset::Moonveil,
+                    _ => ThemePreset::NeonCourier,
+                };
+                app.interface.appearance = Appearance::Custom;
+                app.interface.custom_theme = CustomTheme {
+                    preset,
+                    accent: preset.accent(),
+                    ..Default::default()
+                };
+                if let Some(state) = &mut app.preferences_window {
+                    state.interface = app.interface;
+                }
+            }
         }
         #[cfg(feature = "screenshot")]
         if std::env::var_os("IDM_EX_SCREENSHOT_TO").is_some()
@@ -802,6 +836,8 @@ impl Desktop {
     }
     fn background(&mut self, ctx: &egui::Context) {
         let _language = download_engine::i18n::scope(self.interface.language);
+        self.poll_theme_assets(ctx);
+        self.poll_background_io(ctx);
         self.poll_browser_recovery(ctx);
         self.mcp.poll(&self.store, ctx);
         self.poll_diagnostic_export();
@@ -903,8 +939,14 @@ impl Desktop {
         ctx.request_repaint_after(Duration::from_millis(250));
     }
     fn command(&mut self, command: Command) {
+        let starting = matches!(command, Command::Resume(_) | Command::StartImmediately(_));
         if let Command::Resume(id) | Command::StartImmediately(id) = &command
-            && let Ok(Some(job)) = self.store.get(id)
+            && let Some(job) = self
+                .jobs
+                .iter()
+                .find(|job| &job.id == id)
+                .cloned()
+                .or_else(|| self.cached_status_job(id))
             && self.open_link_fallback(&job)
         {
             return;
@@ -926,10 +968,14 @@ impl Desktop {
         }
         if let Err(error) = self.scheduler.send(command) {
             self.notice = Some(Notice::error(error.to_string()));
+        } else if starting {
+            self.notice = Some(Notice::info(tr("Start requested.").into()));
+            self.force_refresh();
         }
     }
 
     fn refresh(&mut self) {
+        self.poll_download_status();
         let events: Vec<_> = self.scheduler.quota_events.try_iter().collect();
         for event in events {
             self.quota_event(event);
@@ -951,23 +997,7 @@ impl Desktop {
             self.status_command_failed(&error);
             self.notice = Some(Notice::error(error));
         }
-        if self.last_refresh.elapsed() < Duration::from_millis(500) {
-            return;
-        }
-        match self.store.grabber_schedules() {
-            Ok(summaries) => self.grabber_summaries = summaries,
-            Err(error) => {
-                self.notice = Some(Notice::error(tf!(
-                    "Cannot read grabber schedules: {error}",
-                    error = error
-                )))
-            }
-        }
-        match self.store.bandwidth_limits() {
-            Ok(limits) => self.limits = limits,
-            Err(error) => self.notice = Some(Notice::error(error.to_string())),
-        }
-        match self.store.quota_status() {
+        match self.scheduler.quota_snapshot() {
             Ok(status) => self.quota_status = status,
             Err(error) => {
                 self.notice = Some(Notice::error(tf!(
@@ -976,53 +1006,7 @@ impl Desktop {
                 )))
             }
         }
-        match self.store.queues() {
-            Ok(queues) => {
-                self.queues = queues;
-                if !self.queues.iter().any(|q| q.id == self.queue_id) {
-                    self.queue_id = MAIN_QUEUE.into();
-                }
-            }
-            Err(error) => self.notice = Some(Notice::error(error.to_string())),
-        }
-        match self.store.immediate_downloads() {
-            Ok(jobs) => self.immediate_downloads = jobs,
-            Err(error) => self.notice = Some(Notice::error(error.to_string())),
-        }
-        match self.store.queue_jobs(&self.queue_id) {
-            Ok(jobs) => {
-                let seconds = self.last_refresh.elapsed().as_secs_f64();
-                for job in &jobs {
-                    let previous = self
-                        .rates
-                        .get(&job.id)
-                        .map(|v| v.0)
-                        .unwrap_or(job.downloaded);
-                    let rate = if job.status == Status::Downloading {
-                        job.downloaded.saturating_sub(previous) as f64 / seconds
-                    } else {
-                        0.0
-                    };
-                    self.rates.insert(job.id.clone(), (job.downloaded, rate));
-                }
-                self.rates
-                    .retain(|id, _| jobs.iter().any(|job| &job.id == id));
-                self.jobs = jobs;
-                self.reconcile_selection();
-            }
-            Err(error) => self.notice = Some(Notice::error(error.to_string())),
-        }
-        if self.preferences_window.is_some() {
-            self.refresh_settings_summary();
-        }
-        if self.view == View::Automation {
-            self.refresh_automation();
-        }
-        if matches!(self.view, View::Queues | View::Scheduler) {
-            self.refresh_queue_summaries();
-        }
-        self.last_refresh = Instant::now();
-        self.refresh_download_status();
+        self.refresh_snapshot();
     }
 
     fn accepts_category(&self, job: &Job) -> bool {
@@ -1093,14 +1077,7 @@ impl Desktop {
         }
     }
     fn show_folder(&mut self, job: &Job) {
-        let result = download_engine::paths::file_browser().and_then(|path| {
-            Ok(std::process::Command::new(path)
-                .arg(&job.directory)
-                .spawn()?)
-        });
-        if let Err(error) = result {
-            self.notice = Some(Notice::error(error.to_string()));
-        }
+        self.open_folder_async(job.directory.clone());
     }
 
     fn summary(&self) -> String {
@@ -1163,7 +1140,7 @@ impl Desktop {
     }
 
     fn force_refresh(&mut self) {
-        self.last_refresh = Instant::now() - Duration::from_secs(1);
+        self.invalidate_snapshot();
         self.refresh();
     }
 }
@@ -1298,6 +1275,7 @@ impl Desktop {
             file.sync_all().expect("Cannot save test screenshot");
             ctx.send_viewport_cmd_to(egui::ViewportId::ROOT, egui::ViewportCommand::Close);
         } else if !self.screenshot_requested
+            && !self.theme_assets.busy()
             && (self.view != View::Logs || self.logs.loaded())
             && (self.dialog != Some(Dialog::Mcp) || self.mcp.capture_ready())
             && (!std::env::var("IDM_EX_TEST_VIEW")

@@ -89,7 +89,7 @@ pub(super) fn reset_label(at: i64) -> String {
 }
 impl Desktop {
     pub(super) fn open_data_quotas(&mut self) {
-        match self.store.quota_status() {
+        match self.scheduler.quota_snapshot() {
             Ok(status) => self.quota_status = status,
             Err(error) => {
                 self.notice = Some(Notice::error(error.to_string()));
@@ -134,6 +134,7 @@ impl Desktop {
         match event.result {
             Ok(status) => {
                 self.quota_status = status;
+                self.note_advanced_preferences_saved();
                 self.data_quotas = None;
                 self.dialog = None;
                 self.form_error = None;
@@ -239,6 +240,23 @@ impl Desktop {
 mod tests {
     use super::super::interaction_tests::{click, fixture, frame, text_rect};
     use super::*;
+    #[test]
+    fn opening_quota_dialog_does_not_wait_for_a_database_writer() {
+        let (_temp, mut app, _ctx) = fixture();
+        let conn =
+            crate::desktop::fixture_database::open(app.store.paths.data.join("queue.sqlite3"))
+                .unwrap();
+        conn.execute_batch("BEGIN IMMEDIATE").unwrap();
+        let started = Instant::now();
+        app.open_data_quotas();
+        let elapsed = started.elapsed();
+        conn.execute_batch("ROLLBACK").unwrap();
+        assert!(
+            elapsed < Duration::from_millis(250),
+            "UI waited {elapsed:?} on a writer"
+        );
+        assert_eq!(app.dialog, Some(Dialog::DataQuotas));
+    }
     fn await_save(app: &mut Desktop) {
         let deadline = Instant::now() + Duration::from_secs(5);
         while app
@@ -401,7 +419,7 @@ mod tests {
             ctx.set_theme(theme);
             frame(&mut app, &ctx, size, vec![]);
             let output = frame(&mut app, &ctx, size, vec![]);
-            for text in [label.as_str(), "first.zip", "1024.0 MiB/s", "Preferences"] {
+            for text in [label.as_str(), "first.zip", "1024.0 MiB/s", "More"] {
                 let rect = text_rect(&output, text);
                 assert!(
                     egui::Rect::from_min_size(egui::Pos2::ZERO, size).contains_rect(rect),

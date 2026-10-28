@@ -5,6 +5,11 @@ use download_engine::paths::AppPaths;
 fn language_picker_saves_explicitly_and_preserves_download_state() {
     use download_engine::i18n::Language;
     let (_temp, mut app, ctx) = fixture();
+    // Preferences may refresh the real store while this layout fixture is open.
+    for job in &app.jobs {
+        app.store.enqueue(job).unwrap();
+    }
+    app.refresh_and_wait();
     let names: Vec<_> = app
         .jobs
         .iter()
@@ -22,7 +27,7 @@ fn language_picker_saves_explicitly_and_preserves_download_state() {
         Language::SimplifiedChinese
     );
     let out = frame(&mut app, &ctx, egui::vec2(860.0, 600.0), vec![]);
-    text_rect(&out, "偏好设置");
+    text_rect(&out, "更多");
     app.open_preferences_window();
     click(&mut app, &ctx, "简体中文");
     click(&mut app, &ctx, "Bahasa Melayu");
@@ -32,7 +37,7 @@ fn language_picker_saves_explicitly_and_preserves_download_state() {
         Language::Malay
     );
     let out = frame(&mut app, &ctx, egui::vec2(860.0, 600.0), vec![]);
-    text_rect(&out, "Keutamaan");
+    text_rect(&out, "Lagi");
     assert_eq!(
         names,
         app.jobs
@@ -219,10 +224,44 @@ fn topmost_text_rect(output: &egui::FullOutput, label: &str) -> egui::Rect {
 }
 
 pub(super) fn click(app: &mut Desktop, ctx: &egui::Context, label: &str) {
+    app.wait_for_io();
     let size = egui::vec2(1080.0, 800.0);
     // Modal areas and panel sizing need a settled frame before hit testing.
     frame(app, ctx, size, vec![]);
-    let output = frame(app, ctx, size, vec![]);
+    let mut output = frame(app, ctx, size, vec![]);
+    let has_label = |out: &egui::FullOutput, label: &str| {
+        out.shapes.iter().any(|shape|
+        matches!(&shape.shape, egui::Shape::Text(text) if text.galley.job.text.trim() == label))
+    };
+    // Follow the same overflow navigation as a person using the compact toolbar.
+    if app.dialog.is_none()
+        && !egui::Popup::is_any_open(ctx)
+        && !has_label(&output, label)
+        && [
+            "Remove",
+            "Open folder",
+            "Clear completed history",
+            "Queues",
+            "Scheduler",
+            "Scripting",
+            "Grabber",
+            "MCP",
+            "Logs",
+            "Preferences",
+        ]
+        .iter()
+        .any(|key| {
+            let _scope = download_engine::i18n::scope(app.interface.language);
+            tr(key) == label
+        })
+    {
+        let more = {
+            let _scope = download_engine::i18n::scope(app.interface.language);
+            tr("More")
+        };
+        click(app, ctx, more);
+        output = frame(app, ctx, size, vec![]);
+    }
     // A modal can share labels (such as ×) with controls covered by its backdrop.
     let pos = if app.dialog.is_some() || egui::Popup::is_any_open(ctx) {
         topmost_text_rect(&output, label).center()
@@ -245,6 +284,66 @@ pub(super) fn click(app: &mut Desktop, ctx: &egui::Context, label: &str) {
             ],
         );
     }
+    app.wait_for_io();
+}
+
+#[test]
+fn inspector_drag_saves_only_on_release_and_restores_its_height() {
+    let (_root, mut app, ctx) = fixture();
+    let size = egui::vec2(1080.0, 800.0);
+    frame(&mut app, &ctx, size, vec![]);
+    let rect = egui::containers::panel::PanelState::load(&ctx, egui::Id::new("file-details"))
+        .unwrap()
+        .outer_rect;
+    let start = rect.center_top();
+    let end = start - egui::vec2(0.0, 60.0);
+    frame(
+        &mut app,
+        &ctx,
+        size,
+        vec![
+            egui::Event::PointerMoved(start),
+            egui::Event::PointerButton {
+                pos: start,
+                button: egui::PointerButton::Primary,
+                pressed: true,
+                modifiers: egui::Modifiers::NONE,
+            },
+        ],
+    );
+    frame(&mut app, &ctx, size, vec![egui::Event::PointerMoved(end)]);
+    assert_eq!(
+        app.store.interface_preferences().unwrap().details_height,
+        None
+    );
+    frame(
+        &mut app,
+        &ctx,
+        size,
+        vec![
+            egui::Event::PointerMoved(end),
+            egui::Event::PointerButton {
+                pos: end,
+                button: egui::PointerButton::Primary,
+                pressed: false,
+                modifiers: egui::Modifiers::NONE,
+            },
+        ],
+    );
+    let saved = app
+        .store
+        .interface_preferences()
+        .unwrap()
+        .details_height
+        .expect("Released resize persisted");
+    assert!((f32::from(saved) - rect.height() - 60.0).abs() <= 2.0);
+    let fresh = egui::Context::default();
+    super::configure(&fresh);
+    frame(&mut app, &fresh, size, vec![]);
+    let restored = egui::containers::panel::PanelState::load(&fresh, egui::Id::new("file-details"))
+        .unwrap()
+        .outer_rect;
+    assert!((restored.height() - f32::from(saved)).abs() <= 1.0);
 }
 
 #[test]
@@ -455,25 +554,17 @@ fn toolbar_pages_remain_reachable_without_changing_the_download_selection() {
                 app.view = view;
                 frame(&mut app, &ctx, size, vec![]);
                 let output = frame(&mut app, &ctx, size, vec![]);
-                let row = text_rect(&output, "Add URL");
-                let mut previous = text_rect(&output, "Queues");
-                for label in [
-                    "Scheduler",
-                    "Scripting",
-                    "Grabber",
-                    "MCP",
-                    "Logs",
-                    "Preferences",
-                ] {
-                    let rect = text_rect(&output, label);
-                    assert!((rect.center().y - row.center().y).abs() < 1.0);
-                    assert!(
-                        previous.right() + 4.0 < rect.left(),
-                        "Toolbar labels overlap: {label}, {previous:?}, {rect:?}"
-                    );
-                    assert!(egui::Rect::from_min_size(egui::Pos2::ZERO, size).contains_rect(rect));
-                    previous = rect;
-                }
+                let label = if view == View::Downloads {
+                    "Add URL"
+                } else {
+                    "Download list"
+                };
+                let row = text_rect(&output, label);
+                assert!(egui::Rect::from_min_size(egui::Pos2::ZERO, size).contains_rect(row));
+                let more = text_rect(&output, "More");
+                assert!(more.left() > row.right());
+                assert!(egui::Rect::from_min_size(egui::Pos2::ZERO, size).contains_rect(more));
+                assert_eq!(app.selected, selected);
             }
         }
     }
@@ -501,7 +592,7 @@ fn toolbar_pages_remain_reachable_without_changing_the_download_selection() {
         assert!(app.dialog.is_none());
     }
     app.interface.sidebar_labels = true;
-    click(&mut app, &ctx, "All downloads");
+    click(&mut app, &ctx, "Download list");
     assert_eq!(app.view, View::Downloads);
     assert_eq!(app.selected, selected);
 }
@@ -515,7 +606,12 @@ fn logs_navigation_stays_in_app_and_export_cancellation_keeps_the_queue_unchange
     assert_eq!(app.diagnostics.opened, None);
     assert!(app.dialog.is_none());
     let output = frame(&mut app, &ctx, egui::vec2(1080.0, 800.0), vec![]);
-    assert!(text_rect(&output, "Logs").bottom() < text_rect(&output, "Manage queues").top());
+    text_rect(&output, "Download list");
+    assert!(
+        !output.shapes.iter().any(
+            |s| matches!(&s.shape, egui::Shape::Text(t) if t.galley.job.text == "Manage queues")
+        )
+    );
     click(&mut app, &ctx, "Open log folder");
     assert_eq!(
         app.diagnostics.opened,
@@ -618,8 +714,8 @@ fn toolbar_clear_finished_keeps_files_and_pause_all_covers_other_queues() {
     complete.saved_path = Some(saved.clone());
     app.store.enqueue(&complete).unwrap();
     app.store.enqueue(&app.jobs[0]).unwrap();
-    app.force_refresh();
-    click(&mut app, &ctx, "Clear finished");
+    app.refresh_and_wait();
+    click(&mut app, &ctx, "Clear completed history");
     click(&mut app, &ctx, "Tasks");
     click(&mut app, &ctx, "Pause all");
     let deadline = Instant::now() + Duration::from_secs(2);
@@ -631,7 +727,7 @@ fn toolbar_clear_finished_keeps_files_and_pause_all_covers_other_queues() {
     }
     assert_eq!(std::fs::read(saved).unwrap(), b"keep this file");
     assert_eq!(app.store.list().unwrap().len(), 1);
-    app.force_refresh();
+    app.refresh_and_wait();
     assert!(
         app.jobs
             .iter()
@@ -759,6 +855,7 @@ fn ftp_dialogs_select_tls_mode_require_protected_login_and_fit_small_windows() {
     frame(&mut app, &ctx, size, vec![]);
     assert!(!app.add_authentication);
     app.add();
+    app.wait_for_io();
     let plain = app
         .store
         .list()
@@ -906,8 +1003,8 @@ fn table_actions_fit_the_minimum_window_in_both_appearances() {
             "Actions",
             "Start again",
             "Remove",
-            "Source",
-            "Preferences",
+            "Paused",
+            "More",
         ] {
             let rect = text_rect(&output, label);
             let shape = output.shapes.iter().find(|clipped| matches!(&clipped.shape, egui::epaint::Shape::Text(t) if t.galley.job.text.trim() == label)).unwrap();
@@ -1091,7 +1188,7 @@ fn recurring_schedule_form_saves_and_reopens_while_fitting_the_small_window() {
         );
         std::thread::sleep(Duration::from_millis(10));
     }
-    app.force_refresh();
+    app.refresh_and_wait();
     click(&mut app, &ctx, "Scheduler");
     assert!(app.schedule_mode == ScheduleMode::SelectedDays);
     assert_eq!(
@@ -1131,15 +1228,7 @@ fn queue_controls_and_selected_error_details_remain_visible_at_minimum_size() {
             "Pause",
             "Stop",
             "Stop all",
-            "Open folder",
-            "Clear finished",
-            "Queues",
-            "Scheduler",
-            "Scripting",
-            "Grabber",
-            "MCP",
-            "Logs",
-            "Preferences",
+            "More",
             "File actions",
             "Server returned HTTP 403",
             "File name",
@@ -1159,23 +1248,7 @@ fn queue_controls_and_selected_error_details_remain_visible_at_minimum_size() {
                 "{label} is outside window"
             );
         }
-        let toolbar = [
-            "Add URL",
-            "Start again",
-            "Pause",
-            "Stop",
-            "Stop all",
-            "Remove",
-            "Open folder",
-            "Clear finished",
-            "Queues",
-            "Scheduler",
-            "Scripting",
-            "Grabber",
-            "MCP",
-            "Logs",
-            "Preferences",
-        ];
+        let toolbar = ["Add URL", "Start again", "Pause", "Stop", "Stop all"];
         for labels in toolbar.windows(2) {
             let left = text_rect(&output, labels[0]);
             let right = text_rect(&output, labels[1]);
@@ -1238,7 +1311,7 @@ fn right_click_and_three_dot_menus_start_only_the_existing_selected_file() {
         let mut job = app.jobs[0].clone();
         job.status = Status::Queued;
         app.store.enqueue(&job).unwrap();
-        app.force_refresh();
+        app.refresh_and_wait();
         app.set_selection(Some(job.id.clone()));
         // The details panel repeats the filename; target the actual table button.
         app.interface.show_details = false;
@@ -1650,7 +1723,7 @@ fn speed_controls_fit_minimum_window_in_both_themes_and_without_selection() {
                 .insert(app.jobs[0].id.clone(), 1024 * 1024);
             frame(&mut app, &ctx, size, vec![]);
             let output = frame(&mut app, &ctx, size, vec![]);
-            for label in ["1024.0 MiB/s", "Preferences", "≤ 1.0 MiB/s"] {
+            for label in ["1024.0 MiB/s", "More", "≤ 1.0 MiB/s"] {
                 let rect = text_rect(&output, label);
                 assert!(
                     egui::Rect::from_min_size(egui::Pos2::ZERO, size).contains_rect(rect),
@@ -1671,7 +1744,7 @@ fn preferences_cancel_save_and_failed_save_preserve_the_right_state() {
     };
     app.save_interface(&ctx, interface);
     // Tray settings must not rewrite the separate appearance/layout record.
-    rusqlite::Connection::open(app.store.paths.data.join("queue.sqlite3"))
+    crate::desktop::fixture_database::open(app.store.paths.data.join("queue.sqlite3"))
         .unwrap()
         .execute_batch("CREATE TRIGGER protect_appearance BEFORE UPDATE ON interface_preferences BEGIN SELECT RAISE(ABORT, 'Appearance is not editable in tray preferences'); END;")
         .unwrap();
@@ -1696,7 +1769,7 @@ fn preferences_cancel_save_and_failed_save_preserve_the_right_state() {
     app.open_preferences_window();
     app.preferences_window.as_mut().unwrap().category = preferences_window::Category::Startup;
     click(&mut app, &ctx, "Notify when a download needs attention");
-    rusqlite::Connection::open(app.store.paths.data.join("queue.sqlite3"))
+    crate::desktop::fixture_database::open(app.store.paths.data.join("queue.sqlite3"))
         .unwrap()
         .execute("DELETE FROM desktop_preferences", [])
         .unwrap();
@@ -1870,7 +1943,7 @@ fn folder_settings_cancel_validate_persist_and_retain_failed_drafts() {
         &ctx,
         "Automatically sort new downloads by category",
     );
-    rusqlite::Connection::open(app.store.paths.data.join("queue.sqlite3")).unwrap()
+    crate::desktop::fixture_database::open(app.store.paths.data.join("queue.sqlite3")).unwrap()
         .execute_batch("CREATE TRIGGER reject_folders BEFORE UPDATE ON download_folders BEGIN SELECT RAISE(ABORT,'fixture save rejected'); END;").unwrap();
     click(&mut app, &ctx, "Save folder rules");
     assert!(matches!(app.dialog, Some(Dialog::DownloadFolders)));
@@ -1918,7 +1991,7 @@ fn add_and_batch_apply_rules_and_explicit_overrides_and_reveal_new_jobs() {
     let (temp, mut app, ctx) = fixture();
     let queue = app.store.create_queue("Later").unwrap();
     app.queue_id = queue.id;
-    app.force_refresh();
+    app.refresh_and_wait();
     app.category = Some(Category::Video);
     app.open_add();
     app.url = "https://example.test/original.zip".into();
@@ -2015,6 +2088,7 @@ fn category_add_preview_uses_renamed_filename_and_custom_rule_at_minimum_size() 
         rules.overrides.insert(Category::Documents, folder.clone());
         app.store.save_download_folders(&rules).unwrap();
         app.open_add();
+        app.wait_for_io();
         app.url = "https://example.test/original.zip".into();
         app.name = "guide.pdf".into();
         let size = egui::vec2(860.0, 600.0);
@@ -2115,7 +2189,7 @@ fn duplicate_preserves_the_original_file_and_requires_fresh_authentication() {
         app.store
             .enqueue_batch(std::slice::from_ref(&original), &app.queue_id)
             .unwrap();
-        app.force_refresh();
+        app.refresh_and_wait();
         app.selected = Some(original.id.clone());
         click(&mut app, &ctx, "File actions");
         click(&mut app, &ctx, "Duplicate");

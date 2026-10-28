@@ -10,6 +10,9 @@ use std::{
     time::Duration,
 };
 
+pub(crate) mod migrations;
+mod summaries;
+
 #[derive(Clone)]
 pub struct Store {
     pub paths: AppPaths,
@@ -23,45 +26,15 @@ impl Store {
     pub fn open(paths: AppPaths) -> Result<Self> {
         paths.prepare()?;
         let db = paths.data.join("queue.sqlite3");
-        let conn = connect_database(&db)?;
+        let mut conn = connect_database(&db)?;
+        migrations::initialize(&mut conn, &paths.data)?;
+        crate::preferences::apply_install_language(&conn)?;
         let store = Self {
             db,
             paths,
             activity: Default::default(),
             lifetime_connection: Arc::new(Mutex::new(conn)),
         };
-        let conn = store
-            .lifetime_connection
-            .lock()
-            .map_err(|_| anyhow::anyhow!("Database initialization was interrupted"))?;
-        conn.pragma_update(None, "journal_mode", "WAL")?;
-        conn.execute_batch("CREATE TABLE IF NOT EXISTS jobs (id TEXT PRIMARY KEY, request_id TEXT NOT NULL UNIQUE, created INTEGER NOT NULL, data TEXT NOT NULL);")?;
-        conn.execute_batch(
-            "CREATE TABLE IF NOT EXISTS browser_captures (
-            request_id TEXT PRIMARY KEY, state TEXT NOT NULL, data TEXT, job_id TEXT);",
-        )?;
-        store.initialize_queues()?;
-        crate::queue_start::initialize(&conn)?;
-        crate::auth::initialize(&conn)?;
-        crate::bandwidth::initialize(&conn)?;
-        crate::quota::initialize(&conn)?;
-        crate::preferences::initialize(&conn)?;
-        crate::proxy::initialize(&conn)?;
-        crate::categories::initialize(&conn)?;
-        crate::browser_batch::initialize(&conn)?;
-        crate::browser_video::initialize(&conn)?;
-        crate::grabber_projects::initialize(&conn)?;
-        crate::grabber_schedule::initialize(&conn)?;
-        crate::hls::initialize(&conn)?;
-        crate::antivirus::initialize(&conn)?;
-        crate::automation::initialize(&conn)?;
-        crate::script_automation::initialize(&conn)?;
-        crate::control::initialize(&conn)?;
-        crate::mcp::initialize(&conn)?;
-        crate::connections::initialize(&conn)?;
-        crate::browser_recovery::initialize(&conn)?;
-        crate::status_requests::initialize(&conn)?;
-        drop(conn);
         Ok(store)
     }
     pub(crate) fn connect(&self) -> Result<Connection> {
@@ -321,6 +294,8 @@ fn connect_database(db: &Path) -> Result<Connection> {
     let conn = Connection::open(db)?;
     conn.busy_timeout(Duration::from_secs(5))?;
     conn.pragma_update(None, "foreign_keys", "ON")?;
+    migrations::register_writer(&conn)?;
+    migrations::check_compatible(&conn)?;
     Ok(conn)
 }
 

@@ -68,6 +68,11 @@ try {
         Copy-Item -LiteralPath (Join-Path $workspaceRoot 'CHANGELOG.md') -Destination $stage
         Copy-Item -LiteralPath (Join-Path $workspaceRoot 'LICENSE') -Destination $stage
         Copy-Item -LiteralPath (Join-Path $workspaceRoot 'THIRD-PARTY-NOTICES.md') -Destination $stage
+        $examplesRoot = Join-Path $stage 'examples'
+        New-Item -ItemType Directory -Path $examplesRoot | Out-Null
+        foreach ($example in @('core-api-automation.lua','custom-site-reader.lua')) {
+            Copy-Item -LiteralPath (Join-Path $workspaceRoot "examples/$example") -Destination $examplesRoot
+        }
         $mediaRoot = Join-Path $stage 'tools\ffmpeg'
         New-Item -ItemType Directory -Force -Path $mediaRoot | Out-Null
         foreach ($file in @('ffmpeg.exe','LICENSE','README.txt','PROVENANCE.md','media-manifest.json')) {
@@ -111,7 +116,7 @@ try {
                 Compress-Archive -Path (Join-Path $extensionRoot '*') -DestinationPath (Join-Path $outputDirectory "download-engine-$browserName-$extensionVersion.zip") -Force
             }
         }
-        $payload = @('de.exe','de-host.exe','de-cli.exe','portable.json','Register-Browsers.ps1','README.md','SECURITY.md','PRIVACY.md','CHANGELOG.md','LICENSE','THIRD-PARTY-NOTICES.md','extensions','docs','tools') |
+        $payload = @('de.exe','de-host.exe','de-cli.exe','portable.json','Register-Browsers.ps1','README.md','SECURITY.md','PRIVACY.md','CHANGELOG.md','LICENSE','THIRD-PARTY-NOTICES.md','extensions','docs','tools','examples') |
             ForEach-Object { Join-Path $stage $_ }
         $portableArchive = Join-Path $outputDirectory "DownloadEngine-$artifactVersion-windows-x64.zip"
         Compress-Archive -LiteralPath $payload -DestinationPath $portableArchive -Force

@@ -524,7 +524,7 @@ checksum = "75b325c5dbd37f80359721ad39aca5a29fb04c89279657cffdda8736d0c0b9d2"
 
 [[package]]
 name = "download-engine"
-version = "3.2.0"
+version = "3.4.0"
 dependencies = [
  "anyhow",
  "base64",
@@ -537,6 +537,7 @@ dependencies = [
  "httpdate",
  "hyper",
  "hyper-util",
+ "image",
  "mlua",
  "native-tls",
  "percent-encoding",
@@ -1407,6 +1408,8 @@ dependencies = [
  "num-traits",
  "png",
  "tiff",
+ "zune-core",
+ "zune-jpeg",
 ]
 
 [[package]]

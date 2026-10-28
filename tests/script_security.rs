@@ -1,4 +1,6 @@
 //! Real Lua/CLI calls against isolated profiles; queues stay paused.
+#[path = "../src/desktop/fixture_database.rs"]
+mod fixture_database;
 use download_engine::{
     control::Action,
     paths::AppPaths,
@@ -72,12 +74,77 @@ impl Fixture {
             )
             .env("XDOWNLOADER_SCRIPT_FILE", file)
             .env("XDOWNLOADER_EVENT_FILE", event)
+            .env(
+                "XDOWNLOADER_RESULT_FILE",
+                self.temp.path().join("reader-result.json"),
+            )
             .output()
             .unwrap()
     }
 }
 fn quoted(value: impl AsRef<str>) -> String {
     serde_json::to_string(value.as_ref()).unwrap()
+}
+
+#[test]
+fn published_core_api_walkthrough_runs_without_creating_downloads() {
+    let f = Fixture::new();
+    let run = f.run(false, false);
+    let guide = include_str!("../docs/user-guide.md").replace("\r\n", "\n");
+    let source = guide
+        .split("```lua\n")
+        .find(|block| block.starts_with("-- Example: core-api\n"))
+        .expect("The published guide must include the Core API walkthrough")
+        .split("```")
+        .next()
+        .unwrap();
+    let output = f.lua(&run, source);
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("automation"), "{stdout}");
+    assert!(
+        stdout.contains("https://example.com/files/demo.zip"),
+        "{stdout}"
+    );
+    assert!(stdout.contains("Can fetch a page:\tfalse"), "{stdout}");
+    assert!(f.store.list().unwrap().is_empty());
+}
+
+#[test]
+fn packaged_reader_uses_core_parsing_without_gaining_download_access() {
+    let f = Fixture::new();
+    let mut run = f.run(false, false);
+    run.context = serde_json::json!({"trigger":"site_reader", "url":"https://example.com/files/"});
+    let output = f.lua(&run, r#"
+        assert(xd.api_version == 1 and xd.script_kind == 'site_reader')
+        assert(xd.supports('xd.fetch') and not xd.supports('xd.downloads'))
+        assert(not pcall(xd.add, 'https://example.com/never.zip'))
+        local html = '<a class="download" href="../one.zip">One</a><a class="download" href="two.pdf">Two</a>'
+        local items = {}
+        for _, href in ipairs(xd.html_select(html, 'a.download', 'href')) do
+            items[#items+1] = {kind='file',url=xd.url_join(event.url,href)}
+        end
+        return {title='Core reader test',items=items}
+    "#);
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let result: serde_json::Value =
+        serde_json::from_slice(&std::fs::read(f.temp.path().join("reader-result.json")).unwrap())
+            .unwrap();
+    assert_eq!(result["items"][0]["url"], "https://example.com/one.zip");
+    assert_eq!(
+        result["items"][1]["url"],
+        "https://example.com/files/two.pdf"
+    );
+    assert_eq!(result["items"].as_array().unwrap().len(), 2);
+    assert!(f.store.list().unwrap().is_empty());
 }
 
 #[test]
@@ -145,7 +212,7 @@ fn script_security_add_allows_configured_folders_and_keeps_provenance() {
     assert!(jobs.iter().any(|j| j.directory == nested));
     assert!(jobs.iter().any(|j| j.directory == category));
     assert!(!nested.exists() && !category.exists());
-    let db = rusqlite::Connection::open(f.store.paths.data.join("queue.sqlite3")).unwrap();
+    let db = crate::fixture_database::open(f.store.paths.data.join("queue.sqlite3")).unwrap();
     let mut statement = db.prepare("SELECT action FROM control_requests").unwrap();
     let requests: Vec<String> = statement
         .query_map([], |row| row.get(0))

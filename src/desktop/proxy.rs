@@ -123,6 +123,7 @@ impl Desktop {
                         tr("Proxy settings saved. New transfers will use this route.").into(),
                     ));
                     self.proxy = None;
+                    self.note_advanced_preferences_saved();
                     self.dialog = None;
                 }
                 Err(error) => form.error = Some(error.to_string()),

@@ -48,6 +48,9 @@ fn legacy_queue_limit_migration_preserves_jobs_schedules_and_references() {
         DROP TABLE download_queues;
         ALTER TABLE legacy_queues RENAME TO download_queues;
         COMMIT;").unwrap();
+    // This fixture represents an old, unversioned profile. Remove the modern
+    // format contract as well as restoring its historical queue constraint.
+    crate::store::migrations::unversioned_fixture(&conn);
     drop(conn);
     drop(store);
     let store = Store::open(paths.clone()).unwrap();

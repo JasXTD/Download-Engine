@@ -1,5 +1,33 @@
 use super::*;
-use crate::desktop::interaction_tests::{click, fixture, frame, text_rect};
+use crate::desktop::interaction_tests::{click as ui_click, fixture, frame, text_rect};
+
+fn click(app: &mut Desktop, ctx: &egui::Context, label: &str) {
+    // These assertions inspect the settled UI, not scroll animation timing.
+    ctx.all_styles_mut(|style| style.scroll_animation = egui::style::ScrollAnimation::none());
+    if matches!(
+        label,
+        "Allow changes" | "View only" | "Start with Download Engine" | "Save settings"
+    ) && !app.mcp.advanced_open
+    {
+        ui_click(app, ctx, "Advanced settings");
+        frame(app, ctx, SIZE, vec![]);
+        assert!(
+            app.mcp.advanced_open,
+            "Advanced settings must open when clicked"
+        );
+        for _ in 0..30 {
+            frame(app, ctx, SIZE, vec![]);
+            if !app.mcp.advanced_reveal {
+                break;
+            }
+        }
+        assert!(
+            !app.mcp.advanced_reveal,
+            "Expanded controls should be revealed"
+        );
+    }
+    ui_click(app, ctx, label);
+}
 use serde_json::{Value, json};
 
 const SIZE: egui::Vec2 = egui::vec2(1080.0, 800.0);
@@ -160,6 +188,7 @@ fn mcp_controls_copy_working_config_enforce_access_and_use_the_scheduler() {
         Settings {
             port,
             read_only: false,
+            permissions: Default::default(),
             start_with_app: true
         }
     );
@@ -180,7 +209,7 @@ fn mcp_controls_copy_working_config_enforce_access_and_use_the_scheduler() {
     settle(&mut app, &ctx, |s| s.status == ServerStatus::Stopped);
     app.mcp = State::new(&app.store);
     settle(&mut app, &ctx, |s| s.status == ServerStatus::Running);
-    assert_eq!(mcp::check_connection(&app.store.paths, port).unwrap(), 21);
+    assert_eq!(mcp::check_connection(&app.store.paths, port).unwrap(), 19);
     click(&mut app, &ctx, "×");
     assert!(app.dialog.is_none());
     assert_eq!(app.view, View::Downloads);
@@ -225,7 +254,7 @@ fn mcp_errors_do_not_claim_running_or_save_success_and_can_be_retried() {
             .is_some_and(|n| n.starts_with("Connection checked"))
     );
     // A real database failure must not enable startup or launch an unsaved server.
-    rusqlite::Connection::open(app.store.paths.data.join("queue.sqlite3"))
+    crate::desktop::fixture_database::open(app.store.paths.data.join("queue.sqlite3"))
         .unwrap()
         .execute("DROP TABLE mcp_settings", [])
         .unwrap();
@@ -250,6 +279,7 @@ fn localized_mcp_status_and_actions_fit_without_overlapping() {
         app.interface.language = language;
         let _scope = download_engine::i18n::scope(language);
         for running in [false, true] {
+            app.mcp.read_only = !running;
             if running {
                 app.mcp.port = port().to_string();
                 app.mcp.read_only = false;
@@ -266,7 +296,7 @@ fn localized_mcp_status_and_actions_fit_without_overlapping() {
                     tr(if running {
                         "·  Allow changes  ·  This computer only"
                     } else {
-                        "·  This computer only"
+                        "·  View only  ·  This computer only"
                     }),
                 );
                 let action = text_rect(
@@ -302,53 +332,39 @@ fn mcp_popup_and_toolbar_fit_minimum_windows_in_both_themes() {
             egui::Visuals::light()
         });
         for size in [egui::vec2(860.0, 600.0), egui::vec2(1280.0, 860.0)] {
-            frame(&mut app, &ctx, size, vec![]);
+            app.mcp.advanced_open = false;
+            for _ in 0..3 {
+                frame(&mut app, &ctx, size, vec![]);
+            }
             let out = frame(&mut app, &ctx, size, vec![]);
             let viewport = egui::Rect::from_min_size(egui::Pos2::ZERO, size);
             for label in [
-                "MCP",
-                "Scripting",
-                "Logs",
-                "Preferences",
                 "Start server",
-                "View only",
-                "Allow changes",
-                "Save settings",
+                "Server URL",
+                "\u{e8c8}",
+                "Advanced settings",
+                "Setup guide",
+                "Open logs",
             ] {
+                let rect = text_rect(&out, label);
+                assert!(viewport.contains_rect(rect), "Clipped: {label}");
                 assert!(
-                    viewport.contains_rect(text_rect(&out, label)),
-                    "Clipped: {label}"
+                    out.shapes
+                        .iter()
+                        .any(|s| matches!(&s.shape, egui::Shape::Text(t)
+                    if t.galley.job.text.trim() == label && s.clip_rect.contains_rect(rect))),
+                    "Not visible: {label}"
                 );
             }
-            for clipped in &out.shapes {
-                if let egui::Shape::Text(text) = &clipped.shape {
-                    let rect = text.galley.rect.translate(text.pos.to_vec2());
-                    if rect.intersects(clipped.clip_rect) {
-                        assert!(
-                            rect.right() <= size.x + 1.0,
-                            "Horizontal overflow: {}",
-                            text.galley.job.text
-                        );
-                    }
-                }
-            }
-            let port_left = text_rect(&out, &app.mcp.port).left() - 8.0;
-            for label in ["View only", "Allow changes"] {
-                assert!(
-                    (text_rect(&out, label).center().y - text_rect(&out, "AI access").center().y)
-                        .abs()
-                        <= 1.0,
-                    "Access options must align with their label"
-                );
-            }
-            // The taller reference layout scrolls at compact sizes. Footer actions
-            // must be reachable without shrinking the settings or connection field.
+            // Explicitly expand and scroll to the separately grouped configuration.
+            app.mcp.advanced_open = true;
+            frame(&mut app, &ctx, size, vec![]);
             frame(
                 &mut app,
                 &ctx,
                 size,
                 vec![
-                    egui::Event::PointerMoved(egui::pos2(500.0, 450.0)),
+                    egui::Event::PointerMoved(egui::pos2(size.x / 2.0, size.y / 2.0)),
                     egui::Event::MouseWheel {
                         unit: egui::MouseWheelUnit::Point,
                         phase: egui::TouchPhase::Move,
@@ -362,39 +378,35 @@ fn mcp_popup_and_toolbar_fit_minimum_windows_in_both_themes() {
             }
             let out = frame(&mut app, &ctx, size, vec![]);
             for label in [
-                "Connect your AI",
-                "Server URL",
-                "\u{e8c8}",
-                "Setup guide",
-                "Open logs",
-                FIRST_PROMPT,
+                "Start server",
+                "Port",
+                "View only",
+                "Allow changes",
+                "Save settings",
             ] {
                 assert!(
                     viewport.contains_rect(text_rect(&out, label)),
-                    "Unreachable: {label}"
+                    "Advanced control unreachable: {label}"
                 );
             }
-            let url_left = text_rect(&out, &app.mcp.url().unwrap()).left() - 10.0;
-            assert!(
-                (port_left - url_left).abs() <= 1.0,
-                "Port and URL fields must share a leading column"
-            );
-            frame(
-                &mut app,
-                &ctx,
-                size,
-                vec![
-                    egui::Event::PointerMoved(egui::pos2(500.0, 450.0)),
-                    egui::Event::MouseWheel {
-                        unit: egui::MouseWheelUnit::Point,
-                        phase: egui::TouchPhase::Move,
-                        delta: egui::vec2(0.0, 1500.0),
-                        modifiers: egui::Modifiers::NONE,
-                    },
-                ],
-            );
-            for _ in 0..20 {
-                frame(&mut app, &ctx, size, vec![]);
+            for label in ["View only", "Allow changes"] {
+                assert!(
+                    (text_rect(&out, label).center().y - text_rect(&out, "AI access").center().y)
+                        .abs()
+                        <= 1.0
+                );
+            }
+            for clipped in &out.shapes {
+                if let egui::Shape::Text(text) = &clipped.shape {
+                    let rect = text.galley.rect.translate(text.pos.to_vec2());
+                    if rect.intersects(clipped.clip_rect) {
+                        assert!(
+                            rect.right() <= size.x + 1.0,
+                            "Horizontal overflow: {}",
+                            text.galley.job.text
+                        );
+                    }
+                }
             }
         }
     }
@@ -420,7 +432,7 @@ fn mcp_url_and_first_prompt_copy_before_start_without_creating_credentials() {
     assert!(!app.store.paths.data.join("mcp-token.dpapi").exists());
     app.mcp.port = "0".into();
     let out = frame(&mut app, &ctx, SIZE, vec![]);
-    text_rect(&out, "Enter a valid port above");
+    text_rect(&out, "Enter a valid port in Advanced settings");
     app.mcp.notice = None;
     click(&mut app, &ctx, "\u{e8c8}");
     assert!(
@@ -478,7 +490,7 @@ fn mcp_popup_keeps_the_current_page_draft_and_pending_server_when_closed() {
         );
         std::thread::sleep(Duration::from_millis(10));
     }
-    assert_eq!(mcp::check_connection(&app.store.paths, port).unwrap(), 21);
+    assert_eq!(mcp::check_connection(&app.store.paths, port).unwrap(), 19);
     assert_eq!(app.view, View::Queues);
     assert!(app.dialog.is_none());
     click(&mut app, &ctx, "MCP");

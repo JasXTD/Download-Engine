@@ -18,7 +18,9 @@ desktop MCP popup, or started with `--read-only`,
 only exposes read tools and rejects mutation calls even if invoked directly.
 
 If a requested mutation is unavailable, explain that the user can stop the server,
-select **Allow changes**, start it again, and reconnect the client. Never bypass
+select **Allow changes** and the needed capability, start it again, and reconnect
+the client. Lua and PowerShell are separately disabled by default. Running a script
+also needs local approval for the exact saved revision; the client cannot grant it. Never bypass
 the selected access mode by starting another server. Desktop-owned MCP stops when
 the app exits; it remains available while the app is in the tray or its control popup is closed. Reconnect after
 a restart and query receipts before retrying uncertain commands.
@@ -106,12 +108,16 @@ because a response was lost.
 
 After a timeout, lost connection or uncertain result, call `get_request` using the
 original ID. Possible receipt states are `pending`, `running`, `done`, `failed`,
-`cancelled`, `interrupted`, or `expired`. `done` means the app processed the
+`cancelled`, `interrupted`, `expired`, or `retired`. `done` means the app processed the
 command; inspect its result and then the relevant download or run. A tool result
 with `isError: true` can still contain a receipt for an accepted/running command;
 read it before retrying. If the request was not recorded, retry with the original
-ID. Finished receipts are bounded to the most recent 1,000; never assume a very
-old ID still guarantees deduplication after cleanup.
+ID. Detailed receipts are bounded to the most recent 1,000, but compact request-ID
+and action-hash records are retained. `retired` means the command was already
+accepted and its detailed result was pruned; it will not be enqueued again.
+Inspect current state before deciding whether a genuinely new operation is needed.
+IDs already pruned by a version before this protection was introduced cannot be
+recovered; do not blindly retry such historical requests.
 
 `cancel_request` cancels only a command still waiting to be claimed. It cannot
 undo a running/completed command. On modern HTTP, closing an in-flight response
@@ -127,9 +133,12 @@ then verify its state. Disconnecting an AI client does not stop the MCP server.
 Call `list_scripts`, then `get_script` to inspect the selected source, language and
 revision. Run it only with user authorization covering its effects. Lua can
 control downloads; optional PowerShell scripts can run local programs and change
-files. `run_script` runs the current saved revision once, including a disabled
-script, with a manual trigger. If the source changes concurrently, inspect it
-again before execution; this interface does not pin a revision.
+files. `run_script` requires both the language capability and a locally approved
+saved revision. It pins that revision in the queued command and rechecks approval
+while snapshotting the code. Changed or revoked approvals are rejected. A disabled
+script may still run manually if its revision is approved. The user approves it
+locally using `de-cli mcp-approve-script ID REVISION`; MCP cannot grant approval.
+An approval does not restrict the script's own automation API or PowerShell powers.
 
 Call `run_script {"id":"<script UUID>","request_id":"<fresh UUID>"}`. The receipt
 result contains `id`, the run ID. Poll `get_script_log {"run_id":"<run UUID>"}` or

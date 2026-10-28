@@ -8,6 +8,16 @@
 
 اختر إضافة رابط من شريط الأدوات، وألصق رابط ملف مباشرًا، ثم راجع الاسم وقائمة الانتظار والمجلد وابدأ. تقبل إضافة دفعة رابطًا واحدًا في كل سطر. اختر «من نمط» لإنشاء روابط مرقّمة من رابط واحد يحتوي على *. اختر اللغة من الإعدادات ← المظهر ← اللغة. تتبع لغة النظام Windows وتستخدم الإنجليزية إذا لم تكن اللغة مدعومة.
 
+
+
+<!-- custom-themes-3.4.0 -->
+### مجموعة السمات
+
+التفضيلات ← المظهر ← مخصص تضم Neon Courier وReactor Night وAurora وMoonveil. عدّل الخلفية ولون التمييز أو استورد PNG/JPEG. الحفظ يثبت المعاينة والإلغاء يعيد المظهر السابق. تُحفظ الصور محليًا وتُعالج في الخلفية مع حدود للحجم. يشمل الإصدار أيضًا حماية إصدارات الملف الشخصي والتحكم في وصول MCP.
+
+PNG / JPEG · حتى 16 MiB و16 ميغابكسل. تُنسخ إلى هذا الملف الشخصي.
+<!-- /custom-themes-3.4.0 -->
+
 ## التنزيلات والاسترداد
 
 ### التنزيلات والاسترداد
@@ -33,6 +43,9 @@
 أدر قوائم الانتظار لتجميع الملفات وتحديد عدد التنزيلات المتزامنة. تنتظر القوائم الجديدة بدءها أو جدولتها. يدعم المجدول البدء والإيقاف والتكرار. يجب أن يظل التطبيق مفتوحًا، بما في ذلك في علبة النظام. يُفعّل الخروج وإيقاف الكمبيوتر أو وضعه في السكون أو الإسبات بشكل مستقل، ويمكن إلغاء العد التنازلي.
 
 ## البرمجة النصية
+
+أصبح للمحرر والبرامج النصية المحمّلة تبويبان منفصلان. ابحث عن البرامج النصية أو أنشئها في القائمة، وافتح المحرر الكامل من عنوان محرر Lua أو PowerShell. تظهر أزرار الحفظ والتشغيل والإيقاف والسجلات الاختيارية مع الشفرة، وتوجد أوامر الملفات في قائمة إجراءات المحرر. يحافظ تبديل العرض على الشفرة غير المحفوظة والإعدادات وموضع المؤشر.
+
 
 ### البرمجة النصية
 
@@ -73,6 +86,24 @@ print("Failed downloads handled:", handled)
 ```
 
 لتحرير برنامج نصي في برنامج آخر، استخدم فتح ملف… وحفظ في ملف… في رأس المحرر. ينسخ فتح ملف… ملف ‎.lua أو ‎.ps1 إلى المحرر ويسألك أولًا إذا كان سيستبدل شيفرة غير محفوظة؛ اختر حفظ البرنامج النصي للاحتفاظ بها. ويكتب حفظ في ملف… الشيفرة الموجودة في المحرر في ملف.
+
+### Lua Core API 1
+
+أنشئ النص أو افتحه في Loaded scripts، واختر Lua وManual only في Script settings. يوسّع Full editor مساحة التحرير؛ اضغط Save script ثم Run script واقرأ Run logs. يعرض Core API وظائف المشغّل الحالي، ويفتح Ctrl+Space الاقتراحات. API 1 هو إصدار الواجهة وليس إصدار التطبيق. يحلل المثال HTML في الذاكرة فقط دون شبكة أو تنزيل؛ وتكون إمكانية جلب صفحة للنص اليدوي false.
+
+```lua
+-- Example: core-api
+assert(xd.api_version == 1, "This example needs Lua API 1")
+print("App:", xd.app_version, "Role:", xd.script_kind)
+local html = '<a class="download" href="/files/demo.zip">Demo</a>'
+local links = xd.html_select(html, "a.download[href]", "href")
+local url = xd.url_join("https://example.com/catalog/", links[1])
+print("Preview:", xd.to_json({ kind = "file", url = url }))
+print("Can fetch a page:", xd.supports("xd.fetch"))
+```
+
+Open examples/core-api-automation.lua or examples/custom-site-reader.lua with Editor actions → Open file…. Site reader uses public pages, Pages patterns and Direct connection; test with Test on URL before enabling its trigger. Ordinary automation cannot call xd.fetch. Import script… accepts .de-script.json as a new draft with automatic triggers and file changes off; review its code and reselect local queues. Stop script does not undo submitted downloads. Full English reference: docs/automation.md.
+
 
 ## سطر الأوامر
 

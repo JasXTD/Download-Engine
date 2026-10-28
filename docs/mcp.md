@@ -8,10 +8,11 @@ a client does not restart it. No stdio transport is implemented.
 ## Set up in the app
 
 1. Open **MCP** on the toolbar (also **Tools → MCP control** or **Preferences → Browser & AI → AI connection (MCP)**).
-2. Keep port **17842**, or choose an unused port. Choose **View only** to inspect
-   downloads, queues and scripts; choose **Allow changes** to add and pause/resume
-   downloads, manage queues, and run or stop saved scripts. Allow changes includes
-   running saved PowerShell scripts, which can access files and execute programs.
+2. The status, **Start server** and server URL are shown at the top. Open **Advanced settings** to keep port **17842** or choose an unused port. Choose **View only** to inspect
+   downloads, queues and scripts. Under **Allow changes**, select **Download controls**,
+   **Queue controls**, **Approved Lua scripts**, and **Approved PowerShell scripts**
+   independently. Script execution starts disabled, including on existing profiles.
+   Each script also needs local approval for its exact saved revision (see below).
 3. Click **Start server**. This saves your settings and starts the server in the app.
    Wait for **Running**. Click **Check connection** to verify authenticated HTTP
    access and see how many tools are available. This verifies the server; it does
@@ -98,12 +99,15 @@ MCP clients, not a webpage to open in a browser.
 ```powershell
 .\de-cli.exe mcp --read-only
 .\de-cli.exe mcp --port 17843 --no-start
+.\de-cli.exe mcp --no-queue-control
+.\de-cli.exe mcp --allow-lua
 .\de-cli.exe mcp-config --port 17843
 ```
 
 The terminal server is independent of the desktop controls. CLI flags do not read
 or overwrite the MCP popup's settings: `mcp` defaults to port 17842 with changes
-allowed, and `mcp-config` defaults to port 17842. Use explicit `--port` values for a
+allowed for downloads and queues but script execution disabled. `mcp-config`
+defaults to port 17842. Use explicit `--port` values for a
 custom port, or copy the running app's configuration from its MCP popup. Stop the
 desktop-owned server before using the terminal server on the same port. If a
 terminal server launches an app whose MCP startup option is enabled on that port,
@@ -115,6 +119,12 @@ you want to allow changes; it is a server setting, not a client setting.
 `--no-start` requires the desktop to be opened manually before commands can be
 processed. Otherwise mutations launch it when needed; reading state does not.
 New profiles can initialize their database even in read-only mode.
+
+`--no-download-control` and `--no-queue-control` remove their respective mutation
+tools. `--allow-lua` and `--allow-powershell` enable each script language; both are
+off unless explicitly selected. These are server restrictions, enforced even for
+direct calls to hidden tools. Cancelling a request also requires permission for
+the underlying command. Inspection tools remain available.
 
 Use the CLI beside the intended app. Portable copies follow `portable.json`;
 installed copies use the installed data folder. Set an absolute `DOWNLOAD_ENGINE_HOME`
@@ -137,13 +147,39 @@ To rotate it, stop all MCP servers for that profile, delete only its
 `mcp-token.dpapi`, run `mcp-config` to create a new token, update client headers,
 then restart the server. Keep the database and downloads.
 
+## Approve a script locally
+
+Review the script's source, language, file access, and revision in the desktop or
+with `scripts show SCRIPT_ID`. Then, in a local terminal beside this app, use the
+actual ID and reviewed revision:
+
+```powershell
+.\de-cli.exe scripts show SCRIPT_ID
+.\de-cli.exe mcp-approve-script SCRIPT_ID REVISION
+.\de-cli.exe mcp-revoke-script SCRIPT_ID
+```
+
+Approve only scripts whose effects you intend to allow. The language's server
+permission and this approval are both required. MCP has no approval tool, and
+automation workers cannot use these local approval commands. Editing or resaving
+a script invalidates its approval. Approval checks cover its source and settings,
+and are repeated when the queued command snapshots the script for execution.
+Revoking approval prevents new snapshots; already accepted script runs keep their
+snapshot and can be stopped with **Stop script**.
+
+The download and queue switches govern direct MCP tools. An approved Lua script
+retains its existing automation API and file-change setting; an approved PowerShell
+script can run programs and access files with your Windows account's permissions.
+Those language permissions therefore grant the reviewed script's broader effects.
+
 ## Give the AI its guide
 
 Ask your client:
 
 > Read Download Engine's get_usage_guide, then show my queues and paused downloads.
 
-The server advertises 21 tools with input schemas and read/write annotations.
+The server advertises up to 21 tools with input schemas and read/write annotations
+(19 with the default download/queue controls; script tools require a language permission).
 Its initialization/discovery instructions tell clients to call `get_usage_guide`
 first. That tool returns the bundled [AI usage guide](mcp-ai-guide.md), including
 exact tool arguments, download and script workflows, receipts, cancellation and
@@ -153,7 +189,8 @@ A safe first mutation is: “Create a paused queue named MCP practice and add th
 direct file URL to it.” Supply a real file URL, review the client's proposed
 actions, then ask it to start the queue and verify completion. A successful
 command receipt is not a completed download. For scripts, first save one in
-Scripting → Scripts; ask the AI to inspect it before an authorized run.
+Scripting → Scripts, review and approve its saved revision locally, and enable its
+language's server permission before asking the AI to run it.
 
 ## Connection failures
 

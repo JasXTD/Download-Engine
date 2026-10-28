@@ -1,3 +1,5 @@
+#[path = "../src/desktop/fixture_database.rs"]
+mod fixture_database;
 use download_engine::{
     browser_batch::{Destination, Link},
     categories::Category,
@@ -37,7 +39,7 @@ fn links() -> Vec<Link> {
     ]
 }
 fn conn(store: &Store) -> Connection {
-    Connection::open(store.paths.data.join("queue.sqlite3")).unwrap()
+    crate::fixture_database::open(store.paths.data.join("queue.sqlite3")).unwrap()
 }
 fn receipts(store: &Store) -> i64 {
     conn(store)

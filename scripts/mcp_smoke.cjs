@@ -1,12 +1,13 @@
+const openProfileDatabase = require('./profile_database.cjs');
 // Independent HTTP client, real desktop/CLI and loopback bytes. Own profile only.
 const assert = require('node:assert/strict'), fs = require('node:fs'), path = require('node:path');
 const {spawn} = require('node:child_process'), {once} = require('node:events');
-const {randomUUID, createHash} = require('node:crypto'), {DatabaseSync} = require('node:sqlite');
+const {randomUUID, createHash} = require('node:crypto');
 const {setTimeout:delay} = require('node:timers/promises'), http = require('node:http');
 const root = path.resolve(__dirname, '..'), binary = path.resolve(process.argv[2] || 'dist/IDM-EX-UnsignedDev');
 const home = path.join(root, 'artifacts', `mcp-smoke-${randomUUID().slice(0,8)}`);
 fs.mkdirSync(home, {recursive:true});
-const env = {...process.env, IDM_EX_HOME:home};
+const env = {...process.env, DOWNLOAD_ENGINE_HOME:home, IDM_EX_HOME:home};
 for (const key of Object.keys(env)) if (key.startsWith('IDM_EX_TEST_') || key.startsWith('IDM_EX_SCRIPT_') || key.includes('SCREENSHOT_TO')) delete env[key];
 const exe = path.join(binary, 'de-cli.exe'), processes = [], clients = [], checks = [];
 const version = /^version = "([^"]+)"/m.exec(fs.readFileSync(path.join(root,'Cargo.toml'),'utf8'))[1];
@@ -98,12 +99,13 @@ const job=id=>JSON.parse(db.prepare('SELECT data FROM jobs WHERE id=?').get(id).
     let service=await startMcp(),client=new Client(service);
     const discovery=await client.ask('server/discover');assert.equal(discovery.result._meta['io.modelcontextprotocol/serverInfo'].version,version);
     assert.deepEqual(discovery.result.supportedVersions,['2026-07-28','2025-11-25','2025-06-18']);
-    const catalog=(await client.ask('tools/list')).result.tools;assert.equal(catalog.length,21);assert.equal(new Set(catalog.map(t=>t.name)).size,catalog.length);
+    const catalog=(await client.ask('tools/list')).result.tools;assert.equal(catalog.length,19);assert.equal(new Set(catalog.map(t=>t.name)).size,catalog.length);
     for(const tool of catalog){assert.equal(tool.inputSchema.type,'object');assert.equal(tool.inputSchema.additionalProperties,false);assert.equal(typeof tool.annotations.readOnlyHint,'boolean');}
-    assert.equal(catalog.find(t=>t.name==='run_script').annotations.destructiveHint,true);
+    assert(!catalog.some(t=>t.name==='run_script'||t.name==='stop_script'));
+    await client.tool('run_script',{id:randomUUID()},true);
     const guide=await client.tool('get_usage_guide');assert.equal(guide.version,version);assert.equal(guide.guide,fs.readFileSync(path.join(root,'docs/mcp-ai-guide.md'),'utf8'));
     assert.equal((await client.tool('list_queues')).total,1);assert(!fs.existsSync(path.join(home,'data/logs/desktop.log')),'Read tools must not launch desktop');
-    db=new DatabaseSync(path.join(home,'data/queue.sqlite3'));db.exec('PRAGMA busy_timeout=5000');
+    db=openProfileDatabase(path.join(home,'data/queue.sqlite3'));db.exec('PRAGMA busy_timeout=5000');
     const ping={jsonrpc:'2.0',id:1,method:'ping',params:{_meta:meta}}, pingHeaders=client.headers('ping',{});
     for(const [headers,status] of [[{authorization:''},401],[{authorization:'Bearer wrong'},401],[{origin:'https://evil.example'},403],[{origin:'null'},403],[{host:'evil.example'},403],[{'mcp-method':'tools/list'},400],[{'mcp-protocol-version':'2025-11-25'},400],[{accept:'application/json'},406],[{'content-type':'text/plain'},415]]) {
       const result=await exchange(service,ping,{...pingHeaders,...headers}).promise;assert.equal(result.status,status);
@@ -119,7 +121,7 @@ const job=id=>JSON.parse(db.prepare('SELECT data FROM jobs WHERE id=?').get(id).
     assert.equal((await client.ask('unknown')).error.code,-32601);assert.equal((await client.ask('tools/call',{name:'unknown'})).error.code,-32602);
     await client.tool('list_downloads',{limit:0},true);await client.tool('list_downloads',{unexpected:true},true);
     assert.equal((await client.notify('tools/call',{name:'pause_all',arguments:{}})).status,202);
-    mark('HTTP config, 21 strict schemas, embedded AI guide, authentication, origin/host/header checks and bounded bodies');
+    mark('HTTP config, default script denial, 19 strict schemas, embedded AI guide, authentication, origin/host/header checks and bounded bodies');
 
     const readonlyService=await startMcp(['--read-only','--no-start']),readOnly=new Client(readonlyService);
     const reads=(await readOnly.ask('tools/list')).result.tools;assert(reads.every(t=>t.annotations.readOnlyHint));await readOnly.tool('create_queue',{name:'Forbidden'},true);
@@ -164,13 +166,24 @@ const job=id=>JSON.parse(db.prepare('SELECT data FROM jobs WHERE id=?').get(id).
 
     async function save(body,name){const definition={id:randomUUID(),revision:0,name,language:'lua',body,enabled:false,trigger:{kind:'manual'},timeout_seconds:60};const file=path.join(home,`${definition.id}.json`);fs.writeFileSync(file,JSON.stringify(definition));const response=await cli(['scripts','save',file,'--no-start']);return response.receipt.result;}
     const script=await save("print('MCP Lua works')",'MCP Lua');assert.equal((await client.tool('list_scripts')).items[0].body,undefined);assert.equal((await client.tool('get_script',{id:script.id})).script.body,script.body);
-    const run=await client.tool('run_script',{id:script.id}),runId=run.receipt.result.id;
+    await client.tool('run_script',{id:script.id},true);
+    const scriptService=await startMcp(['--allow-lua','--no-start']),scriptClient=new Client(scriptService);
+    await scriptClient.tool('run_script',{id:script.id},true);
+    await cli(['mcp-approve-script',script.id,String(script.revision)]);
+    const scriptCatalog=(await scriptClient.ask('tools/list')).result.tools;
+    assert.equal(scriptCatalog.length,21);
+    assert.equal(scriptCatalog.find(t=>t.name==='run_script').annotations.destructiveHint,true);
+    const run=await scriptClient.tool('run_script',{id:script.id}),runId=run.receipt.result.id;
     await until(async()=> (await client.tool('list_script_runs',{script_id:script.id})).items.find(r=>r.id===runId&&r.state==='succeeded'),'Lua run completes');
     assert((await client.tool('get_script_log',{run_id:runId})).lines.map(l=>l.text).join('').includes('MCP Lua works'));
-    const long=await save('while true do xd.sleep(20) end','MCP stop'),started=await client.tool('run_script',{id:long.id}),stopId=started.receipt.result.id;
+    await cli(['mcp-revoke-script',script.id]);
+    await scriptClient.tool('run_script',{id:script.id},true);
+    const long=await save('while true do xd.sleep(20) end','MCP stop');
+    await cli(['mcp-approve-script',long.id,String(long.revision)]);
+    const started=await scriptClient.tool('run_script',{id:long.id}),stopId=started.receipt.result.id;
     await until(async()=> (await client.tool('list_script_runs',{script_id:long.id})).items.some(r=>r.id===stopId&&r.state==='running'),'Lua worker running');
-    await client.tool('stop_script',{run_id:stopId});await until(async()=> (await client.tool('get_script_log',{run_id:stopId})).state==='stopped','script stopped');
-    mark('Saved Lua inspection, execution, persistent logs and active worker stop');
+    await scriptClient.tool('stop_script',{run_id:stopId});await until(async()=> (await client.tool('get_script_log',{run_id:stopId})).state==='stopped','script stopped');
+    mark('Saved Lua inspection, language permission, local approval and revocation, actual worker execution, persistent logs and stop');
     for(const c of clients)await c.close();
     const result={success:true,transport:'localhost Streamable HTTP',version,binary,home,checks,tools:catalog.map(t=>t.name),downloadSha256:hash(bytes),autoStartedDesktopPid:autoPid};
     fs.writeFileSync(path.join(home,'verification.json'),JSON.stringify(result,null,2));console.log(JSON.stringify(result,null,2));

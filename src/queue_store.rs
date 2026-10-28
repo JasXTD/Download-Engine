@@ -10,7 +10,7 @@ use rusqlite::{Connection, OptionalExtension, TransactionBehavior, params};
 #[cfg(test)]
 mod tests;
 
-fn legacy_queue_limit(conn: &Connection) -> Result<bool> {
+pub(crate) fn legacy_queue_limit(conn: &Connection) -> Result<bool> {
     let schema: Option<String> = conn
         .query_row(
             "SELECT sql FROM sqlite_schema WHERE type='table' AND name='download_queues'",
@@ -52,84 +52,60 @@ pub(crate) fn set_running_in(conn: &Connection, id: &str, running: bool) -> Resu
     Ok(())
 }
 
-impl Store {
-    pub(crate) fn initialize_queues(&self) -> Result<()> {
-        let mut conn = self.connect()?;
-        // The original table has a CHECK <= 8. Rebuild it transactionally using
-        // SQLite's table-replacement sequence; never rename the old parent table,
-        // which would rewrite child foreign keys. This connection is local to
-        // initialization and foreign-key integrity is checked before committing.
-        let migrating = legacy_queue_limit(&conn)?;
-        if migrating {
-            conn.pragma_update(None, "foreign_keys", false)?;
-        }
-        let tx = conn.transaction_with_behavior(TransactionBehavior::Immediate)?;
-        // Another opener may have upgraded while this connection waited for the lock.
-        if migrating && legacy_queue_limit(&tx)? {
-            tx.execute_batch(
-                "CREATE TABLE download_queues_expanded(
-                id TEXT PRIMARY KEY, name TEXT NOT NULL UNIQUE COLLATE NOCASE,
-                max_active INTEGER NOT NULL CHECK(max_active BETWEEN 1 AND 32),
-                running INTEGER NOT NULL, scheduled_at INTEGER);
-                INSERT INTO download_queues_expanded(rowid,id,name,max_active,running,scheduled_at)
-                    SELECT rowid,id,name,max_active,running,scheduled_at FROM download_queues;
-                DROP TABLE download_queues;
-                ALTER TABLE download_queues_expanded RENAME TO download_queues;",
-            )?;
-        }
-        tx.execute_batch(
-            "CREATE TABLE IF NOT EXISTS download_queues(
+pub(crate) fn initialize(conn: &Connection) -> Result<()> {
+    // Another opener may have upgraded while this connection waited for the lock.
+    if legacy_queue_limit(conn)? {
+        conn.execute_batch(
+            "CREATE TABLE download_queues_expanded(
             id TEXT PRIMARY KEY, name TEXT NOT NULL UNIQUE COLLATE NOCASE,
             max_active INTEGER NOT NULL CHECK(max_active BETWEEN 1 AND 32),
             running INTEGER NOT NULL, scheduled_at INTEGER);
-            CREATE TABLE IF NOT EXISTS job_queues(
-            job_id TEXT PRIMARY KEY REFERENCES jobs(id) ON DELETE CASCADE,
-            queue_id TEXT NOT NULL REFERENCES download_queues(id),
-            position INTEGER NOT NULL, paused_by_queue INTEGER NOT NULL DEFAULT 0);
-            CREATE INDEX IF NOT EXISTS queue_order ON job_queues(queue_id,position);
-            CREATE TABLE IF NOT EXISTS queue_schedules(
-            queue_id TEXT PRIMARY KEY REFERENCES download_queues(id) ON DELETE CASCADE,
-            days INTEGER NOT NULL CHECK(days BETWEEN 1 AND 127),
-            start_minute INTEGER NOT NULL CHECK(start_minute BETWEEN 0 AND 1439),
-            stop_minute INTEGER NOT NULL CHECK(stop_minute BETWEEN 0 AND 1439 AND stop_minute<>start_minute),
-            enabled INTEGER NOT NULL CHECK(enabled IN (0,1)));
-            CREATE TABLE IF NOT EXISTS synchronization_queues(
-            queue_id TEXT PRIMARY KEY REFERENCES download_queues(id) ON DELETE CASCADE,
-            last_window_start INTEGER);",
+            INSERT INTO download_queues_expanded(rowid,id,name,max_active,running,scheduled_at)
+                SELECT rowid,id,name,max_active,running,scheduled_at FROM download_queues;
+            DROP TABLE download_queues;
+            ALTER TABLE download_queues_expanded RENAME TO download_queues;",
         )?;
-        tx.execute(
-            "INSERT OR IGNORE INTO download_queues(id,name,max_active,running)
-            VALUES (?1,'Main queue',3,1)",
-            [MAIN_QUEUE],
-        )?;
-        let missing: Vec<String> = {
-            let mut stmt = tx.prepare(
-                "SELECT id FROM jobs WHERE id NOT IN
-                (SELECT job_id FROM job_queues) ORDER BY created,rowid",
-            )?;
-            stmt.query_map([], |r| r.get(0))?
-                .collect::<rusqlite::Result<_>>()?
-        };
-        for id in missing {
-            assign(&tx, &id, MAIN_QUEUE)?;
-        }
-        if migrating {
-            let broken: Option<String> = tx
-                .query_row("PRAGMA foreign_key_check", [], |row| row.get(0))
-                .optional()?;
-            anyhow::ensure!(
-                broken.is_none(),
-                "Queue migration found an invalid foreign key in {}",
-                broken.unwrap_or_default()
-            );
-        }
-        tx.commit()?;
-        if migrating {
-            conn.pragma_update(None, "foreign_keys", true)?;
-        }
-        Ok(())
     }
+    conn.execute_batch(
+        "CREATE TABLE IF NOT EXISTS download_queues(
+        id TEXT PRIMARY KEY, name TEXT NOT NULL UNIQUE COLLATE NOCASE,
+        max_active INTEGER NOT NULL CHECK(max_active BETWEEN 1 AND 32),
+        running INTEGER NOT NULL, scheduled_at INTEGER);
+        CREATE TABLE IF NOT EXISTS job_queues(
+        job_id TEXT PRIMARY KEY REFERENCES jobs(id) ON DELETE CASCADE,
+        queue_id TEXT NOT NULL REFERENCES download_queues(id),
+        position INTEGER NOT NULL, paused_by_queue INTEGER NOT NULL DEFAULT 0);
+        CREATE INDEX IF NOT EXISTS queue_order ON job_queues(queue_id,position);
+        CREATE TABLE IF NOT EXISTS queue_schedules(
+        queue_id TEXT PRIMARY KEY REFERENCES download_queues(id) ON DELETE CASCADE,
+        days INTEGER NOT NULL CHECK(days BETWEEN 1 AND 127),
+        start_minute INTEGER NOT NULL CHECK(start_minute BETWEEN 0 AND 1439),
+        stop_minute INTEGER NOT NULL CHECK(stop_minute BETWEEN 0 AND 1439 AND stop_minute<>start_minute),
+        enabled INTEGER NOT NULL CHECK(enabled IN (0,1)));
+        CREATE TABLE IF NOT EXISTS synchronization_queues(
+        queue_id TEXT PRIMARY KEY REFERENCES download_queues(id) ON DELETE CASCADE,
+        last_window_start INTEGER);",
+    )?;
+    conn.execute(
+        "INSERT OR IGNORE INTO download_queues(id,name,max_active,running)
+        VALUES (?1,'Main queue',3,1)",
+        [MAIN_QUEUE],
+    )?;
+    let missing: Vec<String> = {
+        let mut stmt = conn.prepare(
+            "SELECT id FROM jobs WHERE id NOT IN
+            (SELECT job_id FROM job_queues) ORDER BY created,rowid",
+        )?;
+        stmt.query_map([], |r| r.get(0))?
+            .collect::<rusqlite::Result<_>>()?
+    };
+    for id in missing {
+        assign(conn, &id, MAIN_QUEUE)?;
+    }
+    Ok(())
+}
 
+impl Store {
     pub fn queues(&self) -> Result<Vec<DownloadQueue>> {
         read_queues(&self.connect()?)
     }

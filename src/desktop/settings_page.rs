@@ -211,16 +211,13 @@ fn toggle_with(
     response
 }
 
-impl Desktop {
-    pub(super) fn refresh_settings_summary(&mut self) {
-        self.settings_summary.loaded = true;
-        self.settings_summary.proxy = self
-            .store
+impl Summary {
+    pub(super) fn load(store: &Store) -> Self {
+        let proxy = store
             .proxy_settings()
             .map(|settings| tr(settings.mode.label()).to_owned())
             .map_err(|error| error.to_string());
-        self.settings_summary.antivirus = self
-            .store
+        let antivirus = store
             .antivirus_settings()
             .map(|settings| {
                 if settings.enabled {
@@ -230,6 +227,19 @@ impl Desktop {
                 }
             })
             .map_err(|error| error.to_string());
+        Self {
+            loaded: true,
+            proxy,
+            antivirus,
+        }
+    }
+}
+
+impl Desktop {
+    pub(super) fn refresh_settings_summary(&mut self) {
+        self.background_io.need_settings = true;
+        self.last_refresh = Instant::now() - Duration::from_secs(1);
+        self.request_snapshot(false);
     }
 
     pub(super) fn preferences_category(
@@ -243,6 +253,7 @@ impl Desktop {
             self.refresh_settings_summary();
         }
         let mut editor = None;
+        let theme_session = &mut state.session;
         ui.label(RichText::new(state.category.label()).size(17.0).strong());
         ui.add_space(8.0);
         let interface = &mut state.interface;
@@ -253,18 +264,11 @@ impl Desktop {
                     p,
                     tr("Personalize Download Engine and choose where files are saved."),
                     |ui| {
-                        let theme = row(
-                            ui,
-                            p,
-                            tr("Theme"),
-                            tr("Follow Windows or pick a fixed theme."),
-                            "\u{e790}",
-                            "",
-                        );
                         let choices = [
                             (Appearance::System, tr("System")),
                             (Appearance::Light, tr("Light")),
                             (Appearance::Dark, tr("Dark")),
+                            (Appearance::Custom, tr("Custom")),
                         ];
                         let stroke = ui.visuals().widgets.inactive.bg_stroke.width;
                         let width = choices
@@ -272,7 +276,16 @@ impl Desktop {
                             .map(|(_, label)| view::button_width(ui, label) - 2.0 * stroke)
                             .sum::<f32>()
                             + 2.0 * stroke
-                            + ui.spacing().item_spacing.x * 2.0;
+                            + ui.spacing().item_spacing.x * (choices.len() - 1) as f32;
+                        let theme = row_with(
+                            ui,
+                            p,
+                            tr("Theme"),
+                            (tr("Follow Windows or pick a fixed theme."), p.muted),
+                            "\u{e790}",
+                            "",
+                            width + TRAILING,
+                        );
                         let mut themes = ui.new_child(
                             egui::UiBuilder::new()
                                 .max_rect(trailing_slot(theme.rect, width))
@@ -280,6 +293,19 @@ impl Desktop {
                         );
                         for (appearance, label) in choices {
                             themes.selectable_value(&mut interface.appearance, appearance, label);
+                        }
+                        if interface.appearance == Appearance::Custom {
+                            egui::Frame::new().inner_margin(12).show(ui, |ui| {
+                                ui.spacing_mut().item_spacing.y = 6.0;
+                                self.theme_assets.gallery(
+                                    ui,
+                                    &mut interface.custom_theme,
+                                    theme_session,
+                                    &self.store.paths.data,
+                                    &mut self.folder_picker,
+                                    &self.store.paths.downloads,
+                                );
+                            });
                         }
                         let language = row(
                             ui,
@@ -397,7 +423,6 @@ impl Desktop {
                         editor = Some(Editor::Quotas);
                     }
                 });
-                advanced_hint(ui, p);
             }
             Category::Connection => {
                 section(ui, p, tr("Connection"), |ui| {
@@ -429,7 +454,6 @@ impl Desktop {
                         editor = Some(Editor::Connections);
                     }
                 });
-                advanced_hint(ui, p);
             }
             Category::Browser => {
                 section(ui, p, tr("Browser & AI"), |ui| {
@@ -466,7 +490,6 @@ impl Desktop {
                         editor = Some(Editor::Mcp);
                     }
                 });
-                advanced_hint(ui, p);
             }
             Category::Antivirus => {
                 section(ui, p, tr("Antivirus"), |ui| {
@@ -486,7 +509,6 @@ impl Desktop {
                         editor = Some(Editor::Antivirus);
                     }
                 });
-                advanced_hint(ui, p);
             }
             Category::Startup => self.preferences_startup(ui, p, state),
         }
@@ -592,14 +614,4 @@ impl Desktop {
             );
         });
     }
-}
-
-fn advanced_hint(ui: &mut egui::Ui, p: Palette) {
-    ui.label(
-        RichText::new(tr(
-            "Advanced editors save separately. Close them to return here.",
-        ))
-        .small()
-        .color(p.muted),
-    );
 }

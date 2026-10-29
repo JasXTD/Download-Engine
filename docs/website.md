@@ -96,7 +96,7 @@ existing versioned application release assets.
    This is a public website-verification value, not your account password. Do not
    send passwords, sign-in codes or account cookies to anyone.
 4. Have the maintainer insert that exact tag into the `<head>` of
-   `docs/index.html`, commit and push it. No token is prefilled in this repository.
+   `docs/index.html`, commit and push it.
    Wait for GitHub Pages to finish deploying, then confirm the public homepage
    contains the tag. Return to Search Console and click **Verify**.
 5. Open **Sitemaps** for the verified property. Submit

@@ -8,6 +8,7 @@ mod editor;
 mod file;
 mod form;
 mod library;
+mod provider;
 mod reference;
 mod sample;
 #[cfg(test)]
@@ -29,6 +30,9 @@ pub(super) struct State {
     pages: form::PageInput,
     /// The page a site reader is tested on, its latest test run and what it found.
     test_url: String,
+    provider_name: String,
+    provider_request: String,
+    provider_job: Option<String>,
     test_run: Option<String>,
     test_found: Option<(String, Reading)>,
     /// What the open script keeps between runs.
@@ -79,6 +83,9 @@ impl State {
         }
     }
     pub(super) fn new_script(&mut self) {
+        self.provider_request.clear();
+        self.provider_job = None;
+        self.provider_name.clear();
         self.library_open = false;
         self.full_editor = false;
         self.imported = None;
@@ -101,6 +108,8 @@ impl State {
         self.all_history = false;
     }
     fn select(&mut self, script: Script) {
+        self.provider_request.clear();
+        self.provider_job = None;
         self.imported = None;
         let other = self.draft.as_ref().is_none_or(|d| d.id != script.id);
         self.baseline = Some(script.clone());
@@ -218,6 +227,7 @@ fn trigger_name(trigger: &Trigger) -> &'static str {
         Trigger::DownloadFailed { .. } => tr("Download failed"),
         Trigger::QueueCompleted { .. } => tr("Queue completed"),
         Trigger::SiteReader { .. } => tr("Site reader"),
+        Trigger::Provider => tr("Download provider"),
     }
 }
 fn time(at: i64) -> String {
@@ -515,6 +525,9 @@ fn controls(
                     Err(e) => state.error = Some(e.to_string()),
                 }
             }
+        } else if draft.trigger == Trigger::Provider {
+            if ui.add_enabled(!dirty && draft.revision > 0 && !state.test_url.trim().is_empty() && state.provider_job.is_none(),
+                primary(tr("Add provider download"), p)).clicked() { provider::submit(store, state, &draft); }
         } else if reader {
             if ui.add_enabled(!dirty && draft.revision > 0 && !state.test_url.trim().is_empty(),
                 primary(tr("Test on URL"), p))
@@ -592,6 +605,9 @@ fn controls(
             }
         });
     });
+    if draft.trigger == Trigger::Provider {
+        provider::fields(ui, state, p);
+    }
     if state.full_editor() && reader {
         ui.horizontal(|ui| {
             ui.label(tr("Address"));
@@ -683,8 +699,10 @@ impl Desktop {
             self.dialog = Some(Dialog::ScriptSample);
         }
         let full_editor = state.full_editor();
+        let provider = state.draft.as_ref().is_some_and(|s| s.trigger == Trigger::Provider);
         let editor_height = full_editor.then(|| {
-            (ui.available_height() - 132.0 - if state.show_full_logs { 190.0 } else { 0.0 })
+            (ui.available_height() - if provider { 64.0 } else { 132.0 }
+                - if !provider && state.show_full_logs { 190.0 } else { 0.0 })
                 .max(130.0)
         });
         egui::ScrollArea::vertical()
@@ -747,6 +765,7 @@ impl Desktop {
                             ui.add_space(4.0);
                             if !full_editor { ui.label(
                                 RichText::new(match (&draft.trigger, draft.language) {
+                                    (Trigger::Provider, _) => tr("Resolve a source and transform its bytes. Download Engine owns files, verification, pause and resume."),
                                     (Trigger::SiteReader { .. }, _) => tr("event.url is the page. Use xd.fetch to read it or the site's API, then return the videos you found."),
                                     (Trigger::DownloadFailed { .. }, Language::Lua) => tr("event.downloads lists the downloads that need attention, with their errors. Use xd.retry or xd.restart to try again."),
                                     (Trigger::DownloadFailed { .. }, Language::PowerShell) => tr("$Event.downloads lists the downloads that need attention, with their errors. Use Invoke-DownloadEngine retry or restart to try again."),
@@ -768,7 +787,7 @@ impl Desktop {
                         }
                     }
                 }
-                if full_editor {
+                if full_editor && !provider {
                     ui.toggle_value(&mut state.show_full_logs, tr("Run logs"));
                 }
                 if state.reader() && !full_editor {
@@ -777,7 +796,7 @@ impl Desktop {
                 }
 
                 // Only show Run logs card when a script is open or historical runs exist
-                if (!full_editor || state.show_full_logs) && (state.draft.is_some() || !state.runs.is_empty()) {
+                if !provider && (!full_editor || state.show_full_logs) && (state.draft.is_some() || !state.runs.is_empty()) {
                     ui.add_space(8.0);
                     egui::Frame::new()
                         .fill(p.surface)

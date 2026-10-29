@@ -14,7 +14,13 @@ pub(super) fn open(path: impl AsRef<std::path::Path>) -> rusqlite::Result<rusqli
             FunctionFlags::SQLITE_UTF8
                 | FunctionFlags::SQLITE_DETERMINISTIC
                 | FunctionFlags::SQLITE_INNOCUOUS,
-            |_| Ok(1_i64),
+            move |_| {
+                Ok(if name == "xdownloader_schema_version" {
+                    1_i64
+                } else {
+                    3_i64
+                })
+            },
         )?;
     }
     Ok(conn)

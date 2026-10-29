@@ -44,7 +44,7 @@ pub(super) struct Values {
 }
 
 /// The triggers in the order the list shows them.
-fn triggers() -> [Trigger; 7] {
+fn triggers() -> [Trigger; 8] {
     [
         Trigger::Manual,
         Trigger::Startup,
@@ -55,6 +55,7 @@ fn triggers() -> [Trigger; 7] {
             queue: MAIN_QUEUE.into(),
         },
         Trigger::SiteReader { pages: Vec::new() },
+        Trigger::Provider,
     ]
 }
 
@@ -98,7 +99,9 @@ pub(super) fn show(
             field(ui, tr("Timeout"), 46.0, 70.0, p, |ui| {
                 ui.add_sized(
                     [ui.available_width(), height],
-                    egui::DragValue::new(&mut draft.timeout_seconds).range(1..=3600).suffix(" s"),
+                    egui::DragValue::new(&mut draft.timeout_seconds)
+                        .range(1..=if draft.trigger == Trigger::Provider { download_engine::provider::MAX_CALLBACK_SECONDS } else { 3600 })
+                        .suffix(" s"),
                 );
             });
         });
@@ -111,11 +114,11 @@ pub(super) fn show(
                     .truncate()
                     .selected_text(draft.language.label())
                     .show_ui(ui, |ui| {
-                        let reader = matches!(draft.trigger, Trigger::SiteReader { .. });
+                        let reader = matches!(draft.trigger, Trigger::SiteReader { .. } | Trigger::Provider);
                         ui.selectable_value(&mut draft.language, Language::Lua, "Lua");
                         ui.add_enabled_ui(!reader, |ui| {
                             ui.selectable_value(&mut draft.language, Language::PowerShell, "PowerShell")
-                                .on_disabled_hover_text(tr("Site readers are Lua only"));
+                                .on_disabled_hover_text(tr("Site readers and download providers are Lua only"));
                         });
                     })
                     .response
@@ -140,7 +143,8 @@ pub(super) fn show(
                             if reader {
                                 ui.separator();
                             }
-                            let allowed = !reader || draft.language == Language::Lua;
+                            let provider = trigger == Trigger::Provider;
+                            let allowed = !(reader || provider) || draft.language == Language::Lua;
                             let clicked = ui
                                 .add_enabled(allowed, egui::Button::selectable(selected, trigger_name(&trigger)))
                                 .on_disabled_hover_text(tr("Site readers are Lua only"))
@@ -150,7 +154,11 @@ pub(super) fn show(
                                 let was_reader = matches!(draft.trigger, Trigger::SiteReader { .. });
                                 let was_failure = matches!(draft.trigger, Trigger::DownloadFailed { .. });
                                 let failure = matches!(trigger, Trigger::DownloadFailed { .. });
-                                if reader && draft.body == LUA_EXAMPLE {
+                                if provider && [LUA_EXAMPLE, READER_EXAMPLE, FAILED_EXAMPLE].contains(&draft.body.as_str()) {
+                                    draft.body = download_engine::provider::EXAMPLE.into();
+                                } else if draft.trigger == Trigger::Provider && draft.body == download_engine::provider::EXAMPLE {
+                                    draft.body = if reader { READER_EXAMPLE } else { LUA_EXAMPLE }.into();
+                                } else if reader && draft.body == LUA_EXAMPLE {
                                     draft.body = READER_EXAMPLE.into();
                                 } else if was_reader && draft.body == READER_EXAMPLE {
                                     draft.body = LUA_EXAMPLE.into();
@@ -159,8 +167,11 @@ pub(super) fn show(
                                 } else if was_failure && draft.body == FAILED_EXAMPLE {
                                     draft.body = LUA_EXAMPLE.into();
                                 }
-                                if reader {
+                                if reader || provider {
                                     draft.change_files = false;
+                                }
+                                if provider {
+                                    draft.timeout_seconds = draft.timeout_seconds.min(download_engine::provider::MAX_CALLBACK_SECONDS);
                                 }
                                 draft.trigger = trigger;
                             }
@@ -204,15 +215,17 @@ pub(super) fn show(
                             }).response.on_hover_text(label);
                     });
                 }
-                Trigger::Manual | Trigger::Startup | Trigger::SiteReader { .. } => {}
+                Trigger::Manual | Trigger::Startup | Trigger::SiteReader { .. } | Trigger::Provider => {}
             }
-            if draft.trigger != Trigger::Manual {
+            if !matches!(draft.trigger, Trigger::Manual | Trigger::Provider) {
                 ui.square_checkbox(&mut draft.enabled, tr("Automatic trigger enabled"));
             }
         });
         if let Trigger::SiteReader { pages: list } = &mut draft.trigger {
             ui.add_space(6.0);
             page_list(ui, list, pages, p);
+        } else if draft.trigger == Trigger::Provider {
+            ui.label(RichText::new(tr("Provider API 1: resolve, refresh, transform and finish. Callbacks run in a guarded worker; existing files and saved logins are unavailable.")).small().color(p.muted));
         } else {
             ui.add_space(6.0);
             access(ui, draft, values, p);

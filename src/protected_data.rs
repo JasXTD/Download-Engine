@@ -19,10 +19,7 @@ fn transform(id: Uuid, bytes: &mut [u8], encrypt: bool) -> Result<Zeroizing<Vec<
         },
     };
     use zeroize::Zeroize;
-    ensure!(
-        bytes.len() <= crate::browser_login::MAX_BYTES + 4096,
-        "Invalid browser login size"
-    );
+    ensure!(bytes.len() <= 512 * 1024, "Invalid protected data size");
     let input = CRYPT_INTEGER_BLOB {
         cbData: bytes.len() as u32,
         pbData: bytes.as_mut_ptr(),
@@ -60,7 +57,7 @@ fn transform(id: Uuid, bytes: &mut [u8], encrypt: bool) -> Result<Zeroizing<Vec<
     };
     ensure!(
         ok != 0,
-        "Windows could not protect or unlock this browser login. Use the original Windows account, or send the file again."
+        "Windows could not protect or unlock this data. Use the original Windows account or supply the secret again."
     );
     struct Buffer(CRYPT_INTEGER_BLOB);
     impl Drop for Buffer {
@@ -76,7 +73,7 @@ fn transform(id: Uuid, bytes: &mut [u8], encrypt: bool) -> Result<Zeroizing<Vec<
     let output = Buffer(output);
     ensure!(
         !output.0.pbData.is_null(),
-        "Windows returned an invalid protected login"
+        "Windows returned invalid protected data"
     );
     Ok(Zeroizing::new(
         unsafe { std::slice::from_raw_parts(output.0.pbData, output.0.cbData as usize) }.to_vec(),
@@ -84,5 +81,5 @@ fn transform(id: Uuid, bytes: &mut [u8], encrypt: bool) -> Result<Zeroizing<Vec<
 }
 #[cfg(not(windows))]
 fn transform(_id: Uuid, _bytes: &mut [u8], _encrypt: bool) -> Result<Zeroizing<Vec<u8>>> {
-    anyhow::bail!("Browser login requires Windows protected storage")
+    anyhow::bail!("Protected data requires Windows protected storage")
 }

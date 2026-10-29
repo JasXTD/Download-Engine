@@ -9,6 +9,7 @@ pub(super) fn job_id(command: &Command) -> Option<&str> {
         | Command::Restart(id)
         | Command::SelectDiscoveredFile { id, .. }
         | Command::Remove(id)
+        | Command::ClearHistory { id, .. }
         | Command::DeleteFile { id, .. }
         | Command::RenameFile { id, .. }
         | Command::MoveFile { id, .. }
@@ -31,6 +32,20 @@ pub(super) fn apply(
         );
     }
     match &command {
+        Command::ClearHistory { id, queue } => {
+            // Recheck at execution as well as confirmation. A restart or move
+            // queued before this command must not discard its new progress.
+            if !active.contains_key(id)
+                && let Some(job) = store.get(id)?
+                && job.status == Status::Complete
+                && store.job_queue(id)?.as_deref() == Some(queue.as_str())
+            {
+                // History clearing never removes files. The engine owns completed
+                // transfer cleanup; a temporary-looking name may be a saved file.
+                store.remove(id)?;
+            }
+            return Ok(());
+        }
         Command::StartQueue(id) => {
             store.set_queue_running(id, true)?;
             return reconcile_workers(store, active);
@@ -158,6 +173,9 @@ pub(super) fn apply(
             job.retry = retry::State::default();
             job.quota_waiting = false;
             job.plan = None;
+            if let Some(provider) = &mut job.provider {
+                provider.plan = None;
+            }
             job.link_fallback = None;
             if let Some(ftp) = &mut job.ftp {
                 ftp.reset();

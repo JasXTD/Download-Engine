@@ -70,7 +70,7 @@ try {
         Copy-Item -LiteralPath (Join-Path $workspaceRoot 'THIRD-PARTY-NOTICES.md') -Destination $stage
         $examplesRoot = Join-Path $stage 'examples'
         New-Item -ItemType Directory -Path $examplesRoot | Out-Null
-        foreach ($example in @('core-api-automation.lua','custom-site-reader.lua')) {
+        foreach ($example in @('core-api-automation.lua','custom-site-reader.lua','download-provider.lua','download-provider-custom-ctr.lua')) {
             Copy-Item -LiteralPath (Join-Path $workspaceRoot "examples/$example") -Destination $examplesRoot
         }
         $mediaRoot = Join-Path $stage 'tools\ffmpeg'
@@ -90,6 +90,8 @@ try {
         Copy-Item -LiteralPath (Join-Path $workspaceRoot 'docs\mcp.md') -Destination (Join-Path $stage 'docs')
         Copy-Item -LiteralPath (Join-Path $workspaceRoot 'docs\mcp-ai-guide.md') -Destination (Join-Path $stage 'docs')
         Copy-Item -LiteralPath (Join-Path $workspaceRoot 'docs\user-guide.md') -Destination (Join-Path $stage 'docs')
+        Copy-Item -LiteralPath (Join-Path $workspaceRoot 'docs\lua-providers.md') -Destination (Join-Path $stage 'docs')
+        Copy-Item -LiteralPath (Join-Path $workspaceRoot 'docs\lua-provider-lab.md') -Destination (Join-Path $stage 'docs')
         Copy-Item -LiteralPath (Join-Path $workspaceRoot 'docs\releases.md') -Destination (Join-Path $stage 'docs')
         Copy-Item -LiteralPath (Join-Path $workspaceRoot 'docs\localization.md') -Destination (Join-Path $stage 'docs')
         Copy-Item -LiteralPath (Join-Path $workspaceRoot 'docs\locales') -Destination (Join-Path $stage 'docs') -Recurse

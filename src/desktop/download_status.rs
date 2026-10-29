@@ -455,7 +455,7 @@ impl Desktop {
     pub(super) fn cancel_status_request(&mut self, command: &Command) {
         self.download_status.revision = self.download_status.revision.wrapping_add(1);
         match command {
-            Command::Pause(id) | Command::Remove(id) => {
+            Command::Pause(id) | Command::Remove(id) | Command::ClearHistory { id, .. } => {
                 self.download_status.pending.remove(id);
                 self.download_status.added.remove(id);
                 self.download_status.cancelled.insert(id.clone());

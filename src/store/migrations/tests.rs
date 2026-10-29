@@ -120,13 +120,20 @@ fn unregistered_old_writer_cannot_insert_update_or_delete_any_profile_table() {
 
 #[test]
 fn future_profile_refuses_open_and_an_already_open_writer_cannot_overwrite_it() {
-    for column in ["schema_version", "data_version", "min_writer_version"] {
+    for (column, current) in [
+        ("schema_version", SCHEMA_VERSION),
+        ("data_version", DATA_VERSION),
+        ("min_writer_version", WRITER_VERSION),
+    ] {
         let root = tempfile::tempdir().unwrap();
         let paths = paths(root.path());
         let store = Store::open(paths.clone()).unwrap();
         let conn = store.connect().unwrap();
-        conn.execute(&format!("UPDATE profile_format SET {column}=2"), [])
-            .unwrap();
+        conn.execute(
+            &format!("UPDATE profile_format SET {column}=?1"),
+            [current + 1],
+        )
+        .unwrap();
         let before: String = conn
             .query_row("SELECT group_concat(sql) FROM sqlite_schema", [], |r| {
                 r.get(0)

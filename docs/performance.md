@@ -1,5 +1,30 @@
 # Performance measurements
 
+## Download-list responsiveness — 3.4.1
+
+Measured on 2026-10-29 against the 3.4.0 source at commit `9d9503e`, using the same opt-in fixture in both binaries. These are **unoptimized debug-build, headless egui whole-frame measurements**, not production frame rates or download-throughput improvements.
+
+| 5,000-download view | Before mean frame time, median of blocks | After mean frame time, median of blocks | Reduction |
+| --- | ---: | ---: | ---: |
+| All files | 97.21 ms | 22.94 ms | 76.4% |
+| Filename search | 93.61 ms | 26.69 ms | 71.5% |
+
+[Raw measurements and executable hashes](benchmarks/3.4.1-ui.json) record two blocks per version, alternating before/after/after/before. Each scenario warms five frames and measures sixty frames at 1280×860 logical pixels. The queue contains 5,000 paused downloads; all data is synthetic and temporary. No Cargo or rustc processes were observed at any block boundary. The earlier measurements made during compilation are excluded. This is still one shared workstation and excludes GPU presentation, active network transfers and real user profiles.
+
+The list now snapshots only rows being drawn, instead of cloning all matching jobs and their nested download metadata. Sidebar counts reuse one filename-search pass. Toolbar and selection indicators borrow selected records, and selection reconciliation uses a set of visible IDs. Empty searches skip lowercase filename allocations. Existing row order, selection semantics, virtual scrolling, commands and stored formats are retained.
+
+Run the fixture with `cargo test --offline --locked --bin de desktop::ux_tests::large_download_list_frame_time -- --ignored --exact --nocapture --test-threads=1`. For comparisons, preserve both test executables and run them after compilation has finished. There is no timing pass/fail threshold.
+
+### Engine assessment
+
+This patch does not change transfer algorithms or claim faster Internet downloads. The existing optimized loopback benchmark completed all 15 ordinary-file, ranged-file and HLS transfers, including enabled-quota cases, with exact size and SHA-256 verification. Its timings varied while build work was active, so they are not used to claim a speed change.
+
+The engine already uses bounded parallel ranges, adaptive tail splitting, buffered writes, connection policies, durable quota accounting, and single-part publication without another payload copy. Multi-part completion still reads and copies each saved part into an ordered staging file while hashing it. Reducing that extra disk copy is a candidate for a separate measured engine change, especially for large files on fast connections. A shared-file design would need a new durable record of completed byte ranges and crash/restart tests before it could replace the current per-part-length recovery mechanism. Raising connection counts, weakening validators, batching away durable quota commits or skipping flushes is not part of this patch.
+
+### Checks
+
+Desktop regressions cover selection, Unicode search, keyboard navigation and virtual scrolling, custom column widths and ordering, queue commands, translated controls and status-error tooltips. The native capture workflow is `node scripts/native_ui_smoke.cjs --download-list` with a screenshot build. It uses isolated paused profiles at minimum and wide sizes, dark/light themes, empty and filtered results, keyboard focus, German and Arabic. Human linguistic review and real Internet throughput remain separate from these automated checks.
+
 ## Large-file completion — 3.1.1
 
 Measured on 2026-10-27 against 3.1.0. Same-volume, single-part HTTP/HTTPS and FTP downloads now hash and publish the saved part without writing another complete copy. Multi-part and cross-volume downloads retain asynchronous assembly. This changes the finishing phase, not the server's transfer speed.

@@ -208,6 +208,9 @@ impl Store {
     pub fn enqueue_batch(&self, jobs: &[Job], queue: &str) -> Result<Vec<Job>> {
         let mut conn = self.connect()?;
         let tx = conn.transaction_with_behavior(TransactionBehavior::Immediate)?;
+        if jobs.iter().any(|j| j.provider.is_some()) {
+            crate::provider::protect_profile(&tx)?;
+        }
         let saved = enqueue_batch_in(&tx, jobs, queue)?;
         tx.commit()?;
         Ok(saved)
@@ -516,7 +519,7 @@ fn prepare_sync_checks(conn: &Connection, queue: &str) -> Result<()> {
         // Finite HLS jobs keep their reviewed snapshot; a fresh rendition must
         // go through preview instead of a file synchronization request. FTP
         // jobs do not participate in HTTP synchronization checks.
-        if job.hls.is_some() || job.ftp.is_some() {
+        if job.hls.is_some() || job.ftp.is_some() || job.provider.is_some() {
             continue;
         }
         if job.status == Status::Complete {

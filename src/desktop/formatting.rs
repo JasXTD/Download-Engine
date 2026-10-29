@@ -112,6 +112,7 @@ pub(super) fn retry_description(job: &Job, queue_running: bool) -> Option<String
 
 pub(super) fn supports_authentication(job: &Job) -> bool {
     job.hls.is_none()
+        && job.provider.is_none()
         && job
             .ftp
             .as_ref()

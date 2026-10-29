@@ -148,6 +148,8 @@ pub struct Job {
     pub total: Option<u64>,
     pub plan: Option<Plan>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub provider: Option<crate::provider::State>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub hls: Option<crate::hls::Download>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub ftp: Option<crate::ftp::State>,
@@ -170,6 +172,18 @@ pub struct Job {
 impl Job {
     pub fn validate_persisted(&self) -> Result<()> {
         validate_job_id(&self.id)?;
+        if let Some(provider) = &self.provider {
+            provider.validate()?;
+            ensure!(
+                self.hls.is_none()
+                    && self.ftp.is_none()
+                    && self.authentication.is_none()
+                    && self.synchronization.is_none()
+                    && self.expected_file.is_none()
+                    && self.link_fallback.is_none(),
+                "Provider downloads cannot carry another download type or saved login"
+            );
+        }
         if let Some(state) = &self.link_fallback {
             state.validate(self)?;
         }
@@ -254,6 +268,7 @@ impl Job {
             downloaded: 0,
             total: None,
             plan: None,
+            provider: None,
             hls: None,
             ftp: crate::ftp::State::new(&url),
             remote: None,

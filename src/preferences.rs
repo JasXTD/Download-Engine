@@ -251,6 +251,9 @@ pub struct InterfacePreferences {
     /// Optional toolbar actions, in the stable order defined by the desktop toolbar.
     pub toolbar_pins: [bool; 10],
     pub auto_download_status: bool,
+    /// Check for a newer stable release once when this app opens.
+    /// Existing profiles without the field use the enabled default.
+    pub check_updates_on_launch: bool,
     /// Offer HTTP(S) file links copied in other apps. Saved data without this
     /// field (older versions) turns it on, the default.
     pub clipboard_links: bool,
@@ -277,6 +280,7 @@ impl Default for InterfacePreferences {
             details_height: None,
             toolbar_pins: [true; 10],
             auto_download_status: true,
+            check_updates_on_launch: true,
             clipboard_links: true,
             completion_sound: false,
             drop_target: false,
@@ -337,6 +341,31 @@ mod tests {
         model::{Job, Status},
         paths::AppPaths,
     };
+    #[test]
+    fn update_checks_default_on_for_existing_profiles_and_preserve_opt_out() {
+        let defaults: InterfacePreferences = serde_json::from_str("{}").unwrap();
+        assert!(defaults.check_updates_on_launch);
+        let conn = Connection::open_in_memory().unwrap();
+        initialize(&conn).unwrap();
+        write_interface(
+            &conn,
+            InterfacePreferences {
+                check_updates_on_launch: false,
+                ..defaults
+            },
+        )
+        .unwrap();
+        let saved: String = conn
+            .query_row(
+                "SELECT data FROM interface_preferences WHERE id=1",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+        let restored: InterfacePreferences = serde_json::from_str(&saved).unwrap();
+        assert!(!restored.check_updates_on_launch);
+        assert_eq!(restored.appearance, defaults.appearance);
+    }
     #[test]
     fn pre_release_theme_key_loads_as_moonveil_and_saves_the_new_name() {
         let preset: ThemePreset = serde_json::from_str(r#""fediel""#).unwrap();
@@ -668,6 +697,7 @@ mod tests {
                 true, false, true, false, true, false, true, false, true, false,
             ],
             auto_download_status: false,
+            check_updates_on_launch: false,
             clipboard_links: false,
             completion_sound: true,
             drop_target: true,

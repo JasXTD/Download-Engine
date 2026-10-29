@@ -8,6 +8,127 @@ const CTRL: egui::Modifiers = egui::Modifiers {
     ..egui::Modifiers::NONE
 };
 
+#[test]
+fn clear_completed_history_preserves_files_and_only_clears_the_reviewed_completed_entries() {
+    let (root, mut app, ctx) = fixture();
+    persist(&mut app);
+    let mut stable = app
+        .jobs
+        .iter()
+        .find(|job| job.name == "first.zip")
+        .unwrap()
+        .clone();
+    let mut restarted = app
+        .jobs
+        .iter()
+        .find(|job| job.name == "guide.pdf")
+        .unwrap()
+        .clone();
+    let mut later = app
+        .jobs
+        .iter()
+        .find(|job| job.name == "failed.zip")
+        .unwrap()
+        .clone();
+    let stable_file = root.path().join("stable.bin");
+    let restarted_file = root.path().join("restarted.bin");
+    for (job, path) in [
+        (&mut stable, &stable_file),
+        (&mut restarted, &restarted_file),
+    ] {
+        std::fs::write(path, b"keep completed bytes").unwrap();
+        job.status = Status::Complete;
+        job.saved_path = Some(path.clone());
+        app.store.save(job).unwrap();
+    }
+    app.refresh_and_wait();
+    app.search = "a filter with no matching rows".into();
+    click(&mut app, &ctx, "Clear completed history");
+    assert_eq!(app.dialog, Some(Dialog::Confirm));
+    let output = frame(&mut app, &ctx, SIZE, vec![]);
+    text_rect(&output, "Completed downloads");
+    text_rect(&output, "2");
+    key(&mut app, &ctx, egui::Key::Escape, egui::Modifiers::NONE);
+    assert!(app.dialog.is_none());
+    assert!(app.store.get(&stable.id).unwrap().is_some());
+    click(&mut app, &ctx, "Clear completed history");
+    key(&mut app, &ctx, egui::Key::Enter, egui::Modifiers::NONE);
+    assert!(
+        app.store.get(&stable.id).unwrap().is_some(),
+        "Enter must not silently confirm a new popup"
+    );
+    if app.dialog.is_none() {
+        click(&mut app, &ctx, "Clear completed history");
+    }
+
+    // Changes while reviewing are not part of the approved snapshot.
+    restarted.status = Status::Paused;
+    restarted.saved_path = None;
+    app.store.save(&restarted).unwrap();
+    let parts = app.store.paths.parts(&restarted.id).unwrap();
+    std::fs::create_dir_all(&parts).unwrap();
+    let partial = parts.join("0.part");
+    std::fs::write(&partial, b"new partial bytes").unwrap();
+    later.status = Status::Complete;
+    later.error = None;
+    app.store.save(&later).unwrap();
+    click(&mut app, &ctx, "Clear history");
+    wait_for(|| app.store.get(&stable.id).unwrap().is_none());
+    assert_eq!(
+        app.store.get(&restarted.id).unwrap().unwrap().status,
+        Status::Paused
+    );
+    assert_eq!(
+        app.store.get(&later.id).unwrap().unwrap().status,
+        Status::Complete
+    );
+    assert_eq!(std::fs::read(partial).unwrap(), b"new partial bytes");
+    for path in [stable_file, restarted_file] {
+        assert_eq!(std::fs::read(path).unwrap(), b"keep completed bytes");
+    }
+}
+
+#[test]
+fn clear_completed_history_from_another_queue_does_not_clear_the_selected_queue() {
+    let (_root, mut app, ctx) = fixture();
+    persist(&mut app);
+    let selected_complete = app
+        .jobs
+        .iter()
+        .find(|job| job.status == Status::Complete)
+        .unwrap()
+        .clone();
+    let other = app.store.create_queue("Other queue").unwrap();
+    let mut job = app
+        .store
+        .new_download(
+            "http://127.0.0.1:1/other.bin",
+            None,
+            None,
+            Uuid::new_v4().to_string(),
+        )
+        .unwrap();
+    job.status = Status::Complete;
+    app.store.enqueue_batch(&[job.clone()], &other.id).unwrap();
+    app.refresh_and_wait();
+    assert_eq!(app.queue_id, MAIN_QUEUE);
+    app.request_clear_history(&other.id);
+    drop(frame(&mut app, &ctx, SIZE, vec![]));
+    let out = frame(&mut app, &ctx, SIZE, vec![]);
+    text_rect(&out, "Other queue");
+    click(&mut app, &ctx, "Cancel");
+    assert!(app.store.get(&job.id).unwrap().is_some());
+    app.request_clear_history(&other.id);
+    click(&mut app, &ctx, "Clear history");
+    wait_for(|| app.store.get(&job.id).unwrap().is_none());
+    assert!(app.store.get(&selected_complete.id).unwrap().is_some());
+    app.request_clear_history(&other.id);
+    assert!(
+        app.dialog.is_none(),
+        "An empty history must not open a confirmation"
+    );
+}
+
 fn key(app: &mut Desktop, ctx: &egui::Context, key: egui::Key, modifiers: egui::Modifiers) {
     for pressed in [true, false] {
         frame(

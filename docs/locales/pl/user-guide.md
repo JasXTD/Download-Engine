@@ -2,6 +2,10 @@
 
 ## Pierwsze kroki
 
+### Sprawdzaj aktualizacje przy uruchomieniu
+
+Domyślnie włączone: jedno sprawdzenie przy każdym otwarciu aplikacji. Nowa wersja pozwala wybrać aktualizację lub odłożyć ją. Błędy sieci nie otwierają okna. Opcję można wyłączyć w Preferencjach. Pobierz i zainstaluj aktualizacje z oficjalnej strony wydań GitHub.
+
 Preferencje otwierają się w oknie z kategoriami. Zapisz stosuje zmiany; Anuluj, × lub Escape odrzuca niezapisane zmiany. Motyw można podejrzeć, a Reset przywraca tylko bieżącą kategorię. Edytory zaawansowane zapisują osobno i po zamknięciu wracają do Preferencji.
 
 ### Pierwsze kroki
@@ -104,6 +108,16 @@ print("Can fetch a page:", xd.supports("xd.fetch"))
 
 Open examples/core-api-automation.lua or examples/custom-site-reader.lua with Editor actions → Open file…. Site reader uses public pages, Pages patterns and Direct connection; test with Test on URL before enabling its trigger. Ordinary automation cannot call xd.fetch. Import script… accepts .de-script.json as a new draft with automatic triggers and file changes off; review its code and reselect local queues. Stop script does not undo submitted downloads. Full English reference: docs/automation.md.
 
+
+### Lua Provider API 1
+
+Dostawcy pobierania Lua obsługują rozwiązywanie źródeł, przetwarzanie bajtów, weryfikację skrótów i zwykłe wstrzymywanie/wznawianie. Każde zadanie zachowuje zapisaną wersję skryptu. Testy używają wyłącznie lokalnie wygenerowanych zaszyfrowanych plików. Zapisanie dostawcy blokuje zapis profilu w starszych wersjach aplikacji.
+
+Scripting → Script settings → Download provider → Save script → Add provider download.
+
+API: `resolve(request)`, `refresh(request, previous)`, `transform(plan, bytes, offset)`, `finish(plan, result)`.
+
+`docs/lua-providers.md` · `examples/download-provider.lua` · `examples/download-provider-custom-ctr.lua`
 
 ## Wiersz poleceń
 

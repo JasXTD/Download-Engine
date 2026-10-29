@@ -2,6 +2,42 @@ use super::*;
 use crate::desktop::interaction_tests::{click, fixture, frame, text_rect};
 
 #[test]
+fn launch_update_preference_saves_cancels_and_resets_without_changing_windows_startup() {
+    let (_temp, mut app, ctx) = fixture();
+    let windows_startup = app.startup.enabled();
+    assert!(app.interface.check_updates_on_launch);
+    app.open_preferences_window();
+    click(&mut app, &ctx, "Startup & tray");
+    click(&mut app, &ctx, "Check for updates on launch");
+    click(&mut app, &ctx, "Cancel");
+    assert!(app.interface.check_updates_on_launch);
+    app.open_preferences_window();
+    click(&mut app, &ctx, "Startup & tray");
+    click(&mut app, &ctx, "Check for updates on launch");
+    click(&mut app, &ctx, "Save");
+    assert!(!app.interface.check_updates_on_launch);
+    assert!(
+        !app.store
+            .interface_preferences()
+            .unwrap()
+            .check_updates_on_launch
+    );
+    assert_eq!(app.startup.enabled(), windows_startup);
+    app.open_preferences_window();
+    app.preferences_window.as_mut().unwrap().category = Category::Startup;
+    app.preferences_window.as_mut().unwrap().reset_category();
+    assert!(
+        app.preferences_window
+            .as_ref()
+            .unwrap()
+            .interface
+            .check_updates_on_launch
+    );
+    click(&mut app, &ctx, "Cancel");
+    assert!(!app.interface.check_updates_on_launch);
+}
+
+#[test]
 fn independently_saved_folder_rules_are_reported_and_survive_parent_cancel() {
     let (_root, mut app, ctx) = fixture();
     app.open_preferences_window();

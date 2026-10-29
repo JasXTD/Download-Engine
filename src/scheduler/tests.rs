@@ -2,6 +2,50 @@ use super::*;
 use crate::{paths::AppPaths, queue::MAIN_QUEUE};
 
 #[test]
+fn clear_history_rechecks_status_and_queue_when_the_command_executes() {
+    let (_root, store) = setup();
+    let mut job = add(&store, MAIN_QUEUE, 1).remove(0);
+    let mut active = HashMap::new();
+    let command = || Command::ClearHistory {
+        id: job.id.clone(),
+        queue: MAIN_QUEUE.into(),
+    };
+    let parts = store.paths.parts(&job.id).unwrap();
+    std::fs::create_dir_all(&parts).unwrap();
+    let partial = parts.join("0.part");
+    std::fs::write(&partial, b"unfinished progress").unwrap();
+    for status in [
+        Status::Paused,
+        Status::Queued,
+        Status::Downloading,
+        Status::Failed,
+    ] {
+        job.status = status;
+        store.save(&job).unwrap();
+        store.mark_queue_pause(&job.id, true).unwrap();
+        apply(&store, &mut active, command()).unwrap();
+        assert_eq!(store.get(&job.id).unwrap().unwrap().status, status);
+        assert!(store.queue_paused_jobs().unwrap().contains(&job.id));
+        assert_eq!(std::fs::read(&partial).unwrap(), b"unfinished progress");
+    }
+    job.status = Status::Complete;
+    // Even a saved file named like an old staging file is user data here.
+    let file = job.directory.join(format!(".idm-ex-{}.assembling", job.id));
+    std::fs::write(&file, b"completed bytes").unwrap();
+    job.saved_path = Some(file.clone());
+    store.save(&job).unwrap();
+    let other = store.create_queue("Moved").unwrap();
+    store.move_job(&job.id, &other.id).unwrap();
+    apply(&store, &mut active, command()).unwrap();
+    assert!(store.get(&job.id).unwrap().is_some());
+    store.move_job(&job.id, MAIN_QUEUE).unwrap();
+    apply(&store, &mut active, command()).unwrap();
+    assert!(store.get(&job.id).unwrap().is_none());
+    assert_eq!(std::fs::read(file).unwrap(), b"completed bytes");
+    apply(&store, &mut active, command()).unwrap();
+}
+
+#[test]
 fn restart_clears_both_contiguous_and_out_of_order_video_receipts() {
     let (_temp, store) = setup();
     let mut job = add(&store, MAIN_QUEUE, 1).remove(0);

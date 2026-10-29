@@ -1,0 +1,94 @@
+{
+  "date": "2026-10-29",
+  "baselineCommit": "9d9503e",
+  "baselineVersion": "3.4.0",
+  "candidateVersion": "3.4.1",
+  "profile": "unoptimized debug, same fixture, 1280x860 logical pixels, 5000 paused downloads; five warm-up frames then sixty measured frames per scenario",
+  "scope": "Headless egui whole-frame CPU cost. No GPU presentation, network activity or production FPS claim. Background Cargo/rustc counts observed at block boundaries; shared workstation.",
+  "hashes": {
+    "before": "f8737bb69bf95d681a1de8825f96c43cf4ed23f7af7565842a99447473a27892",
+    "after": "c753c8bc3d10cf53c67842305d2bf5cdd2ef72ae1d1c6926cf1f26583daeee85"
+  },
+  "samples": [
+    {
+      "block": 0,
+      "version": "before",
+      "cargoBefore": 0,
+      "cargoAfter": 0,
+      "frames": 60,
+      "jobs": 5000,
+      "milliseconds_per_frame": 94.11256166666665,
+      "search": ""
+    },
+    {
+      "block": 0,
+      "version": "before",
+      "cargoBefore": 0,
+      "cargoAfter": 0,
+      "frames": 60,
+      "jobs": 5000,
+      "milliseconds_per_frame": 93.86459666666666,
+      "search": "archive-04"
+    },
+    {
+      "block": 1,
+      "version": "after",
+      "cargoBefore": 0,
+      "cargoAfter": 0,
+      "frames": 60,
+      "jobs": 5000,
+      "milliseconds_per_frame": 22.265506666666667,
+      "search": ""
+    },
+    {
+      "block": 1,
+      "version": "after",
+      "cargoBefore": 0,
+      "cargoAfter": 0,
+      "frames": 60,
+      "jobs": 5000,
+      "milliseconds_per_frame": 27.295241666666666,
+      "search": "archive-04"
+    },
+    {
+      "block": 2,
+      "version": "after",
+      "cargoBefore": 0,
+      "cargoAfter": 0,
+      "frames": 60,
+      "jobs": 5000,
+      "milliseconds_per_frame": 23.615385,
+      "search": ""
+    },
+    {
+      "block": 2,
+      "version": "after",
+      "cargoBefore": 0,
+      "cargoAfter": 0,
+      "frames": 60,
+      "jobs": 5000,
+      "milliseconds_per_frame": 26.077755000000003,
+      "search": "archive-04"
+    },
+    {
+      "block": 3,
+      "version": "before",
+      "cargoBefore": 0,
+      "cargoAfter": 0,
+      "frames": 60,
+      "jobs": 5000,
+      "milliseconds_per_frame": 100.31319666666667,
+      "search": ""
+    },
+    {
+      "block": 3,
+      "version": "before",
+      "cargoBefore": 0,
+      "cargoAfter": 0,
+      "frames": 60,
+      "jobs": 5000,
+      "milliseconds_per_frame": 93.358835,
+      "search": "archive-04"
+    }
+  ]
+}

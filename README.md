@@ -168,8 +168,10 @@ a different extension, so its settings start fresh; your desktop queues, downloa
 and profile stay in place. Reload developer-loaded Chromium extensions after
 replacing their files. See the [browser setup guide](docs/reference.md#connect-a-browser).
 
-Use **Help → Check for updates** to check the latest GitHub release and open its
-download page. Updates are downloaded and installed manually.
+Download Engine checks for updates when the app opens, enabled by default. A new
+version offers **Get update** or **Later**. Disable **Check for updates on launch**
+in **Preferences → Startup & tray**, or check manually from **Help → Check for updates**.
+Updates are downloaded and installed manually from the official GitHub release page.
 **Help → About → GitHub** opens this repository. Windows is the supported desktop platform;
 macOS, Linux, and Android packages are not provided by this release workflow.
 

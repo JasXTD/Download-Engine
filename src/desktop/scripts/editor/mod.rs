@@ -261,7 +261,7 @@ pub(super) fn show_sized(
                 .default_width(ui.available_width())
                 .default_height(130.0)
                 .min_height(80.0)
-                .max_height(480.0)
+                .max_height(height.unwrap_or(480.0))
                 .resizable([false, true])
                 .with_stroke(false);
             let resize = if let Some(height) = height {
@@ -388,11 +388,12 @@ pub(super) fn show_sized(
     }
     if edit.response.has_focus() && !state.composing && !state.dismissed && (changed || explicit) {
         state.choices = cursor.and_then(|c| {
-            completion::choices(
+            completion::choices_for(
                 &draft.body,
                 c,
                 draft.language,
                 matches!(draft.trigger, Trigger::SiteReader { .. }),
+                draft.trigger == Trigger::Provider,
                 explicit,
             )
         });

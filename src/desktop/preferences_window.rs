@@ -110,6 +110,7 @@ impl State {
             Category::Startup => {
                 self.behavior = Preferences::default();
                 self.interface.completion_sound = defaults.completion_sound;
+                self.interface.check_updates_on_launch = defaults.check_updates_on_launch;
                 self.startup = false;
                 self.start_hidden =
                     download_engine::preferences::StartupPreferences::default().start_hidden;
@@ -144,6 +145,7 @@ impl State {
             columns,
             table_layout,
             auto_download_status,
+            check_updates_on_launch,
             clipboard_links,
             completion_sound
         );

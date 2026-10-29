@@ -2,6 +2,10 @@
 
 ## Emprims pass
 
+### Tschertgar actualisaziuns a l’avertura
+
+Activà sco standard: ina controlla mintga giada che l’app vegn averta. Ina nova versiun permetta da telechargiar l’actualisaziun u spetgar. Sbagls da rait n’avran nagina fanestra. La controlla po vegnir deactivada en las preferenzas. Telechargiai ed installai actualisaziuns da la pagina uffiziala da versiuns sin GitHub.
+
 Las preferenzas sa avran en ina fanestra cun categorias. Memorisar applitgescha las midadas; Interrumper, × u Escape sbittan midadas betg memorisadas. Il tema po vegnir previsualisà; Restabilir pertutga mo la categoria actuala. Ils editurs avanzads memoriseschan separadamain e returnan a las preferenzas suenter serrar.
 
 ### Emprims pass
@@ -104,6 +108,16 @@ print("Can fetch a page:", xd.supports("xd.fetch"))
 
 Open examples/core-api-automation.lua or examples/custom-site-reader.lua with Editor actions → Open file…. Site reader uses public pages, Pages patterns and Direct connection; test with Test on URL before enabling its trigger. Ordinary automation cannot call xd.fetch. Import script… accepts .de-script.json as a new draft with automatic triggers and file changes off; review its code and reselect local queues. Stop script does not undo submitted downloads. Full English reference: docs/automation.md.
 
+
+### Lua Provider API 1
+
+Furniturs Lua determineschan las funtaunas, elavuran bytes e verifitgeschan ils hash cun pausa e cuntinuaziun. Mintga telechargiada conserva sia versiun memorisada dal script. Ils tests dovran mo datotecas criptadas generadas localmain. Suenter memorisar in furnitur na pon versiuns veglias betg pli scriver en quest profil.
+
+Scripting → Script settings → Download provider → Save script → Add provider download.
+
+API: `resolve(request)`, `refresh(request, previous)`, `transform(plan, bytes, offset)`, `finish(plan, result)`.
+
+`docs/lua-providers.md` · `examples/download-provider.lua` · `examples/download-provider-custom-ctr.lua`
 
 ## Lingia da commandos
 

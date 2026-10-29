@@ -2,6 +2,10 @@
 
 ## Початок роботи
 
+### Перевіряти оновлення під час запуску
+
+За замовчуванням увімкнена одна перевірка щоразу, коли відкривається програма. Для нової версії можна вибрати оновлення або відкласти його. Помилки мережі не відкривають вікно. Перевірку можна вимкнути в налаштуваннях. Завантажте та встановіть оновлення з офіційної сторінки випусків GitHub.
+
 Параметри відкриваються у вікні з категоріями. Зберегти застосовує зміни; Скасувати, × або Escape відкидає незбережені правки. Тему можна переглянути; скидання стосується лише поточної категорії. Розширені редактори зберігають окремо й після закриття повертають до Параметрів.
 
 ### Початок роботи
@@ -104,6 +108,16 @@ print("Can fetch a page:", xd.supports("xd.fetch"))
 
 Open examples/core-api-automation.lua or examples/custom-site-reader.lua with Editor actions → Open file…. Site reader uses public pages, Pages patterns and Direct connection; test with Test on URL before enabling its trigger. Ordinary automation cannot call xd.fetch. Import script… accepts .de-script.json as a new draft with automatic triggers and file changes off; review its code and reselect local queues. Stop script does not undo submitted downloads. Full English reference: docs/automation.md.
 
+
+### Lua Provider API 1
+
+Провайдери завантажень Lua визначають джерело, обробляють байти й перевіряють хеші зі звичайною паузою та відновленням. Завантаження зберігає вибрану версію скрипту. Перевірка виконана лише на локально створених зашифрованих файлах. Після збереження провайдера старі версії застосунку не можуть записувати цей профіль.
+
+Scripting → Script settings → Download provider → Save script → Add provider download.
+
+API: `resolve(request)`, `refresh(request, previous)`, `transform(plan, bytes, offset)`, `finish(plan, result)`.
+
+`docs/lua-providers.md` · `examples/download-provider.lua` · `examples/download-provider-custom-ctr.lua`
 
 ## Командний рядок
 

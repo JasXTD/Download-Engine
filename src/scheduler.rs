@@ -38,6 +38,11 @@ pub enum Command {
         selection: crate::link_fallback::Selection,
     },
     Remove(String),
+    /// Remove a reviewed history entry only while it is still complete in this queue.
+    ClearHistory {
+        id: String,
+        queue: String,
+    },
     DeleteFile {
         id: String,
         path: std::path::PathBuf,
@@ -238,6 +243,7 @@ async fn settle_before_command(
         | Command::Restart(id)
         | Command::SelectDiscoveredFile { id, .. }
         | Command::Remove(id)
+        | Command::ClearHistory { id, .. }
         | Command::DeleteFile { id, .. }
         | Command::RenameFile { id, .. }
         | Command::MoveFile { id, .. }

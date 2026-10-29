@@ -1,9 +1,9 @@
 //! Saved Lua/PowerShell programs, durable run receipts and scheduler-owned execution.
 pub mod api;
 mod fetch;
-mod helpers;
-mod json;
-mod lua;
+pub(crate) mod helpers;
+pub(crate) mod json;
+pub(crate) mod lua;
 pub mod package;
 pub use fetch::{FetchReply, FetchRequest, Fetcher};
 pub use lua::{execute_lua, execute_reader};
@@ -49,6 +49,8 @@ impl Language {
 #[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
 pub enum Trigger {
     Manual,
+    /// Explicit downloads with frozen Lua callbacks; never an automatic trigger.
+    Provider,
     Startup,
     Interval {
         minutes: u32,
@@ -117,6 +119,12 @@ impl Script {
                 "Site readers cannot change downloaded files"
             );
             site::validate_pages(pages)?;
+        }
+        if self.trigger == Trigger::Provider {
+            ensure!(
+                self.language == Language::Lua && !self.change_files,
+                "Download providers require Lua and cannot change existing downloaded files"
+            );
         }
         Ok(())
     }

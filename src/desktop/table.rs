@@ -1,6 +1,6 @@
 use super::*;
 use download_engine::table_layout::{Column, TableLayout};
-use egui::{Align2, CursorIcon, FontId, Rect, Sense, Stroke, pos2, vec2};
+use egui::{CursorIcon, FontId, Rect, Sense, Stroke, pos2, vec2};
 
 #[derive(Default)]
 pub(super) struct State {
@@ -43,9 +43,20 @@ pub(super) fn widths(
                 }
         })
         .map(|column| {
+            // Give filenames more room in compact windows. Explicit user widths
+            // still win, and overflowing custom layouts keep horizontal scrolling.
+            let automatic = if available < 830.0 {
+                match column {
+                    Column::Status => 140,
+                    Column::Size => 90,
+                    _ => column.default_width(),
+                }
+            } else {
+                column.default_width()
+            };
             (
                 column,
-                f32::from(layout.widths[column as usize].unwrap_or(column.default_width())),
+                f32::from(layout.widths[column as usize].unwrap_or(automatic)),
             )
         })
         .collect();
@@ -128,13 +139,16 @@ impl State {
             }
             // Paint labels directly so they cannot steal the header's drag gesture.
             let painter = ui.painter().with_clip_rect(cell.intersect(ui.clip_rect()));
-            painter.text(
-                cell.left_top(),
-                Align2::LEFT_TOP,
-                tr(column.label()),
+            let mut label = egui::text::LayoutJob::simple_singleline(
+                tr(column.label()).into(),
                 FontId::proportional(12.0),
                 p.muted,
             );
+            label.wrap.max_width = cell.width();
+            label.wrap.max_rows = 1;
+            label.wrap.break_anywhere = true;
+            let galley = ui.fonts_mut(|fonts| fonts.layout_job(label));
+            painter.galley(cell.left_top(), galley, p.muted);
             if let Some(payload) = response.dnd_hover_payload::<ColumnDrag>()
                 && payload.0 != column
             {
@@ -152,8 +166,10 @@ impl State {
                     edited = Some(layout);
                 }
             }
-            response.on_hover_text(tr(
-                "Drag to reorder columns. Drag the right edge to resize.",
+            response.on_hover_text(format!(
+                "{}\n{}",
+                tr(column.label()),
+                tr("Drag to reorder columns. Drag the right edge to resize.")
             ));
             let edge = Rect::from_center_size(
                 pos2(raw.right() - 2.0, raw.center().y),
@@ -258,6 +274,29 @@ mod tests {
 
     use super::super::interaction_tests::{fixture, frame, text_rect};
     const SIZE: egui::Vec2 = egui::vec2(1440.0, 860.0);
+    #[test]
+    fn long_column_headings_elide_inside_their_cell_instead_of_clipping_words() {
+        let (_temp, mut app, ctx) = fixture();
+        app.interface.language = download_engine::i18n::Language::German;
+        let _language = download_engine::i18n::scope(app.interface.language);
+        let output = settled(&mut app, &ctx);
+        let text = output
+            .shapes
+            .iter()
+            .find_map(|shape| match &shape.shape {
+                egui::Shape::Text(text) if text.galley.job.text == tr("Speed") => {
+                    Some((text, shape.clip_rect))
+                }
+                _ => None,
+            })
+            .expect("Translated speed column");
+        assert!(text.0.galley.elided);
+        assert!(
+            text.1
+                .contains_rect(Rect::from_min_size(text.0.pos, text.0.galley.size()))
+        );
+    }
+
     fn pointer(app: &mut Desktop, ctx: &egui::Context, pos: egui::Pos2, pressed: Option<bool>) {
         let mut events = vec![egui::Event::PointerMoved(pos)];
         if let Some(pressed) = pressed {

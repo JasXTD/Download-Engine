@@ -520,6 +520,7 @@ impl Desktop {
                 }
             });
         self.clipboard_card(&ctx, p);
+        self.poll_launch_updates(&ctx);
         if self.dialog != Some(Dialog::CheckUpdates) {
             self.extras.update_check = None;
         }
@@ -562,44 +563,34 @@ impl Desktop {
 
 impl Desktop {
     fn filters(&mut self, ui: &mut egui::Ui, p: Palette) {
+        let count = tf!("{} files", self.visible_job_indices().len());
+        let text_width = |text: &str, font: FontId| {
+            ui.painter()
+                .layout_no_wrap(text.into(), font, p.text)
+                .size()
+                .x
+        };
+        let needed = text_width(self.filter.title(), FontId::proportional(17.0))
+            + text_width(&count, egui::TextStyle::Small.resolve(ui.style()))
+            + 206.0
+            + if self.search.is_empty() {
+                0.0
+            } else {
+                button_width(ui, tr("Clear"))
+            }
+            + ui.spacing().item_spacing.x * 5.0;
+        let stacked = ui.available_width() < needed;
         ui.horizontal(|ui| {
             ui.label(RichText::new(self.filter.title()).size(17.0).strong());
-            ui.label(
-                RichText::new(tf!(
-                    "{} files",
-                    self.jobs.iter().filter(|job| self.accepts(job)).count()
-                ))
-                .small()
-                .color(p.muted),
-            );
-            ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                let control_height = CONTROL_HEIGHT;
-                if !self.search.is_empty()
-                    && ui
-                        .add_sized([54.0, control_height], egui::Button::new(tr("Clear")))
-                        .clicked()
-                {
-                    self.search.clear();
-                    self.reconcile_selection();
-                }
-                if ui
-                    .add_sized(
-                        [206.0, control_height],
-                        line_edit(&mut self.search)
-                            .id(egui::Id::new("filename-search"))
-                            .desired_width(190.0)
-                            .margin(egui::Margin::symmetric(8, 4))
-                            .hint_text(tr("Search downloads…"))
-                            .char_limit(256),
-                    )
-                    .on_hover_text(tr("Search filenames (Ctrl+F). Escape clears the search."))
-                    .changed()
-                {
-                    self.reconcile_selection();
-                }
-            });
+            ui.label(RichText::new(count).small().color(p.muted));
+            if !stacked {
+                self.search_controls(ui, false);
+            }
         });
-        ui.horizontal(|ui| {
+        if stacked {
+            self.search_controls(ui, true);
+        }
+        ui.horizontal_wrapped(|ui| {
             let active_queue = self.queues.iter().find(|queue| queue.id == self.queue_id);
             let queue = active_queue
                 .map(|q| display_queue_name(&q.id, &q.name))
@@ -626,6 +617,28 @@ impl Desktop {
                     .small()
                     .color(p.muted),
                 );
+                let id = q.id.clone();
+                // Use the same explicit start/pause commands as the Queues page.
+                // Starting a queue is a manual override of its schedule.
+                if ui
+                    .small_button(if running {
+                        tr("Pause queue")
+                    } else {
+                        tr("Start queue")
+                    })
+                    .on_hover_text(if running {
+                        tr("Pause queue")
+                    } else {
+                        tr("Start this queue now, overriding its schedule.")
+                    })
+                    .clicked()
+                {
+                    self.command(if running {
+                        Command::PauseQueue(id)
+                    } else {
+                        Command::StartQueue(id)
+                    });
+                }
             }
             if let Some(category) = self.category {
                 ui.label(RichText::new("/").small().color(p.muted));
@@ -640,6 +653,42 @@ impl Desktop {
             }
         });
     }
+    fn search_controls(&mut self, ui: &mut egui::Ui, fill: bool) {
+        ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+            let control_height = CONTROL_HEIGHT;
+            if !self.search.is_empty()
+                && ui
+                    .add_sized(
+                        [button_width(ui, tr("Clear")), control_height],
+                        egui::Button::new(tr("Clear")),
+                    )
+                    .clicked()
+            {
+                self.search.clear();
+                self.reconcile_selection();
+            }
+            let width = if fill {
+                ui.available_width()
+            } else {
+                ui.available_width().min(206.0)
+            };
+            if ui
+                .add_sized(
+                    [width, control_height],
+                    line_edit(&mut self.search)
+                        .id(egui::Id::new("filename-search"))
+                        .desired_width(190.0)
+                        .margin(egui::Margin::symmetric(8, 4))
+                        .hint_text(tr("Search downloads…"))
+                        .char_limit(256),
+                )
+                .on_hover_text(tr("Search filenames (Ctrl+F). Escape clears the search."))
+                .changed()
+            {
+                self.reconcile_selection();
+            }
+        });
+    }
     fn content(&mut self, ui: &mut egui::Ui, p: Palette) {
         let small = ui.ctx().content_rect().height() < 700.0;
         ui.add_space(if small { 4.0 } else { 9.0 });
@@ -649,12 +698,7 @@ impl Desktop {
         let reset_scroll =
             self.table
                 .prepare_list(&self.queue_id, self.filter, self.category, &self.search);
-        let jobs: Vec<_> = self
-            .jobs
-            .iter()
-            .filter(|job| self.accepts(job))
-            .cloned()
-            .collect();
+        let jobs = self.visible_job_indices();
         if jobs.is_empty() {
             ui.add_space(25.0);
             if self.queue_loading() {
@@ -771,9 +815,9 @@ impl Desktop {
                             scroll = scroll.vertical_scroll_offset(0.0);
                         }
                         if std::mem::take(&mut self.selection.scroll_to_focus)
-                            && let Some(index) = jobs
-                                .iter()
-                                .position(|j| self.selected.as_deref() == Some(&j.id))
+                            && let Some(index) = jobs.iter().position(|&index| {
+                                self.selected.as_deref() == Some(&self.jobs[index].id)
+                            })
                         {
                             let id = ui.make_persistent_id("download-table");
                             let offset = egui::scroll_area::State::load(ui.ctx(), id)
@@ -790,12 +834,16 @@ impl Desktop {
                             scroll = scroll.vertical_scroll_offset(next);
                         }
                         scroll.show_rows(ui, row_height, jobs.len(), |ui, range| {
-                            for index in range {
-                                let job = &jobs[index];
+                            // Own only the visible rows before dispatching any actions.
+                            // Hidden jobs (including large video plans) are never cloned.
+                            let rows: Vec<_> = range
+                                .map(|index| (index, self.jobs[jobs[index]].clone()))
+                                .collect();
+                            for (index, job) in rows {
                                 ui.push_id(&job.id, |ui| {
                                     self.table_row(
                                         ui,
-                                        job,
+                                        &job,
                                         index + 1,
                                         (width, row_height),
                                         &columns,
@@ -850,6 +898,8 @@ impl Desktop {
             0.0,
             if self.is_selected(&job.id) {
                 p.selected
+            } else if response.hovered() {
+                p.selected.gamma_multiply(0.35)
             } else if theme::custom(ui.ctx()).is_some() {
                 Color32::TRANSPARENT
             } else {
@@ -969,23 +1019,34 @@ impl Desktop {
                     });
                 }
                 Column::Status => {
-                    let label = status_label(
-                        job,
-                        self.queues
-                            .iter()
-                            .any(|q| q.id == self.queue_id && q.running)
-                            || self.immediate_downloads.contains(&job.id),
-                        chrono::Utc::now().timestamp_millis(),
-                    );
+                    let queue_running = self
+                        .queues
+                        .iter()
+                        .any(|q| q.id == self.queue_id && q.running)
+                        || self.immediate_downloads.contains(&job.id);
+                    let label =
+                        status_label(job, queue_running, chrono::Utc::now().timestamp_millis());
                     let label = if inline_progress && let Some(fraction) = progress(job) {
                         format!("{label}   {:.1}%", fraction * 100.0)
                     } else {
                         label
                     };
                     cell.add(
-                        egui::Label::new(RichText::new(label).small().color(p.status(job.status)))
+                        egui::Label::new(RichText::new(&label).small().color(p.status(job.status)))
                             .truncate(),
-                    );
+                    )
+                    .on_hover_ui(|ui| {
+                        ui.set_max_width(360.0);
+                        ui.label(&label);
+                        if let Some(description) = retry_description(job, queue_running) {
+                            ui.label(description);
+                        } else if job.status == Status::Queued && !queue_running {
+                            ui.label(tr("Waiting for this queue to start."));
+                        }
+                        if let Some(error) = &job.error {
+                            ui.label(error);
+                        }
+                    });
                     if inline_progress && let Some(fraction) = progress(job) {
                         let (bar, _) = cell
                             .allocate_exact_size(vec2(cell.available_width(), 3.0), Sense::hover());
@@ -1194,6 +1255,12 @@ impl Desktop {
                 Uuid::new_v4().to_string(),
             )?;
             copy.integrity.expected.clone_from(&job.integrity.expected);
+            copy.provider.clone_from(&job.provider);
+            if let Some(provider) = &mut copy.provider {
+                // Redownload keeps the reviewed code, but resolves a fresh plan.
+                provider.plan = None;
+                copy.server_name_pending = false;
+            }
             copy.ftp.clone_from(&job.ftp);
             if let Some(ftp) = &mut copy.ftp {
                 ftp.reset();
@@ -1473,7 +1540,10 @@ impl Desktop {
             ui.ctx().copy_text(job.url.clone());
             ui.close();
         }
-        if job.ftp.is_none() && job.hls.is_none() && ui.button(tr("Preview ZIP contents")).clicked()
+        if job.ftp.is_none()
+            && job.hls.is_none()
+            && job.provider.is_none()
+            && ui.button(tr("Preview ZIP contents")).clicked()
         {
             self.open_zip_job(job);
             ui.close();
@@ -1489,6 +1559,7 @@ impl Desktop {
         }
         if matches!(job.status, Status::Paused | Status::Failed) {
             if job.ftp.is_none()
+                && job.provider.is_none()
                 && ui
                     .button(if job.hls.is_some() {
                         tr("Preview video again")

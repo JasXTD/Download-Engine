@@ -2,6 +2,10 @@
 
 ## Kom igång
 
+### Sök efter uppdateringar vid start
+
+Aktiverat som standard och kontrollerar en gång varje gång appen öppnas. En ny version ger valet att hämta uppdateringen eller vänta. Nätverksfel öppnar ingen dialog. Kan stängas av i Inställningar. Hämta och installera uppdateringar från den officiella releasesidan på GitHub.
+
 Inställningar öppnas i en ruta med kategorier. Spara tillämpar ändringar; Avbryt, × eller Escape kastar osparade ändringar. Teman kan förhandsvisas; Återställ gäller endast aktuell kategori. Avancerade redigerare sparar separat och återgår till Inställningar när de stängs.
 
 ### Kom igång
@@ -104,6 +108,16 @@ print("Can fetch a page:", xd.supports("xd.fetch"))
 
 Open examples/core-api-automation.lua or examples/custom-site-reader.lua with Editor actions → Open file…. Site reader uses public pages, Pages patterns and Direct connection; test with Test on URL before enabling its trigger. Ordinary automation cannot call xd.fetch. Import script… accepts .de-script.json as a new draft with automatic triggers and file changes off; review its code and reselect local queues. Stop script does not undo submitted downloads. Full English reference: docs/automation.md.
 
+
+### Lua Provider API 1
+
+Lua-leverantörer löser källor, bearbetar byte och verifierar hashvärden med vanliga paus- och återupptagningskontroller. Varje nedladdning behåller sin sparade skriptversion. Testerna använder endast lokalt skapade krypterade filer. Efter att en leverantör sparats kan äldre appversioner inte skriva till profilen.
+
+Scripting → Script settings → Download provider → Save script → Add provider download.
+
+API: `resolve(request)`, `refresh(request, previous)`, `transform(plan, bytes, offset)`, `finish(plan, result)`.
+
+`docs/lua-providers.md` · `examples/download-provider.lua` · `examples/download-provider-custom-ctr.lua`
 
 ## Kommandorad
 

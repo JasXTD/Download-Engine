@@ -2,6 +2,10 @@
 
 ## 入門
 
+### 啟動時檢查更新
+
+預設在每次開啟程式時檢查一次。發現新版本後可選擇取得更新或稍後處理。離線時不會彈出錯誤，可在偏好設定中關閉此選項。 請從官方 GitHub 發行頁面下載並安裝更新。
+
 偏好設定現在以分類彈出視窗開啟。儲存後套用變更；取消、× 或 Escape 放棄未儲存的編輯。佈景主題可預覽，重設僅影響目前類別。進階編輯器獨立儲存，關閉後返回偏好設定。
 
 ### 新增第一個下載
@@ -132,6 +136,16 @@ print("Can fetch a page:", xd.supports("xd.fetch"))
 
 Editor actions → Open file… 可開啟 examples/core-api-automation.lua 或 examples/custom-site-reader.lua。Site reader 使用公開網站、Pages 規則及 Direct connection；先 Test on URL，再啟用自動觸發。一般腳本不能呼叫 xd.fetch。Import script… 讀取 .de-script.json，並關閉自動觸發及檔案修改權限；檢查程式碼、重新選擇佇列後儲存。Stop script 停止腳本，不撤銷已提交的下載。完整步驟見隨附 docs/automation.md。
 
+
+### Lua Provider API 1
+
+新增 Lua 下載提供者：解析檔案、處理位元組、驗證雜湊，並使用一般下載佇列暫停與繼續。每個工作保留已儲存的指令碼版本。範例僅以本機產生的加密檔案驗證。儲存提供者後，舊版應用程式無法再寫入此設定檔。
+
+Scripting → Script settings → Download provider → Save script → Add provider download.
+
+API: `resolve(request)`, `refresh(request, previous)`, `transform(plan, bytes, offset)`, `finish(plan, result)`.
+
+`docs/lua-providers.md` · `examples/download-provider.lua` · `examples/download-provider-custom-ctr.lua`
 
 ## 命令列
 

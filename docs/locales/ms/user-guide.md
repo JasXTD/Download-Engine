@@ -2,6 +2,10 @@
 
 ## Bermula
 
+### Semak kemas kini semasa pelancaran
+
+Diaktifkan secara lalai dan menyemak sekali setiap kali aplikasi dibuka. Versi baharu menawarkan pilihan kemas kini atau kemudian. Ralat luar talian tidak membuka dialog. Boleh dimatikan dalam Keutamaan. Muat turun dan pasang kemas kini dari halaman keluaran GitHub rasmi.
+
 Keutamaan kini dibuka dalam tetingkap dengan kategori. Simpan menggunakan perubahan; Batal, × atau Escape membuang suntingan belum disimpan. Tema boleh dipratonton dan Tetap semula hanya menukar kategori semasa. Editor lanjutan menyimpan secara berasingan dan kembali ke Keutamaan apabila ditutup.
 
 ### Tambah muat turun pertama
@@ -132,6 +136,16 @@ print("Can fetch a page:", xd.supports("xd.fetch"))
 
 Editor actions → Open file… membuka contoh .lua dalam folder examples. Site reader menggunakan laman awam, corak Pages dan Direct connection; gunakan Test on URL sebelum mengaktifkannya. Skrip biasa tidak boleh memanggil xd.fetch. Import script… membaca .de-script.json sebagai draf baharu dengan pencetus automatik dan akses perubahan fail dimatikan; semak kod dan pilih semula baris gilir. Stop script tidak membatalkan muat turun yang sudah dihantar. Rujukan penuh: docs/automation.md.
 
+
+### Lua Provider API 1
+
+Penyedia muat turun Lua kini boleh menentukan sumber, memproses bait dan mengesahkan hash dengan kawalan jeda/sambung biasa. Setiap muat turun menyimpan semakan skripnya. Contoh diuji dengan fail terenkripsi yang dijana secara setempat sahaja. Selepas penyedia disimpan, versi lama tidak boleh menulis profil ini.
+
+Scripting → Script settings → Download provider → Save script → Add provider download.
+
+API: `resolve(request)`, `refresh(request, previous)`, `transform(plan, bytes, offset)`, `finish(plan, result)`.
+
+`docs/lua-providers.md` · `examples/download-provider.lua` · `examples/download-provider-custom-ctr.lua`
 
 ## Baris perintah
 

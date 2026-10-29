@@ -35,7 +35,7 @@ const STORE: [&str; 3] = ["get", "set", "keys"];
 const READER_REFUSAL: &str =
     "Site readers cannot see or change your downloads; use another script for that";
 
-pub(super) fn to_lua(lua: &Lua, value: &impl serde::Serialize) -> mlua::Result<Value> {
+pub(crate) fn to_lua(lua: &Lua, value: &impl serde::Serialize) -> mlua::Result<Value> {
     lua.to_value_with(
         value,
         SerializeOptions::new()
@@ -240,7 +240,7 @@ pub fn execute_lua(
 pub fn execute_reader(
     source: &str,
     event: &serde_json::Value,
-    mut fetch: impl FnMut(FetchRequest) -> Result<FetchReply> + 'static,
+    fetch: impl FnMut(FetchRequest) -> Result<FetchReply> + 'static,
 ) -> Result<serde_json::Value> {
     let (lua, xd) = sandbox(source, event)?;
     super::helpers::install(&lua, &xd, true)?;
@@ -257,6 +257,25 @@ pub fn execute_reader(
         store.set(name, refuse()?)?;
     }
     xd.set("store", store)?;
+    install_fetch(&lua, &xd, fetch)?;
+    lua.globals().set("xd", xd)?;
+    let value: Value = lua
+        .load(source)
+        .set_name("reader.lua")
+        .set_mode(ChunkMode::Text)
+        .eval()?;
+    Ok(super::json::from_lua(
+        &lua,
+        value,
+        super::reading::MAX_READING_BYTES,
+    )?)
+}
+
+pub(crate) fn install_fetch(
+    lua: &Lua,
+    xd: &Table,
+    mut fetch: impl FnMut(FetchRequest) -> Result<FetchReply> + 'static,
+) -> Result<()> {
     xd.set(
         "fetch",
         lua.create_function_mut(move |lua, (url, options): (String, Option<Table>)| {
@@ -294,17 +313,7 @@ pub fn execute_reader(
             to_lua(lua, &reply)
         })?,
     )?;
-    lua.globals().set("xd", xd)?;
-    let value: Value = lua
-        .load(source)
-        .set_name("reader.lua")
-        .set_mode(ChunkMode::Text)
-        .eval()?;
-    Ok(super::json::from_lua(
-        &lua,
-        value,
-        super::reading::MAX_READING_BYTES,
-    )?)
+    Ok(())
 }
 
 #[cfg(test)]

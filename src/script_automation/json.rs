@@ -70,7 +70,7 @@ impl Budget {
     }
 }
 
-pub(super) fn from_lua(lua: &Lua, value: Value, limit: usize) -> mlua::Result<serde_json::Value> {
+pub(crate) fn from_lua(lua: &Lua, value: Value, limit: usize) -> mlua::Result<serde_json::Value> {
     Budget {
         remaining: limit,
         nodes: 0,

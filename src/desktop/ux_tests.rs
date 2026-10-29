@@ -4,6 +4,182 @@ use super::*;
 const SMALL: egui::Vec2 = egui::vec2(860.0, 600.0);
 
 #[test]
+fn filtered_list_preserves_order_unicode_matching_and_selection() {
+    let (_temp, mut app, _ctx) = fixture();
+    app.jobs[0].name = "RÉSUMÉ.ZIP".into();
+    app.jobs[2].name = "résumé-final.zip".into();
+    let ids: Vec<_> = app.jobs.iter().map(|job| job.id.clone()).collect();
+    app.set_selection(Some(ids[0].clone()));
+    app.selection.additional.extend(ids[1..].iter().cloned());
+    app.search = "  RÉSUMÉ  ".into();
+    app.reconcile_selection();
+    assert_eq!(app.visible_job_indices(), [0, 2]);
+    assert_eq!(app.visible_job_ids(), [ids[0].clone(), ids[2].clone()]);
+    assert_eq!(app.selected_job_refs().count(), 2);
+    app.search.clear();
+    app.reconcile_selection();
+    assert_eq!(app.visible_job_indices(), [0, 1, 2]);
+    assert_eq!(
+        app.selected_job_refs().count(),
+        2,
+        "Hidden selections must not return"
+    );
+    app.filter = Filter::Failed;
+    app.reconcile_selection();
+    assert_eq!(app.selected.as_deref(), Some(ids[2].as_str()));
+    assert_eq!(app.selected_jobs()[0].name, "résumé-final.zip");
+}
+
+#[test]
+fn compact_search_controls_and_queue_actions_fit_translated_headers() {
+    use download_engine::i18n::Language;
+    let (_temp, mut app, ctx) = fixture();
+    for language in [
+        Language::English,
+        Language::German,
+        Language::Arabic,
+        Language::Malay,
+    ] {
+        app.interface.language = language;
+        let _scope = download_engine::i18n::scope(language);
+        for filter in [Filter::All, Filter::Unfinished, Filter::Downloading] {
+            app.filter = filter;
+            app.search = "zip".into();
+            let output = settled(&mut app, &ctx);
+            assert_visible(&output, tr("Clear"));
+            assert_visible(&output, filter.title());
+            let title = output
+                .shapes
+                .iter()
+                .find_map(|shape| match &shape.shape {
+                    egui::Shape::Text(text)
+                        if text.galley.job.text == filter.title() && text.pos.x >= 190.0 =>
+                    {
+                        Some(egui::Rect::from_min_size(text.pos, text.galley.size()))
+                    }
+                    _ => None,
+                })
+                .expect("Visible list heading, rather than the sidebar label");
+            let search = output
+                .shapes
+                .iter()
+                .find_map(|shape| match &shape.shape {
+                    egui::Shape::Text(text) if text.galley.job.text == "zip" => {
+                        Some(egui::Rect::from_min_size(text.pos, text.galley.size()))
+                    }
+                    _ => None,
+                })
+                .expect("Visible search text");
+            assert!(
+                !title.intersects(search),
+                "Search overlaps the translated heading"
+            );
+        }
+    }
+}
+
+#[test]
+fn list_queue_controls_start_and_pause_an_empty_queue() {
+    let (_temp, mut app, ctx) = fixture();
+    // The fixture jobs are presentation-only: the store has no runnable downloads.
+    assert!(app.store.list().unwrap().is_empty());
+    app.command(Command::PauseQueue(MAIN_QUEUE.into()));
+    let wait_for_queue = |app: &Desktop, running: bool| {
+        let deadline = Instant::now() + Duration::from_secs(5);
+        while app
+            .store
+            .queues()
+            .unwrap()
+            .iter()
+            .find(|q| q.id == MAIN_QUEUE)
+            .unwrap()
+            .running
+            != running
+        {
+            assert!(
+                Instant::now() < deadline,
+                "Queue command was not acknowledged"
+            );
+            std::thread::sleep(Duration::from_millis(2));
+        }
+    };
+    wait_for_queue(&app, false);
+    app.refresh_and_wait();
+    click(&mut app, &ctx, "Start queue");
+    wait_for_queue(&app, true);
+    app.refresh_and_wait();
+    click(&mut app, &ctx, "Pause queue");
+    wait_for_queue(&app, false);
+    assert!(app.store.list().unwrap().is_empty());
+}
+
+#[test]
+fn status_hover_explains_failure_without_opening_details_or_changing_selection() {
+    let (_temp, mut app, ctx) = fixture();
+    app.interface.show_details = false;
+    let selected = app.selected.clone();
+    let output = settled(&mut app, &ctx);
+    let failed = output
+        .shapes
+        .iter()
+        .find_map(|shape| match &shape.shape {
+            egui::Shape::Text(text) if text.galley.job.text == "Failed" && text.pos.x >= 190.0 => {
+                Some(egui::Rect::from_min_size(text.pos, text.galley.size()))
+            }
+            _ => None,
+        })
+        .expect("Failed status in the download row");
+    frame(
+        &mut app,
+        &ctx,
+        SMALL,
+        vec![egui::Event::PointerMoved(failed.center())],
+    );
+    assert!((0..90).any(|_| {
+        frame(&mut app, &ctx, SMALL, vec![]).shapes.iter().any(|shape|
+            matches!(&shape.shape, egui::Shape::Text(text) if text.galley.job.text == "Server returned HTTP 403"))
+    }), "The failure reason should be available directly from the status");
+    assert_eq!(app.selected, selected);
+    assert!(!app.interface.show_details);
+    assert!(app.dialog.is_none());
+}
+
+/// Observe whole-frame cost with a large queue; never use workstation timing as
+/// a pass/fail threshold. Run the same fixture against before/after binaries.
+#[test]
+#[ignore = "opt-in large download list benchmark"]
+fn large_download_list_frame_time() {
+    let (_temp, mut app, ctx) = fixture();
+    let sample = app.jobs[0].clone();
+    app.jobs = (0..5000)
+        .map(|index| {
+            let mut job = sample.clone();
+            job.id = format!("fixture-{index:05}");
+            job.name = format!("Archive-{index:05}.zip");
+            job
+        })
+        .collect();
+    app.set_selection(Some(app.jobs[0].id.clone()));
+    let size = egui::vec2(1280.0, 860.0);
+    for search in ["", "archive-04"] {
+        app.search = search.into();
+        app.reconcile_selection();
+        for _ in 0..5 {
+            drop(frame(&mut app, &ctx, size, vec![]));
+        }
+        let start = Instant::now();
+        for _ in 0..60 {
+            drop(frame(&mut app, &ctx, size, vec![]));
+        }
+        println!(
+            "UI_FRAME_BENCH {}",
+            serde_json::json!({"jobs": app.jobs.len(), "search": search,
+                "frames": 60, "milliseconds_per_frame": start.elapsed().as_secs_f64() * 1000.0 / 60.0})
+        );
+    }
+}
+
+#[test]
 fn download_focus_outline_follows_the_active_row_without_outlining_empty_space() {
     for dark in [false, true] {
         let (_temp, mut app, ctx) = fixture();

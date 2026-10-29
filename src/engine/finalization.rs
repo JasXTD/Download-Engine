@@ -32,7 +32,7 @@ pub(super) async fn finish(
     } else {
         Direct::CopyRequired
     };
-    let prepared = match direct {
+    let mut prepared = match direct {
         Direct::Ready(prepared) => prepared,
         Direct::Cancelled => return Ok(None),
         Direct::CopyRequired => {
@@ -45,6 +45,40 @@ pub(super) async fn finish(
     if cancel.is_cancelled() {
         discard_cancelled(prepared)?;
         return Ok(None);
+    }
+    if let Some(provider) = &job.provider {
+        let plan = provider.plan.as_ref().context("Missing provider plan")?;
+        ensure!(
+            job.downloaded == plan.size && prepared.hash == plan.input_sha256,
+            "Provider encrypted source checksum or size does not match. The file was not processed."
+        );
+        let processed =
+            crate::provider::transform(store, job, prepared.file.try_clone()?, cancel).await?;
+        // Retire a cross-volume ciphertext assembly before using the same staging
+        // name for plaintext. The original network parts remain available.
+        discard_cancelled(prepared)?;
+        let (snapshot, source, token, activity) = (
+            job.clone(),
+            processed.clone(),
+            cancel.clone(),
+            store.activity.clone(),
+        );
+        prepared = match tokio::task::spawn_blocking(move || {
+            prepare_direct(&snapshot, source, &token, &activity)
+        })
+        .await??
+        {
+            Direct::Ready(value) => value,
+            Direct::Cancelled => return Ok(None),
+            Direct::CopyRequired => match prepare_copy(job, vec![processed], cancel).await? {
+                Some(value) => value,
+                None => return Ok(None),
+            },
+        };
+        ensure!(
+            prepared.hash == plan.output_sha256,
+            "Provider output changed before saving"
+        );
     }
     if let Some(expected) = verified_sha256 {
         ensure!(
@@ -227,7 +261,9 @@ async fn prepare_copy(
 /// A single-part publication uses the original cache file as its recovery
 /// anchor. No new saved-job format is needed; multi-part/media jobs keep staging.
 fn direct_source(job: &Job, root: &Path) -> Option<PathBuf> {
-    if job.hls.is_some() {
+    if job.provider.is_some() {
+        Some(root.join("provider-output.part"))
+    } else if job.hls.is_some() {
         None
     } else if crate::mega::is_url(&job.url) {
         Some(root.join("mega-plaintext.part"))
@@ -290,6 +326,15 @@ pub(super) async fn recover(
                 );
             }
             job.integrity.actual = Some(actual);
+            if let Some(provider) = &job.provider {
+                ensure!(
+                    provider
+                        .plan
+                        .as_ref()
+                        .is_some_and(|p| Some(&p.output_sha256) == job.integrity.actual.as_ref()),
+                    "Published provider file checksum changed"
+                );
+            }
             job.integrity.check()?;
             return Ok(Some(FinishedFile {
                 path,

@@ -1,5 +1,17 @@
 # CLI and automation
 
+Download Engine 3.5.0 also supports **Download provider** scripts in the same
+Scripting page. Read [Lua provider API 1](lua-providers.md) for callbacks,
+verified byte transforms, frozen revisions and offline examples. Submit a saved
+provider with `de-cli.exe scripts download ID URL --name FILE`; control its job
+through the normal download list or CLI pause/resume commands.
+
+Provider `xd.fetch` is available only in resolver workers. Processors use
+`xd.key(protected_token)` for private AES keys; `de-cli.exe scripts protect-key ID`
+reads the hex key from redirected stdin and returns a provider-bound Windows
+DPAPI token. See the provider guide for the `xd.phase` contract, protected frozen
+source, URL refresh and profile upgrades.
+
 Download Engine includes `de-cli.exe` beside the desktop executable. Run it from
 that application folder in PowerShell. It uses the same portable or installed
 data location as the app. `DOWNLOAD_ENGINE_HOME` can select a separate absolute test folder.
@@ -545,6 +557,11 @@ For example, a Site reader can call `xd.fetch(event.url)`, select `a.download[hr
 **Export script…** writes the current code and settings, including unsaved edits, to a package. Logs, stored values, saved identities and automatic enablement are excluded. Code literals are included: remove any private URLs, tokens or passwords before sharing. Open file… and Save to file… remain available for plain .lua/.ps1 code. PowerShell retains its existing full Windows access; importing it does not make it restricted Lua.
 
 Working examples are included as `examples/core-api-automation.lua` (read-only queue/status reporting) and `examples/custom-site-reader.lua` (adapt its CSS selector to a public site). Script API 1 is separate from the app version; compatible additions keep API 1, while a future incompatible contract needs a new API version. Sharing scripts does not install external programs or add unsupported protocols.
+
+Developers can also try the separate [offline Lua provider experiment](lua-provider-lab.md).
+It demonstrates custom processing of a generated encrypted file and checkpointed
+resume. Its experimental callbacks are not available in the installed app's
+Scripting page and do not establish support for any live streaming service.
 
 ## Site readers
 

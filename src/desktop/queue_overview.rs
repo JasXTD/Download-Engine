@@ -496,17 +496,7 @@ impl Desktop {
             )
             .clicked()
         {
-            match self.store.queue_jobs(&queue.id) {
-                Ok(jobs) => {
-                    for job in jobs
-                        .into_iter()
-                        .filter(|job| job.status == Status::Complete)
-                    {
-                        self.command(Command::Remove(job.id));
-                    }
-                }
-                Err(error) => self.notice = Some(Notice::error(error.to_string())),
-            }
+            self.request_clear_history(&queue.id);
             ui.close();
         }
         if ui

@@ -30,11 +30,22 @@ fn allowed(c: char, language: Language) -> bool {
         || (language == Language::PowerShell && matches!(c, '$' | '-'))
 }
 
+#[cfg(test)]
 pub(super) fn choices(
     source: &str,
     cursor: usize,
     language: Language,
     reader: bool,
+    explicit: bool,
+) -> Option<Choices> {
+    choices_for(source, cursor, language, reader, false, explicit)
+}
+pub(super) fn choices_for(
+    source: &str,
+    cursor: usize,
+    language: Language,
+    reader: bool,
+    provider: bool,
     explicit: bool,
 ) -> Option<Choices> {
     let at = byte_at(source, cursor);
@@ -64,11 +75,22 @@ pub(super) fn choices(
     let mut add = |name: &str, args: Option<&str>| items.push(Suggestion::new(name, args));
     if language == Language::Lua {
         use download_engine::script_automation::api;
-        for function in api::FUNCTIONS.iter().filter(|f| f.available(reader)) {
+        let functions: Vec<_> = if provider {
+            download_engine::provider::functions().collect()
+        } else {
+            api::FUNCTIONS
+                .iter()
+                .filter(|f| f.available(reader))
+                .collect()
+        };
+        for function in functions {
             add(function.name, Some(function.arguments));
         }
         for property in api::PROPERTIES {
             add(property, None);
+        }
+        if provider {
+            add("xd.provider_api", None);
         }
         for (name, args) in [
             ("print", "..."),
@@ -81,9 +103,25 @@ pub(super) fn choices(
             ("error", "message"),
             ("pcall", "function, ..."),
         ] {
+            if provider && name == "print" {
+                continue;
+            }
             add(name, Some(args));
         }
-        if reader {
+        if provider {
+            for name in [
+                "request.url",
+                "plan.url",
+                "plan.size",
+                "plan.input_sha256",
+                "plan.output_sha256",
+                "plan.transform_id",
+                "result.size",
+                "result.sha256",
+            ] {
+                add(name, None);
+            }
+        } else if reader {
             add("event.url", None);
         } else {
             for name in [
@@ -257,5 +295,18 @@ mod tests {
         let options = choices(&text, 5, Language::Lua, false, false).unwrap();
         insert(&mut text, &options, 0).unwrap();
         assert_eq!(text, "xd.add(url)");
+    }
+
+    #[test]
+    fn provider_completion_has_crypto_but_no_automation_commands() {
+        let options = choices_for("xd.", 3, Language::Lua, false, true, false).unwrap();
+        assert!(options.items.iter().any(|s| s.name == "xd.aes_ctr"));
+        assert!(
+            options
+                .items
+                .iter()
+                .all(|s| s.name != "xd.add" && s.name != "xd.command")
+        );
+        assert!(choices_for("pri", 3, Language::Lua, false, true, false).is_none());
     }
 }

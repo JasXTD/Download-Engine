@@ -74,7 +74,7 @@ use download_engine::{
 };
 use eframe::egui::{self, Color32, RichText};
 use std::{
-    collections::HashMap,
+    collections::{HashMap, HashSet},
     fs::File,
     path::PathBuf,
     time::{Duration, Instant},
@@ -1013,21 +1013,29 @@ impl Desktop {
         self.category
             .is_none_or(|category| job.category() == category)
     }
+    #[cfg(test)]
     fn accepts(&self, job: &Job) -> bool {
+        self.accepts_with_search(job, &self.search.trim().to_lowercase())
+    }
+    fn accepts_with_search(&self, job: &Job, search: &str) -> bool {
         self.filter.accepts(job.status)
             && self.accepts_category(job)
-            && job
-                .name
-                .to_lowercase()
-                .contains(&self.search.trim().to_lowercase())
+            && Self::matches_search(job, search)
+    }
+    fn matches_search(job: &Job, search: &str) -> bool {
+        // The usual, unfiltered list does not need an allocated lowercase filename.
+        search.is_empty() || job.name.to_lowercase().contains(search)
     }
     fn reconcile_selection(&mut self) {
         let visible = self.visible_job_ids();
-        self.selection.additional.retain(|id| visible.contains(id));
+        let visible_set: HashSet<_> = visible.iter().map(String::as_str).collect();
+        self.selection
+            .additional
+            .retain(|id| visible_set.contains(id.as_str()));
         if !self
             .selected
             .as_ref()
-            .is_some_and(|id| visible.contains(id))
+            .is_some_and(|id| visible_set.contains(id.as_str()))
         {
             self.selected = visible
                 .iter()
@@ -1046,7 +1054,7 @@ impl Desktop {
             .selection
             .anchor
             .as_ref()
-            .is_some_and(|id| visible.contains(id))
+            .is_some_and(|id| visible_set.contains(id.as_str()))
         {
             self.selection.anchor = self.selected.clone();
         }

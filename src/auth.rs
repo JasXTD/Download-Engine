@@ -496,6 +496,10 @@ pub(crate) fn apply(store: &Store, update: Update) -> Result<Option<String>> {
         .get(&update.job)?
         .context("Download no longer exists")?;
     ensure!(
+        original.provider.is_none(),
+        "Provider downloads do not use saved browser or application logins"
+    );
+    ensure!(
         original.link_fallback.is_none(),
         "Webpage file discovery uses anonymous access. Add the direct file URL as a new download to use a login."
     );

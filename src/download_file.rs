@@ -109,7 +109,7 @@ async fn create_fresh(path: &Path, readable: bool) -> Result<AsyncFile> {
     Ok(AsyncFile::from_std(file))
 }
 
-fn fresh_sync(path: &Path, readable: bool) -> Result<File> {
+pub(crate) fn fresh_sync(path: &Path, readable: bool) -> Result<File> {
     match std::fs::remove_file(path) {
         Ok(()) => {}
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
@@ -145,6 +145,12 @@ pub async fn read_part(path: &Path) -> Result<AsyncFile> {
 
 pub(crate) fn read_part_sync(path: &Path) -> Result<File> {
     let file = options().read(true).open(path)?;
+    check_file(&file, false)?;
+    Ok(file)
+}
+
+pub(crate) fn read_write_part_sync(path: &Path) -> Result<File> {
+    let file = options().read(true).write(true).open(path)?;
     check_file(&file, false)?;
     Ok(file)
 }

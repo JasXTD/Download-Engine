@@ -23,6 +23,8 @@ struct Package {
     format: String,
     format_version: u32,
     api_version: u32,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    provider_api: Option<u32>,
     script: Definition,
 }
 
@@ -38,6 +40,7 @@ pub fn encode(script: &Script) -> Result<Vec<u8>> {
         format: "download-engine-script".into(),
         format_version: 1,
         api_version: api::VERSION,
+        provider_api: (script.trigger == Trigger::Provider).then_some(crate::provider::VERSION),
         script: Definition {
             name: script.name.clone(),
             language: script.language,
@@ -58,6 +61,11 @@ pub fn decode(bytes: &[u8]) -> Result<Imported> {
     ensure!(bytes.len() <= MAX_BYTES, "Script package exceeds 512 KiB");
     let bytes = bytes.strip_prefix(b"\xef\xbb\xbf").unwrap_or(bytes);
     let p: Package = serde_json::from_slice(bytes)?;
+    ensure!(
+        p.provider_api
+            == (p.script.trigger == Trigger::Provider).then_some(crate::provider::VERSION),
+        "Unsupported or missing download provider API version"
+    );
     ensure!(
         p.format == "download-engine-script" && p.format_version == 1,
         "Unsupported script package format"

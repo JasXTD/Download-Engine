@@ -2,6 +2,10 @@
 
 ## Premiers pas
 
+### Rechercher les mises à jour au lancement
+
+Activé par défaut, avec une vérification à chaque ouverture de l’application. Une nouvelle version propose une mise à jour ou un report. Les erreurs réseau n’ouvrent pas de fenêtre. Désactivation possible dans les Préférences. Téléchargez et installez les mises à jour depuis la page officielle des versions GitHub.
+
 Les préférences s’ouvrent dans une fenêtre organisée par catégories. Enregistrer applique les changements ; Annuler, × ou Échap abandonne les modifications non enregistrées. Le thème peut être prévisualisé ; Réinitialiser concerne uniquement la catégorie actuelle. Les éditeurs avancés enregistrent séparément et reviennent aux préférences une fois fermés.
 
 ### Premiers pas
@@ -104,6 +108,16 @@ print("Can fetch a page:", xd.supports("xd.fetch"))
 
 Open examples/core-api-automation.lua or examples/custom-site-reader.lua with Editor actions → Open file…. Site reader uses public pages, Pages patterns and Direct connection; test with Test on URL before enabling its trigger. Ordinary automation cannot call xd.fetch. Import script… accepts .de-script.json as a new draft with automatic triggers and file changes off; review its code and reselect local queues. Stop script does not undo submitted downloads. Full English reference: docs/automation.md.
 
+
+### Lua Provider API 1
+
+Les fournisseurs Lua résolvent les sources, traitent les octets et vérifient les empreintes avec les commandes habituelles de pause et de reprise. Chaque téléchargement conserve sa version du script. Les tests utilisent uniquement des fichiers chiffrés générés localement. Après l’enregistrement d’un fournisseur, les anciennes versions ne peuvent plus écrire dans ce profil.
+
+Scripting → Script settings → Download provider → Save script → Add provider download.
+
+API: `resolve(request)`, `refresh(request, previous)`, `transform(plan, bytes, offset)`, `finish(plan, result)`.
+
+`docs/lua-providers.md` · `examples/download-provider.lua` · `examples/download-provider-custom-ctr.lua`
 
 ## Ligne de commande
 

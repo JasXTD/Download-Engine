@@ -13,6 +13,13 @@ mod tests;
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(tag = "action", rename_all = "snake_case", deny_unknown_fields)]
 pub enum Action {
+    AddProvider {
+        script: String,
+        revision: u64,
+        url: String,
+        name: Option<String>,
+        queue: String,
+    },
     Add {
         urls: Vec<String>,
         queue: String,
@@ -178,6 +185,7 @@ pub fn simulated(store: &Store, action: &Action) -> String {
             .map_or_else(|| id.to_string(), |job| job.name)
     };
     let what = match action {
+        Action::AddProvider { url, .. } => format!("add a provider download from {url}"),
         Action::Add { urls, queue, .. } if urls.len() == 1 => {
             format!("add {} to {queue}", urls[0])
         }
@@ -381,6 +389,24 @@ pub fn queue_summaries(store: &Store) -> Result<Value> {
 /// Commands without worker ownership can use the same validated Store methods.
 pub(crate) fn execute_stored(store: &Store, request: &str, action: Action) -> Result<Value> {
     match action {
+        Action::AddProvider {
+            script,
+            revision,
+            url,
+            name,
+            queue,
+        } => {
+            let queue = queue_id(store, &queue)?;
+            let job = store.add_provider_download(
+                &script,
+                revision,
+                &url,
+                name.as_deref(),
+                &queue,
+                request,
+            )?;
+            job_summary(store, &job)
+        }
         Action::Add {
             urls,
             queue,

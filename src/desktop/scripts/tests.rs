@@ -1,9 +1,78 @@
 use super::super::interaction_tests::{click, fixture, frame, text_rect};
 use super::*;
 
+#[test]
+fn provider_editor_uses_download_actions_in_compact_and_full_views() {
+    let (_root, mut app, ctx) = fixture();
+    app.view = View::Automation;
+    app.automation.show_scripts();
+    app.scripts.new_script();
+    let draft = app.scripts.draft.as_mut().unwrap();
+    draft.trigger = Trigger::Provider;
+    draft.body = download_engine::provider::EXAMPLE.into();
+    let saved = app.store.save_script(draft).unwrap();
+    app.scripts.select(saved);
+    app.scripts.test_url = "http://127.0.0.1:9000/fixture.bin".into();
+    for full in [false, true] {
+        app.scripts.full_editor = full;
+        for size in [egui::vec2(860.0, 600.0), egui::vec2(1280.0, 860.0)] {
+            frame(&mut app, &ctx, size, vec![]);
+            let out = frame(&mut app, &ctx, size, vec![]);
+            for label in ["Source URL", "File name", "Add provider download"] {
+                let rect = text_rect(&out, label);
+                assert!(rect.bottom() < size.y && rect.right() < size.x);
+            }
+            assert!(rendered(&out, "Run script").is_empty());
+            assert!(rendered(&out, "Run logs").is_empty());
+            if full {
+                assert!(rendered(&out, "Loaded scripts (1)").is_empty());
+            }
+        }
+    }
+    assert!(app.store.list().unwrap().is_empty());
+    assert!(app.store.script_runs(None).unwrap().is_empty());
+}
+
 fn editor_menu(app: &mut Desktop, ctx: &egui::Context, label: &str) {
     click(app, ctx, "Editor actions");
     click(app, ctx, label);
+}
+
+#[test]
+fn provider_redownload_keeps_its_frozen_script_instead_of_adding_a_plain_download() {
+    let (_root, mut app, ctx) = fixture();
+    app.scripts.new_script();
+    let draft = app.scripts.draft.as_mut().unwrap();
+    draft.trigger = Trigger::Provider;
+    draft.body = download_engine::provider::EXAMPLE.into();
+    let saved = app.store.save_script(draft).unwrap();
+    let mut original = app
+        .store
+        .new_download(
+            "http://127.0.0.1:1/sample.bin",
+            Some("sample.bin"),
+            None,
+            "original".into(),
+        )
+        .unwrap();
+    original.provider = Some(download_engine::provider::State {
+        api_version: 1,
+        script: download_engine::provider::FrozenScript::new(saved.clone()).unwrap(),
+        plan: None,
+    });
+    app.store.remove_script(&saved.id).unwrap();
+    assert!(!supports_authentication(&original));
+    app.duplicate_download(&ctx, &original);
+    let jobs = app.store.list().unwrap();
+    assert_eq!(jobs.len(), 1);
+    assert_ne!(jobs[0].id, original.id);
+    let provider = jobs[0]
+        .provider
+        .as_ref()
+        .expect("must not bypass the transform");
+    assert_eq!(provider.script, saved);
+    assert!(provider.plan.is_none());
+    assert!(!jobs[0].server_name_pending);
 }
 
 #[test]

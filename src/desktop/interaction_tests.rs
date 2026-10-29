@@ -716,6 +716,12 @@ fn toolbar_clear_finished_keeps_files_and_pause_all_covers_other_queues() {
     app.store.enqueue(&app.jobs[0]).unwrap();
     app.refresh_and_wait();
     click(&mut app, &ctx, "Clear completed history");
+    assert_eq!(app.dialog, Some(Dialog::Confirm));
+    assert!(app.store.get(&complete.id).unwrap().is_some());
+    click(&mut app, &ctx, "Cancel");
+    assert!(app.store.get(&complete.id).unwrap().is_some());
+    click(&mut app, &ctx, "Clear completed history");
+    click(&mut app, &ctx, "Clear history");
     click(&mut app, &ctx, "Tasks");
     click(&mut app, &ctx, "Pause all");
     let deadline = Instant::now() + Duration::from_secs(2);

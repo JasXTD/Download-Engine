@@ -350,6 +350,10 @@ Source: "{#SourceRoot}\docs\youtube-port.md"; DestDir: "{app}\docs"; Flags: igno
 Source: "{#SourceRoot}\docs\automation.md"; DestDir: "{app}\docs"; Flags: ignoreversion
 Source: "{#SourceRoot}\examples\core-api-automation.lua"; DestDir: "{app}\examples"; Flags: ignoreversion
 Source: "{#SourceRoot}\examples\custom-site-reader.lua"; DestDir: "{app}\examples"; Flags: ignoreversion
+Source: "{#SourceRoot}\examples\download-provider.lua"; DestDir: "{app}\examples"; Flags: ignoreversion
+Source: "{#SourceRoot}\examples\download-provider-custom-ctr.lua"; DestDir: "{app}\examples"; Flags: ignoreversion
+Source: "{#SourceRoot}\docs\lua-providers.md"; DestDir: "{app}\docs"; Flags: ignoreversion
+Source: "{#SourceRoot}\docs\lua-provider-lab.md"; DestDir: "{app}\docs"; Flags: ignoreversion
 Source: "{#SourceRoot}\docs\mcp.md"; DestDir: "{app}\docs"; Flags: ignoreversion
 Source: "{#SourceRoot}\docs\mcp-ai-guide.md"; DestDir: "{app}\docs"; Flags: ignoreversion
 Source: "{#SourceRoot}\docs\user-guide.md"; DestDir: "{app}\docs"; Flags: ignoreversion

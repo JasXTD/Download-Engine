@@ -71,6 +71,84 @@ async fn single_part_publishes_the_verified_file_without_copying_and_keeps_colli
 }
 
 #[tokio::test]
+async fn lua_provider_publication_recovers_the_plaintext_anchor_and_checks_its_plan() {
+    use crate::{
+        provider,
+        script_automation::{Language, Script, Trigger},
+    };
+    let mut fixture = Fixture::new(1, 1024);
+    let script = fixture
+        .store
+        .save_script(&Script {
+            id: uuid::Uuid::new_v4().to_string(),
+            revision: 0,
+            name: "Recovery provider".into(),
+            language: Language::Lua,
+            body: provider::EXAMPLE.into(),
+            enabled: false,
+            trigger: Trigger::Provider,
+            timeout_seconds: 5,
+            change_files: false,
+        })
+        .unwrap();
+    let root = fixture.store.paths.parts(&fixture.job.id).unwrap();
+    let anchor = root.join("provider-output.part");
+    std::fs::copy(&fixture.sources[0], &anchor).unwrap();
+    let published = fixture.job.directory.join(&fixture.job.name);
+    std::fs::hard_link(&anchor, &published).unwrap();
+    fixture.job.saved_path = Some(published.clone());
+    fixture.job.provider = Some(provider::State {
+        api_version: 1,
+        script: provider::FrozenScript::new(script).unwrap(),
+        plan: Some(provider::Content {
+            size: 1024,
+            input_sha256: "a".repeat(64),
+            output_sha256: fixture.hash.clone(),
+            transform_id: "fixture-v1".into(),
+        }),
+    });
+    fixture.job.integrity.actual = Some(fixture.hash.clone());
+    let result = finalization::recover(
+        &fixture.store,
+        &mut fixture.job,
+        &root,
+        &CancellationToken::new(),
+    )
+    .await
+    .unwrap()
+    .unwrap();
+    assert_eq!(result.path, published);
+    drop(result.guard);
+    fixture
+        .job
+        .provider
+        .as_mut()
+        .unwrap()
+        .plan
+        .as_mut()
+        .unwrap()
+        .output_sha256 = "b".repeat(64);
+    let error = finalization::recover(
+        &fixture.store,
+        &mut fixture.job,
+        &root,
+        &CancellationToken::new(),
+    )
+    .await
+    .err()
+    .unwrap();
+    assert!(
+        error
+            .to_string()
+            .contains("Published provider file checksum changed")
+    );
+    assert_eq!(
+        std::fs::read_dir(&fixture.job.directory).unwrap().count(),
+        1
+    );
+}
+
+#[tokio::test]
 async fn provider_verified_plaintext_checks_hash_before_publish_and_recovers_its_own_anchor() {
     let mut fixture = Fixture::new(1, 1024);
     fixture.job.url =

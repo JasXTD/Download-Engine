@@ -2,6 +2,10 @@
 
 ## 入门
 
+### 启动时检查更新
+
+默认在每次打开程序时检查一次。发现新版本后可选择获取更新或稍后处理。离线时不会弹出错误，可在偏好设置中关闭此选项。 请从官方 GitHub 发布页面下载并安装更新。
+
 偏好设置现在以分类弹窗打开。保存后应用更改；取消、× 或 Escape 放弃未保存的编辑。主题可预览，重置仅影响当前类别。高级编辑器独立保存，关闭后返回偏好设置。
 
 ### 添加第一个下载
@@ -132,6 +136,16 @@ print("Can fetch a page:", xd.supports("xd.fetch"))
 
 Editor actions → Open file… 可打开 examples/core-api-automation.lua 或 examples/custom-site-reader.lua。Site reader 使用公共网站、Pages 匹配规则与 Direct connection；先 Test on URL，再启用自动触发。普通脚本不能调用 xd.fetch。Import script… 读取 .de-script.json，并关闭自动触发及文件修改权限；检查代码、重新选择队列后保存。Stop script 停止脚本，不撤销已提交的下载。完整步骤见随包 docs/automation.md。
 
+
+### Lua Provider API 1
+
+新增 Lua 下载提供程序：解析文件、处理字节、校验哈希并使用常规下载队列暂停和恢复。每个任务保留已保存的脚本版本。示例仅使用本地生成的加密文件验证。保存提供程序后，旧版应用不能再写入此配置文件。
+
+Scripting → Script settings → Download provider → Save script → Add provider download.
+
+API: `resolve(request)`, `refresh(request, previous)`, `transform(plan, bytes, offset)`, `finish(plan, result)`.
+
+`docs/lua-providers.md` · `examples/download-provider.lua` · `examples/download-provider-custom-ctr.lua`
 
 ## 命令行
 

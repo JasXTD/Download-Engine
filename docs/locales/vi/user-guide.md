@@ -2,6 +2,10 @@
 
 ## Bắt đầu
 
+### Kiểm tra cập nhật khi mở ứng dụng
+
+Bật theo mặc định và kiểm tra một lần mỗi khi mở ứng dụng. Khi có phiên bản mới, bạn chọn tải bản cập nhật hoặc để sau. Lỗi ngoại tuyến không mở hộp thoại. Có thể tắt trong Tùy chọn. Tải xuống và cài đặt bản cập nhật từ trang phát hành GitHub chính thức.
+
 Tùy chọn mở trong cửa sổ chia theo danh mục. Lưu để áp dụng; Hủy, × hoặc Escape để bỏ thay đổi chưa lưu. Có thể xem trước giao diện; Đặt lại chỉ ảnh hưởng danh mục hiện tại. Trình chỉnh sửa nâng cao lưu riêng và quay lại Tùy chọn khi đóng.
 
 ### Bắt đầu
@@ -104,6 +108,16 @@ print("Can fetch a page:", xd.supports("xd.fetch"))
 
 Open examples/core-api-automation.lua or examples/custom-site-reader.lua with Editor actions → Open file…. Site reader uses public pages, Pages patterns and Direct connection; test with Test on URL before enabling its trigger. Ordinary automation cannot call xd.fetch. Import script… accepts .de-script.json as a new draft with automatic triggers and file changes off; review its code and reselect local queues. Stop script does not undo submitted downloads. Full English reference: docs/automation.md.
 
+
+### Lua Provider API 1
+
+Nhà cung cấp tải xuống Lua hỗ trợ xác định nguồn, xử lý byte, xác minh mã băm và tạm dừng/tiếp tục. Mỗi tác vụ giữ nguyên phiên bản mã đã lưu. Chỉ kiểm thử bằng tệp mã hóa được tạo cục bộ. Sau khi lưu nhà cung cấp, ứng dụng cũ không thể ghi vào hồ sơ này.
+
+Scripting → Script settings → Download provider → Save script → Add provider download.
+
+API: `resolve(request)`, `refresh(request, previous)`, `transform(plan, bytes, offset)`, `finish(plan, result)`.
+
+`docs/lua-providers.md` · `examples/download-provider.lua` · `examples/download-provider-custom-ctr.lua`
 
 ## Dòng lệnh
 

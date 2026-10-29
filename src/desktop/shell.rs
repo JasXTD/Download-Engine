@@ -369,7 +369,7 @@ fn navigation(
 
 impl Desktop {
     fn selected_job(&self) -> Option<Job> {
-        if self.selected_jobs().len() != 1 {
+        if self.selected_job_refs().take(2).count() != 1 {
             return None;
         }
         self.jobs
@@ -385,14 +385,7 @@ impl Desktop {
     }
 
     fn clear_finished(&mut self) {
-        for job in self
-            .jobs
-            .clone()
-            .into_iter()
-            .filter(|job| job.status == Status::Complete)
-        {
-            self.command(Command::Remove(job.id));
-        }
+        self.request_clear_history(&self.queue_id.clone());
     }
 
     pub(super) fn menu_bar(&mut self, ui: &mut egui::Ui, p: Palette) {
@@ -589,6 +582,14 @@ impl Desktop {
     }
 
     pub(super) fn sidebar(&mut self, ui: &mut egui::Ui, p: Palette) {
+        // Search each filename once; status/category counts reuse cheap metadata.
+        let search = self.search.trim().to_lowercase();
+        let matching: Vec<_> = self
+            .jobs
+            .iter()
+            .filter(|job| Self::matches_search(job, &search))
+            .map(|job| (job.status, job.category()))
+            .collect();
         let labels = self.interface.sidebar_labels;
         let small = ui.ctx().content_rect().height() < 700.0;
         egui::Panel::left("navigation")
@@ -619,16 +620,13 @@ impl Desktop {
                             (Filter::Complete, CHECK),
                             (Filter::Failed, WARNING),
                         ] {
-                            let count = self
-                                .jobs
+                            let count = matching
                                 .iter()
-                                .filter(|job| {
-                                    filter.accepts(job.status)
-                                        && self.accepts_category(job)
-                                        && job
-                                            .name
-                                            .to_lowercase()
-                                            .contains(&self.search.trim().to_lowercase())
+                                .filter(|(status, category)| {
+                                    filter.accepts(*status)
+                                        && self
+                                            .category
+                                            .is_none_or(|selected| selected == *category)
                                 })
                                 .count();
                             if navigation(
@@ -658,16 +656,10 @@ impl Desktop {
                             Category::Compressed,
                             Category::Other,
                         ] {
-                            let count = self
-                                .jobs
+                            let count = matching
                                 .iter()
-                                .filter(|job| {
-                                    job.category() == category
-                                        && self.filter.accepts(job.status)
-                                        && job
-                                            .name
-                                            .to_lowercase()
-                                            .contains(&self.search.trim().to_lowercase())
+                                .filter(|(status, kind)| {
+                                    *kind == category && self.filter.accepts(*status)
                                 })
                                 .count();
                             if navigation(
@@ -793,7 +785,7 @@ impl Desktop {
                             RichText::new(if self.view == View::Logs {
                                 tr("Local logs").into()
                             } else {
-                                match self.selected_jobs().len() {
+                                match self.selected_job_refs().count() {
                                     0 => tr("No selection").into(),
                                     count => tf!("{count} selected", count = count),
                                 }

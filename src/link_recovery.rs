@@ -122,6 +122,10 @@ async fn check(
         job.hls.is_none(),
         "Preview the HLS video again to replace an expired playlist"
     );
+    ensure!(
+        job.provider.is_none(),
+        "Lua provider links refresh automatically on resume"
+    );
     let limiter = limiter.with_store(store)?;
     limiter.check_quota().await?;
     // Cancel drops the HTTP response immediately. File operations are read-only;

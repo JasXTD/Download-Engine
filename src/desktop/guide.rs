@@ -158,17 +158,29 @@ impl Desktop {
         };
         let localized;
         let body = if let Some(latest) = latest {
-            let history = CHANGELOG.splitn(3, "\n## ").nth(2).unwrap_or("");
-            localized = format!(
-                "{latest}\n\n### {}\n\n## {history}",
-                tr("Earlier release notes (English)")
-            );
+            localized = localized_changelog(latest);
             localized.as_str()
         } else {
             &CHANGELOG[start + 1..]
         };
         article(ui, p, "changelog", tr("Release notes"), body);
     }
+}
+
+/// Keep archived translations in source without repeating releases in Help.
+fn current_release(notes: &str) -> &str {
+    notes
+        .split_once("\n## ")
+        .map_or(notes, |(latest, _)| latest)
+}
+fn localized_changelog(notes: &str) -> String {
+    let normalized = notes.replace("\r\n", "\n");
+    let latest = current_release(&normalized).trim_end();
+    let history = CHANGELOG.splitn(3, "\n## ").nth(2).unwrap_or("");
+    format!(
+        "{latest}\n\n### {}\n\n## {history}",
+        tr("Earlier release notes (English)")
+    )
 }
 
 /// A full-width, left-aligned topic row. Long translated titles end with … and show
@@ -332,11 +344,25 @@ mod tests {
                 "{code}: release notes are not for the current release"
             );
             assert_eq!(
-                notes.matches("\n### ").count(),
+                current_release(&notes).matches("\n### ").count(),
                 sections,
                 "{code}: sections differ"
             );
-            assert!(!notes.contains("\n## "), "{code}: only the newest release");
+            // Older translations may be retained, but the displayed history must
+            // contain exactly one copy of every release, in canonical order.
+            let displayed = localized_changelog(&notes);
+            let actual: Vec<_> = displayed
+                .lines()
+                .filter(|line| line.starts_with("## "))
+                .collect();
+            let expected: Vec<_> = CHANGELOG
+                .lines()
+                .filter(|line| line.starts_with("## "))
+                .collect();
+            assert_eq!(
+                actual, expected,
+                "{code}: duplicated or missing displayed release"
+            );
             // The article view splits paragraphs and headings on "\n\n".
             assert!(!notes.contains('\r'), "{code}: use LF line endings");
         }

@@ -66,7 +66,9 @@ without a WeTransfer-specific extension update.
 
 The sidebar filters downloads by status, file type or queue. Manage queues controls groups of downloads. In the top toolbar, Scripting contains your rules, scripts, site readers and run history; Grabber beside it finds website files and saves offline websites. Logs contains application diagnostics and sits beside Preferences at the right end of the toolbar.
 
-Tasks contains download actions. View changes the current page and list options. Tools opens settings, browser setup, video previews and the website grabber. Help contains this Guide, Changelog, Check for updates and About. Changelog shows release notes newest first; About shows the full installed version and a link to the official GitHub repository. Choose Help → Check for updates to compare your installed version with the latest stable public GitHub release. The check runs only when you request it, respects your proxy settings and can be closed while it is loading. Open release page takes you to GitHub to choose an installer or portable package; the app does not install updates automatically. If the check fails, use Check again. Open Legal & licenses to read or copy the application’s MIT license and bundled third-party notices offline; Back to About or Escape returns to the information card. License texts retain their original language and wording.
+The queue line above the list also offers Start queue or Pause queue. Start queue runs that queue immediately and overrides its schedule; use the Scheduler page to restore scheduled operation. These controls affect the queue, while Resume and Pause in the toolbar affect selected files. Hover a file's status to read its full label, retry explanation or reported error without opening its details. Compact windows give filenames extra space; explicitly resized columns keep their saved widths and can scroll horizontally. Hover a shortened column heading to read its full label and the reorder/resize hint.
+
+Tasks contains download actions. View changes the current page and list options. Tools opens settings, browser setup, video previews and the website grabber. Help contains this Guide, Changelog, Check for updates and About. Changelog shows release notes newest first; About shows the full installed version and a link to the official GitHub repository. Choose Help → Check for updates to compare your installed version with the latest stable public GitHub release. By default, Download Engine also checks once in the background whenever the program opens. A newer stable release shows Get update and Later; Get update opens the official GitHub release page. Dismissing the prompt keeps the current version and does not interrupt downloads. Offline or failed launch checks stay quiet. Turn off Check for updates on launch in Preferences → Startup & tray to disable automatic checks. This setting does not start the app with Windows. Checks respect your proxy settings, and manual checks can be closed while loading. Open release page takes you to GitHub to choose an installer or portable package; the app does not install updates automatically. If the check fails, use Check again. Open Legal & licenses to read or copy the application’s MIT license and bundled third-party notices offline; Back to About or Escape returns to the information card. License texts retain their original language and wording.
 
 ### Useful shortcuts
 
@@ -253,7 +255,7 @@ Notify and Exit remain separate choices. Exit uses a 15-second countdown and clo
 
 A synchronization queue checks its source again on later runs. Previous copies are kept when a replacement is needed. Use it for files you want to check repeatedly, rather than for a one-time download.
 
-Download at once in a queue's three-dot menu accepts a typed number from 1 to 32. Click Set or press Enter. The scheduler runs at most 32 files across all queues, including Start immediately. Higher limits use more CPU, memory and network connections; the default queue limits are unchanged. Clear completed history removes completed entries from that queue's history and keeps their saved files.
+Download at once in a queue's three-dot menu accepts a typed number from 1 to 32. Click Set or press Enter. The scheduler runs at most 32 files across all queues, including Start immediately. Higher limits use more CPU, memory and network connections; the default queue limits are unchanged. Clear completed history removes completed entries from that queue's history and keeps their saved files. It first shows a confirmation with the queue and completed count. Choose Clear history to confirm, or Cancel, close the popup or press Escape to keep the entries. Only the reviewed entries still completed in that queue are cleared; newly completed or restarted downloads are kept.
 
 ## Scripting
 
@@ -585,6 +587,53 @@ return {
 From then on, Download video, Find videos on this page, Add URL and Preview video open matching pages with your reader. One stream goes straight to the quality choice; files or several streams open the Video downloads list. If the reader fails on a page opened from the browser, Download Engine shows what the browser found instead. YouTube, Bilibili, TikTok and Twitch always use the built-in readers.
 
 Site readers can read web pages but cannot see or change your downloads. Their requests and returned downloads reach the public internet only: home-network and local addresses are refused and browser cookies and logins are never sent by the reader. Choose Preferences → Connection → Proxy → Direct connection to use a reader or download its results; System and custom proxies are refused because they cannot guarantee the same address checks. Redirects to another origin drop script-supplied headers and cannot forward a POST body. The full reference is in docs/automation.md.
+
+### Download providers — API 1
+
+Choose **Download provider** in **Script settings → Trigger**, keep Lua, adapt the
+starter and save it. Enter **Source URL** and an optional file name, then choose
+**Add provider download**. The job uses Main queue and normal download folders.
+Pause, Resume and Stop live in the download list. Each job keeps the exact saved
+script revision; editing the library cannot change an existing job.
+
+Return four callbacks: `resolve(request)`, `refresh(request, previous)`,
+`transform(plan, bytes, offset)` and `finish(plan, result)`. Plans contain
+`url`, positive `size`, trusted `input_sha256` and `output_sha256`, and
+`transform_id`. Hashes are lowercase SHA-256. Transform returns exactly as many
+bytes as it receives. Offsets are absolute; chunks are at most 256 KiB.
+
+`xd.aes_ctr(key_or_handle, counter_hex, bytes, offset)` provides native AES-CTR.
+`xd.aes_blocks(key_or_handle, blocks)` lets Lua implement its own construction.
+`xd.key(protected_token)` opens a provider-bound Windows-protected key as an opaque
+handle in the processor. Provision tokens locally with `scripts protect-key ID`,
+reading the private hex key from redirected stdin instead of command arguments.
+`xd.fetch` is available only during resolve/refresh and retains the public-only site-reader network rules. Providers cannot
+access files, launch programs, mutate downloads, or read saved logins. Each
+callback has a timeout capped at 60 seconds and a 64 MiB Lua memory limit.
+
+Resolvers and processors run in separate fresh workers. `xd.phase` is `resolver`
+or `processor`; processor source never has `xd.fetch`, even during initialization.
+Use `xd.key` in the processor and the absolute offset; globals from refresh do
+not carry into processing or survive a pause. Stored plans and processor callback
+plans contain size, hashes and transform identity, with no resolved URL.
+The core verifies encrypted bytes first, checks saved processing checkpoints on
+resume, and independently verifies the final hash before publishing. Transfer
+progress can show 100% while Processing with Lua provider is still running.
+
+Bundled examples: `examples/download-provider.lua` and
+`examples/download-provider-custom-ctr.lua`. Their public test keys and hash
+placeholders must be replaced with metadata for your own file. Read
+`docs/lua-providers.md` for the complete contract and offline test command.
+These are examples, not verified integrations with any particular service.
+
+Frozen job source is encrypted with Windows DPAPI, bound to the current Windows
+account. Existing saved jobs upgrade atomically; old backups and private literals
+in library source or exported scripts are not erased. Use protected tokens for
+private keys and keep shared scripts free of private credentials.
+
+Saving a provider upgrades profile compatibility to data/writer version 3: older
+builds then refuse to write the profile. Plain URL exports omit provider jobs. Share reviewed script
+packages separately. The earlier standalone lab uses a different experimental API.
 
 ## Command line
 

@@ -24,6 +24,7 @@ pub(super) struct ChecksumDialog {
 }
 pub(super) struct Extras {
     pub(super) update_check: Option<updates::State>,
+    pub(super) launch_update_check: Option<updates::State>,
     checksum: Option<ChecksumDialog>,
     pub(super) watches: HashMap<String, Watch>,
     pub(super) exit_deadline: Option<Instant>,
@@ -45,6 +46,7 @@ impl Default for Extras {
     fn default() -> Self {
         Self {
             update_check: None,
+            launch_update_check: None,
             checksum: None,
             watches: HashMap::new(),
             exit_deadline: None,
@@ -113,7 +115,7 @@ impl Desktop {
                 }
             }
             "zip-preview" => self.zip_sample(),
-            "updates-available" | "updates-current" | "updates-error" => self.updates_sample(mode),
+            "updates-available" | "updates-current" | "updates-error" | "updates-launch" => self.updates_sample(mode),
             "ftp-add" | "ftps-add" => {
                 self.url = if mode == "ftp-add" {
                     "ftp://downloads.example.com/releases/archive.zip"
@@ -273,6 +275,7 @@ impl Desktop {
             "remove-confirmation" => {
                 self.request_destructive(DestructiveAction::Remove, self.selected_jobs())
             }
+            "clear-history-confirmation" => self.request_clear_history(MAIN_QUEUE),
             "delete-file-confirmation" | "delete-files-confirmation" => {
                 let count = if mode == "delete-files-confirmation" {
                     usize::MAX

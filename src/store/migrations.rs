@@ -5,8 +5,8 @@ use anyhow::{Context, Result, ensure};
 use rusqlite::{Connection, OptionalExtension, TransactionBehavior, functions::FunctionFlags};
 
 const SCHEMA_VERSION: i64 = 1;
-const DATA_VERSION: i64 = 1;
-const WRITER_VERSION: i64 = 1;
+const DATA_VERSION: i64 = 3;
+const WRITER_VERSION: i64 = 3;
 
 pub(super) fn register_writer(conn: &Connection) -> Result<()> {
     conn.create_scalar_function(

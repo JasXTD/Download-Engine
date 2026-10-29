@@ -46,7 +46,7 @@ fn select(html: &str, selector: &str, attribute: Option<&str>) -> Result<Vec<Str
     Ok(results)
 }
 
-pub(super) fn install(lua: &Lua, xd: &Table, reader: bool) -> mlua::Result<()> {
+pub(crate) fn install(lua: &Lua, xd: &Table, reader: bool) -> mlua::Result<()> {
     use super::{api, lua::to_lua};
     xd.set("api_version", api::VERSION)?;
     xd.set("app_version", env!("CARGO_PKG_VERSION"))?;

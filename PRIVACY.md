@@ -79,7 +79,9 @@ have remote access to your local profile through the extension.
 
 ## Optional update checks
 
-Help → Check for updates contacts the public GitHub API only when you request it.
+Download Engine contacts the public GitHub API once when the program opens by default.
+Disable Check for updates on launch in Preferences → Startup & tray to opt out.
+Help → Check for updates also lets you request a check manually.
 The request includes a Download Engine version user-agent and normal connection
 information such as your IP address. It uses your configured proxy and does not
 send your download history, filenames, browser cookies or GitHub account token.

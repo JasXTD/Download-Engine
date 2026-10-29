@@ -122,7 +122,7 @@ fn list(ui: &mut egui::Ui, store: &Store, state: &mut State, p: Palette, height:
                             } else {
                                 tr("Running")
                             }
-                        } else if matches!(item.trigger, Trigger::Manual) {
+                        } else if matches!(item.trigger, Trigger::Manual | Trigger::Provider) {
                             tr("Manual")
                         } else if item.enabled {
                             tr("Automatic trigger on")

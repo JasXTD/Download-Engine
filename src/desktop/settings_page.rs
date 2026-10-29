@@ -558,6 +558,14 @@ impl Desktop {
             });
         });
         section(ui, p, tr("Tray & notifications"), |ui| {
+            toggle(
+                ui,
+                p,
+                tr("Check for updates on launch"),
+                tr("Check GitHub when Download Engine opens. You choose whether to update."),
+                "\u{e895}",
+                &mut state.interface.check_updates_on_launch,
+            );
             ui.add_enabled_ui(
                 self.tray_available() || state.behavior.close_to_tray,
                 |ui| {

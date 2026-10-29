@@ -2,6 +2,44 @@
 
 Release notes are available offline in Help → Changelog. Newest releases appear first.
 
+## 3.5.2 — 2026-10-30
+
+### Update notifications on app launch
+
+- Check for updates on launch is enabled by default. Download Engine checks the latest stable GitHub release once in the background when the program opens. A newer version offers Get update or Later; Get update opens the official release page for a manual download and installation.
+- Disable the check in Preferences → Startup & tray. Offline or failed checks stay quiet. A prompt waits for other dialogs to close, and manual checks reuse a pending launch request. Windows startup settings are unchanged.
+
+## 3.5.1 — 2026-10-29
+
+### Lua provider security
+
+- Resolve/refresh and transform/finish now run in workers with separate capabilities. Processors never receive `xd.fetch`, even while loading source, and cannot call resolver operations. Use `xd.phase` for phase-specific initialization; resolver locals do not carry into processing.
+- Saved provider plans retain only size, hashes and transform identity. Resolved URLs are refreshed when needed, and frozen job source is protected by Windows user-scoped DPAPI. Existing provider jobs upgrade atomically without changing their checkpoint bindings; older writers are blocked.
+- Added opaque, provider-bound AES key handles through `xd.key` and the local `scripts protect-key` CLI command, which reads keys from redirected stdin. Private keys need not appear in script source or exports. Historical backups and source literals in existing library scripts are not erased; see `docs/lua-providers.md`.
+
+### Confirm before clearing history
+
+- Clear completed history now asks for confirmation from both the toolbar and queue menu. The compact popup shows the queue and completed count in a summary card, with Clear history and Cancel actions. Closing it or pressing Escape leaves history unchanged. Downloaded files stay in their folders.
+- Only the reviewed completed entries in that queue are cleared. Downloads completed later, restarted or moved to another queue while confirming are preserved, including their saved progress.
+
+## 3.5.0 — 2026-10-29
+
+### Lua download providers
+
+- Scripting now includes a Download provider role. Saved Lua scripts resolve a direct file and transform its bytes through Core Provider API 1, with native AES-CTR and AES block helpers. The desktop and `scripts download` CLI command add jobs to the regular download queue.
+- The engine owns range transfers, proxy/quota settings, source and output verification, saved checkpoints, pause/resume/Stop and final file publication. Each job pins its reviewed script revision. Provider workers have memory and callback limits and are terminated promptly on cancellation.
+- Added native and custom Lua AES-CTR examples, provider-aware autocomplete/API reference and an offline guide. Validation uses generated encrypted files and loopback servers; no service-specific or DRM compatibility is claimed.
+- Saving a provider upgrades the profile compatibility guard. Older builds refuse that profile instead of downloading provider jobs as ordinary encrypted files. Plain download-list exports omit these jobs; export the reviewed script package separately.
+
+## 3.4.1 — 2026-10-29
+
+### Download list responsiveness and controls
+
+- Large queues avoid copying every download record during redraws. Search counts share filename matching, selection controls borrow records, and filtering a large selection uses direct ID lookups.
+- Compact windows give filenames more room while retaining custom column widths. Search and translated Clear controls adapt to the available space. Long column headings use an ellipsis with the complete label available on hover.
+- Start or pause the current queue beside its status. Start queue runs it now and overrides its schedule, just like the Queues page. Hover a download's status for the full label, retry explanation and reported error.
+- Download transport, connection limits, integrity verification, quota accounting and resume formats are unchanged. Performance notes distinguish UI measurements from network speed.
+
 ## 3.4.0 — 2026-10-29
 
 ### Custom themes

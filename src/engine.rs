@@ -297,6 +297,10 @@ async fn transfer(
     tokio::fs::create_dir_all(&job.directory)
         .await
         .context("Cannot create the download folder")?;
+    if job.provider.is_some() {
+        let source = crate::provider::resolve(store, job, cancel).await?;
+        return http::transfer(source, store, job, &root, cancel, limiter).await;
+    }
     if job.hls.is_some() {
         return crate::hls::transfer(store, job, &root, cancel, limiter).await;
     }

@@ -44,6 +44,8 @@ MCP controls: --no-download-control, --no-queue-control, --allow-lua,
   automation chain NAME --source NAME|ID --queue NAME|ID
   automation enable ID | disable ID | remove ID
   scripts list | show ID | save JSON_FILE | remove ID
+  scripts download ID URL [--name FILE] [--queue ID]  Add using a saved Lua provider
+  scripts protect-key ID        Read an AES hex key from redirected stdin; return a protected token for xd.key
   scripts enable ID | disable ID | run ID | stop RUN_ID
   scripts sample ID [DOWNLOAD_ID...]  Run an event script with chosen downloads; changes are simulated
   scripts runs [SCRIPT_ID] | logs RUN_ID
@@ -115,6 +117,12 @@ impl Args {
 
 fn main() {
     let args: Vec<String> = std::env::args().skip(1).collect();
+    if args == ["--provider-worker"] {
+        if download_engine::provider::worker_main().is_err() {
+            std::process::exit(1);
+        }
+        return;
+    }
     if matches!(args.first().map(String::as_str), Some("mcp" | "mcp-config")) {
         if let Err(error) = mcp(&args) {
             eprintln!("{error:#}");
@@ -288,6 +296,27 @@ fn run(raw: Vec<String>) -> Result<(Value, i32)> {
     let store = Store::open(paths.clone())?;
     let words = args.words.clone();
     let w: Vec<&str> = words.iter().map(String::as_str).collect();
+    if let ["scripts", "protect-key", id] = w.as_slice() {
+        use std::io::IsTerminal;
+        args.finish()?;
+        ensure!(
+            !args.delete_file && request.is_none(),
+            "Key protection does not accept queued-command options"
+        );
+        ensure!(
+            script_run.is_none(),
+            "Automation workers cannot provision provider keys"
+        );
+        ensure!(
+            !std::io::stdin().is_terminal(),
+            "Supply the AES hex key through redirected stdin, never a command argument"
+        );
+        let mut key = zeroize::Zeroizing::new(String::new());
+        std::io::stdin().lock().take(67).read_to_string(&mut key)?;
+        ensure!(key.len() <= 66, "AES key input is too long");
+        let token = store.protect_provider_key(id, key.trim())?;
+        return Ok((json!({"ok":true,"result":{"token":token}}), 0));
+    }
     ensure!(
         !args.delete_file || matches!(w.as_slice(), ["remove", _]),
         "--delete-file is for remove"
@@ -512,6 +541,20 @@ fn run(raw: Vec<String>) -> Result<(Value, i32)> {
             Action::SaveScript { script }
         }
         ["scripts", "remove", id] => Action::RemoveScript { id: (*id).into() },
+        ["scripts", "download", id, url] => {
+            ensure!(
+                script_run.is_none(),
+                "Automation workers cannot start provider downloads"
+            );
+            let script = store.script(id)?;
+            Action::AddProvider {
+                script: (*id).into(),
+                revision: script.revision,
+                url: (*url).into(),
+                name: args.take("--name"),
+                queue: args.take("--queue").unwrap_or_else(|| "main".into()),
+            }
+        }
         ["scripts", "run", id] => Action::RunScript { id: (*id).into() },
         ["scripts", "sample", id, downloads @ ..] => Action::RunScriptSample {
             id: (*id).into(),

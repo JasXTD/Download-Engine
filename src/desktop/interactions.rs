@@ -69,6 +69,7 @@ pub(super) struct Selection {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(super) enum DestructiveAction {
     Remove,
+    ClearHistory,
     Restart,
     DeleteFile,
 }
@@ -76,13 +77,18 @@ impl DestructiveAction {
     fn label(self) -> &'static str {
         match self {
             Self::Remove => tr("Remove"),
+            Self::ClearHistory => tr("Clear history"),
             Self::Restart => tr("Restart"),
             Self::DeleteFile => tr("Delete"),
         }
     }
-    fn command(self, job: Job) -> anyhow::Result<Command> {
+    fn command(self, job: Job, history_queue: Option<&str>) -> anyhow::Result<Command> {
         Ok(match self {
             Self::Remove => Command::Remove(job.id),
+            Self::ClearHistory => Command::ClearHistory {
+                id: job.id,
+                queue: history_queue.context("Missing history queue")?.into(),
+            },
             Self::Restart => Command::Restart(job.id),
             Self::DeleteFile => Command::DeleteFile {
                 id: job.id,
@@ -96,6 +102,7 @@ impl DestructiveAction {
 pub(super) struct Confirmation {
     action: DestructiveAction,
     jobs: Vec<Job>,
+    history_queue: Option<String>,
 }
 
 impl Desktop {
@@ -110,17 +117,27 @@ impl Desktop {
         self.selected.as_deref() == Some(id) || self.selection.additional.contains(id)
     }
     pub(super) fn selected_jobs(&self) -> Vec<Job> {
+        self.selected_job_refs().cloned().collect()
+    }
+    pub(super) fn selected_job_refs(&self) -> impl Iterator<Item = &Job> {
+        let search = self.search.trim().to_lowercase();
         self.jobs
             .iter()
-            .filter(|j| self.accepts(j) && self.is_selected(&j.id))
-            .cloned()
+            .filter(move |j| self.is_selected(&j.id) && self.accepts_with_search(j, &search))
+    }
+    pub(super) fn visible_job_indices(&self) -> Vec<usize> {
+        let search = self.search.trim().to_lowercase();
+        self.jobs
+            .iter()
+            .enumerate()
+            .filter(|(_, job)| self.accepts_with_search(job, &search))
+            .map(|(index, _)| index)
             .collect()
     }
     pub(super) fn visible_job_ids(&self) -> Vec<String> {
-        self.jobs
-            .iter()
-            .filter(|j| self.accepts(j))
-            .map(|j| j.id.clone())
+        self.visible_job_indices()
+            .into_iter()
+            .map(|index| self.jobs[index].id.clone())
             .collect()
     }
     pub(super) fn choose_download(&mut self, id: &str, modifiers: egui::Modifiers) {
@@ -271,6 +288,9 @@ impl Desktop {
         let mut current = Vec::new();
         for snapshot in jobs {
             if let Some(job) = self.store.get(&snapshot.id)? {
+                if action == DestructiveAction::ClearHistory && job.status != Status::Complete {
+                    continue;
+                }
                 if action == DestructiveAction::DeleteFile {
                     anyhow::ensure!(
                         job.status == Status::Complete,
@@ -321,20 +341,52 @@ impl Desktop {
                     && (action == DestructiveAction::DeleteFile
                         || jobs.iter().any(|j| self.has_partial_data(j))) =>
             {
-                self.confirmation = Some(Confirmation { action, jobs });
+                self.confirmation = Some(Confirmation {
+                    action,
+                    jobs,
+                    history_queue: None,
+                });
                 self.form_error = None;
                 self.dialog = Some(Dialog::Confirm);
             }
-            Ok(jobs) => self.dispatch_destructive(action, jobs),
+            Ok(jobs) => self.dispatch_destructive(action, jobs, None),
             Err(error) => self.notice = Some(Notice::error(error.to_string())),
         }
     }
-    fn dispatch_destructive(&mut self, action: DestructiveAction, jobs: Vec<Job>) {
+    pub(super) fn request_clear_history(&mut self, queue: &str) {
+        if self.dialog.is_some() {
+            return;
+        }
+        match self.store.queue_jobs(queue) {
+            Ok(jobs) => {
+                let jobs: Vec<_> = jobs
+                    .into_iter()
+                    .filter(|job| job.status == Status::Complete)
+                    .collect();
+                if !jobs.is_empty() {
+                    self.confirmation = Some(Confirmation {
+                        action: DestructiveAction::ClearHistory,
+                        jobs,
+                        history_queue: Some(queue.into()),
+                    });
+                    self.form_error = None;
+                    self.dialog = Some(Dialog::Confirm);
+                }
+            }
+            Err(error) => self.notice = Some(Notice::error(error.to_string())),
+        }
+    }
+    fn dispatch_destructive(
+        &mut self,
+        action: DestructiveAction,
+        jobs: Vec<Job>,
+        history_queue: Option<&str>,
+    ) {
         for job in jobs {
-            if let Err(error) = action
-                .command(job)
-                .and_then(|command| self.scheduler.send(command))
-            {
+            if let Err(error) = action.command(job, history_queue).and_then(|command| {
+                self.cancel_status_request(&command);
+                self.scheduler.send(command)
+            }) {
                 self.notice = Some(Notice::error(error.to_string()));
                 break;
             }
@@ -346,12 +398,15 @@ impl Desktop {
             return;
         };
         let action = form.action;
+        let clearing = action == DestructiveAction::ClearHistory;
         let mut confirm = false;
         let mut cancel = false;
         let response = form_dialog::modal("confirm-download-action", p).show(ctx, |ui| {
             ui.set_width(430.0);
             let deleting = action == DestructiveAction::DeleteFile;
-            let title = if deleting {
+            let title = if clearing {
+                tr("Clear completed history?").into()
+            } else if deleting {
                 if form.jobs.len() == 1 {
                     tr("Delete file?").into()
                 } else {
@@ -362,13 +417,60 @@ impl Desktop {
             };
             cancel = form_dialog::title(ui, &title, form_dialog::Icon::Symbol("\u{e7ba}"), p, true);
             ui.add_space(8.0);
-            if form.jobs.len() == 1 {
+            if clearing {
+                let queue_id = form.history_queue.as_deref().unwrap_or("");
+                let name = self
+                    .queues
+                    .iter()
+                    .find(|queue| queue.id == queue_id)
+                    .map_or(queue_id, |queue| queue.name.as_str());
+                ui.label(
+                    RichText::new(tr("Remove these entries from the download list?"))
+                        .color(p.muted),
+                );
+                ui.add_space(8.0);
+                egui::Frame::new()
+                    .fill(p.background)
+                    .stroke(egui::Stroke::new(1.0, p.border))
+                    .corner_radius(8)
+                    .inner_margin(12)
+                    .show(ui, |ui| {
+                        ui.set_width(ui.available_width());
+                        ui.columns(2, |columns| {
+                            columns[0].label(RichText::new(tr("Queue")).size(11.0).color(p.muted));
+                            columns[0].add_space(4.0);
+                            columns[0]
+                                .add(egui::Label::new(RichText::new(name).size(20.0)).truncate())
+                                .on_hover_text(name);
+                            columns[1].with_layout(
+                                egui::Layout::top_down(egui::Align::Max),
+                                |ui| {
+                                    ui.add(
+                                        egui::Label::new(
+                                            RichText::new(tr("Completed downloads"))
+                                                .size(11.0)
+                                                .color(p.muted),
+                                        )
+                                        .truncate(),
+                                    )
+                                    .on_hover_text(tr("Completed downloads"));
+                                    ui.add_space(4.0);
+                                    ui.label(
+                                        RichText::new(form.jobs.len().to_string())
+                                            .size(20.0)
+                                            .strong(),
+                                    );
+                                },
+                            );
+                        });
+                    });
+            } else if form.jobs.len() == 1 {
                 ui.add(egui::Label::new(&form.jobs[0].name).truncate())
                     .on_hover_text(&form.jobs[0].name);
             } else {
                 ui.label(tf!("{} selected downloads", form.jobs.len()));
             }
-            if deleting {
+            if !clearing && deleting {
                 egui::ScrollArea::vertical()
                     .max_height(120.0)
                     .show(ui, |ui| {
@@ -385,7 +487,7 @@ impl Desktop {
                 ui.label(tr(
                     "Files will not go to the Recycle Bin. This cannot be undone.",
                 ));
-            } else {
+            } else if !clearing {
                 ui.label(tr(
                     "Saved progress will be discarded. This cannot be undone.",
                 ));
@@ -399,7 +501,9 @@ impl Desktop {
                 ui.label(RichText::new(error).color(p.warning));
             }
             form_dialog::controls(ui, |ui| {
-                let label = if deleting {
+                let label = if clearing {
+                    tr("Clear history").into()
+                } else if deleting {
                     if form.jobs.len() == 1 {
                         tr("Delete file").into()
                     } else {
@@ -409,6 +513,9 @@ impl Desktop {
                     tf!("{} and discard progress", tr(action.label()))
                 };
                 confirm = form_dialog::danger_button(ui, &label, p).clicked();
+                if clearing {
+                    cancel |= form_dialog::secondary_button(ui, tr("Cancel")).clicked();
+                }
             });
         });
         if cancel || response.should_close() {
@@ -419,10 +526,11 @@ impl Desktop {
             // Re-read before dispatch: refreshes and worker events can arrive while the modal is open.
             match self.current_action_jobs(action, &form.jobs) {
                 Ok(jobs) => {
+                    let history_queue = form.history_queue.clone();
                     self.confirmation = None;
                     self.dialog = None;
                     self.form_error = None;
-                    self.dispatch_destructive(action, jobs);
+                    self.dispatch_destructive(action, jobs, history_queue.as_deref());
                 }
                 Err(error) => self.form_error = Some(error.to_string()),
             }

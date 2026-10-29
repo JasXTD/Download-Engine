@@ -109,13 +109,13 @@ pub enum Scope {
 #[derive(Default)]
 pub struct Collected {
     pub entries: Vec<Entry>,
-    /// HLS, DASH and YouTube streams need Preview video; a plain link cannot add them.
+    /// Media streams and providers cannot be recreated from a plain link.
     pub streams: usize,
 }
 
-/// Streams are left out of every list: Add batch and import reject their links.
+/// Specialized jobs are omitted: a plain URL cannot retain their processing.
 pub fn is_stream(job: &Job) -> bool {
-    job.hls.is_some() || crate::hls::is_playlist_url(&job.url)
+    job.provider.is_some() || job.hls.is_some() || crate::hls::is_playlist_url(&job.url)
 }
 
 #[derive(Serialize)]

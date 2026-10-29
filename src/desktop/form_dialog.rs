@@ -87,7 +87,8 @@ pub(super) fn footer(ui: &mut egui::Ui, action: &str, hint: Option<&str>, p: Pal
 }
 
 /// Right-aligned footer; put the primary action first, then secondary actions.
-/// Do not add Cancel or Close: the header × already dismisses the dialog.
+/// Ordinary forms dismiss through the header ×. A destructive confirmation can
+/// also offer an explicit Cancel action alongside its primary action.
 pub(super) fn controls<R>(ui: &mut egui::Ui, content: impl FnOnce(&mut egui::Ui) -> R) -> R {
     ui.add_space(2.0);
     ui.separator();

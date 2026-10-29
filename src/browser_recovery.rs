@@ -82,7 +82,7 @@ fn read(conn: &Connection, id: &str) -> Result<Option<Session>> {
 }
 fn inactive(job: &Job) -> Result<()> {
     ensure!(
-        job.hls.is_none() && job.ftp.is_none(),
+        job.hls.is_none() && job.ftp.is_none() && job.provider.is_none(),
         "Browser link recovery is for direct HTTP/HTTPS files"
     );
     ensure!(

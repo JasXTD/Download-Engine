@@ -137,16 +137,14 @@ impl Desktop {
     fn toolbar_enabled(&self, action: Action) -> bool {
         match action {
             Action::Resume => self
-                .selected_jobs()
-                .iter()
+                .selected_job_refs()
                 .any(|j| matches!(j.status, Status::Paused | Status::Failed)),
             Action::Pause | Action::Stop => self
-                .selected_jobs()
-                .iter()
+                .selected_job_refs()
                 .any(|j| matches!(j.status, Status::Downloading | Status::Queued)),
             Action::Remove => {
-                let jobs = self.selected_jobs();
-                !jobs.is_empty() && jobs.iter().all(|j| j.status != Status::Downloading)
+                let mut jobs = self.selected_job_refs().peekable();
+                jobs.peek().is_some() && jobs.all(|j| j.status != Status::Downloading)
             }
             Action::Folder => self.selected_job().is_some(),
             Action::Clear => self.jobs.iter().any(|j| j.status == Status::Complete),

@@ -5,6 +5,11 @@ mod fallback;
 #[derive(Clone)]
 pub(crate) enum Source {
     Direct(DownloadClient),
+    Provider {
+        client: DownloadClient,
+        url: String,
+        identity: String,
+    },
     Discovered {
         client: DownloadClient,
         url: String,
@@ -16,7 +21,7 @@ pub(crate) enum Source {
 impl Source {
     fn initial_url<'a>(&'a self, original: &'a str) -> &'a str {
         match self {
-            Self::Discovered { url, .. } => url,
+            Self::Discovered { url, .. } | Self::Provider { url, .. } => url,
             _ => original,
         }
     }
@@ -28,6 +33,19 @@ impl Source {
     ) -> Result<Response> {
         match self {
             Self::WeTransfer(source) => source.get(range, etag).await,
+            Self::Provider { client, url, .. } => {
+                let mut request = client
+                    .get(url)?
+                    .same_origin()
+                    .header(header::ACCEPT_ENCODING, "identity");
+                if let Some((start, end)) = range {
+                    request = request.header(header::RANGE, format!("bytes={start}-{end}"));
+                }
+                if let Some(etag) = etag {
+                    request = request.header(header::IF_RANGE, etag);
+                }
+                request.send().await
+            }
             Self::Direct(client) | Self::Discovered { client, .. } => {
                 let mut request = client.get(url)?.header(header::ACCEPT_ENCODING, "identity");
                 if matches!(
@@ -53,6 +71,7 @@ impl Source {
         match self {
             Self::Direct(_) | Self::Discovered { .. } => response.url().as_str(),
             Self::WeTransfer(source) => &source.identity,
+            Self::Provider { identity, .. } => identity,
         }
     }
     fn remote(&self, response: &Response) -> RemoteFile {
@@ -65,6 +84,7 @@ impl Source {
             Self::WeTransfer(source) => Some(&source.name),
             Self::Discovered { name, .. } => Some(name),
             Self::Direct(_) => None,
+            Self::Provider { .. } => None,
         };
         if let Some(name) = name
             && job.server_name_pending
@@ -126,6 +146,12 @@ pub(crate) async fn transfer(
     if probe.status() == reqwest::StatusCode::PARTIAL_CONTENT {
         identity(&probe)?;
         if let (Some(size), Some(etag)) = (probe_size(&probe)?, strong_etag(&probe)) {
+            if let Some(expected) = job.provider.as_ref().and_then(|p| p.plan.as_ref()) {
+                ensure!(
+                    size == expected.size,
+                    "Provider source size differs from its trusted plan"
+                );
+            }
             job.remote = Some(source.remote(&probe));
             let final_url = source.identity(&probe).to_owned();
             let connection_limit = connections.limit(&job.url, probe.url().as_str())?;
@@ -209,7 +235,20 @@ pub(crate) async fn transfer(
         expected.check(&response)?;
     }
     source.resolve_name(job, response.headers());
-    job.total = response.content_length();
+    if let Some(expected) = job.provider.as_ref().and_then(|p| p.plan.as_ref()) {
+        ensure!(
+            response
+                .content_length()
+                .is_none_or(|size| size == expected.size),
+            "Provider source size differs from its trusted plan"
+        );
+    }
+    job.total = response.content_length().or_else(|| {
+        job.provider
+            .as_ref()
+            .and_then(|p| p.plan.as_ref())
+            .map(|p| p.size)
+    });
     job.downloaded = 0;
     job.remote = Some(source.remote(&response));
     store.save(job)?;

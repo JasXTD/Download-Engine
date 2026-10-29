@@ -2,6 +2,10 @@
 
 ## 시작하기
 
+### 실행 시 업데이트 확인
+
+기본으로 활성화되어 앱을 열 때마다 한 번 확인합니다. 새 버전이 있으면 업데이트 받기 또는 나중에를 선택할 수 있습니다. 오프라인 오류는 팝업을 표시하지 않으며 환경설정에서 끌 수 있습니다. 공식 GitHub 릴리스 페이지에서 업데이트를 다운로드하고 설치하세요.
+
 환경 설정은 범주별 팝업으로 열립니다. 저장하면 적용되고 취소, × 또는 Escape를 누르면 저장하지 않은 변경이 취소됩니다. 테마를 미리 볼 수 있으며 재설정은 현재 범주에만 적용됩니다. 고급 편집기는 별도로 저장하며 닫으면 환경 설정으로 돌아옵니다.
 
 ### 시작하기
@@ -104,6 +108,16 @@ print("Can fetch a page:", xd.supports("xd.fetch"))
 
 Open examples/core-api-automation.lua or examples/custom-site-reader.lua with Editor actions → Open file…. Site reader uses public pages, Pages patterns and Direct connection; test with Test on URL before enabling its trigger. Ordinary automation cannot call xd.fetch. Import script… accepts .de-script.json as a new draft with automatic triggers and file changes off; review its code and reselect local queues. Stop script does not undo submitted downloads. Full English reference: docs/automation.md.
 
+
+### Lua Provider API 1
+
+Lua 다운로드 공급자로 소스 확인, 바이트 처리, 해시 검증 및 일반 일시 중지/재개를 사용할 수 있습니다. 각 다운로드는 저장된 스크립트 버전을 유지합니다. 로컬에서 생성한 암호화 파일로만 검증했습니다. 공급자를 저장하면 이전 앱 버전은 이 프로필에 쓸 수 없습니다.
+
+Scripting → Script settings → Download provider → Save script → Add provider download.
+
+API: `resolve(request)`, `refresh(request, previous)`, `transform(plan, bytes, offset)`, `finish(plan, result)`.
+
+`docs/lua-providers.md` · `examples/download-provider.lua` · `examples/download-provider-custom-ctr.lua`
 
 ## 명령줄
 

@@ -21,6 +21,7 @@ pub mod notifications;
 pub mod offline_website;
 pub mod paths;
 pub mod preferences;
+pub mod provider;
 pub mod proxy;
 pub mod quota;
 pub mod retry;

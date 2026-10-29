@@ -165,6 +165,7 @@ fn start() -> anyhow::Result<()> {
             app.attach_url_drop(cc);
             app.attach_clipboard(&cc.egui_ctx);
             app.attach_drop_target(&cc.egui_ctx);
+            app.check_updates_on_launch(&cc.egui_ctx);
             if show_browser_setup {
                 app.open_browser_setup();
             }

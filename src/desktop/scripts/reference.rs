@@ -35,7 +35,14 @@ pub(super) fn show(ui: &mut egui::Ui, draft: &Script, search: &mut String, p: Pa
                 .id_salt("script-api-functions")
                 .max_height(170.0)
                 .show(ui, |ui| {
-                    for function in api::FUNCTIONS.iter().filter(|f| f.available(reader)) {
+                    let functions: Vec<_> = if draft.trigger == Trigger::Provider {
+                        download_engine::provider::functions().collect()
+                    } else { api::FUNCTIONS.iter().filter(|f| f.available(reader)).collect() };
+                    if draft.trigger == Trigger::Provider {
+                        ui.label("Provider API 1 · xd.provider_api");
+                        ui.label("resolve(request), refresh(request, previous), transform(plan, bytes, offset), finish(plan, result)");
+                    }
+                    for function in functions {
                         if !query.is_empty()
                             && !format!("{} {}", function.name, function.description)
                                 .to_lowercase()

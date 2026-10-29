@@ -1,4 +1,4 @@
-//! User-requested checks of this project's public GitHub releases.
+//! Checks of this project's public GitHub releases, at app launch or on request.
 use crate::{proxy::Route, store::Store};
 use anyhow::{Context, Result, bail, ensure};
 use reqwest::{Client, StatusCode};
@@ -58,7 +58,7 @@ fn parse(body: &[u8], installed: &str) -> Result<Release> {
     })
 }
 
-/// No startup polling, credentials, download history, asset download or installation.
+/// Reads release metadata only; no credentials, download history, asset download or installation.
 pub async fn check(store: &Store, cancel: &CancellationToken) -> Result<Release> {
     fetch(
         &Route::load(store)?,

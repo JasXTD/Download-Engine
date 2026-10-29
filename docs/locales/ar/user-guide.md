@@ -2,6 +2,10 @@
 
 ## بدء الاستخدام
 
+### التحقق من التحديثات عند التشغيل
+
+مفعّل افتراضيًا ويتحقق مرة واحدة عند كل فتح للبرنامج. عند توفر إصدار جديد يمكنك الحصول على التحديث أو تأجيله. لا تظهر نافذة لأخطاء الاتصال، ويمكن تعطيل التحقق في التفضيلات. نزّل التحديثات وثبّتها من صفحة إصدارات GitHub الرسمية.
+
 تفتح التفضيلات في نافذة مقسمة إلى فئات. يطبق الحفظ التغييرات؛ ويلغي إلغاء أو × أو Escape التعديلات غير المحفوظة. يمكنك معاينة السمة، وإعادة الضبط تخص الفئة الحالية فقط. تحفظ المحررات المتقدمة بشكل منفصل وتعود إلى التفضيلات عند إغلاقها.
 
 ### بدء الاستخدام
@@ -104,6 +108,16 @@ print("Can fetch a page:", xd.supports("xd.fetch"))
 
 Open examples/core-api-automation.lua or examples/custom-site-reader.lua with Editor actions → Open file…. Site reader uses public pages, Pages patterns and Direct connection; test with Test on URL before enabling its trigger. Ordinary automation cannot call xd.fetch. Import script… accepts .de-script.json as a new draft with automatic triggers and file changes off; review its code and reselect local queues. Stop script does not undo submitted downloads. Full English reference: docs/automation.md.
 
+
+### Lua Provider API 1
+
+تدعم موفّرات تنزيل Lua تحديد المصدر ومعالجة البايتات والتحقق من البصمات مع الإيقاف المؤقت والاستئناف المعتادين. يحتفظ كل تنزيل بنسخة السكربت المحفوظة. اقتصر الاختبار على ملفات مشفرة مولّدة محليًا. بعد حفظ موفّر، لا تستطيع الإصدارات القديمة الكتابة إلى ملف التعريف هذا.
+
+Scripting → Script settings → Download provider → Save script → Add provider download.
+
+API: `resolve(request)`, `refresh(request, previous)`, `transform(plan, bytes, offset)`, `finish(plan, result)`.
+
+`docs/lua-providers.md` · `examples/download-provider.lua` · `examples/download-provider-custom-ctr.lua`
 
 ## سطر الأوامر
 

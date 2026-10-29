@@ -129,6 +129,7 @@ fn repeated_pages_dialogs_and_history_cleanup() {
             assert!(app.dialog.is_none(), "{dialog:?} did not close");
         }
         click(&mut app, &ctx, "Clear completed history");
+        click(&mut app, &ctx, "Clear history");
         let deadline = Instant::now() + Duration::from_secs(5);
         while app.store.get(&job.id).unwrap().is_some() {
             assert!(Instant::now() < deadline, "History removal did not settle");

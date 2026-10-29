@@ -169,6 +169,9 @@ impl Store {
         script.validate()?;
         let mut conn = self.connect()?;
         let tx = conn.transaction_with_behavior(TransactionBehavior::Immediate)?;
+        if script.trigger == Trigger::Provider {
+            crate::provider::protect_profile(&tx)?;
+        }
         let old: Option<String> = tx
             .query_row(
                 "SELECT data FROM automation_scripts WHERE id=?1",
@@ -259,8 +262,11 @@ impl Store {
         }
         // A reader never runs with automation powers; it only reads pages.
         ensure!(
-            !matches!(script.trigger, Trigger::SiteReader { .. }),
-            "Site readers run when a matching page is opened. Use Test on URL to try one."
+            !matches!(
+                script.trigger,
+                Trigger::SiteReader { .. } | Trigger::Provider
+            ),
+            "Use Test on URL for site readers or Add provider download for providers."
         );
         let run = enqueue(
             &tx,
@@ -647,7 +653,7 @@ impl Store {
             let mut context = None;
             match &script.trigger {
                 // Site readers run only when a matching page is opened or tested.
-                Trigger::Manual | Trigger::SiteReader { .. } => {}
+                Trigger::Manual | Trigger::SiteReader { .. } | Trigger::Provider => {}
                 Trigger::Startup if startup => {
                     context = Some(json!({"trigger":"startup","downloads":[]}))
                 }

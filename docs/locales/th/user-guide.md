@@ -2,6 +2,10 @@
 
 ## เริ่มต้นใช้งาน
 
+### ตรวจหาการอัปเดตเมื่อเปิดแอป
+
+เปิดใช้งานโดยค่าเริ่มต้นและตรวจสอบหนึ่งครั้งทุกครั้งที่เปิดแอป เมื่อพบรุ่นใหม่ คุณเลือกรับการอัปเดตหรือทำภายหลังได้ ข้อผิดพลาดขณะออฟไลน์จะไม่เปิดกล่องโต้ตอบ และปิดตัวเลือกนี้ได้ในการตั้งค่า ดาวน์โหลดและติดตั้งการอัปเดตจากหน้าเผยแพร่ GitHub อย่างเป็นทางการ
+
 การตั้งค่าเปิดเป็นหน้าต่างแบ่งตามหมวดหมู่ บันทึกเพื่อนำไปใช้ หรือยกเลิกด้วย ยกเลิก, × หรือ Escape ดูตัวอย่างธีมได้ และรีเซ็ตเฉพาะหมวดปัจจุบัน ตัวแก้ไขขั้นสูงบันทึกแยกกันและกลับสู่การตั้งค่าเมื่อปิด
 
 ### เริ่มต้นใช้งาน
@@ -104,6 +108,16 @@ print("Can fetch a page:", xd.supports("xd.fetch"))
 
 Open examples/core-api-automation.lua or examples/custom-site-reader.lua with Editor actions → Open file…. Site reader uses public pages, Pages patterns and Direct connection; test with Test on URL before enabling its trigger. Ordinary automation cannot call xd.fetch. Import script… accepts .de-script.json as a new draft with automatic triggers and file changes off; review its code and reselect local queues. Stop script does not undo submitted downloads. Full English reference: docs/automation.md.
 
+
+### Lua Provider API 1
+
+เพิ่มผู้ให้บริการดาวน์โหลด Lua สำหรับระบุแหล่งข้อมูล ประมวลผลไบต์ ตรวจสอบแฮช และหยุดชั่วคราว/ดำเนินการต่อ แต่ละงานเก็บสคริปต์รุ่นที่บันทึกไว้ ทดสอบเฉพาะไฟล์เข้ารหัสที่สร้างในเครื่อง เมื่อบันทึกผู้ให้บริการแล้ว แอปรุ่นเก่าจะเขียนโปรไฟล์นี้ไม่ได้
+
+Scripting → Script settings → Download provider → Save script → Add provider download.
+
+API: `resolve(request)`, `refresh(request, previous)`, `transform(plan, bytes, offset)`, `finish(plan, result)`.
+
+`docs/lua-providers.md` · `examples/download-provider.lua` · `examples/download-provider-custom-ctr.lua`
 
 ## บรรทัดคำสั่ง
 

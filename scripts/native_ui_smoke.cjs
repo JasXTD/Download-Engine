@@ -119,6 +119,7 @@ function capture(name, dark, size, view = 'downloads', empty = false, legacy = f
       ? 'local files = xd.downloads()\nfor _, file in ipairs(files) do\n    print(file.name)\nend)\n'
       : 'Write-Output "Hello"\nif ($true {\n    Write-Output "Missing closing parenthesis"\n}\n';
     if(name.includes('scripts-completion')) script.body = 'local queues = xd.que';
+    if(name.includes('lua-provider')) { script.name='Encrypted file provider'; script.trigger={kind:'provider'}; script.body=fs.readFileSync(path.join(root,'examples/download-provider.lua'),'utf8'); }
     if(name.includes('scripts-core-reader') || name.includes('workspace-full-reader')) { script.name='Custom site reader'; script.trigger={kind:'site_reader',pages:['example.com/*']}; script.body=fs.readFileSync(path.join(root,'examples/custom-site-reader.lua'),'utf8'); }
     if(name.includes('scripts-manual')) { script.name='New script'; script.trigger={kind:'manual'}; }
     if(name.includes('scripts-startup')) script.trigger={kind:'startup'};
@@ -200,6 +201,7 @@ function capture(name, dark, size, view = 'downloads', empty = false, legacy = f
   if(['list-export','list-import','list-import-details'].includes(view)) env.IDM_EX_TEST_FEATURE=view;
   if(view.startsWith('completion-')) env.IDM_EX_TEST_FEATURE=view;
   if(toolbar?.feature) env.IDM_EX_TEST_FEATURE=toolbar.feature;
+  if(view==='clear-history-confirmation') env.IDM_EX_TEST_FEATURE=view;
   if(process.argv.includes('--script-editor')) env.IDM_EX_TEST_EDITOR=name.includes('scripts-completion')?'completion':'editor';
   if(process.argv.includes('--core-api')) env.IDM_EX_TEST_CORE_API='1';
   if(name.includes('workspace-full')) env.IDM_EX_TEST_FULL_EDITOR='1';
@@ -242,6 +244,41 @@ function capture(name, dark, size, view = 'downloads', empty = false, legacy = f
   console.log(JSON.stringify({name,screenshot}));
   return {name,screenshot,size,view,dark,legacy,compact,toolbar,queuedNetworkWork:false};
 }
+if(process.argv.includes('--clear-history')) {
+  const results = [
+    capture('clear-history-dark',true,'1080x800','clear-history-confirmation'),
+    capture('clear-history-light',false,'860x600','clear-history-confirmation'),
+    capture('clear-history-german',true,'860x600','clear-history-confirmation',false,false,false,{language:'de'}),
+    capture('clear-history-arabic',false,'860x600','clear-history-confirmation',false,false,false,{language:'ar'}),
+  ];
+  fs.writeFileSync(path.join(output,'verification.json'),JSON.stringify({results,scope:'Clear completed history confirmations; isolated paused profiles, no clearing performed.'},null,2));
+  console.log(`Verification: ${path.join(output,'verification.json')}`);process.exit(0);
+}
+if(process.argv.includes('--lua-provider')) {
+  const results=[];
+  for(const dark of [true,false]) for(const full of [false,true]) {
+    results.push(capture(`lua-provider-${full?'workspace-full':'compact'}-${dark?'dark':'light'}`,dark,full?'1280x860':'860x600','automation-scripts'));
+  }
+  fs.writeFileSync(path.join(output,'verification.json'),JSON.stringify({results,scope:'Lua provider compact and full editors, both themes; isolated paused profiles, no network work.'},null,2));
+  console.log(`Verification: ${path.join(output,'verification.json')}`);process.exit(0);
+}
+if(process.argv.includes('--download-list')) {
+  const results=[];
+  for(const dark of [true,false]) {
+    for(const size of ['860x600','1280x860']) {
+      results.push(capture(`download-list-${dark?'dark':'light'}-${size}`,dark,size));
+    }
+    for(const view of ['filtered-empty','downloads-focused']) {
+      results.push(capture(`download-list-${view}-${dark?'dark':'light'}`,dark,'860x600',view));
+    }
+    results.push(capture(`download-list-empty-${dark?'dark':'light'}`,dark,'860x600','downloads',true));
+  }
+  for(const language of ['de','ar']) {
+    results.push(capture(`download-list-${language}`,true,'860x600','downloads',false,false,false,{language}));
+  }
+  fs.writeFileSync(path.join(output,'verification.json'),JSON.stringify({results,scope:'Download list at minimum and wide sizes, both themes, keyboard focus, filtered/empty results and long/RTL translations. Isolated paused queues; no network work.'},null,2));
+  console.log(`Verification: ${path.join(output,'verification.json')}`);process.exit(0);
+}
 if(process.argv.includes('--release-docs')) {
   const results=[capture('public-moonveil',true,'1280x860','downloads',false,false,false,{details:false,customTheme:'moonveil'})];
   results.push(capture('guide-lua-860x600',true,'860x600','guide-lua'));
@@ -274,11 +311,13 @@ if(process.argv.includes('--custom-themes')) {
 if(process.argv.includes('--updates')) {
   const results=[];
   for(const dark of [true,false]) for(const size of ['860x600','1280x860']) {
-    for(const feature of ['updates-available','updates-current','updates-error']) {
+    for(const feature of ['updates-available','updates-current','updates-error','updates-launch']) {
       results.push(capture(feature+'-'+(dark?'dark':'light')+'-'+size,dark,size,'downloads',false,false,false,{feature}));
     }
   }
-  fs.writeFileSync(path.join(output,'verification.json'),JSON.stringify({results,scope:'Update dialog: available, current and error states in both themes and sizes. Offline fixtures, no GitHub requests.'},null,2));
+  for(const language of ['de','ar']) results.push(capture(`updates-launch-${language}`,true,'860x600','downloads',false,false,false,{feature:'updates-launch',language}));
+  for(const dark of [true,false]) results.push(capture(`updates-preference-${dark?'dark':'light'}`,dark,'860x600','settings-startup',false,false,false,{startup:'off'}));
+  fs.writeFileSync(path.join(output,'verification.json'),JSON.stringify({results,scope:'Update dialog: launch prompt, manual available/current/error states, and enabled-by-default preference. Both themes and window sizes, German/Arabic prompts. Offline fixtures, no GitHub requests.'},null,2));
   console.log('Verification: '+path.join(output,'verification.json'));process.exit(0);
 }
 if(process.argv.includes('--link-fallback')) {

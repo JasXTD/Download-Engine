@@ -2,6 +2,10 @@
 
 ## はじめに
 
+### 起動時に更新を確認
+
+初期設定ではアプリを開くたびに一度確認します。新しいバージョンがあると更新を入手するか後で行うかを選べます。オフラインのエラーは表示せず、環境設定で無効にできます。 公式 GitHub リリースページから更新をダウンロードしてインストールしてください。
+
 環境設定はカテゴリー別のポップアップで開きます。保存で変更を適用し、キャンセル、×、Escape で未保存の編集を破棄します。テーマはプレビューでき、リセットは現在のカテゴリーだけに適用されます。詳細エディターは個別に保存し、閉じると環境設定に戻ります。
 
 ### はじめに
@@ -104,6 +108,16 @@ print("Can fetch a page:", xd.supports("xd.fetch"))
 
 Open examples/core-api-automation.lua or examples/custom-site-reader.lua with Editor actions → Open file…. Site reader uses public pages, Pages patterns and Direct connection; test with Test on URL before enabling its trigger. Ordinary automation cannot call xd.fetch. Import script… accepts .de-script.json as a new draft with automatic triggers and file changes off; review its code and reselect local queues. Stop script does not undo submitted downloads. Full English reference: docs/automation.md.
 
+
+### Lua Provider API 1
+
+Lua ダウンロードプロバイダーで取得元の解決、バイト処理、ハッシュ検証と通常の一時停止・再開ができます。各ダウンロードは保存時のスクリプト版を保持します。検証はローカル生成の暗号化ファイルのみです。プロバイダー保存後は旧版アプリがこのプロファイルに書き込めなくなります。
+
+Scripting → Script settings → Download provider → Save script → Add provider download.
+
+API: `resolve(request)`, `refresh(request, previous)`, `transform(plan, bytes, offset)`, `finish(plan, result)`.
+
+`docs/lua-providers.md` · `examples/download-provider.lua` · `examples/download-provider-custom-ctr.lua`
 
 ## コマンドライン
 

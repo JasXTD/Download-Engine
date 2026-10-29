@@ -701,7 +701,7 @@ fn export_form(ui: &mut egui::Ui, draft: &mut ExportDraft, p: Palette) {
         note(
             ui,
             &tf!(
-                "Video streams left out: {}. Use Preview video to add them again.",
+                "Media/provider jobs left out: {}. Add them through Preview video or their saved provider script.",
                 streams
             ),
             p.muted,

@@ -8,14 +8,14 @@
   <meta name="referrer" content="strict-origin-when-cross-origin">
   <meta name="google-site-verification" content="PbceSkVGGFYJq6mRZNadT7UEKYjVgNl7pqSAtAaH_nE" />
   <title>Download Engine — Free Windows Download Manager</title>
-  <meta name="description" content="A free Windows download manager with custom themes, support for public YouTube, Bilibili, TikTok and Twitch videos, HLS and DASH streams, Web Grabber, scripting and browser integration.">
+  <meta name="description" content="Free, open-source Windows download manager with Lua scripting, custom download providers, Web Grabber, offline websites, supported video downloads and browser integration.">
   <link rel="canonical" href="https://jasxtd.github.io/Download-Engine/">
   <link rel="icon" type="image/png" href="images/download-engine-logo.png">
   <meta property="og:type" content="website">
   <meta property="og:locale" content="en_US">
   <meta property="og:site_name" content="Download Engine">
   <meta property="og:title" content="Download Engine — Download more. Keep control.">
-  <meta property="og:description" content="Files, supported YouTube, Bilibili, TikTok and Twitch videos, and offline websites. Now with custom themes. One free, open-source Windows app.">
+  <meta property="og:description" content="Download files and supported videos, collect links with Web Grabber, save static websites and build your own Lua workflows. Free and open source for Windows.">
   <meta property="og:url" content="https://jasxtd.github.io/Download-Engine/">
   <meta property="og:image" content="https://jasxtd.github.io/Download-Engine/images/social-preview.jpg">
   <meta property="og:image:width" content="1200">
@@ -23,7 +23,7 @@
   <meta property="og:image:alt" content="Download Engine with the Aurora theme and example downloads">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="Download Engine — Download more. Keep control.">
-  <meta name="twitter:description" content="Download supported YouTube, Bilibili, TikTok and Twitch videos, HLS and DASH streams, and files. Custom themes, scripting and browser integration. Free and open source for Windows.">
+  <meta name="twitter:description" content="Files, supported videos and offline websites. Lua scripting, custom download providers, Web Grabber and browser integration in one free Windows app.">
   <meta name="twitter:image" content="https://jasxtd.github.io/Download-Engine/images/social-preview.jpg">
   <link rel="stylesheet" href="site.css">
   <script src="site.js" defer></script>
@@ -34,13 +34,13 @@
     "@type": "SoftwareApplication",
     "name": "Download Engine",
     "url": "https://jasxtd.github.io/Download-Engine/",
-    "description": "Free, open-source Windows download manager for files, supported public YouTube, Bilibili, TikTok and Twitch videos, and compatible HLS and DASH streams, with a website grabber, custom themes and automation.",
+    "description": "Free, open-source Windows download manager with Lua automation, custom download providers, Web Grabber, static website capture, supported public videos, custom themes and browser integration.",
     "operatingSystem": "Windows x64",
     "applicationCategory": "UtilitiesApplication",
-    "softwareVersion": "3.4.0",
+    "softwareVersion": "3.5.2",
     "image": "https://jasxtd.github.io/Download-Engine/images/download-engine-logo.png",
     "screenshot": "https://jasxtd.github.io/Download-Engine/images/theme-aurora.webp",
-    "downloadUrl": "https://github.com/JasXTD/Download-Engine/releases/tag/v3.4.0",
+    "downloadUrl": "https://github.com/JasXTD/Download-Engine/releases/tag/v3.5.2",
     "license": "https://github.com/JasXTD/Download-Engine/blob/main/LICENSE",
     "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
   }
@@ -52,7 +52,7 @@
     <div class="shell header-inner">
       <a class="brand" href="./" aria-label="Download Engine home"><img src="images/download-engine-logo.png" width="36" height="36" alt=""><span>Download Engine</span></a>
       <nav class="site-nav" aria-label="Main navigation">
-        <a href="#themes">Themes</a><a href="#video">Video</a><a href="#grabber">Web Grabber</a><a href="#hosting">Hosting</a><a href="#scripting">Scripting</a><a href="https://github.com/JasXTD/Download-Engine">GitHub <span aria-hidden="true">↗</span></a>
+        <a href="#themes">Themes</a><a href="#video">Video</a><a href="#grabber">Web Grabber</a><a href="#hosting">Hosting</a><a href="#scripting">Lua scripting</a><a href="https://github.com/JasXTD/Download-Engine">GitHub <span aria-hidden="true">↗</span></a>
       </nav>
       <a class="nav-download" href="#download">Download <span aria-hidden="true">↓</span></a>
     </div>
@@ -61,12 +61,12 @@
   <main id="main" tabindex="-1">
     <section class="hero shell" aria-labelledby="hero-title">
       <div class="hero-copy">
-        <a class="release-badge" href="#themes"><span class="badge-new">New in 3.4</span><span>Custom themes with whole-window artwork</span><span class="badge-arrow" aria-hidden="true">→</span></a>
+        <a class="release-badge" href="#scripting"><span class="badge-new">New in 3.5</span><span>Your own Lua download providers</span><span class="badge-arrow" aria-hidden="true">→</span></a>
         <h1 id="hero-title">Download more.<br><span>Keep control.</span></h1>
-        <p class="hero-description">Files, supported videos and offline websites.<br class="desktop-break"> Bring them together in one download manager that puts you in charge, and now looks the way you like.</p>
+        <p class="hero-description">Files, supported videos and offline websites.<br class="desktop-break"> Bring them together with Web Grabber, Lua scripting and queues that fit your workflow. Make the workspace yours with custom themes.</p>
         <a class="hero-video-sites" href="#video">YouTube <span>·</span> Bilibili <span>·</span> TikTok <span>·</span> Twitch <span>·</span> HLS &amp; DASH <span aria-hidden="true">↗</span></a>
-        <div class="hero-actions"><a class="button button-primary" href="https://github.com/JasXTD/Download-Engine/releases/download/v3.4.0/DownloadEngine-3.4.0-UnsignedSetup.exe"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M4 15v6h16v-6"/></svg>Download for Windows</a><a class="button button-secondary" href="https://github.com/JasXTD/Download-Engine/releases/download/v3.4.0/DownloadEngine-3.4.0-Unsigned-windows-x64.zip">Get the portable ZIP <span aria-hidden="true">↗</span></a></div>
-        <p class="hero-version">Stable v3.4.0 <span aria-hidden="true">·</span> Windows x64 <span aria-hidden="true">·</span> Free under MIT</p>
+        <div class="hero-actions"><a class="button button-primary" href="https://github.com/JasXTD/Download-Engine/releases/download/v3.5.2/DownloadEngine-3.5.2-UnsignedSetup.exe"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M4 15v6h16v-6"/></svg>Download for Windows</a><a class="button button-secondary" href="https://github.com/JasXTD/Download-Engine/releases/download/v3.5.2/DownloadEngine-3.5.2-Unsigned-windows-x64.zip">Get the portable ZIP <span aria-hidden="true">↗</span></a></div>
+        <p class="hero-version">Stable v3.5.2 <span aria-hidden="true">·</span> Windows x64 <span aria-hidden="true">·</span> Free under MIT</p>
       </div>
       <figure class="theme-stack" data-theme-stack>
         <div class="stack-frames">
@@ -85,11 +85,11 @@
       </figure>
     </section>
 
-    <nav class="highlights shell reveal" aria-label="New since version 3.2">
-      <a href="#themes"><span class="highlight-version">3.4</span><strong>Custom themes</strong><span>Artwork behind translucent panels</span></a>
-      <a href="#scripting"><span class="highlight-version">3.3</span><strong>Scripting workspace</strong><span>Editor, Loaded scripts and full editor</span></a>
-      <a href="#whats-new"><span class="highlight-version">3.3</span><strong>Responsive actions</strong><span>Slow storage no longer holds up clicks</span></a>
-      <a href="#hosting"><span class="highlight-version">3.2</span><strong>MEGA &amp; WeTransfer</strong><span>Plus Help → Check for updates</span></a>
+    <nav class="highlights shell reveal" aria-label="Explore Download Engine">
+      <a href="#scripting"><span class="highlight-version">LUA</span><strong>Build your workflow</strong><span>Automation, site readers and providers</span></a>
+      <a href="#grabber"><span class="highlight-version">WEB</span><strong>Collect more in one go</strong><span>Find files or save a static website</span></a>
+      <a href="#themes"><span class="highlight-version">THEMES</span><strong>Make it your workspace</strong><span>Bundled artwork or your own image</span></a>
+      <a href="#whats-new"><span class="highlight-version">3.5.2</span><strong>Stay up to date</strong><span>New-version prompts when you open the app</span></a>
     </nav>
 
     <section class="themes-section section-space" id="themes" aria-labelledby="themes-title">
@@ -144,8 +144,9 @@
       <div class="grabber-copy reveal"><p class="eyebrow">Built-in Web Grabber</p><h2 id="grabber-title">Collect the files.<br>Keep the website.</h2><p class="section-intro">Skip copying links one by one. Discover the files you need, or take a supported static website with you.</p>
         <div class="workflow-description"><span class="step-number">01</span><div><h3>Find downloadable files</h3><p>Scan a page, filter by file type and review the results. Select the files you want, then add them to a queue.</p></div></div>
         <div class="workflow-description"><span class="step-number">02</span><div><h3>Save a website offline</h3><p>Capture supported pages, images and styles with local links. Open the saved site in your browser, without a connection.</p></div></div>
-        <p class="fine-print">Choose scan depth and limits, save projects and schedule scans. Offline copies are static; scripts, sign-in flows and interactive apps do not keep working.</p>
-        <a class="text-link" href="https://github.com/JasXTD/Download-Engine/blob/main/docs/user-guide.md#find-files-on-a-website">Explore the grabber guide <span aria-hidden="true">↗</span></a>
+        <div class="workflow-description"><span class="step-number">03</span><div><h3>Keep a project ready</h3><p>Save a file-discovery project and schedule repeat scans. Review the newly discovered files before adding them to your queue.</p></div></div>
+        <p class="fine-print">Choose scan depth, page limits and capture size. The capture report shows what was saved or omitted. Offline copies cover static content; sign-in flows and interactive apps require the original website.</p>
+        <div class="inline-links"><a class="text-link" href="https://github.com/JasXTD/Download-Engine/blob/main/docs/user-guide.md#find-files-on-a-website">Find files guide <span aria-hidden="true">↗</span></a><a class="text-link" href="https://github.com/JasXTD/Download-Engine/blob/main/docs/user-guide.md#offline-websites">Offline website guide <span aria-hidden="true">↗</span></a></div>
       </div>
       <div class="grabber-visual reveal">
         <fieldset class="grabber-demo">
@@ -175,7 +176,7 @@
     <section class="hosting-section section-space" id="hosting" aria-labelledby="hosting-title">
       <div class="shell">
         <div class="section-heading split-heading reveal"><div><p class="eyebrow">Beyond direct file links</p><h2 id="hosting-title">More links.<br>One download queue.</h2></div><div class="hosting-intro"><span class="development-tag">Since version 3.2.0</span><p>Dedicated support for MEGA and WeTransfer, plus discovery for pages that expose downloadable files.</p></div></div>
-        <p class="availability-note reveal"><strong>Availability:</strong> these hosting integrations and GitHub capture changes are <strong>included in the v3.4.0 installer, portable ZIP and extension ZIPs</strong> linked below. Reload your browser extension after upgrading.</p>
+        <p class="availability-note reveal"><strong>Availability:</strong> these hosting integrations and GitHub capture changes are <strong>included in the v3.5.2 installer, portable ZIP and extension ZIPs</strong> linked below. Reload your browser extension after upgrading.</p>
         <div class="hosting-grid reveal">
           <article class="hosting-card"><div class="hosting-brand"><span class="host-monogram mega-mark" aria-hidden="true">M</span><div><h3>MEGA</h3><span>Public file links</span></div></div><p>Paste the complete file link, including its <code>#</code> key. Download Engine decrypts locally and verifies the file before completing it.</p><ul><li>Parallel transfers and pause/resume</li><li>Local decryption and integrity verification</li><li>Individual public files; no folder or account downloads</li></ul><a class="text-link" href="https://github.com/JasXTD/Download-Engine/blob/main/docs/mega.md">MEGA support &amp; limits <span aria-hidden="true">↗</span></a></article>
           <article class="hosting-card"><div class="hosting-brand"><span class="host-monogram transfer-mark" aria-hidden="true">we</span><div><h3>WeTransfer</h3><span>Public transfers</span></div></div><p>Use a <code>we.tl</code> short link or a full transfer link. Save the file or whole bundle supplied by WeTransfer.</p><ul><li>Single files or a complete transfer archive</li><li>Resume when the file server supports it</li><li>No password or identity-verification transfers</li></ul><a class="text-link" href="https://github.com/JasXTD/Download-Engine/blob/main/docs/wetransfer.md">WeTransfer support &amp; limits <span aria-hidden="true">↗</span></a></article>
@@ -196,23 +197,39 @@
     </section>
 
     <section class="scripting shell section-space" id="scripting" aria-labelledby="scripting-title">
+      <div class="scripting-overview">
       <div class="scripting-copy reveal">
-        <p class="eyebrow">Less repetition. More possibility.</p>
-        <h2 id="scripting-title">Make it part of<br>your workflow.</h2>
-        <p class="section-intro">Route files with rules. Write Lua or PowerShell scripts. Use the CLI, or connect a compatible AI client through the optional local MCP server.</p>
+        <p class="eyebrow">Lua scripting · Built into the app</p>
+        <h2 id="scripting-title">Your ideas.<br>One core API.</h2>
+        <p class="section-intro">Automate a queue, read a custom site or build a download provider. Write Lua in the app and use the download engine underneath, without recompiling it.</p>
         <ul class="check-list">
-          <li><strong>A focused workspace.</strong> Editor and Loaded scripts have their own tabs. Full editor gives code the window while Save, Run and logs stay close.</li>
-          <li><strong>One core API.</strong> Automation scripts and custom site readers share autocomplete and a searchable Core API reference.</li>
-          <li><strong>Share scripts with their settings.</strong> <code>.de-script.json</code> packages import as disabled drafts with file access off, ready for review.</li>
-          <li><strong>Explicit AI access.</strong> MCP is off by default, with View only selected. Allow download, queue and script controls separately; scripts need approval of their exact saved revision.</li>
+          <li><strong>An editor with room to work.</strong> Live syntax checks, autocomplete, a searchable API reference and Full editor. Keep your saved scripts in Loaded scripts.</li>
+          <li><strong>Run it your way.</strong> Run automation manually or from a supported trigger. Follow its logs and stop a run from the same workspace.</li>
+          <li><strong>Share what you build.</strong> Export <code>.de-script.json</code> packages with their settings. Imports start as disabled drafts with file access off, ready for review.</li>
         </ul>
-        <div class="inline-links"><a class="text-link" href="https://github.com/JasXTD/Download-Engine/blob/main/docs/automation.md">Scripting &amp; automation <span aria-hidden="true">↗</span></a><a class="text-link" href="https://github.com/JasXTD/Download-Engine/blob/main/docs/mcp.md">Local MCP guide <span aria-hidden="true">↗</span></a></div>
+        <div class="inline-links"><a class="text-link" href="https://github.com/JasXTD/Download-Engine/blob/main/docs/user-guide.md#lua-scripting">Start with the Lua guide <span aria-hidden="true">↗</span></a><a class="text-link" href="https://github.com/JasXTD/Download-Engine/blob/main/docs/automation.md#core-api-and-shared-scripts">Explore Core API 1 <span aria-hidden="true">↗</span></a></div>
       </div>
       <figure class="scripting-preview reveal">
         <div class="preview-chrome" aria-hidden="true"><span class="window-dots"><i></i><i></i><i></i></span><span>SCRIPTING · EDITOR</span><span class="chrome-tag">LUA</span></div>
         <a href="images/scripting-workspace.webp" target="_blank" rel="noopener" aria-label="Open the scripting workspace screenshot at full size in a new tab"><img src="images/scripting-workspace.webp" width="1280" height="860" loading="lazy" decoding="async" alt="Download Engine Scripting page with Editor and Loaded scripts tabs, a Lua script, Full editor and Core API buttons and a successful run log"></a>
         <figcaption><span>Scripting workspace · Neon Courier theme · example script</span><span>View full size <span aria-hidden="true">↗</span></span></figcaption>
       </figure>
+      </div>
+      <div class="script-roles reveal-group">
+        <article class="script-role reveal"><span class="role-label">01 · AUTOMATION</span><h3>Handle the routine.</h3><p>Inspect downloads, manage queues and react to completion events or timers. Start with a manual run, then choose a trigger.</p><a class="text-link" href="https://github.com/JasXTD/Download-Engine/blob/main/docs/automation.md#custom-scripts-lua-and-powershell">Automation guide <span aria-hidden="true">↗</span></a></article>
+        <article class="script-role reveal"><span class="role-label">02 · SITE READERS</span><h3>Teach it a new page.</h3><p>Use HTTP and HTML helpers to turn a custom page into supported file or video links. Review the results before downloading.</p><a class="text-link" href="https://github.com/JasXTD/Download-Engine/blob/main/docs/automation.md#site-readers">Build a site reader <span aria-hidden="true">↗</span></a></article>
+        <article class="script-role provider-role reveal"><span class="role-label">03 · DOWNLOAD PROVIDERS</span><h3>Your logic. Core transfers.</h3><p>Resolve a file URL and transform its bytes. The core handles transfers, pause/resume, saved checkpoints and final integrity checks.</p><a class="text-link" href="https://github.com/JasXTD/Download-Engine/blob/main/docs/lua-providers.md">Provider API &amp; examples <span aria-hidden="true">↗</span></a></article>
+      </div>
+      <p class="provider-scope fine-print">Provider API 1 handles single files and same-length byte transformations. The included AES-CTR examples use generated test files; they are starting points for your own data, not ready-made streaming-service integrations.</p>
+      <div class="script-starter reveal" aria-labelledby="lua-starter-title">
+        <div class="starter-copy"><p class="eyebrow">A small first step</p><h3 id="lua-starter-title">Try Lua without starting a download.</h3><p>Create a Lua script with a Manual trigger, paste this example, then Save and Run. Your queue names and running states appear in the logs.</p><a class="text-link" href="https://github.com/JasXTD/Download-Engine/blob/main/docs/user-guide.md#run-your-first-lua-script">Follow the walkthrough <span aria-hidden="true">↗</span></a></div>
+        <div class="starter-code"><div class="code-heading"><span>hello-queues.lua</span><span>Read-only example</span></div><pre><code><span class="lua-comment">-- Read your queues. No files changed.</span>
+<span class="lua-keyword">for</span> _, queue <span class="lua-keyword">in</span> ipairs(xd.queues()) <span class="lua-keyword">do</span>
+    print(queue.name, queue.running)
+<span class="lua-keyword">end</span>
+print(<span class="lua-string">"Download Engine"</span>, xd.app_version)</code></pre></div>
+      </div>
+      <div class="script-access reveal"><p><strong>More ways to connect.</strong> Use PowerShell for trusted Windows automation, the CLI from a terminal, or optional localhost MCP for an AI client. MCP starts disabled; you choose its permissions.</p><div class="inline-links"><a class="text-link" href="https://github.com/JasXTD/Download-Engine/blob/main/docs/automation.md#optional-powershell">PowerShell <span aria-hidden="true">↗</span></a><a class="text-link" href="https://github.com/JasXTD/Download-Engine/blob/main/docs/user-guide.md#command-line">CLI guide <span aria-hidden="true">↗</span></a><a class="text-link" href="https://github.com/JasXTD/Download-Engine/blob/main/docs/mcp.md">MCP setup <span aria-hidden="true">↗</span></a></div></div>
     </section>
 
     <section class="browser-section shell section-space" id="browser" aria-labelledby="browser-title">
@@ -242,22 +259,22 @@
     </section>
 
     <section class="whats-new shell section-space" id="whats-new" aria-labelledby="whats-new-title">
-      <div class="split-heading reveal"><div><p class="eyebrow">Release highlights</p><h2 id="whats-new-title">What’s new since 3.2.</h2></div><a class="text-link" href="https://github.com/JasXTD/Download-Engine/blob/main/CHANGELOG.md">Read the full changelog <span aria-hidden="true">↗</span></a></div>
+      <div class="split-heading reveal"><div><p class="eyebrow">Release highlights</p><h2 id="whats-new-title">What’s new in 3.5.2.</h2></div><a class="text-link" href="https://github.com/JasXTD/Download-Engine/blob/main/CHANGELOG.md">Read the full changelog <span aria-hidden="true">↗</span></a></div>
       <div class="release-grid reveal-group">
-        <article class="release-card reveal"><span class="release-version">3.4.0</span><h3>Themes and safer profiles</h3><ul><li>Theme collection, your own image, background strength and accent</li><li>Profile version guards and transactional upgrades; older builds refuse to write to an upgraded profile</li><li>MCP capability controls and exact-revision script approvals</li><li>Database pagination for large download histories</li></ul></article>
-        <article class="release-card reveal"><span class="release-version">3.3.3</span><h3>Focused scripting, responsive actions</h3><ul><li>Separate Editor and Loaded scripts tabs, with Full editor in the editor header</li><li>File commands and sample runs grouped under Editor actions</li><li>Queue refreshes, browser video intake and submissions run in the background</li><li>Add dialogs show progress and keep your draft if saving fails</li></ul></article>
-        <article class="release-card reveal"><span class="release-version">3.3.0 – 3.3.2</span><h3>One core API, clearer controls</h3><ul><li>A documented Lua core API with autocomplete and a searchable reference</li><li>Share scripts as <code>.de-script.json</code> packages</li><li>Toolbar More menu with pinned commands and a resizable details panel</li><li>Simpler download status with the percentage beside the bar</li></ul></article>
+        <article class="release-card reveal"><span class="release-version">3.5.2</span><h3>A quiet check for updates.</h3><ul><li>Checks once when the app opens, enabled by default</li><li>A newer version offers Get update or Later</li><li>No popup when you are current, offline or the check fails</li><li>You choose when to download and install</li></ul></article>
+        <article class="release-card reveal"><span class="release-version">3.5.0 – 3.5.1</span><h3>Build a Lua download provider.</h3><ul><li>Resolve files and transform their bytes through Core Provider API 1</li><li>Transfers, saved progress and integrity checks stay in the core</li><li>Separate resolver and processor workers, with protected keys</li><li>Guides, autocomplete and offline examples included</li></ul></article>
+        <article class="release-card reveal"><span class="release-version">3.4.1 – 3.5.1</span><h3>Clearer controls. Less friction.</h3><ul><li>Review the queue and count before clearing completed history</li><li>Downloaded files remain in their folders</li><li>Less copying and filtering work in large download lists</li><li>Better filename space, compact layouts and queue controls</li></ul></article>
       </div>
     </section>
 
     <section class="downloads shell section-space" id="download" aria-labelledby="download-title">
-      <div class="download-heading reveal"><div><p class="eyebrow">Free. Open source. Yours.</p><h2 id="download-title">Your next download<br>starts here.</h2></div><a class="release-pill" href="https://github.com/JasXTD/Download-Engine/releases/tag/v3.4.0"><span class="status-dot pulse" aria-hidden="true"></span> Stable v3.4.0 <span aria-hidden="true">↗</span></a></div>
+      <div class="download-heading reveal"><div><p class="eyebrow">Free. Open source. Yours.</p><h2 id="download-title">Your next download<br>starts here.</h2></div><a class="release-pill" href="https://github.com/JasXTD/Download-Engine/releases/tag/v3.5.2"><span class="status-dot pulse" aria-hidden="true"></span> Stable v3.5.2 <span aria-hidden="true">↗</span></a></div>
       <div class="download-options reveal-group">
-        <article class="download-option recommended reveal"><div class="option-top"><svg class="platform-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m3 5 8-1v7H3Zm10-1 8-1v8h-8ZM3 13h8v7l-8-1Zm10 0h8v8l-8-1Z"/></svg><span class="option-label">Everyday use</span></div><h3>Windows installer</h3><p>Install for your Windows account and keep Download Engine ready to use.</p><a class="button button-primary" href="https://github.com/JasXTD/Download-Engine/releases/download/v3.4.0/DownloadEngine-3.4.0-UnsignedSetup.exe">Download installer <span aria-hidden="true">↓</span></a><span class="package-detail">Windows x64 · .exe · Version 3.4.0</span></article>
-        <article class="download-option reveal"><div class="option-top"><svg class="platform-icon folder-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5h7l2 2h9v13H3Z"/></svg><span class="option-label">Take it with you</span></div><h3>Portable ZIP</h3><p>Extract the whole folder somewhere writable, then open <code>de.exe</code>.</p><a class="button button-secondary" href="https://github.com/JasXTD/Download-Engine/releases/download/v3.4.0/DownloadEngine-3.4.0-Unsigned-windows-x64.zip">Download portable ZIP <span aria-hidden="true">↓</span></a><span class="package-detail">Windows x64 · .zip · Version 3.4.0</span></article>
+        <article class="download-option recommended reveal"><div class="option-top"><svg class="platform-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m3 5 8-1v7H3Zm10-1 8-1v8h-8ZM3 13h8v7l-8-1Zm10 0h8v8l-8-1Z"/></svg><span class="option-label">Everyday use</span></div><h3>Windows installer</h3><p>Install for your Windows account and keep Download Engine ready to use.</p><a class="button button-primary" href="https://github.com/JasXTD/Download-Engine/releases/download/v3.5.2/DownloadEngine-3.5.2-UnsignedSetup.exe">Download installer <span aria-hidden="true">↓</span></a><span class="package-detail">Windows x64 · .exe · Version 3.5.2</span></article>
+        <article class="download-option reveal"><div class="option-top"><svg class="platform-icon folder-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5h7l2 2h9v13H3Z"/></svg><span class="option-label">Take it with you</span></div><h3>Portable ZIP</h3><p>Extract the whole folder somewhere writable, then open <code>de.exe</code>.</p><a class="button button-secondary" href="https://github.com/JasXTD/Download-Engine/releases/download/v3.5.2/DownloadEngine-3.5.2-Unsigned-windows-x64.zip">Download portable ZIP <span aria-hidden="true">↓</span></a><span class="package-detail">Windows x64 · .zip · Version 3.5.2</span></article>
       </div>
-      <div class="download-note"><span aria-hidden="true">ⓘ</span><p>Both packages include FFmpeg and its source and license files. Windows binaries are currently unsigned. <a href="https://github.com/JasXTD/Download-Engine/releases/download/v3.4.0/SHA256SUMS-3.4.0">Check the SHA-256 checksums</a> against your download.</p></div>
-      <div class="additional-downloads"><div><h3>Browser extensions</h3><p>Version 3.4.0 · Manual installation</p><div class="inline-links"><a href="https://github.com/JasXTD/Download-Engine/releases/download/v3.4.0/download-engine-chrome-3.4.0.zip">Chrome ZIP <span aria-hidden="true">↓</span></a><a href="https://github.com/JasXTD/Download-Engine/releases/download/v3.4.0/download-engine-edge-3.4.0.zip">Edge ZIP <span aria-hidden="true">↓</span></a><a href="https://github.com/JasXTD/Download-Engine/releases/download/v3.4.0/download-engine-firefox-3.4.0.zip">Firefox ZIP <span aria-hidden="true">↓</span></a></div></div><div><h3>Explore the source.</h3><p>Get the matching v3.4.0 source archive, or explore ongoing development on GitHub.</p><div class="inline-links"><a href="https://github.com/JasXTD/Download-Engine">Latest source <span aria-hidden="true">↗</span></a><a href="https://github.com/JasXTD/Download-Engine/releases/download/v3.4.0/DownloadEngine-3.4.0-Source.zip">v3.4.0 source ZIP <span aria-hidden="true">↓</span></a><a href="https://github.com/JasXTD/Download-Engine/releases/latest">Latest release <span aria-hidden="true">↗</span></a></div></div></div>
+      <div class="download-note"><span aria-hidden="true">ⓘ</span><p>Both packages include FFmpeg and its source and license files. Windows binaries are currently unsigned. <a href="https://github.com/JasXTD/Download-Engine/releases/download/v3.5.2/SHA256SUMS-3.5.2">Check the SHA-256 checksums</a> against your download.</p></div>
+      <div class="additional-downloads"><div><h3>Browser extensions</h3><p>Version 3.5.2 · Manual installation</p><div class="inline-links"><a href="https://github.com/JasXTD/Download-Engine/releases/download/v3.5.2/download-engine-chrome-3.5.2.zip">Chrome ZIP <span aria-hidden="true">↓</span></a><a href="https://github.com/JasXTD/Download-Engine/releases/download/v3.5.2/download-engine-edge-3.5.2.zip">Edge ZIP <span aria-hidden="true">↓</span></a><a href="https://github.com/JasXTD/Download-Engine/releases/download/v3.5.2/download-engine-firefox-3.5.2.zip">Firefox ZIP <span aria-hidden="true">↓</span></a></div></div><div><h3>Explore the source.</h3><p>Get the matching v3.5.2 source archive, or explore ongoing development on GitHub.</p><div class="inline-links"><a href="https://github.com/JasXTD/Download-Engine">Latest source <span aria-hidden="true">↗</span></a><a href="https://github.com/JasXTD/Download-Engine/releases/download/v3.5.2/DownloadEngine-3.5.2-Source.zip">v3.5.2 source ZIP <span aria-hidden="true">↓</span></a><a href="https://github.com/JasXTD/Download-Engine/releases/latest">Latest release <span aria-hidden="true">↗</span></a></div></div></div>
     </section>
 
     <section class="getting-started shell reveal" aria-labelledby="start-title"><div><p class="eyebrow">A few clicks, then you’re off</p><h2 id="start-title">Your first download.</h2></div><ol class="steps"><li><span>01</span><h3>Open the app</h3><p>Install it, or extract the portable ZIP and open <code>de.exe</code>.</p></li><li><span>02</span><h3>Add your link</h3><p>Select <strong>Add URL</strong>, paste a file link and choose where to save it.</p></li><li><span>03</span><h3>Take control</h3><p>Start your download, organize a queue, connect your browser or pick a theme.</p></li></ol><a class="text-link" href="https://github.com/JasXTD/Download-Engine/blob/main/docs/user-guide.md">Read the full user guide <span aria-hidden="true">↗</span></a></section>
@@ -267,10 +284,11 @@
       <details><summary>Can I use my own background image?<span aria-hidden="true">+</span></summary><p>Yes. Open Preferences → Appearance → Custom and choose <strong>Choose image…</strong>. PNG and JPEG files up to 16 MiB and 16 megapixels are supported. The app keeps a resized copy in your local profile; images are never uploaded. Your picture gets its own card next to the presets, and Remove image deletes the copy when you save. <a href="https://github.com/JasXTD/Download-Engine/blob/main/docs/user-guide.md#custom-themes">Read the custom themes guide.</a></p></details>
       <details><summary>Which hosting sites are supported?<span aria-hidden="true">+</span></summary><p>Since version 3.2.0, Download Engine supports individual MEGA public files and public WeTransfer transfers. It also discovers exposed links on supported download pages, including GitHub raw files. These features are included in the release packages. Password-protected transfers, account-only links and browser challenges are outside the supported workflows. <a href="#hosting">See the hosting support details.</a></p></details>
       <details><summary>Can Web Grabber save any website?<span aria-hidden="true">+</span></summary><p>It can discover downloadable files and save supported static pages with their assets and local links. A saved copy does not reproduce server-side features, forms, sign-in flows or JavaScript applications. Site structure and access restrictions affect what can be saved.</p></details>
+      <details><summary>Do I need to install Lua or recompile the app?<span aria-hidden="true">+</span></summary><p>No. Lua is built in. Create an automation script, site reader or download provider in the Scripting editor, then save it. A script can use the functions available to its role; provider jobs retain the saved revision used when they were added. Start with the <a href="#scripting">read-only Lua example</a> or the <a href="https://github.com/JasXTD/Download-Engine/blob/main/docs/lua-providers.md">provider guide</a>.</p></details>
       <details><summary>Can it download every video?<span aria-hidden="true">+</span></summary><p>No. Built-in readers support selected public YouTube, Bilibili, TikTok and Twitch videos, plus compatible finished, unencrypted HLS and DASH streams from other sites. Live recording and DRM are unsupported. Website changes and access restrictions can affect availability. <a href="#video">Check supported sites and limits.</a></p></details>
       <details><summary>Does it work on macOS or Linux?<span aria-hidden="true">+</span></summary><p>Current packages support Windows x64. macOS, Linux and Android packages are not provided.</p></details>
       <details><summary>Is this Internet Download Manager?<span aria-hidden="true">+</span></summary><p>Download Engine is an independent project inspired by Internet Download Manager (IDM). It is not affiliated with IDM and does not offer complete IDM feature parity.</p></details>
-      <details><summary>How do I update?<span aria-hidden="true">+</span></summary><p>Choose Help → Check for updates to compare your version with the <a href="https://github.com/JasXTD/Download-Engine/releases/latest">latest GitHub release</a>, then open the release page to download it; installation stays manual. Close the app before upgrading. Preserve your data and downloads when updating a portable copy, and keep desktop and extension versions aligned. Older builds cannot write to a profile upgraded by version 3.4.0, so keep a backup if you may need to go back.</p></details>
+      <details><summary>How do I update?<span aria-hidden="true">+</span></summary><p>The app checks the <a href="https://github.com/JasXTD/Download-Engine/releases/latest">latest GitHub release</a> when it opens, enabled by default. A newer version offers <strong>Get update</strong> or <strong>Later</strong>; current, offline and failed checks stay quiet. Turn this off in Preferences → Startup &amp; tray, or check manually from Help → Check for updates. Downloads and installation stay manual. Close the app before upgrading, preserve portable data and downloads, and reload developer-loaded extensions. Profile upgrades can prevent older builds from reopening your data, so keep a backup if you may need to go back.</p></details>
     </div></section>
   </main>
 

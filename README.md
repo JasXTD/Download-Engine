@@ -41,12 +41,10 @@ The familiar layout is inspired by **Internet Download Manager (IDM)**. Download
 Engine is an independent project, is not affiliated with IDM, and does not claim
 complete IDM feature parity.
 
-> **New in v3.4.0:** custom themes with artwork across the whole window or your own
-> picture, a customizable toolbar, a focused scripting workspace with a versioned
-> core API and shareable script packages, and download actions that stay responsive
-> on slow storage. Get the
-> [installer, portable ZIP and browser extensions](https://github.com/JasXTD/Download-Engine/releases/tag/v3.4.0);
-> the [changelog](CHANGELOG.md) lists everything since v3.2.0.
+> **New in v3.5.2:** Lua download providers, update notifications when the app opens,
+> confirmation before clearing completed history, and a more responsive download list.
+> Get the [installer, portable ZIP and browser extensions](https://github.com/JasXTD/Download-Engine/releases/tag/v3.5.2),
+> or read the [changelog](CHANGELOG.md) for everything since v3.4.0.
 
 ## Features
 
@@ -67,6 +65,8 @@ complete IDM feature parity.
   existing downloaded data can be reused.
 - Add individual links, import batches, organize files into categories and folders,
   and export download lists.
+- Review a confirmation before clearing completed history; saved files stay in
+  their folders.
 - Set global and per-file speed limits, hourly/daily data quotas, and per-site
   connection settings. Use proxies or supported site authentication when needed.
 
@@ -108,6 +108,9 @@ complete IDM feature parity.
   with autocomplete, a searchable core API reference and a full-window mode. Share
   scripts as packages with their settings, or control the app through its **CLI**
   and optional local **MCP server**.
+- Create **Lua download providers** that resolve a file and transform its bytes.
+  The core handles transfers, checkpoints, pause/resume and integrity checks.
+  Start with the [provider guide and bundled examples](docs/lua-providers.md).
 
 ![Download Engine with the Moonveil custom theme: artwork behind the toolbar, sidebar and download list](docs/images/readme-custom-theme.jpg)
 
@@ -235,6 +238,7 @@ Choose the level of automation you need:
 | **Lua scripting** | Inspect queues, perform supported app actions, and react to download events using the built-in Lua runtime. |
 | **PowerShell scripting** | Run trusted Windows automation under your own account. This has normal file and program access. |
 | **Lua site readers** | Extend file/video-page support in the same editor and core API, with restricted page-fetching permissions. |
+| **Lua download providers** | Resolve a file and apply a same-length byte transformation while the core owns transfers, recovery and verification. [Guide and examples](docs/lua-providers.md). |
 | **`de-cli.exe`** | Inspect and manage downloads from a terminal or existing script, with structured JSON results. |
 | **Local MCP** | Let a compatible AI client inspect or control this app through an authenticated Streamable HTTP connection. |
 
@@ -281,6 +285,7 @@ permissions, data protection, and the limits of these controls.
 | Everyday use, recovery, and troubleshooting | [User guide](docs/user-guide.md) |
 | Supported sites, streams, and protocol limits | [Detailed reference](docs/reference.md#youtube-video-downloads) |
 | CLI, rules, and custom scripts | [Automation](docs/automation.md) · [Lua walkthrough](docs/user-guide.md#lua-scripting) |
+| Custom download providers and offline samples | [Provider API](docs/lua-providers.md) · [Offline lab](docs/lua-provider-lab.md) |
 | Connect an AI client | [MCP setup](docs/mcp.md) · [AI usage guide](docs/mcp-ai-guide.md) |
 | Language settings | [Languages](docs/localization.md) |
 | Detailed behavior, limits, and development checks | [Reference](docs/reference.md) |

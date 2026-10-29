@@ -27,7 +27,7 @@ Motion is CSS plus `site.js`, with no libraries. The hero copy fades in on load,
 sections reveal as they scroll into view, and cards lift slightly on hover.
 `site.js` adds the `motion` class only when JavaScript runs and reduced motion is
 off; content that is already on screen is never hidden. The hero theme stack
-rotates Aurora, Neon Courier and Reactor Night every 3.8 seconds while visible.
+rotates Aurora, Neon Courier, Reactor Night and Moonveil every 3.8 seconds while visible.
 Hover, keyboard focus and hidden tabs suspend it; choosing a theme or Pause stops
 it until Play is chosen. Reduced-motion users start paused, and the global
 reduced-motion rule removes transitions and animations.
@@ -41,6 +41,18 @@ live-recording limits.
 The Web Grabber illustration uses native radio controls to preview file discovery
 and offline website capture. Its filenames, sizes and site tree are example
 content, not a live scan or a desktop screenshot. Keep that label visible.
+
+The Lua section explains automation, site readers and download providers as three
+roles in the same scripting workspace. Keep their capabilities aligned with
+`automation.md` and `lua-providers.md`. The selectable code example only reads queue
+state; it never executes in the website. Provider API 1 handles single files and
+same-length transforms, and its encrypted fixtures do not establish support for
+any streaming service. Link to the guides for full contracts and limits.
+
+Web Grabber has separate file-discovery and static offline-capture workflows.
+Saved projects and repeat schedules apply to file discovery, not resumable offline
+website capture. Preserve the illustration's native radio controls and the links
+to both guide sections.
 
 The custom-themes section uses the same native radio technique to switch between
 real 3.4.0 screenshots; the theme-collection panel around it is an illustration.
@@ -64,7 +76,7 @@ GitHub Pages deploys the `/docs` contents automatically. Check the repository's
 Actions page or Settings → Pages for the deployment result, then verify the
 published page and affected assets.
 
-Featured packages are explicitly pinned to **3.4.0**. Publish the v3.4.0 GitHub
+Featured packages are explicitly pinned to **3.5.2**. Publish the v3.5.2 GitHub
 release with all seven assets before or together with pushing this site, or the
 download buttons return 404. When a new release is
 published, update the version labels, seven asset URLs, release-notes URL and

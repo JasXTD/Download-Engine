@@ -24,8 +24,6 @@
   <strong>Windows x64</strong> · Installer or portable · Chrome, Edge, Brave &amp; Firefox · MIT licensed
 </p>
 
-> **Official website:** [jasxtd.github.io/Download-Engine](https://jasxtd.github.io/Download-Engine/) — screenshots, supported sites, and download links.
-
 ![Download Engine in dark mode, showing download controls, queues and file progress](docs/images/downloads-dark.png)
 
 <p align="center"><em>Example desktop layout in dark mode, with sample downloads.</em></p>
@@ -47,6 +45,10 @@ complete IDM feature parity.
 > scripts, rules and run history.
 > Get the [installer, portable ZIP and browser extensions](https://github.com/JasXTD/Download-Engine/releases/tag/v3.6.0),
 > or read the [changelog](CHANGELOG.md) for everything since v3.5.2.
+
+![A short tour of Download Engine: the download list, adding a link, the browser extension's Download video button and media list, choosing video quality, queues, schedules, the website grabber, app extensions and custom themes](docs/images/download-engine-demo.gif)
+
+<p align="center"><em>A short tour of the real app and browser extension, with sample data.</em></p>
 
 ## Features
 
@@ -118,10 +120,6 @@ complete IDM feature parity.
   starts turned off, and each job keeps its own limits. Extensions install from a
   local file and publishers are not verified, so use only ones you trust. See the
   [extension guide](docs/extensions.md).
-
-![Download Engine with the Moonveil custom theme: artwork behind the toolbar, sidebar and download list](docs/images/readme-custom-theme.jpg)
-
-<p align="center"><em>The Moonveil custom theme, with sample downloads.</em></p>
 
 ## Supported video sites and formats
 

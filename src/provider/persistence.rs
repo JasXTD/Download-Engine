@@ -81,8 +81,10 @@ impl<'de> Deserialize<'de> for FrozenScript {
         let result = match Saved::deserialize(deserializer)? {
             Saved::Legacy(script) => Self::new(script),
             Saved::Protected(sealed) => (|| -> Result<Self> {
+                // An extension's frozen copy holds all of its Lua, so this is the
+                // base64 of the most that protected_data can seal.
                 ensure!(
-                    sealed.format == "provider-script-v1" && sealed.sealed.len() <= 600_000,
+                    sealed.format == "provider-script-v1" && sealed.sealed.len() <= 720_000,
                     "Invalid protected provider source"
                 );
                 let ciphertext = STANDARD.decode(&sealed.sealed)?;

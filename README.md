@@ -35,16 +35,18 @@
 Download Engine brings file transfers, supported video downloads, schedules, and
 browser handoffs into one desktop app. Add a link, review where it will be saved,
 and manage progress from a download list with queues and individual status windows.
-Use it interactively, run a portable copy, or connect your own scripts and AI client.
+Use it interactively, run a portable copy, or connect your own scripts, extensions
+and AI client.
 
 The familiar layout is inspired by **Internet Download Manager (IDM)**. Download
 Engine is an independent project, is not affiliated with IDM, and does not claim
 complete IDM feature parity.
 
-> **New in v3.5.2:** Lua download providers, update notifications when the app opens,
-> confirmation before clearing completed history, and a more responsive download list.
-> Get the [installer, portable ZIP and browser extensions](https://github.com/JasXTD/Download-Engine/releases/tag/v3.5.2),
-> or read the [changelog](CHANGELOG.md) for everything since v3.4.0.
+> **New in v3.6.0:** extensions, which package site support and automation into one
+> file you review before installing, and one **Extensions** page for your extensions,
+> scripts, rules and run history.
+> Get the [installer, portable ZIP and browser extensions](https://github.com/JasXTD/Download-Engine/releases/tag/v3.6.0),
+> or read the [changelog](CHANGELOG.md) for everything since v3.5.2.
 
 ## Features
 
@@ -82,8 +84,8 @@ complete IDM feature parity.
 
 - Send links from **Chrome, Edge, Brave, and Firefox**, capture matching file
   downloads, or select links from the current page.
-- Discover supported media through the extension and review video quality before
-  adding a download.
+- Discover supported media through the browser extension and review video quality
+  before adding a download.
 - Opt into a reviewed browser-login handoff for compatible authenticated direct
   file downloads; ordinary capture does not copy your browser cookies.
 - Find files with the website grabber, save and schedule grabber projects, or
@@ -104,13 +106,18 @@ complete IDM feature parity.
 - Choose from **19 interface languages**, with Windows language detection and
   English fallback; read the bundled guide offline with **F1**.
 - Verify SHA-256 checksums and optionally scan files with a configured antivirus.
-- Build routing rules, or write **Lua or PowerShell** scripts in a focused editor
-  with autocomplete, a searchable core API reference and a full-window mode. Share
-  scripts as packages with their settings, or control the app through its **CLI**
-  and optional local **MCP server**.
+- On the **Extensions** page, build routing rules or write **Lua or PowerShell**
+  scripts in a focused editor with autocomplete, a searchable core API reference and
+  a full-window mode. Share scripts as packages with their settings, or control the
+  app through its **CLI** and optional local **MCP server**.
 - Create **Lua download providers** that resolve a file and transform its bytes.
   The core handles transfers, checkpoints, pause/resume and integrity checks.
   Start with the [provider guide and bundled examples](docs/lua-providers.md).
+- Install **extensions**: one file that packages site readers, download providers
+  and automation jobs. A review shows what it can do before you install it, it
+  starts turned off, and each job keeps its own limits. Extensions install from a
+  local file and publishers are not verified, so use only ones you trust. See the
+  [extension guide](docs/extensions.md).
 
 ![Download Engine with the Moonveil custom theme: artwork behind the toolbar, sidebar and download list](docs/images/readme-custom-theme.jpg)
 
@@ -120,7 +127,7 @@ complete IDM feature parity.
 
 Download Engine includes built-in readers for **YouTube, TikTok, Bilibili, and
 Twitch**, plus supported HLS and DASH streams from other sites. Paste a supported
-video page into **Add URL**, open **Tools → Preview video**, or use the extension's
+video page into **Add URL**, open **Tools → Preview video**, or use the browser extension's
 **Download video** / **Find videos on this page** actions. Review the available
 quality and audio choices, then select **Add video to queue**.
 
@@ -143,7 +150,7 @@ as a media file. Download only content you are authorized to save.
 ## Install
 
 Choose a **Windows x64** package from the project's release assets. The desktop app
-is required for browser integration; the extension does not download on its own.
+is required for browser integration; the browser extension does not download on its own.
 
 | Package | How to use it |
 | --- | --- |
@@ -161,7 +168,12 @@ published checksum; it does not establish publisher identity or guarantee safety
 Close Download Engine through **Tasks → Exit** before upgrading. Stop a separately
 started CLI MCP server as well. Use the installer to upgrade an installed copy,
 or update the same portable folder while preserving its `data` and downloads.
-Keep the application and extension versions aligned.
+Keep the application and browser extension versions aligned.
+
+**Upgrading to 3.6:** the **Scripting** page is now **Extensions**, and your scripts,
+rules and run history are on its tabs. Installing your first extension upgrades the
+profile, so older versions then refuse it. Back up the profile before going back to
+an older version.
 
 **Upgrading to 3.0:** the Firefox extension now has the identity
 `download-engine@xetro`. Finish any pending browser handoffs, remove the old
@@ -239,6 +251,7 @@ Choose the level of automation you need:
 | **PowerShell scripting** | Run trusted Windows automation under your own account. This has normal file and program access. |
 | **Lua site readers** | Extend file/video-page support in the same editor and core API, with restricted page-fetching permissions. |
 | **Lua download providers** | Resolve a file and apply a same-length byte transformation while the core owns transfers, recovery and verification. [Guide and examples](docs/lua-providers.md). |
+| **Extensions** | Install site support and automation as one reviewed package. Each job keeps its own limits, and the app holds it to the hosts it declares. [Guide](docs/extensions.md). |
 | **`de-cli.exe`** | Inspect and manage downloads from a terminal or existing script, with structured JSON results. |
 | **Local MCP** | Let a compatible AI client inspect or control this app through an authenticated Streamable HTTP connection. |
 
@@ -256,8 +269,9 @@ terminal server, use `de-cli.exe mcp --read-only`; plain `de-cli.exe mcp` allows
 changes. Keep its access token private. See the [MCP setup guide](docs/mcp.md) and
 [AI usage guide](docs/mcp-ai-guide.md) before connecting a client.
 
-The scripting editor includes syntax checks, line numbers, highlighting, and
-autocomplete and a searchable core API reference. Import/export script packages
+The scripting editor, on the **Scripts** tab of the **Extensions** page, includes
+syntax checks, line numbers, highlighting, autocomplete and a searchable core API
+reference. Import/export script packages
 with their triggers and settings; imported scripts start disabled for review.
 Read the [automation reference](docs/automation.md#core-api-and-shared-scripts)
 for API helpers, permissions, events, timeouts, cancellation and examples.
@@ -272,8 +286,9 @@ legacy `IDM_EX_HOME` variable remains supported.
 The queue database is **not encrypted** and can contain signed URLs and local file
 paths. Supported credentials and browser-login snapshots use Windows credential
 storage or user-scoped DPAPI, but other programs running as your Windows account
-are outside that protection boundary. Review scripts before running them, keep
-MCP local, and treat downloaded files and offline websites as untrusted content.
+are outside that protection boundary. Review scripts and extensions before running
+them, keep MCP local, and treat downloaded files and offline websites as untrusted
+content.
 
 See [SECURITY.md](SECURITY.md) for private vulnerability reporting, browser
 permissions, data protection, and the limits of these controls.
@@ -286,6 +301,7 @@ permissions, data protection, and the limits of these controls.
 | Supported sites, streams, and protocol limits | [Detailed reference](docs/reference.md#youtube-video-downloads) |
 | CLI, rules, and custom scripts | [Automation](docs/automation.md) · [Lua walkthrough](docs/user-guide.md#lua-scripting) |
 | Custom download providers and offline samples | [Provider API](docs/lua-providers.md) · [Offline lab](docs/lua-provider-lab.md) |
+| Install or build extensions | [Extensions](docs/extensions.md) |
 | Connect an AI client | [MCP setup](docs/mcp.md) · [AI usage guide](docs/mcp-ai-guide.md) |
 | Language settings | [Languages](docs/localization.md) |
 | Detailed behavior, limits, and development checks | [Reference](docs/reference.md) |

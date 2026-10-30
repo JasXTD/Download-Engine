@@ -7,7 +7,7 @@ is included in the application and works offline. Choose a topic to get started.
 
 ### Toolbar and details
 
-Commands that do not fit on the toolbar appear under More. Choose More → Customize toolbar to pin the optional actions you use; pinned actions remain in More when the window is too narrow. Your choices are remembered. Scripting, Logs and guide pages use compact navigation; Download list returns to your files without changing selection or filters.
+Commands that do not fit on the toolbar appear under More. Choose More → Customize toolbar to pin the optional actions you use; pinned actions remain in More when the window is too narrow. Your choices are remembered. Extensions, Logs and guide pages use compact navigation; Download list returns to your files without changing selection or filters.
 
 Drag the top edge of the download details panel to adjust its height. The app remembers your choice and keeps room for the file list. On short windows, the default details panel shows a compact summary. Open the download status window for larger progress, speed and time remaining.
 
@@ -64,7 +64,7 @@ without a WeTransfer-specific extension update.
 
 ### Find your way around
 
-The sidebar filters downloads by status, file type or queue. Manage queues controls groups of downloads. In the top toolbar, Scripting contains your rules, scripts, site readers and run history; Grabber beside it finds website files and saves offline websites. Logs contains application diagnostics and sits beside Preferences at the right end of the toolbar.
+The sidebar filters downloads by status, file type or queue. Manage queues controls groups of downloads. In the top toolbar, Extensions contains your installed extensions, scripts, rules and run history; Grabber beside it finds website files and saves offline websites. Logs contains application diagnostics and sits beside Preferences at the right end of the toolbar.
 
 The queue line above the list also offers Start queue or Pause queue. Start queue runs that queue immediately and overrides its schedule; use the Scheduler page to restore scheduled operation. These controls affect the queue, while Resume and Pause in the toolbar affect selected files. Hover a file's status to read its full label, retry explanation or reported error without opening its details. Compact windows give filenames extra space; explicitly resized columns keep their saved widths and can scroll horizontally. Hover a shortened column heading to read its full label and the reorder/resize hint.
 
@@ -257,11 +257,43 @@ A synchronization queue checks its source again on later runs. Previous copies a
 
 Download at once in a queue's three-dot menu accepts a typed number from 1 to 32. Click Set or press Enter. The scheduler runs at most 32 files across all queues, including Start immediately. Higher limits use more CPU, memory and network connections; the default queue limits are unchanged. Clear completed history removes completed entries from that queue's history and keeps their saved files. It first shows a confirmation with the queue and completed count. Choose Clear history to confirm, or Cancel, close the popup or press Escape to keep the entries. Only the reviewed entries still completed in that queue are cleared; newly completed or restarted downloads are kept.
 
+## Extensions
+
+### What extensions do
+
+Extensions add site support and automation as one package. They run on the same restricted Lua workers as your scripts, and each one lists the sites it can reach. They are separate from the browser extension you load into your browser.
+
+### Install an extension
+
+1. Open Extensions in the top toolbar. The Installed tab lists what you have.
+
+2. Choose Install from file… and pick a .de-extension.json file.
+
+3. Read the review. It shows the publisher, what the extension can do and its jobs. Nothing runs yet.
+
+4. Tick file access only if you want to allow it, then choose Install.
+
+5. It installs turned off. Select it and tick Enabled when you are ready.
+
+Publishers are not verified, so install extensions only from people you trust.
+
+### Settings, code and updates
+
+Select an extension to see what it can do, what it cannot do and when its jobs last ran. Settings holds its options. Protected values can be replaced or cleared but not shown again. Code shows its files, read-only. Copy to my scripts makes an editable copy as a personal script.
+
+To update, choose Install from file… and pick a newer file. The review shows what changed. If it asks for new access, you must approve it, and Not now leaves the installed version as it was. Settings, keys and stored values are kept, and downloads already running keep the code they started with.
+
+Remove deletes the extension's settings, keys and stored values. Run history stays, and files you downloaded are kept.
+
+### Scripts or an extension?
+
+Write a script for something just for you. Make an extension for something you want to share or keep updated. See docs/extensions.md for the package format.
+
 ## Scripting
 
 ### Route new downloads
 
-Open Scripting in the top toolbar beside Scheduler, or Tools → Scripting. Choose New rule, enter a name and leave Enabled checked. Choose A download is added.
+Open Extensions in the top toolbar beside Scheduler, then choose Rules. Choose New rule, enter a name and leave Enabled checked. Choose A download is added.
 
 Site hostname is an exact host such as www.w3.org, without https:// or a path. File extension is a type such as pdf or zip. Both conditions must match when both are filled in. Blank conditions match every new download.
 
@@ -293,11 +325,11 @@ The app remembers handled completions across restarts. Editing or re-enabling a 
 
 Run history shows the latest 500 runs: blue for information and red for errors. A missing destination queue is an error; edit the rule to choose an existing queue. Disabling a rule stops future actions and does not undo actions already completed.
 
-Rules run only while Download Engine is open, including in the tray. They perform built-in app actions. For programmable workflows, use Scripting → Scripts. Use Scheduler for time-based queue starts.
+Rules run only while Download Engine is open, including in the tray. They perform built-in app actions. For programmable workflows, use Extensions → Scripts. Use Scheduler for time-based queue starts.
 
 ### Write and run a script
 
-Open Scripting → Scripts → Loaded scripts → New script. The editor starts with a working example. Give it a name, choose Save script, then Run script. Run logs appear below the editor; scroll down in a small window. The Save and Run/Stop buttons stay in the editor header while the code and logs scroll. Information is blue, errors are red and warnings are light red. Copy log copies the output, and All scripts includes history from removed scripts.
+Open Extensions → Scripts → Loaded scripts → New script. The editor starts with a working example. Give it a name, choose Save script, then Run script. Run logs appear below the editor; scroll down in a small window. The Save and Run/Stop buttons stay in the editor header while the code and logs scroll. Information is blue, errors are red and warnings are light red. Copy log copies the output, and All scripts includes history from removed scripts.
 
 Expand **Script settings** to edit the name, language, trigger, timeout and permissions. Collapse it to make more room for code. **Manual** means a script runs on request; **Automatic trigger off** means its saved trigger will not run automatically, but you can still run it yourself.
 
@@ -350,7 +382,7 @@ After a crash or app exit, unfinished runs are marked interrupted and are not au
 
 ### Run your first Lua script
 
-1. Open Scripting in the top toolbar → Scripts → Loaded scripts → + New script. Keep Language set to Lua and Trigger set to Manual only. Lua is built in; nothing needs installing.
+1. Open Extensions in the top toolbar → Scripts → Loaded scripts → + New script. Keep Language set to Lua and Trigger set to Manual only. Lua is built in; nothing needs installing.
 
 2. Name it Hello Lua. Copy this script, replace the editor's contents, then choose Save script → Run script. This example only reads your queues.
 
@@ -367,7 +399,7 @@ end
 
 ### Try the upgraded Core API without downloading anything
 
-1. Open **Scripting → Scripts → Loaded scripts → New script**. In **Script settings**, choose **Lua** and **Manual only**. Keep file-changing permission off.
+1. Open **Extensions → Scripts → Loaded scripts → New script**. In **Script settings**, choose **Lua** and **Manual only**. Keep file-changing permission off.
 2. Paste the example below. Syntax checks run automatically; **Ctrl+Space** opens completion. **Core API** in the editor header lists the functions available for the selected trigger.
 3. Choose **Save script**, then **Run script**. Use **Full editor** if you need more room, and show **Run logs** to see the result. This example only parses the text inside the script; it makes no web request or download.
 
@@ -402,7 +434,7 @@ Readers use **xd.fetch**, **xd.html_select**, **xd.url_join** and JSON helpers, 
 
 ### Core API and shared scripts
 
-Use **Scripting → Scripts** for both automation and custom site readers. There is no separate plugin editor. The trigger decides which operations are available: ordinary scripts control downloads and queues; Site reader scripts resolve matching pages and return links for the normal download engine.
+Use **Extensions → Scripts** for both automation and custom site readers. The trigger decides which operations are available: ordinary scripts control downloads and queues; Site reader scripts resolve matching pages and return links for the normal download engine.
 
 Choose **Core API** in the Lua editor header to search available functions and copy their signatures. Autocomplete uses the same catalog. `xd.api_version` is currently **1**, `xd.app_version` is the installed app version, and `xd.script_kind` is `automation` or `site_reader`. Check `xd.supports("xd.fetch")` for function availability; this is not a permission grant. Existing `xd.add`, queue, file and stored-value functions retain their contracts.
 
@@ -425,7 +457,7 @@ Working examples are included as `examples/core-api-automation.lua` (read-only q
 
 To edit a script in another program, use Open file… and Save to file… in the editor's header. Open file… copies a .lua or .ps1 file into the editor and asks first if it would replace unsaved code; choose Save script to keep it. Save to file… writes the editor's code to a file.
 
-Use Scripting in the toolbar to return from this guide to the editor. Your unsaved code is kept. The Language picker replaces only an untouched starter example; custom code is kept, so paste Lua code after switching from PowerShell. Save edits before running.
+Use Extensions in the toolbar to return from this guide to the editor. Your unsaved code is kept. The Language picker replaces only an untouched starter example; custom code is kept, so paste Lua code after switching from PowerShell. Save edits before running.
 
 ### Live syntax checks and autocomplete
 
@@ -540,7 +572,7 @@ if not ok then xd.log("warning", "Handled: " .. tostring(message)) end
 print("Still running")
 ```
 
-This example should finish as Succeeded, with all three colours and Still running in its log. Remove pcall when an error should stop the script. Script output lives under Scripting → Scripts → Run logs; the toolbar's Logs page contains application diagnostics instead.
+This example should finish as Succeeded, with all three colours and Still running in its log. Remove pcall when an error should stop the script. Script output lives under Extensions → Scripts → Run logs; the toolbar's Logs page contains application diagnostics instead.
 
 ### Download Engine Lua API
 
@@ -568,7 +600,7 @@ Run disabled: save changed code first and wait for the current run to finish. No
 
 A site reader is a Lua script that teaches Download Engine a video site it does not know.
 
-1. Open Scripting → Scripts → Loaded scripts → + New script. Keep Language set to Lua and choose Trigger → Site reader. The editor switches to a starter reader.
+1. Open Extensions → Scripts → Loaded scripts → + New script. Keep Language set to Lua and choose Trigger → Site reader. The editor switches to a starter reader.
 2. Under Pages, add the pages it reads, such as `example.com/watch/*`, and choose Add page. `*` matches anything; `*.example.com` covers every subdomain. Leave Automatic trigger enabled checked.
 3. Write the reader. `event.url` is the page. Read it, or the site's own API, with `xd.fetch`, and return what you found:
 
@@ -724,7 +756,7 @@ Ask your AI: Read Download Engine's get_usage_guide, then show my queues and pau
 
 With Allow changes enabled, ask: Create a paused queue named MCP practice and add this direct file URL to it. Replace the URL with one you want to download. Review the proposed tool calls in your client. Ask it to start MCP practice when ready, then check until the file is complete. A successful command receipt means the command was accepted; it does not mean the file has finished downloading.
 
-For Lua: save a script under Scripting → Scripts first, review its source and permissions, then approve the exact revision locally with de-cli mcp-approve-script SCRIPT_ID REVISION. Enable Approved Lua scripts on the server before asking the client to run it and read its logs. Editing or resaving invalidates approval; de-cli mcp-revoke-script SCRIPT_ID revokes it. PowerShell needs its separate server permission and revision approval, and can access files and execute programs. An approved script retains its own automation capabilities; the direct download/queue tool switches do not sandbox it. MCP cannot grant approvals or upload/edit scripts. Manual runs have no completed-download event files.
+For Lua: save a script under Extensions → Scripts first, review its source and permissions, then approve the exact revision locally with de-cli mcp-approve-script SCRIPT_ID REVISION. Enable Approved Lua scripts on the server before asking the client to run it and read its logs. Editing or resaving invalidates approval; de-cli mcp-revoke-script SCRIPT_ID revokes it. PowerShell needs its separate server permission and revision approval, and can access files and execute programs. An approved script retains its own automation capabilities; the direct download/queue tool switches do not sandbox it. MCP cannot grant approvals or upload/edit scripts. Manual runs have no completed-download event files.
 
 ### Profiles, retries and cancellation
 
@@ -805,7 +837,7 @@ Play a sound when downloads finish is off by default. When it is on, Download En
 
 Open Logs in the top toolbar beside Preferences. Messages are selectable text with level badges: errors are red, warnings are amber and information is blue. Use search and filters to find an event. Open the log folder or export diagnostics from this page.
 
-Scripting → Run history records rule actions; Logs records application and connection events. Extension popup → Browser options → Diagnostic log contains browser-side events. Include the error and approximate time when reporting a problem.
+Extensions → Run history records rule, script and extension runs; Logs records application and connection events. Extension popup → Browser options → Diagnostic log contains browser-side events. Include the error and approximate time when reporting a problem.
 
 ### Company logins and proxies
 

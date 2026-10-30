@@ -124,14 +124,14 @@ impl Desktop {
                         ui.add_space(8.0);
                         if link.browser.is_some() {
                             ui.horizontal(|ui| {ui.spinner();ui.label(tr("Waiting for the fresh browser download…"));});
-                            ui.label(tr("Click the same file on the page. The extension pauses the matching download for review here. If needed, open its popup and allow recovery access."));
+                            ui.label(tr("Click the same file on the page. The browser extension pauses the matching download for review here. If needed, open its popup and allow recovery access."));
                             if ui.button(tr("Stop waiting")).clicked() {link.browser=None;}
                         } else {
                             egui::CollapsingHeader::new(tr("Find a fresh link in the browser")).default_open(true).show(ui,|ui| {
                                 ui.label(tr("Original webpage"));
                                 ui.add(view::line_edit(&mut link.page).hint_text("https://example.com/download-page").desired_width(f32::INFINITY).char_limit(16384));
                                 browse=ui.button(tr("Open page and wait for link")).clicked();
-                                ui.label(RichText::new(tr("Use the same browser with Download Engine's extension. Recovery keeps the existing download and asks before resuming.")).small().color(p.muted));
+                                ui.label(RichText::new(tr("Use the same browser with Download Engine's browser extension. Recovery keeps the existing download and asks before resuming.")).small().color(p.muted));
                             });
                         }
                     }

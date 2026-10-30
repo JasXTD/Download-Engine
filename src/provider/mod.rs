@@ -18,6 +18,7 @@ use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
+pub(crate) use keys::seal_key;
 pub use persistence::FrozenScript;
 pub(crate) use persistence::upgrade;
 pub use runtime::worker_main;
@@ -219,11 +220,12 @@ impl Store {
         request: &str,
     ) -> Result<Job> {
         crate::model::validate_url(url)?;
-        let script = self.script(script_id)?;
+        let mut script = self.script(script_id)?;
         ensure!(
             script.revision == revision,
             "The script changed. Reload it before adding a download."
         );
+        self.freeze_extension(&mut script)?;
         let state = State {
             api_version: VERSION,
             script: FrozenScript::new(script)?,
@@ -251,12 +253,22 @@ pub(crate) async fn resolve(
     cancel: &tokio_util::sync::CancellationToken,
 ) -> Result<crate::engine::http::Source> {
     let state = job.provider.clone().context("Missing provider")?;
+    let extension = store.extension_context(&state.script, crate::extensions::Reach::Web)?;
+    let limit = extension
+        .as_ref()
+        .filter(|context| context.limit_results)
+        .map(|context| context.hosts.clone());
     let paths = store.paths.clone();
     let input = job.url.clone();
     let token = cancel.clone();
     let plan = tokio::task::spawn_blocking(move || {
-        let mut worker =
-            process::Worker::start(&paths, &state.script, process::Role::Resolver, &token)?;
+        let mut worker = process::Worker::start(
+            &paths,
+            &state.script,
+            process::Role::Resolver,
+            extension.as_ref(),
+            &token,
+        )?;
         worker.resolve(&input, state.plan.as_ref(), &token)
     })
     .await??;
@@ -264,6 +276,12 @@ pub(crate) async fn resolve(
         ensure!(
             previous == &plan.content(),
             "Provider content changed. Restart this download."
+        );
+    }
+    if let Some(hosts) = &limit {
+        ensure!(
+            crate::extensions::url_allowed(hosts, &plan.url),
+            "An extension with a saved secret can only return addresses on its declared hosts"
         );
     }
     // The explicitly entered origin is authorized. Other origins stay public-only.

@@ -117,10 +117,12 @@ fn process(
         (output, saved, hash)
     };
     let refreshed = {
+        let extension = store.extension_context(&state.script, crate::extensions::Reach::Web)?;
         let mut resolver = super::process::Worker::start(
             &store.paths,
             &state.script,
             super::process::Role::Resolver,
+            extension.as_ref(),
             cancel,
         )?;
         resolver.resolve(&job.url, Some(plan), cancel)?.content()
@@ -129,10 +131,12 @@ fn process(
         plan == &refreshed,
         "Provider content changed before processing. Restart this download."
     );
+    let extension = store.extension_context(&state.script, crate::extensions::Reach::Processor)?;
     let mut worker = super::process::Worker::start(
         &store.paths,
         &state.script,
         super::process::Role::Processor,
+        extension.as_ref(),
         cancel,
     )?;
     input.seek(SeekFrom::Start(saved.offset))?;

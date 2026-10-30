@@ -125,8 +125,22 @@ pub fn execute_lua(
     event: &serde_json::Value,
     command: impl Fn(Vec<String>) -> Result<serde_json::Value> + 'static,
 ) -> Result<()> {
+    execute_job(source, event, None, command)
+}
+
+/// As `execute_lua`, with an extension job's modules, settings and narrower commands.
+pub fn execute_job(
+    source: &str,
+    event: &serde_json::Value,
+    extension: Option<&crate::extensions::Context>,
+    command: impl Fn(Vec<String>) -> Result<serde_json::Value> + 'static,
+) -> Result<()> {
     let (lua, xd) = sandbox(source, event)?;
     super::helpers::install(&lua, &xd, false)?;
+    if let Some(extension) = extension {
+        extension.install(&lua, &xd)?;
+    }
+    let restricted = extension.is_some();
     let command = std::rc::Rc::new(command);
     let call = command.clone();
     xd.set(
@@ -175,6 +189,17 @@ pub fn execute_lua(
             ) {
                 return Err(mlua::Error::runtime(
                     "This command is not available in Lua; see the script guide",
+                ));
+            }
+            // Routing rules, other commands' receipts and partial data belong to the person.
+            if restricted
+                && matches!(
+                    args[0].as_str(),
+                    "automation" | "request" | "cancel" | "restart"
+                )
+            {
+                return Err(mlua::Error::runtime(
+                    "This command is not available to extensions",
                 ));
             }
             let result = call(args).map_err(mlua::Error::external)?;
@@ -242,8 +267,21 @@ pub fn execute_reader(
     event: &serde_json::Value,
     fetch: impl FnMut(FetchRequest) -> Result<FetchReply> + 'static,
 ) -> Result<serde_json::Value> {
+    execute_reader_job(source, event, None, fetch)
+}
+
+/// As `execute_reader`, with an extension job's modules and settings.
+pub fn execute_reader_job(
+    source: &str,
+    event: &serde_json::Value,
+    extension: Option<&crate::extensions::Context>,
+    fetch: impl FnMut(FetchRequest) -> Result<FetchReply> + 'static,
+) -> Result<serde_json::Value> {
     let (lua, xd) = sandbox(source, event)?;
     super::helpers::install(&lua, &xd, true)?;
+    if let Some(extension) = extension {
+        extension.install(&lua, &xd)?;
+    }
     let refuse = || {
         lua.create_function(|_, _: Variadic<Value>| -> mlua::Result<()> {
             Err(mlua::Error::runtime(READER_REFUSAL))

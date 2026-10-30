@@ -348,3 +348,30 @@ fn live_public_page_is_fetched() {
     assert_eq!(reply.status, 200);
     assert!(reply.body.contains("Example Domain"));
 }
+
+#[test]
+fn extensions_reach_only_their_declared_hosts_even_through_redirects() {
+    let server = Server::start();
+    let mut limited = fetcher()
+        .allowing_local()
+        .limit_hosts(vec!["other.example".into()]);
+    let error = limited.fetch(get(&server.url("/page"))).unwrap_err();
+    assert!(error.to_string().contains("did not declare"), "{error}");
+    assert!(server.requests.lock().unwrap().is_empty());
+
+    let target = Server::start();
+    let origin =
+        Server::redirecting_to(Some(target.url("/other").replace("127.0.0.1", "localhost")));
+    let mut limited = fetcher()
+        .allowing_local()
+        .limit_hosts(vec!["127.0.0.1".into()]);
+    limited.fetch(get(&server.url("/page"))).unwrap();
+    let error = limited
+        .fetch(get(&origin.url("/cross-origin")))
+        .unwrap_err();
+    assert!(
+        error.to_string().contains("did not declare localhost"),
+        "{error}"
+    );
+    assert!(target.requests.lock().unwrap().is_empty());
+}

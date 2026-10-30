@@ -359,6 +359,7 @@ fn packages_import_as_disabled_drafts_export_and_preserve_unsaved_edits() {
         },
         timeout_seconds: 30,
         change_files: false,
+        extension: None,
     };
     let path = temp.path().join("reader.de-script.json");
     std::fs::write(&path, package::encode(&original).unwrap()).unwrap();
@@ -403,12 +404,12 @@ fn packages_import_as_disabled_drafts_export_and_preserve_unsaved_edits() {
 #[test]
 fn script_guides_follow_language_and_preserve_unsaved_code() {
     let (_temp, mut app, ctx) = fixture();
-    click(&mut app, &ctx, "Scripting");
+    click(&mut app, &ctx, "Extensions");
     click(&mut app, &ctx, "Scripts");
     // The Lua help is also reachable before any script exists.
     click(&mut app, &ctx, "Lua guide");
     assert_eq!(app.view, View::Guide);
-    click(&mut app, &ctx, "Scripting");
+    click(&mut app, &ctx, "Extensions");
     click(&mut app, &ctx, "+ New script");
     if !app.scripts.settings_open {
         click(&mut app, &ctx, "Script settings");
@@ -418,14 +419,14 @@ fn script_guides_follow_language_and_preserve_unsaved_code() {
     click(&mut app, &ctx, "Lua guide");
     let out = frame(&mut app, &ctx, egui::vec2(860.0, 600.0), vec![]);
     text_rect(&out, "Run your first Lua script");
-    click(&mut app, &ctx, "Scripting");
+    click(&mut app, &ctx, "Extensions");
     assert_eq!(app.scripts.draft, draft);
     click(&mut app, &ctx, "Lua");
     click(&mut app, &ctx, "PowerShell");
     click(&mut app, &ctx, "Script guide");
     let out = frame(&mut app, &ctx, egui::vec2(860.0, 600.0), vec![]);
     text_rect(&out, "Route new downloads");
-    click(&mut app, &ctx, "Scripting");
+    click(&mut app, &ctx, "Extensions");
     assert_eq!(
         app.scripts.draft.as_ref().unwrap().body,
         draft.unwrap().body
@@ -1252,6 +1253,7 @@ fn clicking_a_script_notification_opens_its_run_log() {
             trigger: Trigger::Manual,
             timeout_seconds: 30,
             change_files: false,
+            extension: None,
         })
         .unwrap();
     let run = app

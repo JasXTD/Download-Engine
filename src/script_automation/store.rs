@@ -82,7 +82,7 @@ fn latest(conn: &Connection) -> Result<i64> {
         })?,
     )
 }
-fn definition(conn: &Connection, id: &str) -> Result<Script> {
+pub(crate) fn definition(conn: &Connection, id: &str) -> Result<Script> {
     let data: String = conn
         .query_row(
             "SELECT data FROM automation_scripts WHERE id=?1",
@@ -93,7 +93,7 @@ fn definition(conn: &Connection, id: &str) -> Result<Script> {
         .context("Script no longer exists")?;
     Ok(serde_json::from_str(&data)?)
 }
-fn definitions(conn: &Connection) -> Result<Vec<Script>> {
+pub(crate) fn definitions(conn: &Connection) -> Result<Vec<Script>> {
     let mut stmt = conn.prepare("SELECT data FROM automation_scripts ORDER BY rowid")?;
     let data = stmt
         .query_map([], |r| r.get::<_, String>(0))?
@@ -102,7 +102,7 @@ fn definitions(conn: &Connection) -> Result<Vec<Script>> {
         .map(|v| Ok(serde_json::from_str(&v)?))
         .collect()
 }
-fn busy(conn: &Connection, id: &str) -> Result<bool> {
+pub(crate) fn busy(conn: &Connection, id: &str) -> Result<bool> {
     Ok(conn.query_row("SELECT EXISTS(SELECT 1 FROM script_runs WHERE script_id=?1 AND state IN ('queued','running'))", [id], |r| r.get(0))?)
 }
 fn update_run(conn: &Connection, run: &Run) -> Result<()> {
@@ -157,9 +157,24 @@ fn enqueue(
     Ok(run)
 }
 
+/// Saves a checked definition. Older events and timers do not fire for it.
+pub(crate) fn put_script(conn: &Connection, script: &Script) -> Result<()> {
+    let now = chrono::Utc::now().timestamp();
+    let next_at = match &script.trigger {
+        Trigger::Interval { minutes } => Some(now + i64::from(*minutes) * 60),
+        _ => None,
+    };
+    conn.execute("INSERT INTO automation_scripts(id,data,cursor,next_at) VALUES(?1,?2,?3,?4) ON CONFLICT(id) DO UPDATE SET data=excluded.data,cursor=excluded.cursor,next_at=excluded.next_at",
+        params![script.id,serde_json::to_string(script)?,latest(conn)?,next_at])?;
+    Ok(())
+}
+
 impl Store {
+    /// Your own scripts. Extension jobs are managed from their extension.
     pub fn scripts(&self) -> Result<Vec<Script>> {
-        definitions(&self.connect()?)
+        let mut scripts = definitions(&self.connect()?)?;
+        scripts.retain(|script| script.extension.is_none());
+        Ok(scripts)
     }
     pub fn script(&self, id: &str) -> Result<Script> {
         definition(&self.connect()?, id)
@@ -167,6 +182,10 @@ impl Store {
 
     pub fn save_script(&self, script: &Script) -> Result<Script> {
         script.validate()?;
+        ensure!(
+            script.extension.is_none(),
+            "This job belongs to an extension. Manage it from the Extensions page"
+        );
         let mut conn = self.connect()?;
         let tx = conn.transaction_with_behavior(TransactionBehavior::Immediate)?;
         if script.trigger == Trigger::Provider {
@@ -179,25 +198,24 @@ impl Store {
                 |r| r.get(0),
             )
             .optional()?;
-        let revision = old
+        let old = old
             .map(|v| serde_json::from_str::<Script>(&v))
-            .transpose()?
-            .map_or(0, |s| s.revision);
+            .transpose()?;
+        ensure!(
+            old.as_ref().is_none_or(|s| s.extension.is_none()),
+            "This job belongs to an extension. Manage it from the Extensions page"
+        );
+        let revision = old.map_or(0, |s| s.revision);
         ensure!(
             revision == script.revision,
             "This script changed elsewhere. Reload it before saving"
         );
         let count: i64 = tx.query_row(
-            "SELECT COUNT(*) FROM automation_scripts WHERE id<>?1",
+            "SELECT COUNT(*) FROM automation_scripts WHERE id<>?1 AND json_extract(data,'$.extension') IS NULL",
             [&script.id],
             |r| r.get(0),
         )?;
         ensure!(count < 50, "Keep at most 50 scripts");
-        let now = chrono::Utc::now().timestamp();
-        let next_at = match &script.trigger {
-            Trigger::Interval { minutes } => Some(now + i64::from(*minutes) * 60),
-            _ => None,
-        };
         let queue = match &script.trigger {
             Trigger::DownloadCompleted { queue } | Trigger::DownloadFailed { queue } => {
                 queue.as_ref()
@@ -220,14 +238,17 @@ impl Store {
         saved.revision = revision
             .checked_add(1)
             .context("Script revision overflow")?;
-        tx.execute("INSERT INTO automation_scripts(id,data,cursor,next_at) VALUES(?1,?2,?3,?4) ON CONFLICT(id) DO UPDATE SET data=excluded.data,cursor=excluded.cursor,next_at=excluded.next_at",
-            params![saved.id,serde_json::to_string(&saved)?,latest(&tx)?,next_at])?;
+        put_script(&tx, &saved)?;
         tx.commit()?;
         Ok(saved)
     }
     pub fn remove_script(&self, id: &str) -> Result<()> {
         let mut conn = self.connect()?;
         let tx = conn.transaction_with_behavior(TransactionBehavior::Immediate)?;
+        ensure!(
+            definition(&tx, id).map_or(true, |s| s.extension.is_none()),
+            "This job belongs to an extension. Manage it from the Extensions page"
+        );
         ensure!(!busy(&tx, id)?, "Stop this script before removing it");
         ensure!(
             tx.execute("DELETE FROM automation_scripts WHERE id=?1", [id])? == 1,
@@ -260,6 +281,10 @@ impl Store {
         if let Some(revision) = approval {
             crate::mcp::access::check_approval(&tx, &script, revision)?;
         }
+        ensure!(
+            script.extension.is_none() || script.enabled,
+            "Turn this extension on to run its jobs"
+        );
         // A reader never runs with automation powers; it only reads pages.
         ensure!(
             !matches!(
@@ -795,8 +820,20 @@ impl Store {
         tx.commit()?;
         Ok(())
     }
-    /// The first enabled site reader whose pages cover `page`, in the order the
-    /// scripts were created. Built-in readers always take their own sites.
+    /// Enabled site readers in the order they are tried: your own scripts in the
+    /// order they were created, then extension jobs in the order they were installed.
+    pub(crate) fn site_readers(&self) -> Result<Vec<Script>> {
+        let mut readers = definitions(&self.connect()?)?;
+        readers.retain(|script| {
+            script.enabled
+                && script.language == Language::Lua
+                && matches!(script.trigger, Trigger::SiteReader { .. })
+        });
+        readers.sort_by_key(|script| script.extension.is_some());
+        Ok(readers)
+    }
+    /// The first enabled site reader whose pages cover `page`. Built-in readers
+    /// always take their own sites.
     pub fn site_reader_for(&self, page: &str) -> Result<Option<Script>> {
         if crate::hls::is_site_video(page) {
             return Ok(None);
@@ -804,11 +841,9 @@ impl Store {
         let Ok(url) = crate::model::validate_url(page) else {
             return Ok(None);
         };
-        Ok(definitions(&self.connect()?)?.into_iter().find(|script| {
-            script.enabled
-                && script.language == Language::Lua
-                && matches!(&script.trigger, Trigger::SiteReader { pages }
-                    if pages.iter().any(|p| site::page_matches(p, &url)))
+        Ok(self.site_readers()?.into_iter().find(|script| {
+            matches!(&script.trigger, Trigger::SiteReader { pages }
+                if pages.iter().any(|p| site::page_matches(p, &url)))
         }))
     }
     /// Read `page` with a saved site reader. Retrying the same request ID
@@ -862,6 +897,15 @@ impl Store {
     }
     pub(crate) fn save_script_result(&self, run: &str, reading: &Reading) -> Result<()> {
         reading.check()?;
+        let (script, _) = self.script_for_run(run)?;
+        if let Some(link) = script.extension.as_ref().filter(|l| l.limit_results) {
+            for item in &reading.items {
+                ensure!(
+                    crate::extensions::url_allowed(&link.hosts, &item.url),
+                    "An extension with a saved secret can only return addresses on its declared hosts"
+                );
+            }
+        }
         self.connect()?.execute(
             "INSERT INTO script_results(run_id,data) VALUES(?1,?2)
              ON CONFLICT(run_id) DO UPDATE SET data=excluded.data",

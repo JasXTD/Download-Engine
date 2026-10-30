@@ -47,6 +47,7 @@ text. Do not send them outside this local workflow without authorization.
 | Inspect a command | `get_request {request_id}` |
 | Cancel unclaimed command | `cancel_request {request_id}` |
 | Find saved scripts | `list_scripts {offset?, limit?}` |
+| List installed extensions | `list_extensions {offset?, limit?}` |
 | Inspect script source | `get_script {id}` |
 | Run a saved script | `run_script {id}` |
 | Stop a script run | `stop_script {run_id}` |
@@ -159,5 +160,5 @@ sessions but preserves the profile's token, downloads and retained receipts.
 
 MCP does not expose arbitrary shell execution, script editing/upload, file deletion,
 credential access, browser extraction, or scheduler/rule editing. Saved scripts
-must be created in the Scripting page or authorized CLI workflow. Use the desktop
+must be created on the Scripts tab or through an authorized CLI workflow. Use the desktop
 for unsupported operations. No remote access or stdio transport is provided.

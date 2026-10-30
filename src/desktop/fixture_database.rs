@@ -18,7 +18,7 @@ pub(super) fn open(path: impl AsRef<std::path::Path>) -> rusqlite::Result<rusqli
                 Ok(if name == "xdownloader_schema_version" {
                     1_i64
                 } else {
-                    3_i64
+                    4_i64
                 })
             },
         )?;

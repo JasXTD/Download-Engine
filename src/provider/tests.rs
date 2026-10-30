@@ -26,6 +26,7 @@ fn script() -> Script {
         enabled: false,
         timeout_seconds: 5,
         change_files: false,
+        extension: None,
     }
 }
 fn store(root: &std::path::Path) -> Store {
@@ -197,12 +198,20 @@ fn older_connected_writers_cannot_discard_provider_metadata() {
     assert!(store.get(&job.id).unwrap().unwrap().provider.is_some());
 }
 fn runtime(body: &str) -> runtime::Runtime {
-    runtime::Runtime::new(body, runtime::Capabilities::Processor(uuid::Uuid::new_v4())).unwrap()
+    runtime::Runtime::new(
+        body,
+        runtime::Capabilities::Processor(uuid::Uuid::new_v4()),
+        None,
+    )
+    .unwrap()
 }
 fn resolver(body: &str) -> runtime::Runtime {
     runtime::Runtime::new(
         body,
-        runtime::Capabilities::Resolver(Fetcher::new(crate::proxy::Route::direct()).unwrap()),
+        runtime::Capabilities::Resolver(Box::new(
+            Fetcher::new(crate::proxy::Route::direct()).unwrap(),
+        )),
+        None,
     )
     .unwrap()
 }
@@ -400,6 +409,7 @@ fn opaque_keys_are_bound_to_provider_and_never_expose_bytes_to_lua() {
     let processor = runtime::Runtime::new(
         &source,
         runtime::Capabilities::Processor(uuid::Uuid::parse_str(&saved.id).unwrap()),
+        None,
     )
     .unwrap();
     let cipher = crypto::unhex("874d6191b620e3261bef6864990db6ce").unwrap();
@@ -411,7 +421,8 @@ fn opaque_keys_are_bound_to_provider_and_never_expose_bytes_to_lua() {
     assert!(
         runtime::Runtime::new(
             &source,
-            runtime::Capabilities::Processor(uuid::Uuid::new_v4())
+            runtime::Capabilities::Processor(uuid::Uuid::new_v4()),
+            None
         )
         .is_err()
     );
@@ -599,4 +610,59 @@ fn failed_provider_upgrade_rolls_back_rows_and_profile_version() {
         .unwrap(),
         (2, 2)
     );
+}
+
+#[cfg(windows)]
+#[test]
+fn an_extension_processor_unlocks_only_keys_saved_for_its_extension() {
+    let scope = uuid::Uuid::new_v4();
+    let token = seal_key(scope, "2b7e151628aed2a6abf7158809cf4f3c").unwrap();
+    let context = crate::extensions::Context {
+        keys: [("content_key".to_owned(), token)].into(),
+        key_scope: Some(scope),
+        ..Default::default()
+    };
+    let source = r#"
+        local key = xd.key_setting("content_key")
+        return {resolve=function() end, refresh=function() end,
+            transform=function(_, bytes, offset)
+                return xd.aes_ctr(key, "f0f1f2f3f4f5f6f7f8f9fafbfcfdfeff", bytes, offset)
+            end,
+            finish=function() return true end}
+    "#;
+    let processor = runtime::Runtime::new(
+        source,
+        runtime::Capabilities::Processor(uuid::Uuid::new_v4()),
+        Some(&context),
+    )
+    .unwrap();
+    let cipher = crypto::unhex("874d6191b620e3261bef6864990db6ce").unwrap();
+    let output = processor
+        .handle(json!({"op":"transform","plan":plan().content(),"bytes":STANDARD.encode(cipher),"offset":0}))
+        .unwrap();
+    assert_eq!(
+        STANDARD.decode(output.as_str().unwrap()).unwrap(),
+        crypto::unhex("6bc1bee22e409f96e93d7e117393172a").unwrap()
+    );
+
+    let wrong = crate::extensions::Context {
+        key_scope: Some(uuid::Uuid::new_v4()),
+        ..context.clone()
+    };
+    assert!(
+        runtime::Runtime::new(
+            source,
+            runtime::Capabilities::Processor(uuid::Uuid::new_v4()),
+            Some(&wrong)
+        )
+        .is_err()
+    );
+    runtime::Runtime::new(
+        "assert(xd.key_setting == nil); return {resolve=function() end, refresh=function() end, transform=function(p,b) return b end, finish=function() return true end}",
+        runtime::Capabilities::Resolver(Box::new(
+            Fetcher::new(crate::proxy::Route::direct()).unwrap(),
+        )),
+        Some(&context),
+    )
+    .unwrap();
 }

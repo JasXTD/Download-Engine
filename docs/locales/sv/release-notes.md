@@ -1,3 +1,9 @@
+## 3.6.0 — 2026-10-31
+
+### Tillägg
+
+Den nya sidan Tillägg ersätter Skript och har flikarna Installerade, Skript, Regler och Körhistorik. Ett tillägg är en enda .de-extension.json-fil som samlar webbplatsläsare, nedladdningsleverantörer och automatiseringsjobb. Installation sker endast från en lokal fil, och utgivare verifieras inte. En granskning visar vad tillägget kan göra, det startar avstängt och en uppdatering måste fråga innan den får ny åtkomst. Webbåtkomsten är begränsad till de värdar som tillägget anger. Efter att det första tillägget installerats kan äldre appversioner inte skriva till profilen.
+
 ## 3.5.2 — 2026-10-30
 
 ### Sök efter uppdateringar vid start

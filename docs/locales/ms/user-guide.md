@@ -60,6 +60,38 @@ Baris gilir mengumpulkan muat turun, mengehadkan bilangan serentak dan menetapka
 
 Penjadual menyokong mula, henti dan pengulangan. Aplikasi mesti terbuka atau berada dalam dulang sistem. Semak zon waktu dan baris gilir. Keluar, matikan, tidurkan atau hibernasikan komputer selepas muat turun perlu didayakan berasingan; kira detik boleh dibatalkan.
 
+## Sambungan
+
+### Apa yang dilakukan sambungan
+
+Sambungan menambah sokongan laman dan automasi dalam satu pakej. Sambungan berjalan pada pekerja Lua terhad yang sama seperti skrip anda, dan setiap satu menyenaraikan laman yang boleh dicapainya. Sambungan ini berasingan daripada sambungan pelayar yang anda muatkan ke dalam pelayar.
+
+### Pasang sambungan
+
+1. Buka Sambungan pada bar alat atas. Tab Dipasang menyenaraikan sambungan yang anda ada.
+
+2. Pilih Pasang daripada fail… dan pilih fail .de-extension.json.
+
+3. Baca tetingkap semakan. Ia menunjukkan penerbit, perkara yang boleh dilakukan oleh sambungan dan tugasnya. Belum ada apa-apa yang dijalankan.
+
+4. Tandakan akses fail hanya jika anda mahu membenarkannya, kemudian pilih Pasang.
+
+5. Sambungan dipasang dalam keadaan dimatikan. Pilih sambungan itu dan tandakan Diaktifkan apabila anda bersedia.
+
+Penerbit tidak disahkan, jadi pasang sambungan hanya daripada orang yang anda percayai.
+
+### Tetapan, kod dan kemas kini
+
+Pilih sambungan untuk melihat perkara yang boleh dilakukannya, perkara yang tidak boleh dilakukannya dan masa tugasnya terakhir dijalankan. Tetapan mengandungi pilihannya. Nilai dilindungi boleh diganti atau dikosongkan tetapi tidak boleh dipaparkan lagi. Kod menunjukkan failnya secara baca sahaja. Salin ke skrip saya membuat salinan boleh sunting sebagai skrip peribadi.
+
+Untuk mengemas kini, pilih Pasang daripada fail… dan pilih fail yang lebih baharu. Tetingkap semakan menunjukkan perkara yang berubah. Jika sambungan meminta akses baharu, anda mesti meluluskannya, dan Bukan sekarang mengekalkan versi yang dipasang tanpa sebarang perubahan. Tetapan, kunci dan nilai tersimpan dikekalkan, dan muat turun yang sedang berjalan mengekalkan kod yang digunakan semasa bermula.
+
+Buang memadam tetapan, kunci dan nilai tersimpan sambungan itu. Sejarah pelaksanaan kekal, dan fail yang anda muat turun dikekalkan.
+
+### Skrip atau sambungan?
+
+Tulis skrip untuk sesuatu yang hanya untuk anda. Buat sambungan untuk sesuatu yang ingin anda kongsi atau terus dikemas kini. Lihat docs/extensions.md untuk format pakej.
+
 ## Skrip
 
 Editor dan skrip yang dimuatkan kini mempunyai tab berasingan. Cari atau cipta skrip dalam pustaka, dan buka editor penuh dari pengepala editor Lua atau PowerShell. Simpan, Jalankan/Hentikan dan log pilihan kekal bersama kod. Arahan fail berada dalam menu tindakan editor. Pertukaran paparan mengekalkan kod yang belum disimpan, tetapan dan kedudukan kursor.
@@ -67,7 +99,7 @@ Editor dan skrip yang dimuatkan kini mempunyai tab berasingan. Cari atau cipta s
 
 ### Peraturan dan skrip
 
-Di Alat → Skrip, buat peraturan untuk memilih baris gilir dan had kelajuan berdasarkan domain atau sambungan nama fail, atau memulakan baris gilir lain selepas selesai. Baris gilir kosong, fail gagal atau belum selesai tidak dikira selesai. Sejarah peraturan menunjukkan hasilnya.
+Di Sambungan → Peraturan, buat peraturan untuk memilih baris gilir dan had kelajuan berdasarkan domain atau sambungan nama fail, atau memulakan baris gilir lain selepas selesai. Baris gilir kosong, fail gagal atau belum selesai tidak dikira selesai. Sejarah peraturan menunjukkan hasilnya.
 
 Pada tab Skrip, cipta skrip, masukkan nama, pilih Lua atau PowerShell, simpan dan jalankan. Henti skrip menamatkan proses skrip dan anaknya; arahan muat turun yang sudah dihantar masih berkuat kuasa. Log menyimpan output: maklumat biru, ralat merah dan amaran merah muda.
 
@@ -77,7 +109,7 @@ Pencetus automatik termasuk permulaan aplikasi, selang masa, muat turun selesai 
 
 ### Jalankan skrip Lua pertama
 
-Buka Alat → Skrip → Skrip, cipta skrip, pilih Lua dan pencetus manual. Lua 5.4 tersedia terbina dalam. Salin contoh baca sahaja berikut, simpan, jalankan dan lihat log.
+Buka Sambungan → Skrip, cipta skrip, pilih Lua dan pencetus manual. Lua 5.4 tersedia terbina dalam. Salin contoh baca sahaja berikut, simpan, jalankan dan lihat log.
 
 Editor Lua dan PowerShell kini menyemak sintaks secara automatik selepas jeda menaip, tanpa menyimpan atau menjalankan skrip. Nombor baris, warna sintaks dan ralat yang boleh diklik ditambah. Taip awalan atau tekan Ctrl+Space untuk cadangan; pilih dengan kekunci anak panah, sisip dengan Tab, Enter atau klik, dan tutup dengan Esc. Sokongan buat asal dikekalkan; ralat masa jalan masih muncul dalam log.
 
@@ -141,7 +173,7 @@ Editor actions → Open file… membuka contoh .lua dalam folder examples. Site 
 
 Penyedia muat turun Lua kini boleh menentukan sumber, memproses bait dan mengesahkan hash dengan kawalan jeda/sambung biasa. Setiap muat turun menyimpan semakan skripnya. Contoh diuji dengan fail terenkripsi yang dijana secara setempat sahaja. Selepas penyedia disimpan, versi lama tidak boleh menulis profil ini.
 
-Scripting → Script settings → Download provider → Save script → Add provider download.
+Sambungan → Skrip → Script settings → Download provider → Save script → Add provider download.
 
 API: `resolve(request)`, `refresh(request, previous)`, `transform(plan, bytes, offset)`, `finish(plan, result)`.
 

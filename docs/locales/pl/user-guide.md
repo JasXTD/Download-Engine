@@ -46,6 +46,38 @@ Otwórz Narzędzia → Ustawienia przeglądarki, aby połączyć Chrome, Edge, B
 
 Zarządzaj kolejkami, aby grupować pliki i ustawiać liczbę jednoczesnych pobrań. Nowe kolejki czekają na uruchomienie lub harmonogram. Harmonogram obsługuje start, zatrzymanie i powtarzanie. Aplikacja musi działać, także w zasobniku. Zakończenie aplikacji oraz wyłączenie, uśpienie lub hibernacja komputera wymagają osobnego włączenia; odliczanie można anulować.
 
+## Rozszerzenia
+
+### Co robią rozszerzenia
+
+Rozszerzenia dodają obsługę witryn i automatyzację w jednym pakiecie. Działają w tych samych ograniczonych procesach Lua co Twoje skrypty, a każde z nich podaje witryny, do których ma dostęp. Są czymś innym niż rozszerzenie przeglądarki, które wczytujesz do swojej przeglądarki.
+
+### Instalowanie rozszerzenia
+
+1. Otwórz Rozszerzenia na górnym pasku narzędzi. Karta Zainstalowane pokazuje, co masz.
+
+2. Wybierz Zainstaluj z pliku… i wskaż plik .de-extension.json.
+
+3. Przeczytaj okno przeglądu. Pokazuje wydawcę, możliwości rozszerzenia i jego zadania. Na razie nic się nie uruchamia.
+
+4. Zaznacz dostęp do plików tylko wtedy, gdy chcesz na niego zezwolić, a następnie wybierz Zainstaluj.
+
+5. Rozszerzenie instaluje się jako wyłączone. Gdy wszystko będzie gotowe, wybierz je i zaznacz Włączone.
+
+Wydawcy nie są weryfikowani, więc instaluj rozszerzenia tylko od osób, którym ufasz.
+
+### Ustawienia, kod i aktualizacje
+
+Wybierz rozszerzenie, aby zobaczyć, co może robić, czego nie może robić i kiedy ostatnio działały jego zadania. Ustawienia zawierają jego opcje. Wartości chronione można zastąpić lub wyczyścić, ale nie można ich ponownie wyświetlić. Kod pokazuje jego pliki w trybie tylko do odczytu. Kopiuj do moich skryptów tworzy edytowalną kopię jako osobisty skrypt.
+
+Aby zaktualizować rozszerzenie, wybierz Zainstaluj z pliku… i wskaż nowszy plik. Okno przeglądu pokazuje, co się zmieniło. Jeśli rozszerzenie prosi o nowy dostęp, musisz go zatwierdzić, a Nie teraz pozostawia zainstalowaną wersję bez zmian. Ustawienia, klucze i zapisane wartości zostają zachowane, a trwające pobrania zachowują kod, z którym zostały uruchomione.
+
+Usuń kasuje ustawienia, klucze i zapisane wartości rozszerzenia. Historia uruchomień pozostaje, a pobrane pliki zostają zachowane.
+
+### Skrypt czy rozszerzenie?
+
+Napisz skrypt, jeśli coś ma służyć tylko Tobie. Utwórz rozszerzenie, jeśli chcesz coś udostępniać lub dalej aktualizować. Format pakietu opisano w docs/extensions.md.
+
 ## Skrypty
 
 Edytor i wczytane skrypty mają teraz osobne karty. Skrypty można wyszukiwać i tworzyć na liście, a pełny edytor otworzyć z nagłówka Lua lub PowerShell. Zapis, uruchamianie/zatrzymywanie i opcjonalne dzienniki znajdują się przy kodzie. Polecenia plików przeniesiono do menu działań edytora. Zmiana widoku zachowuje niezapisany kod, ustawienia i pozycję kursora.
@@ -53,7 +85,7 @@ Edytor i wczytane skrypty mają teraz osobne karty. Skrypty można wyszukiwać i
 
 ### Skrypty
 
-W Narzędzia → Skrypty utwórz reguły według witryny lub rozszerzenia. W skryptach wybierz Lua lub PowerShell, zapisz i uruchom. Wyzwalacze: ręczny, start aplikacji, interwał, ukończenie pobrania i kolejki. Skrypt nie nakłada uruchomień na siebie. Zatrzymanie kończy skrypt, ale nie cofa wysłanych poleceń pobierania. Wyniki znajdziesz w dzienniku.
+W Rozszerzenia → Reguły utwórz reguły według witryny lub rozszerzenia pliku. W skryptach wybierz Lua lub PowerShell, zapisz i uruchom. Wyzwalacze: ręczny, start aplikacji, interwał, ukończenie pobrania i kolejki. Skrypt nie nakłada uruchomień na siebie. Zatrzymanie kończy skrypt, ale nie cofa wysłanych poleceń pobierania. Wyniki znajdziesz w dzienniku.
 
 ## Skrypty Lua
 
@@ -113,7 +145,7 @@ Open examples/core-api-automation.lua or examples/custom-site-reader.lua with Ed
 
 Dostawcy pobierania Lua obsługują rozwiązywanie źródeł, przetwarzanie bajtów, weryfikację skrótów i zwykłe wstrzymywanie/wznawianie. Każde zadanie zachowuje zapisaną wersję skryptu. Testy używają wyłącznie lokalnie wygenerowanych zaszyfrowanych plików. Zapisanie dostawcy blokuje zapis profilu w starszych wersjach aplikacji.
 
-Scripting → Script settings → Download provider → Save script → Add provider download.
+Rozszerzenia → Skrypty → Script settings → Download provider → Save script → Add provider download.
 
 API: `resolve(request)`, `refresh(request, previous)`, `transform(plan, bytes, offset)`, `finish(plan, result)`.
 

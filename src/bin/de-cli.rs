@@ -5,6 +5,7 @@ use anyhow::{Context, Result, bail, ensure};
 use download_engine::{
     automation::{Rule, Workflow},
     control::{self, Action},
+    extensions::Context as ExtensionContext,
     paths::AppPaths,
     store::Store,
 };
@@ -50,6 +51,13 @@ MCP controls: --no-download-control, --no-queue-control, --allow-lua,
   scripts sample ID [DOWNLOAD_ID...]  Run an event script with chosen downloads; changes are simulated
   scripts runs [SCRIPT_ID] | logs RUN_ID
   scripts state SCRIPT_ID [clear]  Show or clear what a script keeps between runs
+  extensions list | show ID | review FILE
+  extensions install FILE [--queue NAME|ID] [--allow-files] [--approve]
+                               Install turned off, or update an installed extension
+  extensions enable ID | disable ID | remove ID
+  extensions set ID KEY VALUE  Save a setting
+  extensions set-secret ID KEY Save a protected setting from redirected stdin
+  extensions pack FOLDER [--out FILE]  Build a package from manifest.json and Lua files
 Inside a running script only:
   notify TITLE [TEXT]          Show a Windows notification (at most 5 per run)
   state get KEY | set KEY JSON | delete KEY | keys
@@ -67,6 +75,8 @@ struct Args {
     options: BTreeMap<String, String>,
     no_start: bool,
     delete_file: bool,
+    allow_files: bool,
+    approve: bool,
 }
 impl Args {
     fn parse(raw: Vec<String>) -> Result<Self> {
@@ -75,6 +85,8 @@ impl Args {
             options: BTreeMap::new(),
             no_start: false,
             delete_file: false,
+            allow_files: false,
+            approve: false,
         };
         let mut iter = raw.into_iter();
         while let Some(v) = iter.next() {
@@ -82,8 +94,10 @@ impl Args {
                 "--json" => {}
                 "--no-start" => a.no_start = true,
                 "--delete-file" => a.delete_file = true,
+                "--allow-files" => a.allow_files = true,
+                "--approve" => a.approve = true,
                 "--queue" | "--folder" | "--name" | "--host" | "--extension" | "--source"
-                | "--speed-kib" | "--wait" | "--request-id" => {
+                | "--speed-kib" | "--wait" | "--request-id" | "--out" => {
                     let value = iter
                         .next()
                         .with_context(|| format!("Missing value for {v}"))?;
@@ -227,10 +241,20 @@ fn lua_worker() -> Result<()> {
         download_engine::script_automation::MAX_SCRIPT_BYTES,
     )?;
     let event: Value = serde_json::from_str(&read("XDOWNLOADER_EVENT_FILE", 2 * 1024 * 1024)?)?;
+    let extension = if std::env::var_os("XDOWNLOADER_EXTENSION").is_some() {
+        let mut text = zeroize::Zeroizing::new(String::new());
+        std::io::stdin()
+            .lock()
+            .take(4 * 1024 * 1024)
+            .read_to_string(&mut text)?;
+        Some(serde_json::from_str::<ExtensionContext>(&text).context("Invalid extension input")?)
+    } else {
+        None
+    };
     if event["trigger"] == "site_reader" {
-        return site_reader(&source, &event);
+        return site_reader(&source, &event, extension.as_ref());
     }
-    download_engine::script_automation::execute_lua(&source, &event, |args| {
+    download_engine::script_automation::execute_job(&source, &event, extension.as_ref(), |args| {
         let (response, code) = run(args)?;
         ensure!(code == 0, "Download Engine command failed: {response}");
         // A sample run's "Would …" line, or the notification just shown.
@@ -247,8 +271,8 @@ fn lua_worker() -> Result<()> {
 
 /// A site reader gets xd.fetch (through the profile's proxy settings) instead of
 /// app commands, and leaves what it found where the scheduler collects it.
-fn site_reader(source: &str, event: &Value) -> Result<()> {
-    use download_engine::script_automation::{Fetcher, Reading, execute_reader};
+fn site_reader(source: &str, event: &Value, extension: Option<&ExtensionContext>) -> Result<()> {
+    use download_engine::script_automation::{Fetcher, Reading, execute_reader_job};
     let paths: AppPaths = serde_json::from_str(&std::env::var("IDM_EX_SCRIPT_PROFILE")?)?;
     ensure!(
         paths.data.is_absolute() && paths.downloads.is_absolute(),
@@ -256,7 +280,12 @@ fn site_reader(source: &str, event: &Value) -> Result<()> {
     );
     let route = download_engine::proxy::Route::load(&Store::open(paths)?)?;
     let mut fetcher = Fetcher::new(route)?;
-    let value = execute_reader(source, event, move |request| fetcher.fetch(request))?;
+    if let Some(extension) = extension {
+        fetcher = fetcher.limit_hosts(extension.hosts.clone());
+    }
+    let value = execute_reader_job(source, event, extension, move |request| {
+        fetcher.fetch(request)
+    })?;
     let reading = Reading::from_value(value)?;
     std::fs::write(
         std::env::var("XDOWNLOADER_RESULT_FILE")?,
@@ -321,6 +350,21 @@ fn run(raw: Vec<String>) -> Result<(Value, i32)> {
         !args.delete_file || matches!(w.as_slice(), ["remove", _]),
         "--delete-file is for remove"
     );
+    ensure!(
+        !(args.allow_files || args.approve) || matches!(w.as_slice(), ["extensions", "install", _]),
+        "--allow-files and --approve are for extensions install"
+    );
+    if let ["extensions", rest @ ..] = w.as_slice() {
+        ensure!(
+            script_run.is_none(),
+            "Automation workers cannot manage extensions"
+        );
+        ensure!(
+            request.is_none(),
+            "Extensions change immediately, not through queued app commands"
+        );
+        return extensions(&store, &mut args, rest);
+    }
     if matches!(
         w.first(),
         Some(&"mcp-approve-script" | &"mcp-revoke-script")
@@ -654,6 +698,129 @@ fn script_state(store: &Store, run: &str, words: &[&str]) -> Result<(Value, i32)
             Value::Null
         }
         _ => bail!("Use state get KEY, state set KEY JSON, state delete KEY or state keys"),
+    };
+    Ok((json!({"ok":true,"result":result}), 0))
+}
+
+fn package_file(file: &str) -> Result<Vec<u8>> {
+    use download_engine::extensions::MAX_PACKAGE_BYTES;
+    let mut bytes = Vec::new();
+    std::fs::File::open(file)?
+        .take(MAX_PACKAGE_BYTES as u64 + 1)
+        .read_to_end(&mut bytes)?;
+    Ok(bytes)
+}
+
+/// `extensions ...`. These write directly, like `mcp-approve-script`: the person
+/// at the keyboard decides, and worker processes are refused before this runs.
+fn extensions(store: &Store, args: &mut Args, words: &[&str]) -> Result<(Value, i32)> {
+    use download_engine::{extensions as ex, script_automation::Trigger};
+    // Read the options first: a mistyped one must stop the command before it acts.
+    let queue = matches!(words, ["install", _])
+        .then(|| args.take("--queue"))
+        .flatten();
+    let out = matches!(words, ["pack", _])
+        .then(|| args.take("--out"))
+        .flatten();
+    args.finish()?;
+    let result = match words {
+        ["list"] => Value::Array(
+            store
+                .extensions()?
+                .iter()
+                .map(|e| {
+                    json!({"id":e.package.id,"name":e.package.name,"version":e.package.version,
+                        "publisher":e.package.publisher,"enabled":e.enabled,"jobs":e.package.jobs.len()})
+                })
+                .collect(),
+        ),
+        ["show", id] => {
+            let extension = store.extension(id)?;
+            let jobs = extension
+                .package
+                .jobs
+                .iter()
+                .map(|job| {
+                    let script = store.extension_job(id, &job.id)?;
+                    Ok(json!({"id":job.id,"name":job.name,"script_id":script.id,
+                        "revision":script.revision,"enabled":script.enabled,
+                        "change_files":script.change_files}))
+                })
+                .collect::<Result<Vec<_>>>()?;
+            json!({"extension":extension,"jobs":jobs})
+        }
+        ["review", file] => serde_json::to_value(store.review_extension(&package_file(file)?)?)?,
+        ["install", file] => {
+            let bytes = package_file(file)?;
+            let review = store.review_extension(&bytes)?;
+            let mut grants = ex::Grants {
+                approved: args.approve,
+                ..Default::default()
+            };
+            if args.allow_files {
+                grants.file_access = review
+                    .package
+                    .jobs
+                    .iter()
+                    .filter(|job| job.change_files)
+                    .map(|job| job.id.clone())
+                    .collect();
+            }
+            if let Some(queue) = queue {
+                let queue = control::queue_id(store, &queue)?;
+                for job in &review.package.jobs {
+                    if matches!(job.trigger, Trigger::QueueCompleted { .. }) {
+                        grants.queues.insert(job.id.clone(), queue.clone());
+                    }
+                }
+            }
+            serde_json::to_value(store.install_extension(&bytes, &grants)?)?
+        }
+        ["set", id, key, value] => {
+            let value =
+                serde_json::from_str(value).unwrap_or_else(|_| Value::String((*value).to_owned()));
+            store.set_extension_setting(id, key, &value)?;
+            Value::Null
+        }
+        ["set-secret", id, key] => {
+            use std::io::IsTerminal;
+            ensure!(
+                !std::io::stdin().is_terminal(),
+                "Supply the value through redirected stdin, never a command argument"
+            );
+            let mut value = zeroize::Zeroizing::new(String::new());
+            std::io::stdin()
+                .lock()
+                .take(4097)
+                .read_to_string(&mut value)?;
+            store.set_extension_secret(id, key, value.trim())?;
+            Value::Null
+        }
+        ["enable", id] => {
+            store.set_extension_enabled(id, true)?;
+            Value::Null
+        }
+        ["disable", id] => {
+            store.set_extension_enabled(id, false)?;
+            Value::Null
+        }
+        ["remove", id] => {
+            store.remove_extension(id)?;
+            Value::Null
+        }
+        ["pack", folder] => {
+            use std::io::Write;
+            let (name, bytes) = ex::pack(std::path::Path::new(folder))?;
+            let path = std::path::absolute(out.unwrap_or(name))?;
+            std::fs::OpenOptions::new()
+                .write(true)
+                .create_new(true)
+                .open(&path)
+                .with_context(|| format!("Cannot create {}", path.display()))?
+                .write_all(&bytes)?;
+            json!({"path":path})
+        }
+        _ => bail!("Unknown extensions command. Use --help."),
     };
     Ok((json!({"ok":true,"result":result}), 0))
 }

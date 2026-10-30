@@ -3,13 +3,24 @@ use super::*;
 use download_engine::automation::{Rule, Run, Workflow};
 use egui::{Align, Layout, Stroke};
 
+/// The tabs of the Extensions page.
+#[derive(Clone, Copy, Default, PartialEq, Eq)]
+pub(super) enum Tab {
+    #[default]
+    Installed,
+    Scripts,
+    Rules,
+    History,
+}
+
 #[derive(Default)]
 pub(super) struct State {
     loaded: bool,
     rules: Vec<Rule>,
     runs: Vec<Run>,
-    history: bool,
-    scripts_view: bool,
+    /// Script and extension runs, each with where it came from.
+    script_runs: Vec<(download_engine::script_automation::Run, String)>,
+    tab: Tab,
     error: Option<String>,
     load_error: Option<String>,
     draft: Option<Draft>,
@@ -17,8 +28,7 @@ pub(super) struct State {
 impl State {
     /// Open the Scripts tab.
     pub(super) fn show_scripts(&mut self) {
-        self.history = false;
-        self.scripts_view = true;
+        self.tab = Tab::Scripts;
     }
 }
 
@@ -128,7 +138,12 @@ pub(super) fn queue_label(queues: &[DownloadQueue], id: &str) -> String {
         .map(|q| display_queue_name(&q.id, &q.name).to_owned())
         .unwrap_or_else(|| tr("Queue removed — choose another").into())
 }
-fn queue_picker(ui: &mut egui::Ui, key: &str, queues: &[DownloadQueue], id: &mut String) {
+pub(super) fn queue_picker(
+    ui: &mut egui::Ui,
+    key: &str,
+    queues: &[DownloadQueue],
+    id: &mut String,
+) {
     egui::ComboBox::from_id_salt(key)
         .selected_text(queue_label(queues, id))
         .width(ui.available_width())
@@ -250,7 +265,7 @@ fn render_rule_flow(ui: &mut egui::Ui, rule: &Rule, queues: &[DownloadQueue], p:
     });
 }
 
-fn subtab_button(
+pub(super) fn subtab_button(
     ui: &mut egui::Ui,
     selected: bool,
     label: impl Into<String>,
@@ -282,8 +297,16 @@ impl Desktop {
     #[cfg(feature = "screenshot")]
     pub(super) fn prepare_automation_capture(&mut self, mode: &str) {
         self.refresh_automation();
-        self.automation.history = mode == "automation-history";
-        self.automation.scripts_view = mode.starts_with("automation-scripts");
+        self.automation.tab = if mode == "automation-history" {
+            Tab::History
+        } else if mode.starts_with("automation-scripts") {
+            Tab::Scripts
+        } else if mode.starts_with("automation-installed") {
+            self.prepare_extensions_capture(mode);
+            Tab::Installed
+        } else {
+            Tab::Rules
+        };
         if matches!(mode, "automation-edit" | "automation-error") {
             let mut draft = self
                 .automation
@@ -303,16 +326,36 @@ impl Desktop {
 
     pub(super) fn refresh_automation(&mut self) {
         scripts::refresh(&self.store, &mut self.scripts);
+        // The count on the tab needs a first load, whichever tab opens.
+        if self.automation.tab == Tab::Installed || !self.extensions.loaded() {
+            self.refresh_extensions();
+        }
         let result = (|| -> anyhow::Result<_> {
+            let origins = self.store.script_origins()?;
+            let script_runs = self
+                .store
+                .script_runs(None)?
+                .into_iter()
+                .map(|run| {
+                    let origin = match origins.get(&run.script_id) {
+                        Some(Some(name)) => tf!("{name} extension", name = name),
+                        Some(None) => tr("Your script").into(),
+                        None => tr("Removed").into(),
+                    };
+                    (run, origin)
+                })
+                .collect();
             Ok((
                 self.store.automation_rules()?,
                 self.store.automation_history()?,
+                script_runs,
             ))
         })();
         match result {
-            Ok((rules, runs)) => {
+            Ok((rules, runs, script_runs)) => {
                 self.automation.rules = rules;
                 self.automation.runs = runs;
+                self.automation.script_runs = script_runs;
                 self.automation.load_error = None;
             }
             Err(error) => self.automation.load_error = Some(error.to_string()),
@@ -327,21 +370,29 @@ impl Desktop {
         ui.horizontal(|ui| {
             ui.vertical(|ui| {
                 ui.set_width((ui.available_width() - 128.0).max(260.0));
-                ui.label(RichText::new(tr("Scripting")).size(18.5).strong());
+                ui.label(RichText::new(tr("Extensions")).size(18.5).strong());
                 ui.label(
-                    RichText::new(tr("Route downloads by website or file type, chain queues together, run event-driven scripts and add your own video sites."))
+                    RichText::new(tr("Install extensions, write your own scripts and route downloads with rules."))
                         .small()
                         .color(p.muted),
                 );
             });
-            if !self.automation.scripts_view {
-                ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                    if ui.add(primary(tr("+ New rule"), p)
-                        .min_size(egui::vec2(112.0, view::PRIMARY_HEIGHT))).clicked() {
-                        self.automation.draft = Some(Draft::new());
-                        self.dialog = Some(Dialog::Automation);
-                    }
-                });
+            match self.automation.tab {
+                Tab::Rules => {
+                    ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+                        if ui.add(primary(tr("+ New rule"), p)
+                            .min_size(egui::vec2(112.0, view::PRIMARY_HEIGHT))).clicked() {
+                            self.automation.draft = Some(Draft::new());
+                            self.dialog = Some(Dialog::Automation);
+                        }
+                    });
+                }
+                Tab::Installed => {
+                    ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+                        self.extension_actions(ui, p);
+                    });
+                }
+                Tab::Scripts | Tab::History => {}
             }
         });
         ui.add_space(10.0);
@@ -355,38 +406,41 @@ impl Desktop {
                 .inner_margin(egui::Margin::same(3))
                 .show(ui, |ui| {
                     ui.spacing_mut().item_spacing.x = 4.0;
+                    let tab = self.automation.tab;
                     if subtab_button(
                         ui,
-                        !self.automation.history && !self.automation.scripts_view,
+                        tab == Tab::Installed,
+                        tf!("Installed ({})", self.extensions.count()),
+                        p,
+                    )
+                    .clicked()
+                    {
+                        self.automation.tab = Tab::Installed;
+                        self.refresh_extensions();
+                    }
+                    if subtab_button(ui, tab == Tab::Scripts, tr("Scripts"), p).clicked() {
+                        self.automation.tab = Tab::Scripts;
+                    }
+                    if subtab_button(
+                        ui,
+                        tab == Tab::Rules,
                         tf!("Rules ({})", self.automation.rules.len()),
                         p,
                     )
                     .clicked()
                     {
-                        self.automation.history = false;
-                        self.automation.scripts_view = false;
+                        self.automation.tab = Tab::Rules;
                     }
-                    if subtab_button(ui, self.automation.scripts_view, tr("Scripts"), p).clicked() {
-                        self.automation.scripts_view = true;
-                    }
-                    if subtab_button(
-                        ui,
-                        self.automation.history && !self.automation.scripts_view,
-                        tr("Run history"),
-                        p,
-                    )
-                    .clicked()
-                    {
-                        self.automation.history = true;
-                        self.automation.scripts_view = false;
+                    if subtab_button(ui, tab == Tab::History, tr("Run history"), p).clicked() {
+                        self.automation.tab = Tab::History;
                     }
                 });
 
             ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                let (guide_label, guide_topic) = if self.automation.scripts_view {
-                    self.scripts.guide()
-                } else {
-                    (tr("How rules work"), "Scripting")
+                let (guide_label, guide_topic) = match self.automation.tab {
+                    Tab::Scripts => self.scripts.guide(),
+                    Tab::Installed => (tr("Extension guide"), "Extensions"),
+                    Tab::Rules | Tab::History => (tr("How rules work"), "Scripting"),
                 };
                 if ui
                     .add(
@@ -400,7 +454,7 @@ impl Desktop {
                 {
                     self.open_guide(guide_topic);
                 }
-                if self.automation.scripts_view {
+                if self.automation.tab == Tab::Scripts {
                     if ui
                         .add_enabled(
                             self.scripts.can_export(),
@@ -423,10 +477,19 @@ impl Desktop {
         ui.add_space(8.0);
         // Results of actions taken here, such as opening or saving a script file.
         self.notice(ui, p);
-        if self.automation.scripts_view {
-            self.scripts_page(ui, p);
-            return;
+        match self.automation.tab {
+            Tab::Scripts => {
+                self.scripts_page(ui, p);
+                return;
+            }
+            Tab::Installed => {
+                self.installed_tab(ui, p);
+                return;
+            }
+            Tab::Rules | Tab::History => {}
         }
+        let history = self.automation.tab == Tab::History;
+        let mut open_log = None;
         if let Some(error) = self.automation.error.clone() {
             egui::Frame::new()
                 .fill(p.warning.gamma_multiply(0.12))
@@ -447,7 +510,7 @@ impl Desktop {
             ui.colored_label(p.warning, error);
         }
         ui.label(
-            RichText::new(if self.automation.history {
+            RichText::new(if history {
                 tr("Latest 500 runs. Completed actions are immediate and cannot be cancelled.")
             } else {
                 tr("Rules run while the app is open, including in the tray. The first matching routing rule wins.")
@@ -460,8 +523,8 @@ impl Desktop {
             .id_salt("automation-page")
             .auto_shrink([false, false])
             .show(ui, |ui| {
-                if self.automation.history {
-                    if self.automation.runs.is_empty() {
+                if history {
+                    if self.automation.runs.is_empty() && self.automation.script_runs.is_empty() {
                         egui::Frame::new()
                             .fill(p.surface)
                             .stroke(Stroke::new(1.0, p.border))
@@ -532,6 +595,28 @@ impl Desktop {
                                     .selectable(true)
                                     .wrap(),
                                 );
+                            });
+                        ui.add_space(8.0);
+                    }
+                    for (run, origin) in &self.automation.script_runs {
+                        egui::Frame::new()
+                            .fill(p.surface)
+                            .stroke(Stroke::new(1.0, p.border))
+                            .corner_radius(9)
+                            .inner_margin(egui::Margin::symmetric(14, 10))
+                            .show(ui, |ui| {
+                                ui.set_width(ui.available_width());
+                                ui.horizontal(|ui| {
+                                    ui.add(egui::Label::new(RichText::new(&run.name).strong()).truncate())
+                                        .on_hover_text(&run.name);
+                                    ui.label(RichText::new(origin).small().color(p.muted));
+                                    ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+                                        if ui.button(tr("View log")).clicked() {
+                                            open_log = Some(run.id.clone());
+                                        }
+                                        ui.label(RichText::new(&run.state).small().monospace().color(p.muted));
+                                    });
+                                });
                             });
                         ui.add_space(8.0);
                     }
@@ -675,6 +760,10 @@ impl Desktop {
                         });
                 }
             });
+        if let Some(run) = open_log {
+            self.scripts.show_run(run);
+            self.automation.show_scripts();
+        }
     }
 
     pub(super) fn automation_dialog(&mut self, ctx: &egui::Context, p: Palette) {
@@ -818,7 +907,7 @@ mod tests {
         let (_temp, mut app, ctx) = fixture();
         app.view = View::Automation;
         app.refresh_automation();
-        app.automation.history = true;
+        app.automation.tab = Tab::History;
         let name = "A long automation rule name ".repeat(4).trim().to_owned();
         app.automation.runs = vec![Run {
             id: 1,
@@ -857,6 +946,7 @@ mod tests {
     fn automation_editor_validates_saves_toggles_and_discards_cancelled_edits() {
         let (_temp, mut app, ctx) = fixture();
         app.view = View::Automation;
+        app.automation.tab = Tab::Rules;
         click(&mut app, &ctx, "+ New rule");
         click(&mut app, &ctx, "Save rule");
         assert!(

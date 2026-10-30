@@ -9,6 +9,7 @@ pub mod control;
 pub mod dash;
 pub mod diagnostics;
 pub mod engine;
+pub mod extensions;
 pub mod ftp;
 pub mod grabber_projects;
 pub mod grabber_schedule;

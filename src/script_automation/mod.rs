@@ -6,7 +6,7 @@ pub(crate) mod json;
 pub(crate) mod lua;
 pub mod package;
 pub use fetch::{FetchReply, FetchRequest, Fetcher};
-pub use lua::{execute_lua, execute_reader};
+pub use lua::{execute_job, execute_lua, execute_reader, execute_reader_job};
 mod reading;
 pub use reading::{Reading, ReadingItem};
 mod runner;
@@ -15,8 +15,8 @@ mod store;
 pub mod syntax;
 pub(crate) use runner::Controller;
 use serde::{Deserialize, Serialize};
-pub(crate) use store::initialize;
 pub use store::read_page;
+pub(crate) use store::{busy, definition, definitions as all_scripts, initialize, put_script};
 
 pub const MAX_SCRIPT_BYTES: usize = 65_536;
 pub const MAX_LOG_BYTES: usize = 131_072;
@@ -71,6 +71,24 @@ pub enum Trigger {
     },
 }
 
+/// Ties a saved script to the extension job it runs. Such a script is read-only.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ExtensionLink {
+    pub id: String,
+    pub job: String,
+    pub version: String,
+    /// The only hosts this job can reach, enforced in Rust.
+    pub hosts: Vec<String>,
+    /// A package with a secret may only return addresses on its own hosts, since
+    /// the app opens a single returned stream without asking.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub limit_results: bool,
+    /// Set only on a download's frozen copy, which keeps the code it started with.
+    #[serde(default, skip_serializing_if = "std::collections::BTreeMap::is_empty")]
+    pub files: std::collections::BTreeMap<String, String>,
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Script {
@@ -87,6 +105,8 @@ pub struct Script {
     /// Lets the script rename, move and remove its downloads' files.
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub change_files: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub extension: Option<ExtensionLink>,
 }
 impl Script {
     /// Shared structural validation for saved definitions and imported packages.
@@ -126,6 +146,10 @@ impl Script {
                 "Download providers require Lua and cannot change existing downloaded files"
             );
         }
+        ensure!(
+            self.extension.is_none() || self.language == Language::Lua,
+            "Extension jobs must be Lua"
+        );
         Ok(())
     }
     /// Event scripts can be tried on downloads or a queue the person picks.

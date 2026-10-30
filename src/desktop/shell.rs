@@ -509,8 +509,14 @@ impl Desktop {
                                 ui.close();
                             }
                             ui.separator();
-                            if ui.selectable_label(self.view == View::Automation, tr("Scripting")).clicked() {
+                            if ui.selectable_label(self.view == View::Automation, tr("Extensions")).clicked() {
                                 self.view = View::Automation;
+                                self.refresh_automation();
+                                ui.close();
+                            }
+                            if ui.button(tr("Scripting")).clicked() {
+                                self.view = View::Automation;
+                                self.automation.show_scripts();
                                 self.refresh_automation();
                                 ui.close();
                             }
@@ -872,7 +878,7 @@ mod tests {
                     tr("Clear completed history"),
                     tr("Queues"),
                     tr("Scheduler"),
-                    tr("Scripting"),
+                    tr("Extensions"),
                     tr("Grabber"),
                     "MCP",
                     tr("Logs"),

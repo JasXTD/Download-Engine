@@ -11,6 +11,7 @@ mod clipboard;
 mod diagnostics;
 mod download_status;
 mod drop_target;
+mod extensions;
 #[cfg(any(test, feature = "screenshot"))]
 mod fixture_database;
 mod folder_picker;
@@ -150,6 +151,8 @@ enum Dialog {
     ListTransfer,
     ScriptSample,
     ScriptReplace,
+    ExtensionReview,
+    ExtensionRemove,
 }
 
 enum LinkState {
@@ -293,6 +296,7 @@ pub struct Desktop {
     mcp: mcp::State,
     guide_topic: usize,
     automation: automation::State,
+    extensions: extensions::State,
     scripts: scripts::State,
     clipboard: clipboard::State,
     drop_target: drop_target::State,
@@ -416,6 +420,7 @@ impl Desktop {
             mcp: mcp::State::new(&store),
             guide_topic: 0,
             automation: automation::State::default(),
+            extensions: extensions::State::default(),
             scripts: scripts::State::default(),
             clipboard: clipboard::State::default(),
             drop_target: drop_target::State::default(),
@@ -592,6 +597,10 @@ impl Desktop {
                     | "automation-history"
                     | "automation-edit"
                     | "automation-error"
+                    | "automation-installed"
+                    | "automation-installed-settings"
+                    | "automation-installed-code"
+                    | "automation-installed-review"
                     | "automation-scripts"
                     | "automation-scripts-empty"
                     | "automation-scripts-error"
@@ -811,7 +820,7 @@ impl Desktop {
                     scripts::refresh(&self.store, &mut self.scripts);
                 } else {
                     self.notice = Some(Notice::info(
-                        tr("Finish the current dialog, then open Scripting to see this run.")
+                        tr("Finish the current dialog, then open the Scripts tab to see this run.")
                             .into(),
                     ));
                 }

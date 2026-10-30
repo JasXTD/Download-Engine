@@ -940,11 +940,6 @@
     "此下載使用受保護的瀏覽器登入資訊。",
     "Muat turun ini menggunakan log masuk pelayar terlindung."
   ],
-  "To refresh it, sign in to the site and send the file again using Use this site's login in the extension. Select None to remove this saved login.": [
-    "要刷新登录信息，请登录网站并在扩展中使用“使用此网站的登录信息”重新发送文件。选择“无”可删除已保存的登录信息。",
-    "要更新登入資訊，請登入網站並在擴充功能中使用「使用此網站的登入資訊」重新傳送檔案。選擇「無」可刪除已儲存的登入資訊。",
-    "Untuk menyegarkannya, log masuk ke laman dan hantar semula fail melalui Gunakan log masuk laman ini dalam sambungan. Pilih Tiada untuk membuang log masuk tersimpan."
-  ],
   "Saved in Windows Credential Manager for this download and server. Removed when the download completes or you remove it.": [
     "保存在 Windows 凭据管理器中，仅用于此下载和服务器。下载完成或移除时删除。",
     "儲存在 Windows 認證管理員中，僅用於此下載和伺服器。下載完成或移除時刪除。",
@@ -1404,11 +1399,6 @@
     "浏览器未在此页面找到视频直链或 HLS / DASH 播放列表。",
     "瀏覽器未在此頁面找到影片直接連結或 HLS / DASH 播放清單。",
     "Pelayar tidak menemui fail video terus atau senarai main HLS / DASH pada halaman ini."
-  ],
-  "Turn on Detect media while browsing in the extension, play the video, then try Find videos again.": [
-    "在扩展中启用浏览时检测媒体，播放视频后再尝试查找视频。",
-    "在擴充功能中啟用瀏覽時偵測媒體，播放影片後再嘗試尋找影片。",
-    "Aktifkan Kesan media semasa melayari dalam sambungan, mainkan video dan cuba Cari video sekali lagi."
   ],
   "Select files to download, or choose a stream quality.": [
     "选择要下载的文件，或选择流媒体画质。",
@@ -3290,11 +3280,6 @@
     "等候瀏覽器中的新下載…",
     "Menunggu muat turun pelayar baharu…"
   ],
-  "Click the same file on the page. The extension pauses the matching download for review here. If needed, open its popup and allow recovery access.": [
-    "在页面点击相同文件。扩展会暂停匹配的下载以在此确认。如有需要，打开扩展弹出窗口并允许恢复访问权限。",
-    "在頁面點選相同檔案。擴充功能會暫停相符的下載以在此確認。如有需要，開啟擴充功能彈出視窗並允許復原存取權限。",
-    "Klik fail yang sama pada halaman. Sambungan menjeda muat turun sepadan untuk semakan di sini. Jika perlu, buka pop timbul dan benarkan akses pemulihan."
-  ],
   "Stop waiting": [
     "停止等待",
     "停止等候",
@@ -3314,11 +3299,6 @@
     "打开页面并等待链接",
     "開啟頁面並等候連結",
     "Buka halaman dan tunggu pautan"
-  ],
-  "Use the same browser with Download Engine's extension. Recovery keeps the existing download and asks before resuming.": [
-    "请使用装有 Download Engine 扩展的同一浏览器。恢复会保留现有下载，并在继续前询问。",
-    "請使用裝有 Download Engine 擴充功能的同一瀏覽器。復原會保留現有下載，並在繼續前詢問。",
-    "Gunakan pelayar yang sama dengan sambungan Download Engine. Pemulihan mengekalkan muat turun sedia ada dan meminta pengesahan sebelum menyambung."
   ],
   "Checking replacement link…": [
     "正在检查替换链接…",
@@ -6995,11 +6975,6 @@
     "指令碼",
     "Skrip"
   ],
-  "Rules, scripts, site readers and run history": [
-    "规则、脚本、站点读取器和运行历史",
-    "規則、指令碼、網站讀取器和執行歷程",
-    "Peraturan, skrip, pembaca laman dan sejarah pelaksanaan"
-  ],
   "Route downloads by website or file type, chain queues together, run event-driven scripts and add your own video sites.": [
     "按网站或文件类型分配下载、串联队列、运行事件触发的脚本，并添加你自己的视频网站。",
     "依網站或檔案類型分配下載、串聯佇列、執行事件觸發的指令碼，並新增你自己的影片網站。",
@@ -7294,11 +7269,6 @@
     "{queue} · 添加于 {time}",
     "{queue} · 新增於 {time}",
     "{queue} · Ditambah {time}"
-  ],
-  "Finish the current dialog, then open Scripting to see this run.": [
-    "请先完成当前对话框，再打开“脚本”查看此运行。",
-    "請先完成目前的對話框，再開啟「指令碼」查看此執行。",
-    "Selesaikan dialog semasa, kemudian buka Skrip untuk melihat pelaksanaan ini."
   ],
   "Show notifications from scripts": [
     "显示来自脚本的通知",
@@ -7984,5 +7954,95 @@
     "背景不可用。请在偏好设置中选择其他图片。",
     "背景無法使用。請在偏好設定中選擇其他圖片。",
     "Latar tidak tersedia. Pilih imej lain dalam Keutamaan."
-  ]
+  ],
+  "1 job": ["1 个任务","1 個工作","1 tugas"],
+  "Add a download with {job}": ["使用 {job} 添加下载","使用 {job} 新增下載","Tambah muat turun dengan {job}"],
+  "Add downloads only from {hosts}": ["仅从 {hosts} 添加下载","僅從 {hosts} 新增下載","Menambah muat turun daripada {hosts} sahaja"],
+  "Approve and update": ["批准并更新","核准並更新","Luluskan dan kemas kini"],
+  "Change, move or delete your files": ["更改、移动或删除你的文件","變更、移動或刪除你的檔案","Mengubah, memindahkan atau memadam fail anda"],
+  "Code": ["代码","程式碼","Kod"],
+  "Code files changed: {files}": ["已更改的代码文件：{files}","已變更的程式碼檔案：{files}","Fail kod diubah: {files}"],
+  "Copy to my scripts": ["复制到我的脚本","複製到我的指令碼","Salin ke skrip saya"],
+  "Downloads already running keep the code they started with.": ["正在运行的下载会继续使用启动时的代码。","正在執行的下載會繼續使用啟動時的程式碼。","Muat turun yang sedang berjalan mengekalkan kod yang digunakan semasa bermula."],
+  "Enter a whole number": ["请输入整数","請輸入整數","Masukkan nombor bulat"],
+  "Extension (*.de-extension.json)": ["扩展 (*.de-extension.json)","擴充功能 (*.de-extension.json)","Sambungan (*.de-extension.json)"],
+  "Extension guide": ["扩展指南","擴充功能指南","Panduan sambungan"],
+  "Extensions": ["扩展","擴充功能","Sambungan"],
+  "File access requested": ["请求文件访问权限","要求檔案存取權限","Akses fail diminta"],
+  "Install": ["安装","安裝","Pasang"],
+  "Install extensions, write your own scripts and route downloads with rules.": ["安装扩展、编写自己的脚本，并用规则分配下载。","安裝擴充功能、撰寫自己的指令碼，並用規則分配下載。","Pasang sambungan, tulis skrip anda sendiri dan halakan muat turun dengan peraturan."],
+  "Install from file…": ["从文件安装…","從檔案安裝…","Pasang daripada fail…"],
+  "Install {name}?": ["安装 {name}？","安裝 {name}？","Pasang {name}?"],
+  "Installed ({})": ["已安装（{}）","已安裝（{}）","Dipasang ({})"],
+  "It can": ["它可以","它可以","Sambungan ini boleh"],
+  "It installs turned off. Turn it on after you review it.": ["安装后默认关闭。检查后再启用。","安裝後預設為關閉。檢查後再啟用。","Sambungan dipasang dalam keadaan dimatikan. Aktifkan selepas anda menyemaknya."],
+  "Its settings, saved keys and stored values are deleted. Run history stays, and files you downloaded are kept.": ["其设置、已保存的密钥和已存储的值将被删除。运行历史会保留，你下载的文件也会保留。","其設定、已儲存的金鑰和已儲存的值將被刪除。執行歷程會保留，你下載的檔案也會保留。","Tetapan, kunci tersimpan dan nilai tersimpannya akan dipadam. Sejarah pelaksanaan kekal, dan fail yang anda muat turun dikekalkan."],
+  "Jobs": ["任务","工作","Tugas"],
+  "Jobs ({count})": ["任务（{count}）","工作（{count}）","Tugas ({count})"],
+  "Last run": ["上次运行","上次執行","Pelaksanaan terakhir"],
+  "Last run failed": ["上次运行失败","上次執行失敗","Pelaksanaan terakhir gagal"],
+  "Never runs: page conflict": ["不会运行：页面冲突","不會執行：頁面衝突","Tidak akan berjalan: konflik halaman"],
+  "New access": ["新权限","新權限","Akses baharu"],
+  "New job: {job}": ["新任务：{job}","新工作：{job}","Tugas baharu: {job}"],
+  "No extensions yet": ["尚无扩展","尚無擴充功能","Belum ada sambungan"],
+  "No jobs added or removed": ["未添加或移除任务","未新增或移除工作","Tiada tugas ditambah atau dibuang"],
+  "No longer reads {host}": ["不再读取 {host}","不再讀取 {host}","Tidak lagi membaca {host}"],
+  "Not now": ["暂不","暫不","Bukan sekarang"],
+  "Not now keeps the installed version exactly as it is.": ["“暂不”会让已安装的版本保持原样。","「暫不」會讓已安裝的版本保持原樣。","“Bukan sekarang” mengekalkan versi yang dipasang tanpa sebarang perubahan."],
+  "Not run yet": ["尚未运行","尚未執行","Belum dijalankan"],
+  "Not set": ["未设置","未設定","Belum ditetapkan"],
+  "On matching pages": ["在匹配的页面上","在相符的頁面上","Pada halaman sepadan"],
+  "Open Scripts": ["打开脚本","開啟指令碼","Buka Skrip"],
+  "Overview": ["概览","總覽","Gambaran keseluruhan"],
+  "Process downloads through a new provider": ["通过新的提供程序处理下载","透過新的提供者處理下載","Memproses muat turun melalui penyedia baharu"],
+  "Protected by Windows. Only its provider jobs can use it, and it can't be shown again.": ["受 Windows 保护。只有此扩展的提供程序任务可以使用，且无法再次显示。","受 Windows 保護。只有此擴充功能的提供者工作可以使用，且無法再次顯示。","Dilindungi oleh Windows. Hanya tugas penyedia sambungan ini boleh menggunakannya, dan ia tidak boleh dipaparkan lagi."],
+  "Protected by Windows. Only this extension's web jobs can read it.": ["受 Windows 保护。只有此扩展的网络任务可以读取。","受 Windows 保護。只有此擴充功能的網路工作可以讀取。","Dilindungi oleh Windows. Hanya tugas web sambungan ini boleh membacanya."],
+  "Publisher not verified": ["发布者未验证","發行者未驗證","Penerbit tidak disahkan"],
+  "Reach the web": ["访问互联网","連線到網際網路","Mencapai internet"],
+  "Read only. Copy a file to your scripts to change it.": ["只读。将文件复制到你的脚本后即可更改。","唯讀。將檔案複製到你的指令碼後即可變更。","Baca sahaja. Salin fail ke skrip anda untuk mengubahnya."],
+  "Read pages through a new site reader": ["通过新的站点读取器读取页面","透過新的網站讀取器讀取頁面","Membaca halaman melalui pembaca laman baharu"],
+  "Read {hosts}": ["读取 {hosts}","讀取 {hosts}","Membaca {hosts}"],
+  "Remove {name}?": ["移除 {name}？","移除 {name}？","Buang {name}?"],
+  "Removed": ["已移除","已移除","Dibuang"],
+  "Removed job: {job}": ["已移除任务：{job}","已移除工作：{job}","Tugas dibuang: {job}"],
+  "Run other programs": ["运行其他程序","執行其他程式","Menjalankan program lain"],
+  "Runs": ["运行时机","執行時機","Dijalankan"],
+  "Saved. Type to replace it": ["已保存。输入内容即可替换","已儲存。輸入內容即可取代","Disimpan. Taip untuk menggantikannya"],
+  "Search extensions": ["搜索扩展","搜尋擴充功能","Cari sambungan"],
+  "See download names, folders and status": ["查看下载的名称、文件夹和状态","查看下載的名稱、資料夾和狀態","Melihat nama, folder dan status muat turun"],
+  "See download names, folders and status, never their addresses": ["查看下载的名称、文件夹和状态，但绝不查看其地址","查看下載的名稱、資料夾和狀態，但絕不查看其位址","Melihat nama, folder dan status muat turun, tetapi tidak sekali-kali alamatnya"],
+  "The last run failed: {error}": ["上次运行失败：{error}","上次執行失敗：{error}","Pelaksanaan terakhir gagal: {error}"],
+  "This extension has no settings.": ["此扩展没有设置。","此擴充功能沒有設定。","Sambungan ini tiada tetapan."],
+  "Update": ["更新","更新","Kemas kini"],
+  "Update {name}?": ["更新 {name}？","更新 {name}？","Kemas kini {name}?"],
+  "Use a key you save in Settings": ["使用你在设置中保存的密钥","使用你在設定中儲存的金鑰","Menggunakan kunci yang anda simpan dalam Tetapan"],
+  "Use your browser logins or cookies": ["使用你的浏览器登录信息或 Cookie","使用你的瀏覽器登入資訊或 Cookie","Menggunakan log masuk pelayar atau kuki anda"],
+  "View log": ["查看日志","檢視記錄","Lihat log"],
+  "What changes": ["变更内容","變更內容","Perkara yang berubah"],
+  "What it can do": ["它可以做什么","它可以做什麼","Perkara yang boleh dilakukan"],
+  "What it can't do": ["它不能做什么","它不能做什麼","Perkara yang tidak boleh dilakukan"],
+  "When you add a download": ["添加下载时","新增下載時","Apabila anda menambah muat turun"],
+  "Your script": ["你的脚本","你的指令碼","Skrip anda"],
+  "Your settings, keys and stored values are kept.": ["你的设置、密钥和已存储的值都会保留。","你的設定、金鑰和已儲存的值都會保留。","Tetapan, kunci dan nilai tersimpan anda dikekalkan."],
+  "{blocker} handles the same pages first, so this job never runs.": ["{blocker} 会先处理相同的页面，因此此任务永远不会运行。","{blocker} 會先處理相同的頁面，因此此工作永遠不會執行。","{blocker} mengendalikan halaman yang sama dahulu, jadi tugas ini tidak akan berjalan."],
+  "{count} jobs": ["{count} 个任务","{count} 個工作","{count} tugas"],
+  "{from} to {to}": ["{from} 到 {to}","{from} 到 {to}","{from} ke {to}"],
+  "{job} asks to change downloaded files": ["{job} 请求更改已下载的文件","{job} 要求變更已下載的檔案","{job} meminta untuk mengubah fail yang dimuat turun"],
+  "{name} extension": ["{name} 扩展","{name} 擴充功能","Sambungan {name}"],
+  "To refresh it, sign in to the site and send the file again using Use this site's login in the browser extension. Select None to remove this saved login.": ["要刷新登录信息，请登录网站并在浏览器扩展中使用“使用此网站的登录信息”重新发送文件。选择“无”可删除已保存的登录信息。","要更新登入資訊，請登入網站並在瀏覽器擴充功能中使用「使用此網站的登入資訊」重新傳送檔案。選擇「無」可刪除已儲存的登入資訊。","Untuk menyegarkannya, log masuk ke laman dan hantar semula fail melalui Gunakan log masuk laman ini dalam sambungan pelayar. Pilih Tiada untuk membuang log masuk tersimpan."],
+  "Turn on Detect media while browsing in the browser extension, play the video, then try Find videos again.": ["在浏览器扩展中启用浏览时检测媒体，播放视频后再尝试查找视频。","在瀏覽器擴充功能中啟用瀏覽時偵測媒體，播放影片後再嘗試尋找影片。","Aktifkan Kesan media semasa melayari dalam sambungan pelayar, mainkan video dan cuba Cari video sekali lagi."],
+  "Click the same file on the page. The browser extension pauses the matching download for review here. If needed, open its popup and allow recovery access.": ["在页面点击相同文件。浏览器扩展会暂停匹配的下载以在此确认。如有需要，打开浏览器扩展弹出窗口并允许恢复访问权限。","在頁面點選相同檔案。瀏覽器擴充功能會暫停相符的下載以在此確認。如有需要，開啟瀏覽器擴充功能彈出視窗並允許復原存取權限。","Klik fail yang sama pada halaman. Sambungan pelayar menjeda muat turun sepadan untuk semakan di sini. Jika perlu, buka pop timbul dan benarkan akses pemulihan."],
+  "Use the same browser with Download Engine's browser extension. Recovery keeps the existing download and asks before resuming.": ["请使用装有 Download Engine 浏览器扩展的同一浏览器。恢复会保留现有下载，并在继续前询问。","請使用裝有 Download Engine 瀏覽器擴充功能的同一瀏覽器。復原會保留現有下載，並在繼續前詢問。","Gunakan pelayar yang sama dengan sambungan pelayar Download Engine. Pemulihan mengekalkan muat turun sedia ada dan meminta pengesahan sebelum menyambung."],
+  "Finish the current dialog, then open the Scripts tab to see this run.": ["请先完成当前对话框，再打开“脚本”选项卡查看此运行。","請先完成目前的對話框，再開啟「指令碼」分頁查看此執行。","Selesaikan dialog semasa, kemudian buka tab Skrip untuk melihat pelaksanaan ini."],
+  "Extensions, scripts, rules and run history": ["扩展、脚本、规则和运行历史","擴充功能、指令碼、規則和執行歷程","Sambungan, skrip, peraturan dan sejarah pelaksanaan"],
+  "Extensions add site support and automation without changing the app. Install one from a file, or write your own script.": ["扩展可在不更改应用的情况下添加网站支持和自动化功能。你可以从文件安装扩展，或编写自己的脚本。","擴充功能可在不變更應用程式的情況下新增網站支援和自動化功能。你可以從檔案安裝擴充功能，或撰寫自己的指令碼。","Sambungan menambah sokongan laman dan automasi tanpa mengubah aplikasi. Pasang satu daripada fail, atau tulis skrip anda sendiri."],
+  "Pause, resume and retry downloads, manage queues and show notifications": ["暂停、继续和重试下载，管理队列并显示通知","暫停、繼續和重試下載，管理佇列並顯示通知","Menjeda, menyambung dan mencuba semula muat turun, mengurus giliran dan memaparkan pemberitahuan"],
+  "Type": ["类型","類型","Jenis"],
+  "Let {job} rename, move and delete any downloaded file": ["允许 {job} 重命名、移动和删除任何已下载的文件","允許 {job} 重新命名、移動和刪除任何已下載的檔案","Benarkan {job} menamakan semula, memindahkan dan memadam mana-mana fail yang dimuat turun"],
+  "Rename, move and delete any downloaded file. You allowed this.": ["重命名、移动和删除任何已下载的文件。你已允许此操作。","重新命名、移動和刪除任何已下載的檔案。你已允許此操作。","Menamakan semula, memindahkan dan memadam mana-mana fail yang dimuat turun. Anda telah membenarkannya."],
+  "Publisher changes to {name}": ["发布者变更为 {name}","發行者變更為 {name}","Penerbit bertukar kepada {name}"],
+  "{job} changes when or how it runs": ["{job} 更改了运行时机或运行方式","{job} 變更了執行時機或執行方式","{job} mengubah masa atau cara ia dijalankan"],
+  "Settings reset: {settings}": ["设置已重置：{settings}","設定已重設：{settings}","Tetapan ditetapkan semula: {settings}"],
+  "Your other settings, keys and stored values are kept.": ["你的其他设置、密钥和已存储的值都会保留。","你的其他設定、金鑰和已儲存的值都會保留。","Tetapan, kunci dan nilai tersimpan anda yang lain dikekalkan."],
+  "Save or discard your open script first": ["请先保存或放弃当前打开的脚本","請先儲存或捨棄目前開啟的指令碼","Simpan atau buang skrip yang sedang dibuka dahulu"]
 }

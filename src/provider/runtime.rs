@@ -10,11 +10,15 @@ pub(super) struct Runtime {
     role: Role,
 }
 pub(super) enum Capabilities {
-    Resolver(Fetcher),
+    Resolver(Box<Fetcher>),
     Processor(uuid::Uuid),
 }
 impl Runtime {
-    pub(super) fn new(source: &str, capabilities: Capabilities) -> Result<Self> {
+    pub(super) fn new(
+        source: &str,
+        capabilities: Capabilities,
+        extension: Option<&crate::extensions::Context>,
+    ) -> Result<Self> {
         ensure!(
             source.len() <= crate::script_automation::MAX_SCRIPT_BYTES,
             "Provider code exceeds 64 KiB"
@@ -100,6 +104,26 @@ impl Runtime {
                     lua.create_string(output)
                 })?,
             )?;
+        }
+        if let Some(extension) = extension {
+            extension.install(&lua, &xd)?;
+            // Tokens reach only a processor, and unlock only under this extension.
+            #[cfg(windows)]
+            if role == Role::Processor {
+                let keys = extension.keys.clone();
+                let scope = extension.key_scope;
+                xd.set(
+                    "key_setting",
+                    lua.create_function(move |_, id: String| {
+                        let token = keys.get(&id).ok_or_else(|| {
+                            mlua::Error::runtime(format!("xd.key_setting: {id} has no saved key"))
+                        })?;
+                        let scope = scope
+                            .ok_or_else(|| mlua::Error::runtime("Missing extension key scope"))?;
+                        super::keys::unlock(scope, token).map_err(mlua::Error::external)
+                    })?,
+                )?;
+            }
         }
         lua.globals().set("xd", xd)?;
         let callbacks: Table = lua
@@ -204,15 +228,21 @@ impl Runtime {
 pub fn worker_main() -> Result<()> {
     let mut input = std::io::stdin().lock();
     let mut output = std::io::stdout().lock();
-    let first = super::process::read_frame(&mut input)?;
+    let first = super::process::read_init_frame(&mut input)?;
     ensure!(first["op"] == "init", "Provider must initialize first");
+    let extension: Option<crate::extensions::Context> =
+        serde_json::from_value(first["extension"].clone())?;
     // Never construct a Fetcher or load profile/network settings in a processor.
     // Reject missing/unknown roles rather than falling back to resolver access.
     let capabilities = match serde_json::from_value::<Role>(first["role"].clone())? {
         Role::Resolver => {
             let paths = serde_json::from_str(&std::env::var("IDM_EX_PROVIDER_PROFILE")?)?;
             let store = crate::store::Store::open(paths)?;
-            Capabilities::Resolver(Fetcher::new(crate::proxy::Route::load(&store)?)?)
+            let mut fetcher = Fetcher::new(crate::proxy::Route::load(&store)?)?;
+            if let Some(extension) = &extension {
+                fetcher = fetcher.limit_hosts(extension.hosts.clone());
+            }
+            Capabilities::Resolver(Box::new(fetcher))
         }
         Role::Processor => Capabilities::Processor(uuid::Uuid::parse_str(
             first["script_id"]
@@ -225,6 +255,7 @@ pub fn worker_main() -> Result<()> {
             .as_str()
             .context("Missing provider source")?,
         capabilities,
+        extension.as_ref(),
     );
     match runtime {
         Err(error) => super::process::write_frame(

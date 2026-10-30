@@ -1,3 +1,9 @@
+## 3.6.0 — 2026-10-31
+
+### Sambungan
+
+Halaman Sambungan baharu menggantikan Skrip, dengan tab Dipasang, Skrip, Peraturan dan Sejarah pelaksanaan. Sambungan ialah satu fail .de-extension.json yang menggabungkan pembaca laman, penyedia muat turun dan tugas automasi. Pasang daripada fail setempat sahaja; penerbit tidak disahkan. Semakan menunjukkan perkara yang boleh dilakukannya, sambungan bermula dalam keadaan dimatikan, dan kemas kini mesti meminta kebenaran sebelum mendapat akses baharu. Akses webnya terhad kepada hos yang diisytiharkan. Selepas sambungan pertama dipasang, versi lama tidak boleh menulis profil ini.
+
 ## 3.5.2 — 2026-10-30
 
 ### Semak kemas kini semasa pelancaran

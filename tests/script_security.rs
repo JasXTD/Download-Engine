@@ -41,6 +41,7 @@ impl Fixture {
                 },
                 timeout_seconds: 30,
                 change_files,
+                extension: None,
             })
             .unwrap();
         let id = uuid::Uuid::new_v4().to_string();

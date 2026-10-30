@@ -1,3 +1,9 @@
+## 3.6.0 — 2026-10-31
+
+### Estensioni
+
+La nuova pagina Estensioni sostituisce Script e offre le schede Installate, Script, Regole e Cronologia esecuzioni. Un'estensione è un unico file .de-extension.json che raggruppa lettori di siti, fornitori di download e attività di automazione. L'installazione è possibile solo da un file locale e i produttori non sono verificati. Una verifica mostra cosa può fare l'estensione, che parte disattivata, e un aggiornamento deve chiedere il permesso prima di ottenere nuovi accessi. L'accesso al web è limitato agli host dichiarati. Dopo l'installazione della prima estensione, le versioni precedenti non possono scrivere in questo profilo.
+
 ## 3.5.2 — 2026-10-30
 
 ### Controlla aggiornamenti all’avvio

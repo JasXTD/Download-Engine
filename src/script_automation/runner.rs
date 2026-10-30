@@ -157,6 +157,15 @@ impl Active {
                 .parent()
                 .context("Application directory unavailable")?
                 .join("de-cli.exe");
+            // Extension jobs get their settings and library code over a pipe, so a
+            // saved secret never sits in the run folder. A job must not start
+            // without its limits, so a failed read stops the run.
+            let reach = if claim.run.trigger == "site_reader" {
+                crate::extensions::Reach::Web
+            } else {
+                crate::extensions::Reach::Automation
+            };
+            let extension = store.extension_context(&store.script(&claim.run.script_id)?, reach)?;
             let mut command = match claim.run.language {
                 Language::Lua => {
                     std::fs::write(folder.join("script.lua"), &claim.body)?;
@@ -195,9 +204,16 @@ impl Active {
                     serde_json::to_string(&store.paths)?,
                 )
                 .env("IDM_EX_SCRIPT_RUN", &claim.run.id)
-                .stdin(Stdio::null())
+                .stdin(if extension.is_some() {
+                    Stdio::piped()
+                } else {
+                    Stdio::null()
+                })
                 .stdout(Stdio::piped())
                 .stderr(Stdio::piped());
+            if extension.is_some() {
+                command.env("XDOWNLOADER_EXTENSION", "1");
+            }
             // Include native parsing/conversion allocations in the worker budget.
             // Lua calls the CLI in-process and does not need child processes.
             let memory_limit = (claim.run.language == Language::Lua).then_some(256 * 1024 * 1024);
@@ -215,10 +231,19 @@ impl Active {
                 .stderr
                 .take()
                 .context("Missing script stderr")?;
-            let readers = vec![
+            let mut readers = vec![
                 read_output(stdout, "info", tx.clone(), budget.clone()),
                 read_output(stderr, "error", tx, budget),
             ];
+            if let Some(extension) = &extension {
+                use std::io::Write;
+                let mut pipe = process.child.stdin.take().context("Missing script stdin")?;
+                let bytes = zeroize::Zeroizing::new(serde_json::to_vec(extension)?);
+                // A full pipe must not stall the scheduler. Closing it ends the input.
+                readers.push(thread::spawn(move || {
+                    let _ = pipe.write_all(&bytes);
+                }));
+            }
             Ok(Self {
                 process: Some(process),
                 output,

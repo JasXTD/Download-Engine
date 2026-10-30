@@ -1,3 +1,9 @@
+## 3.6.0 — 2026-10-31
+
+### Utvidelser
+
+Den nye siden Utvidelser erstatter Skript og har fanene Installert, Skript, Regler og Kjøringshistorikk. En utvidelse er én .de-extension.json-fil som samler nettstedslesere, nedlastingsleverandører og automatiseringsjobber. Installasjon skjer bare fra en lokal fil, og utgivere blir ikke verifisert. En gjennomgang viser hva utvidelsen kan gjøre, den starter avslått, og en oppdatering må spørre før den får ny tilgang. Nettilgangen er begrenset til vertene utvidelsen oppgir. Etter at den første utvidelsen er installert, kan eldre appversjoner ikke skrive til profilen.
+
 ## 3.5.2 — 2026-10-30
 
 ### Se etter oppdateringer ved oppstart

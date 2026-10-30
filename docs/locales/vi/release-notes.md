@@ -1,3 +1,9 @@
+## 3.6.0 — 2026-10-31
+
+### Tiện ích mở rộng
+
+Trang Tiện ích mở rộng mới thay thế Tập lệnh, gồm các thẻ Đã cài đặt, Tập lệnh, Quy tắc và Lịch sử chạy. Mỗi tiện ích mở rộng là một tệp .de-extension.json gộp trình đọc trang, nhà cung cấp tải xuống và tác vụ tự động hóa. Chỉ cài đặt từ tệp cục bộ; nhà phát hành chưa được xác minh. Cửa sổ xem xét cho biết tiện ích mở rộng làm được gì, sau khi cài đặt nó ở trạng thái tắt, và bản cập nhật phải hỏi trước khi nhận quyền truy cập mới. Truy cập web chỉ giới hạn ở các máy chủ đã khai báo. Sau khi cài tiện ích mở rộng đầu tiên, ứng dụng cũ không thể ghi vào hồ sơ này.
+
 ## 3.5.2 — 2026-10-30
 
 ### Kiểm tra cập nhật khi mở ứng dụng

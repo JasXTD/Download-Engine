@@ -46,6 +46,38 @@ Unter Werkzeuge → Browsereinrichtung Chrome, Edge, Brave oder Firefox verbinde
 
 Unter Warteschlangen verwalten Dateien gruppieren und gleichzeitige Downloads einstellen. Neue Warteschlangen warten auf Start oder Zeitplan. Der Zeitplaner bietet Start, Pause und Wiederholungen. Die App muss geöffnet bleiben, auch im Infobereich. Automatisches Beenden, Herunterfahren, Energiesparen oder Ruhezustand muss gesondert aktiviert werden; der Countdown lässt sich abbrechen.
 
+## Erweiterungen
+
+### Was Erweiterungen leisten
+
+Erweiterungen fügen Website-Unterstützung und Automatisierung in einem Paket hinzu. Dabei laufen sie in denselben eingeschränkten Lua-Prozessen wie Ihre Skripte, und jede listet die Websites auf, die sie erreichen kann. Diese Erweiterungen sind unabhängig von der Browsererweiterung, die Sie in Ihren Browser laden.
+
+### Erweiterung installieren
+
+1. Öffnen Sie „Erweiterungen“ in der oberen Symbolleiste. Die Registerkarte „Installiert“ listet Ihre Erweiterungen auf.
+
+2. Wählen Sie „Aus Datei installieren…“ und dann eine .de-extension.json-Datei.
+
+3. Lesen Sie den Prüfdialog. Er zeigt den Herausgeber, was die Erweiterung kann, und ihre Aufträge. Noch läuft nichts.
+
+4. Setzen Sie das Häkchen für den Dateizugriff nur, wenn Sie ihn erlauben möchten, und wählen Sie dann „Installieren“.
+
+5. Die Erweiterung wird deaktiviert installiert. Wählen Sie sie aus und setzen Sie das Häkchen bei „Aktiviert“, wenn Sie bereit sind.
+
+Herausgeber werden nicht verifiziert. Installieren Sie Erweiterungen daher nur von Personen, denen Sie vertrauen.
+
+### Einstellungen, Code und Updates
+
+Wählen Sie eine Erweiterung aus, um zu sehen, was sie kann, was sie nicht kann und wann ihre Aufträge zuletzt ausgeführt wurden. „Einstellungen“ enthält ihre Optionen. Geschützte Werte lassen sich ersetzen oder löschen, aber nicht erneut anzeigen. „Code“ zeigt ihre Dateien schreibgeschützt an. „In meine Skripte kopieren“ erstellt eine bearbeitbare Kopie als persönliches Skript.
+
+Wählen Sie zum Aktualisieren „Aus Datei installieren…“ und dann eine neuere Datei. Der Prüfdialog zeigt, was sich geändert hat. Fordert die Erweiterung neuen Zugriff an, müssen Sie ihn freigeben, und „Nicht jetzt“ lässt die installierte Version unverändert. Einstellungen, Schlüssel und gespeicherte Werte bleiben erhalten, und bereits laufende Downloads behalten den Code, mit dem sie gestartet wurden.
+
+„Entfernen“ löscht die Einstellungen, Schlüssel und gespeicherten Werte der Erweiterung. Der Ausführungsverlauf bleibt bestehen, und Ihre heruntergeladenen Dateien bleiben erhalten.
+
+### Skript oder Erweiterung?
+
+Schreiben Sie ein Skript für etwas, das nur für Sie gedacht ist. Erstellen Sie eine Erweiterung für etwas, das Sie teilen oder aktuell halten möchten. Das Paketformat ist in docs/extensions.md beschrieben.
+
 ## Skripte
 
 Editor und geladene Skripte haben jetzt eigene Registerkarten. Skripte lassen sich in der Liste suchen und erstellen; der vollständige Editor öffnet sich im Kopfbereich des Lua- oder PowerShell-Editors. Speichern, Ausführen/Stoppen und optionale Protokolle bleiben beim Code. Dateibefehle stehen im Aktionsmenü des Editors. Beim Ansichtswechsel bleiben ungespeicherter Code, Einstellungen und Cursorposition erhalten.
@@ -53,7 +85,7 @@ Editor und geladene Skripte haben jetzt eigene Registerkarten. Skripte lassen si
 
 ### Skripte
 
-Unter Werkzeuge → Skripte Regeln nach Website oder Dateiendung erstellen. Unter Skripte Lua oder PowerShell wählen, speichern und ausführen. Auslöser: manuell, App-Start, Intervall, Download- oder Warteschlangenabschluss. Ein Skript überlappt seine eigenen Ausführungen nicht. Stopp beendet das Skript, macht aber bereits gesendete Downloadbefehle nicht rückgängig. Ausgabe steht im Ausführungsprotokoll.
+Regeln nach Website oder Dateiendung unter Erweiterungen → Regeln erstellen. Unter Skripte Lua oder PowerShell wählen, speichern und ausführen. Auslöser: manuell, App-Start, Intervall, Download- oder Warteschlangenabschluss. Ein Skript überlappt seine eigenen Ausführungen nicht. Stopp beendet das Skript, macht aber bereits gesendete Downloadbefehle nicht rückgängig. Ausgabe steht im Ausführungsprotokoll.
 
 ## Lua-Skripte
 
@@ -113,7 +145,7 @@ Open examples/core-api-automation.lua or examples/custom-site-reader.lua with Ed
 
 Lua-Downloadanbieter lösen Quellen auf, verarbeiten Bytes und prüfen Hashes mit den üblichen Pause-/Fortsetzen-Funktionen. Jeder Download behält seine gespeicherte Skriptversion. Tests verwenden ausschliesslich lokal erzeugte verschlüsselte Dateien. Nach dem Speichern eines Anbieters können ältere App-Versionen dieses Profil nicht mehr beschreiben.
 
-Scripting → Script settings → Download provider → Save script → Add provider download.
+Erweiterungen → Skripte → Script settings → Download provider → Save script → Add provider download.
 
 API: `resolve(request)`, `refresh(request, previous)`, `transform(plan, bytes, offset)`, `finish(plan, result)`.
 

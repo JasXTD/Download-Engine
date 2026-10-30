@@ -423,16 +423,33 @@ pub(crate) fn execute_stored(store: &Store, request: &str, action: Action) -> Re
                 "A file name applies only to one URL"
             );
             let queue = queue_id(store, &queue)?;
+            // A download is a request to a host, so it could carry out what a job
+            // can see. An extension may only add from the hosts it declares.
+            let extension = script_run
+                .as_ref()
+                .map(|run| store.script_for_run(run))
+                .transpose()?
+                .and_then(|(script, _)| script.extension);
+            if let Some(link) = &extension {
+                ensure!(
+                    urls.iter()
+                        .all(|url| crate::extensions::url_allowed(&link.hosts, url)),
+                    "An extension can only add downloads from the hosts it declares"
+                );
+            }
             let jobs = urls
                 .iter()
                 .enumerate()
                 .map(|(i, url)| {
-                    store.new_download(
+                    let mut job = store.new_download(
                         url,
                         name.as_deref(),
                         folder.as_deref(),
                         format!("cli:{request}:{i}"),
-                    )
+                    )?;
+                    // A declared name can still point at this computer or the local network.
+                    job.public_only = extension.is_some();
+                    Ok(job)
                 })
                 .collect::<Result<Vec<_>>>()?;
             if let Some(run) = &script_run {

@@ -46,6 +46,38 @@ Innsamling finner fillenker eller lagrer et nettsted frakoblet. Velg URL, dybde,
 
 Administrer køer grupperer filer og begrenser samtidige nedlastinger. Nye køer venter på start eller tidsplan. Planleggeren har start, pause og gjentakelse. Appen må være åpen, også i systemstatusfeltet. Automatisk avslutning, avslåing, hvilemodus og dvalemodus aktiveres separat; nedtellingen kan avbrytes.
 
+## Utvidelser
+
+### Hva utvidelser gjør
+
+Utvidelser gir nettstedstøtte og automatisering i én pakke. De kjører i de samme begrensede Lua-prosessene som skriptene dine, og hver utvidelse viser hvilke nettsteder den kan nå. De er noe annet enn nettleserutvidelsen du laster inn i nettleseren.
+
+### Installer en utvidelse
+
+1. Åpne Utvidelser i verktøylinjen øverst. Fanen Installert viser hva du har.
+
+2. Velg Installer fra fil… og velg deretter en .de-extension.json-fil.
+
+3. Les gjennomgangsvinduet. Det viser utgiveren, hva utvidelsen kan gjøre, og jobbene dens. Ingenting kjører ennå.
+
+4. Kryss av for filtilgang bare hvis du vil tillate det, og velg deretter Installer.
+
+5. Utvidelsen installeres avslått. Velg den og kryss av for Aktivert når du er klar.
+
+Utgivere er ikke verifisert, så installer bare utvidelser fra folk du stoler på.
+
+### Innstillinger, kode og oppdateringer
+
+Velg en utvidelse for å se hva den kan gjøre, hva den ikke kan gjøre og når jobbene dens sist kjørte. Innstillinger inneholder alternativene dens. Beskyttede verdier kan erstattes eller tømmes, men ikke vises igjen. Kode viser filene dens, som er skrivebeskyttet. Kopier til skriptene mine lager en redigerbar kopi som et personlig skript.
+
+Hvis du vil oppdatere, velger du Installer fra fil… og deretter en nyere fil. Gjennomgangsvinduet viser hva som er endret. Hvis oppdateringen ber om ny tilgang, må du godkjenne den, og Ikke nå lar den installerte versjonen være som den var. Innstillinger, nøkler og lagrede verdier beholdes, og nedlastinger som allerede kjører, beholder koden de startet med.
+
+Fjern sletter innstillingene, nøklene og de lagrede verdiene til utvidelsen. Kjøringshistorikken blir værende, og filer du har lastet ned, beholdes.
+
+### Skript eller utvidelse?
+
+Skriv et skript for noe som bare er for deg. Lag en utvidelse for noe du vil dele eller holde oppdatert. Se docs/extensions.md for pakkeformatet.
+
 ## Skript
 
 Redigereren og innlastede skript har nå egne faner. Søk etter eller opprett skript i listen, og åpne den fullstendige redigereren fra overskriften for Lua eller PowerShell. Lagre, kjør/stopp og valgfrie logger vises sammen med koden. Filkommandoer ligger i redigererens handlingsmeny. Bytte av visning bevarer ulagret kode, innstillinger og markørposisjon.
@@ -53,7 +85,7 @@ Redigereren og innlastede skript har nå egne faner. Søk etter eller opprett sk
 
 ### Skript
 
-I Verktøy → Skript lager du regler etter nettsted eller filtype. Velg Lua eller PowerShell under Skript, lagre og kjør. Utløsere: manuelt, appstart, intervall, fullført nedlasting eller kø. Et skript overlapper ikke egne kjøringer. Stopp avslutter skriptet, men angrer ikke sendte nedlastingskommandoer. Utdata vises i kjøringsloggen.
+I Utvidelser → Regler lager du regler etter nettsted eller filtype. Velg Lua eller PowerShell under Utvidelser → Skript, lagre og kjør. Utløsere: manuelt, appstart, intervall, fullført nedlasting eller kø. Et skript overlapper ikke egne kjøringer. Stopp avslutter skriptet, men angrer ikke sendte nedlastingskommandoer. Utdata vises i kjøringsloggen.
 
 ## Lua-skript
 
@@ -113,7 +145,7 @@ Open examples/core-api-automation.lua or examples/custom-site-reader.lua with Ed
 
 Lua-leverandører finner kilder, behandler byte og bekrefter hasher med vanlige kontroller for pause og fortsettelse. Hver nedlasting beholder sin lagrede skriptversjon. Testene bruker bare lokalt genererte krypterte filer. Etter at en leverandør er lagret, kan eldre appversjoner ikke skrive til profilen.
 
-Scripting → Script settings → Download provider → Save script → Add provider download.
+Utvidelser → Skript → Script settings → Download provider → Save script → Add provider download.
 
 API: `resolve(request)`, `refresh(request, previous)`, `transform(plan, bytes, offset)`, `finish(plan, result)`.
 

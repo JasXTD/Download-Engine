@@ -161,7 +161,7 @@ impl Desktop {
                     } else if form.method == Some(AuthKind::Bearer) { ui.label(tr("Token (without the Bearer prefix)")); }
                     if form.method == Some(AuthKind::Browser) {
                         ui.label(tr("This download uses a protected browser login."));
-                        ui.label(tr("To refresh it, sign in to the site and send the file again using Use this site's login in the extension. Select None to remove this saved login."));
+                        ui.label(tr("To refresh it, sign in to the site and send the file again using Use this site's login in the browser extension. Select None to remove this saved login."));
                     } else if form.method.is_some() {
                         let mut input = view::line_edit(&mut *form.secret).password(true)
                             .id(egui::Id::new("authentication-secret"))

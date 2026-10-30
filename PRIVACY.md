@@ -155,12 +155,13 @@ on your behalf.
 
 ## Integrations and information you choose to share
 
-If you enable desktop scripting, connect an MCP/AI client, or configure an
-antivirus scanner or proxy, the selected tools can process information or files
-within the access you give them. In particular, an AI client may send information
-obtained from the local MCP server to its own provider. Custom scripts can have
-their own network behaviour. Review those tools and their privacy settings;
-this policy does not control third-party processing or user-modified builds.
+If you enable desktop scripting, install an extension, connect an MCP/AI client,
+or configure an antivirus scanner or proxy, the selected tools can process
+information or files within the access you give them. In particular, an AI client
+may send information obtained from the local MCP server to its own provider.
+Custom scripts can have their own network behaviour, and an extension can contact
+the hosts it declares. Review those tools and their privacy settings; this policy
+does not control third-party processing or user-modified builds.
 
 If you choose to submit a GitHub issue, attachment or support report, the project
 receives what you share. Public issues are visible to others and GitHub processes

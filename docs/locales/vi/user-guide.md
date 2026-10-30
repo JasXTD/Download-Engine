@@ -46,6 +46,38 @@ Mở Công cụ → Thiết lập trình duyệt để kết nối Chrome, Edge,
 
 Quản lý hàng đợi để nhóm tệp và đặt số tải đồng thời. Hàng đợi mới chờ bạn bắt đầu hoặc lên lịch. Bộ lập lịch có bắt đầu, dừng và lặp lại. Ứng dụng phải mở, kể cả ở khay hệ thống. Thoát, tắt máy, ngủ hoặc ngủ đông khi xong cần bật riêng; có thể hủy đếm ngược.
 
+## Tiện ích mở rộng
+
+### Tiện ích mở rộng làm được gì
+
+Tiện ích mở rộng bổ sung hỗ trợ trang và tự động hóa trong một gói. Chúng chạy trên cùng các tiến trình Lua bị hạn chế như tập lệnh của bạn, và mỗi tiện ích mở rộng liệt kê các trang mà nó có thể truy cập. Chúng tách biệt với tiện ích trình duyệt mà bạn nạp vào trình duyệt.
+
+### Cài đặt tiện ích mở rộng
+
+1. Mở Tiện ích mở rộng trên thanh công cụ phía trên. Thẻ Đã cài đặt liệt kê các tiện ích mở rộng bạn có.
+
+2. Chọn Cài đặt từ tệp… rồi chọn một tệp .de-extension.json.
+
+3. Đọc cửa sổ xem xét. Cửa sổ này cho biết nhà phát hành, những việc tiện ích mở rộng có thể làm và các tác vụ của nó. Chưa có gì chạy.
+
+4. Chỉ đánh dấu quyền truy cập tệp nếu bạn muốn cho phép, rồi chọn Cài đặt.
+
+5. Tiện ích mở rộng được cài ở trạng thái tắt. Khi sẵn sàng, chọn tiện ích mở rộng đó và đánh dấu Đã bật.
+
+Nhà phát hành chưa được xác minh, vì vậy chỉ cài đặt tiện ích mở rộng từ những người bạn tin tưởng.
+
+### Cài đặt, mã và cập nhật
+
+Chọn một tiện ích mở rộng để xem những việc nó có thể làm, những việc nó không thể làm và thời điểm các tác vụ chạy gần nhất. Thẻ Cài đặt chứa các tùy chọn của nó. Giá trị được bảo vệ có thể được thay thế hoặc xóa nhưng không thể hiển thị lại. Thẻ Mã hiển thị các tệp ở chế độ chỉ đọc. Sao chép vào tập lệnh của tôi tạo một bản sao có thể chỉnh sửa dưới dạng tập lệnh cá nhân.
+
+Để cập nhật, chọn Cài đặt từ tệp… rồi chọn tệp mới hơn. Cửa sổ xem xét cho biết những gì đã thay đổi. Nếu tiện ích mở rộng yêu cầu quyền mới, bạn phải duyệt; chọn Để sau sẽ giữ nguyên phiên bản đã cài đặt. Cài đặt, khóa và giá trị đã lưu được giữ lại, và các lượt tải đang chạy vẫn dùng mã lúc bắt đầu.
+
+Nút Xóa sẽ xóa cài đặt, khóa và giá trị đã lưu của tiện ích mở rộng. Lịch sử chạy vẫn còn và các tệp bạn đã tải xuống được giữ lại.
+
+### Tập lệnh hay tiện ích mở rộng?
+
+Viết tập lệnh cho việc chỉ dành riêng cho bạn. Tạo tiện ích mở rộng cho việc bạn muốn chia sẻ hoặc tiếp tục cập nhật. Xem docs/extensions.md để biết định dạng gói.
+
 ## Tập lệnh
 
 Trình chỉnh sửa và danh sách tập lệnh đã tải nay có các thẻ riêng. Tìm kiếm hoặc tạo tập lệnh trong danh sách, rồi mở trình chỉnh sửa toàn màn hình từ tiêu đề Lua hoặc PowerShell. Lưu, chạy/dừng và nhật ký tùy chọn được đặt cùng mã; các lệnh tệp nằm trong trình đơn thao tác. Chuyển chế độ xem vẫn giữ mã chưa lưu, cài đặt và vị trí con trỏ.
@@ -53,7 +85,7 @@ Trình chỉnh sửa và danh sách tập lệnh đã tải nay có các thẻ r
 
 ### Tập lệnh
 
-Trong Công cụ → Tập lệnh, tạo quy tắc theo trang web hoặc phần mở rộng. Ở tab tập lệnh, chọn Lua hoặc PowerShell, lưu rồi chạy. Có kích hoạt thủ công, lúc mở ứng dụng, theo khoảng thời gian, tải xong và hàng đợi xong. Một tập lệnh không chạy chồng lên chính nó. Dừng kết thúc tập lệnh nhưng lệnh tải đã gửi vẫn có hiệu lực. Xem kết quả trong nhật ký.
+Trong Tiện ích mở rộng → Quy tắc, tạo quy tắc theo trang web hoặc phần mở rộng. Ở tab tập lệnh, chọn Lua hoặc PowerShell, lưu rồi chạy. Có kích hoạt thủ công, lúc mở ứng dụng, theo khoảng thời gian, tải xong và hàng đợi xong. Một tập lệnh không chạy chồng lên chính nó. Dừng kết thúc tập lệnh nhưng lệnh tải đã gửi vẫn có hiệu lực. Xem kết quả trong nhật ký.
 
 ## Lập trình Lua
 
@@ -113,7 +145,7 @@ Open examples/core-api-automation.lua or examples/custom-site-reader.lua with Ed
 
 Nhà cung cấp tải xuống Lua hỗ trợ xác định nguồn, xử lý byte, xác minh mã băm và tạm dừng/tiếp tục. Mỗi tác vụ giữ nguyên phiên bản mã đã lưu. Chỉ kiểm thử bằng tệp mã hóa được tạo cục bộ. Sau khi lưu nhà cung cấp, ứng dụng cũ không thể ghi vào hồ sơ này.
 
-Scripting → Script settings → Download provider → Save script → Add provider download.
+Tiện ích mở rộng → Tập lệnh → Script settings → Download provider → Save script → Add provider download.
 
 API: `resolve(request)`, `refresh(request, previous)`, `transform(plan, bytes, offset)`, `finish(plan, result)`.
 

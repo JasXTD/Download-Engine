@@ -170,6 +170,7 @@ Only enable scripts and automatic triggers you have reviewed and trust.
 | PowerShell scripts | Normal file, network, and program access under your Windows account. App API restrictions do not confine the PowerShell process. |
 | Custom scanner commands | External programs with your Windows account's permissions; trust both the executable and its arguments. |
 | Lua site readers | A separate API for fetching public pages and returning supported files/streams; they cannot inspect or change existing downloads through the automation API. |
+| Extensions | Packages of Lua jobs, each in its own worker with the limits of its kind. Rust holds `xd.fetch` and `xd.add` to the hosts a package declares. These are application-level limits, not an OS sandbox, and publishers are not verified, so install only from people you trust. See [Extensions](docs/extensions.md). |
 
 Custom readers' network requests and returned downloads are restricted to public
 destinations, including redirects and stream segments. The reader path validates
@@ -226,6 +227,7 @@ directory. `DOWNLOAD_ENGINE_HOME` can select a separate profile, with
 | Browser-login snapshots | Encrypted using Windows user-scoped DPAPI before database storage and scoped to the associated download/origin. |
 | MCP access token | Encrypted using user-scoped DPAPI in the profile's `mcp-token.dpapi`; copied client configuration contains the usable token. |
 | Saved scripts and script output | Stored locally; source and output can contain anything the script author includes. Review before sharing. |
+| Extension settings | Plain settings are stored locally. `secret` and `aes_key` settings are encrypted using Windows user-scoped DPAPI. A `secret` reaches the job as text, so its code could still write it to a run log. |
 | Diagnostics and exported lists | Can expose operational details or private URLs. Redact them manually; an export is not a safe anonymized profile. |
 
 Keep the application, portable folder, and profile writable only by accounts you

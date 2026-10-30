@@ -46,6 +46,38 @@ Avra Utensils → Configuraziun dal navigatur per colliar Chrome, Edge, Brave u 
 
 Administrar las colonnas gruppescha datotecas e limitescha quants telechargiadas che pon funcziunar a la giada. Novas colonnas spetgan in cumenzament manual u in urari. Definescha temps da cumenzament e pausa e dis da repetiziun en la Planisaziun. L’app sto restar averta, era en la zona da notificaziun. Sortida automatica, stizzar, durmir ed ibernaziun dal computer basegnan ina tscherna explicita; ti pos interrumper il quint enavos.
 
+## Extensiuns
+
+### Tge che extensiuns fan
+
+Extensiuns agiuntan sustegn per websites ed automatisaziun en in sulet pachet. Ellas vegnan exequidas en ils medems process Lua limitads sco tes scripts, e mintga extensiun inditgescha ils websites ch’ella po cuntanscher. Ellas èn separadas da l’extensiun dal navigatur che ti chargias en tes navigatur.
+
+### Installar ina extensiun
+
+1. Avra Extensiuns en la glista d’utensils sura. Il tab Installadas mussa quai che ti has.
+
+2. Tscherna Installar da datoteca… e tscherna lura ina datoteca .de-extension.json.
+
+3. Legia la fanestra da verificaziun. Ella mussa il producent, quai che l’extensiun po far e sias incumbensas. Anc na vegn nagut exequì.
+
+4. Marchescha l’access a datotecas mo sche ti vuls al permetter, e tscherna lura Installar.
+
+5. L’extensiun vegn installada deactivada. Tscherna ella e marchescha Activà cur che ti vuls.
+
+Ils producents na vegnan betg verifitgads, perquai installescha extensiuns mo da persunas en las qualas ti has fidanza.
+
+### Parameters, code ed actualisaziuns
+
+Tscherna ina extensiun per vesair quai ch’ella po far, quai ch’ella na po betg far e cur che sias incumbensas èn vegnidas exequidas l’ultima giada. Parameters cuntegna sias opziuns. Valurs protegidas pon vegnir remplazzadas u stizzadas, ma betg pli mussadas. Code mussa sias datotecas, mo per leger. Copiar en mes scripts fa ina copia modifitgabla sco script persunal.
+
+Per actualisar, tscherna Installar da datoteca… e lura ina datoteca pli nova. La fanestra da verificaziun mussa las midadas. Sche l’actualisaziun dumonda nov access, stos ti l’approvar, e Betg ussa lascha la versiun installada sco ch’ella era. Parameters, clavs e valurs memorisadas vegnan mantegnids, e telechargiadas gia en curs mantegnan il code cun il qual ellas èn vegnidas aviadas.
+
+Allontanar stizza ils parameters, las clavs e las valurs memorisadas da l’extensiun. La cronologia d'execuziuns resta e las datotecas che ti has telechargià vegnan mantegnidas.
+
+### Script u extensiun?
+
+Scriva in script per insatge che è mo per tai. Creescha ina extensiun per insatge che ti vuls cundivider u mantegnair actual. Guarda docs/extensions.md per il format dal pachet.
+
 ## Scripts
 
 L’editur ed ils scripts chargiads han ussa registers separads. Tschertga u creescha scripts en la glista ed avra l’editur cumplet en il chau da l’editur Lua u PowerShell. Memorisar, exequir/fermar ed ils protocols opziunals restan sper il code. Ils cumonds da datotecas èn en il menu d’acziuns da l’editur. La midada da vista mantegna il code betg memorisà, ils parameters e la posiziun dal cursor.
@@ -53,7 +85,7 @@ L’editur ed ils scripts chargiads han ussa registers separads. Tschertga u cre
 
 ### Scripts
 
-Sut Utensils → Scripts creescha reglas tenor website u extensiun da datoteca. L’emprima regla d’attribuziun correspundenta vala. En Scripts pos ti duvrar Lua u PowerShell. Memorisescha las midadas avant exequir. Ils eveniments cumpiglian execuziun manuala, cumenzament da l’app, interval e fin da telechargiada u colonna. Activescha e memorisescha l’eveniment automatic per al duvrar. Fermar il script terminescha l’execuziun senza revocar las acziuns gia transmessas a l’app. Guarda ils protocols d’execuziun per resultats e sbagls.
+Sut Extensiuns → Reglas creescha reglas tenor website u extensiun da datoteca. L’emprima regla d’attribuziun correspundenta vala. En Extensiuns → Scripts pos ti duvrar Lua u PowerShell. Memorisescha las midadas avant exequir. Ils eveniments cumpiglian execuziun manuala, cumenzament da l’app, interval e fin da telechargiada u colonna. Activescha e memorisescha l’eveniment automatic per al duvrar. Fermar il script terminescha l’execuziun senza revocar las acziuns gia transmessas a l’app. Guarda ils protocols d’execuziun per resultats e sbagls.
 
 ## Scripts Lua
 
@@ -113,7 +145,7 @@ Open examples/core-api-automation.lua or examples/custom-site-reader.lua with Ed
 
 Furniturs Lua determineschan las funtaunas, elavuran bytes e verifitgeschan ils hash cun pausa e cuntinuaziun. Mintga telechargiada conserva sia versiun memorisada dal script. Ils tests dovran mo datotecas criptadas generadas localmain. Suenter memorisar in furnitur na pon versiuns veglias betg pli scriver en quest profil.
 
-Scripting → Script settings → Download provider → Save script → Add provider download.
+Extensiuns → Scripts → Script settings → Download provider → Save script → Add provider download.
 
 API: `resolve(request)`, `refresh(request, previous)`, `transform(plan, bytes, offset)`, `finish(plan, result)`.
 

@@ -64,6 +64,7 @@ fn saved_script(
             trigger: Trigger::Manual,
             timeout_seconds: 30,
             change_files: false,
+            extension: None,
         })
         .unwrap()
 }

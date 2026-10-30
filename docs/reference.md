@@ -77,13 +77,13 @@ Open **Help → Changelog** for offline release notes, newest first. The same
 [changelog](../CHANGELOG.md) ships in both packages. Every delivered update gets a
 new version and release note; see the [release workflow](releases.md).
 
-The **Scripting** page in the top toolbar can route new downloads by site or
+The **Extensions** page in the top toolbar can route new downloads by site or
 file type, apply a speed limit, and start another queue after completion. Rules
 have enable switches and a text run history. The packaged **de-cli.exe**
 provides JSON commands for PowerShell and other scripts, using the same scheduler
 as the app. See [CLI and automation](automation.md) for commands and examples.
 
-**Scripting → Scripts** adds a built-in Lua editor with optional PowerShell, Save, Run, Stop, timeouts
+**Extensions → Scripts** adds a built-in Lua editor with optional PowerShell, Save, Run, Stop, timeouts
 and persistent coloured text logs. Choose manual, startup, interval, download
 completion or queue completion triggers. The included example uses
 Lua's `xd` app API and `event` for trigger context. PowerShell scripts use
@@ -1801,7 +1801,7 @@ The desktop app and native browser connector keep separate structured logs:
 An installed copy normally uses `%LOCALAPPDATA%\Download Engine\logs`
 (`%LOCALAPPDATA%\IDM_EX\logs` for a profile from before 2.0); a portable copy
 uses `data\logs` beside its executables. `DOWNLOAD_ENGINE_HOME` overrides this with
-`<DOWNLOAD_ENGINE_HOME>\data\logs`. **Logs**, beside Scripting in the top toolbar, opens the
+`<DOWNLOAD_ENGINE_HOME>\data\logs`. **Logs**, in the top toolbar, opens the
 in-app viewer. **Open log folder** inside that page opens this copy's log files
 directly in File Explorer when needed.
 

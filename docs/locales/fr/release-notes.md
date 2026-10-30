@@ -1,3 +1,9 @@
+## 3.6.0 — 2026-10-31
+
+### Extensions
+
+La nouvelle page Extensions remplace Scripts et propose les onglets Installées, Scripts, Règles et Historique d’exécution. Une extension est un seul fichier .de-extension.json qui regroupe des lecteurs de site, des fournisseurs de téléchargement et des tâches d’automatisation. L’installation se fait uniquement depuis un fichier local ; les éditeurs ne sont pas vérifiés. Une vérification indique ce que l’extension peut faire, elle démarre désactivée et une mise à jour doit demander l’autorisation avant tout nouvel accès. Son accès au web est limité aux hôtes déclarés. Après l’installation de la première extension, les anciennes versions ne peuvent plus écrire dans ce profil.
+
 ## 3.5.2 — 2026-10-30
 
 ### Rechercher les mises à jour au lancement

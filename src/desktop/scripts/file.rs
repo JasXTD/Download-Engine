@@ -137,7 +137,7 @@ pub(super) fn screenshot_replace(state: &mut State) {
 
 /// Whether replacing the editor's code loses nothing: it is the saved code or
 /// an untouched starter example.
-fn untouched(state: &State) -> bool {
+pub(super) fn untouched(state: &State) -> bool {
     let Some(draft) = &state.draft else {
         return true;
     };

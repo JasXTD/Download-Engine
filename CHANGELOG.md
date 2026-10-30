@@ -2,6 +2,17 @@
 
 Release notes are available offline in Help → Changelog. Newest releases appear first.
 
+## 3.6.0 — 2026-10-31
+
+### Extensions
+
+- The new Extensions page replaces Scripting in the top toolbar, with Installed, Scripts, Rules and Run history tabs. Tools → Scripting opens the Scripts tab. Existing rules, scripts and site readers keep working as before.
+- An extension is one `.de-extension.json` file that packages site readers, download providers and automation jobs with shared settings. This release installs from a local file only: there is no online catalogue, and publishers are not verified.
+- Installing shows a review of what the extension can do, and it starts turned off. File access stays off unless you tick it. An update shows what changed. New access, a new publisher or a job that runs differently needs your approval, and your settings, keys and stored values are kept. Not now leaves the installed version as it was.
+- Each job runs in its own restricted Lua worker with the limits of its kind. The app holds `xd.fetch`, including every redirect, and `xd.add` to the hosts the extension declares. Jobs share read-only settings, and each `secret` and `aes_key` setting is encrypted with Windows user-scoped DPAPI.
+- The new `de-cli extensions` commands list, review, install, configure, enable, disable, remove and pack extensions. `list_extensions` shows them to MCP clients. See `docs/extensions.md`.
+- Installing the first extension upgrades the profile compatibility guard. Older builds refuse that profile instead of running its jobs without these limits.
+
 ## 3.5.2 — 2026-10-30
 
 ### Update notifications on app launch

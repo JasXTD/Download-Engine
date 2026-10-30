@@ -46,6 +46,38 @@ Ouvrez Outils → Configuration du navigateur pour connecter Chrome, Edge, Brave
 
 Gérer les files permet de grouper les fichiers et limiter les téléchargements simultanés. Les nouvelles files attendent un démarrage ou un planning. Le planificateur gère début, pause et répétition. L’application doit rester ouverte, même dans la zone de notification. Fermeture, arrêt, mise en veille et veille prolongée automatiques exigent une activation séparée ; le compte à rebours peut être annulé.
 
+## Extensions
+
+### À quoi servent les extensions
+
+Les extensions ajoutent la prise en charge de sites et l’automatisation en un seul paquet. Elles s’exécutent dans les mêmes processus Lua restreints que vos scripts, et chacune indique les sites auxquels elle peut accéder. Elles sont distinctes de l’extension de navigateur que vous chargez dans votre navigateur.
+
+### Installer une extension
+
+1. Ouvrez Extensions dans la barre d’outils supérieure. L’onglet Installées liste vos extensions.
+
+2. Choisissez Installer depuis un fichier… et sélectionnez un fichier .de-extension.json.
+
+3. Lisez la fenêtre de vérification. Elle indique l’éditeur, ce que l’extension peut faire et ses tâches. Rien ne s’exécute pour l’instant.
+
+4. Cochez l’accès aux fichiers uniquement si vous voulez l’autoriser, puis choisissez Installer.
+
+5. L’extension s’installe désactivée. Sélectionnez-la et cochez Activé le moment venu.
+
+Les éditeurs ne sont pas vérifiés : installez uniquement des extensions provenant de personnes en qui vous avez confiance.
+
+### Paramètres, code et mises à jour
+
+Sélectionnez une extension pour voir ce qu’elle peut faire, ce qu’elle ne peut pas faire et quand ses tâches se sont exécutées pour la dernière fois. Paramètres contient ses options. Les valeurs protégées peuvent être remplacées ou effacées, mais ne peuvent plus être affichées. Code affiche ses fichiers en lecture seule. Copier dans mes scripts crée une copie modifiable sous forme de script personnel.
+
+Pour mettre à jour, choisissez Installer depuis un fichier… et sélectionnez un fichier plus récent. La fenêtre de vérification indique ce qui a changé. Si la mise à jour demande un nouvel accès, vous devez l’approuver, et Pas maintenant laisse la version installée telle quelle. Les paramètres, clés et valeurs enregistrées sont conservés, et les téléchargements en cours gardent le code avec lequel ils ont démarré.
+
+Supprimer efface les paramètres, clés et valeurs enregistrées de l’extension. L’historique d’exécution reste et les fichiers que vous avez téléchargés sont conservés.
+
+### Script ou extension ?
+
+Écrivez un script pour un besoin qui ne concerne que vous. Créez une extension pour ce que vous voulez partager ou maintenir à jour. Consultez docs/extensions.md pour le format du paquet.
+
 ## Scripts
 
 L’éditeur et les scripts chargés disposent désormais d’onglets distincts. Recherchez ou créez un script dans la liste, puis ouvrez l’éditeur complet depuis l’en-tête Lua ou PowerShell. Enregistrement, exécution/arrêt et journaux facultatifs restent près du code. Les commandes de fichiers sont regroupées dans le menu d’actions de l’éditeur. Le changement de vue conserve le code non enregistré, les réglages et la position du curseur.
@@ -53,7 +85,7 @@ L’éditeur et les scripts chargés disposent désormais d’onglets distincts.
 
 ### Scripts
 
-Dans Outils → Scripts, créez des règles par site ou extension de fichier. Dans Scripts, choisissez Lua ou PowerShell, enregistrez et exécutez. Déclencheurs : manuel, démarrage, intervalle, fin de téléchargement ou de file. Un script ne chevauche pas ses propres exécutions. Arrêter termine le script sans annuler les commandes déjà envoyées. Consultez les journaux pour la sortie.
+Dans Extensions → Règles, créez des règles par site ou extension de fichier. Dans Extensions → Scripts, choisissez Lua ou PowerShell, enregistrez et exécutez. Déclencheurs : manuel, démarrage, intervalle, fin de téléchargement ou de file. Un script ne chevauche pas ses propres exécutions. Arrêter termine le script sans annuler les commandes déjà envoyées. Consultez les journaux pour la sortie.
 
 ## Scripts Lua
 
@@ -113,7 +145,7 @@ Open examples/core-api-automation.lua or examples/custom-site-reader.lua with Ed
 
 Les fournisseurs Lua résolvent les sources, traitent les octets et vérifient les empreintes avec les commandes habituelles de pause et de reprise. Chaque téléchargement conserve sa version du script. Les tests utilisent uniquement des fichiers chiffrés générés localement. Après l’enregistrement d’un fournisseur, les anciennes versions ne peuvent plus écrire dans ce profil.
 
-Scripting → Script settings → Download provider → Save script → Add provider download.
+Extensions → Scripts → Script settings → Download provider → Save script → Add provider download.
 
 API: `resolve(request)`, `refresh(request, previous)`, `transform(plan, bytes, offset)`, `finish(plan, result)`.
 

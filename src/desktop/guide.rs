@@ -614,6 +614,7 @@ mod tests {
     fn automation_links_to_its_guide_topic() {
         let (_temp, mut app, ctx) = fixture();
         app.view = View::Automation;
+        click(&mut app, &ctx, "Rules (0)");
         click(&mut app, &ctx, "How rules work");
         assert_eq!(app.view, View::Guide);
         assert_eq!(topics()[app.guide_topic].0, "Scripting");

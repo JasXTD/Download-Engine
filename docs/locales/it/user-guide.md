@@ -46,6 +46,38 @@ Apri Strumenti → Configurazione browser per collegare Chrome, Edge, Brave o Fi
 
 Gestisci code raggruppa i file e limita quanti download possono funzionare insieme. Le nuove code attendono l’avvio manuale o una pianificazione. Imposta orari di avvio e pausa e giorni di ripetizione nella Pianificazione. L’app deve restare aperta, anche nell’area di notifica. Uscita automatica, spegnimento, sospensione e ibernazione richiedono una scelta esplicita; puoi annullare il conto alla rovescia.
 
+## Estensioni
+
+### A cosa servono le estensioni
+
+Le estensioni aggiungono supporto per i siti e automazione in un unico pacchetto. Vengono eseguite negli stessi processi Lua limitati dei tuoi script e ognuna elenca i siti che può raggiungere. Sono distinte dall’estensione browser che carichi nel tuo browser.
+
+### Installa un’estensione
+
+1. Apri Estensioni nella barra degli strumenti in alto. La scheda Installate elenca ciò che hai.
+
+2. Scegli Installa da file… e seleziona un file .de-extension.json.
+
+3. Leggi la finestra di verifica. Mostra il produttore, cosa può fare l’estensione e le sue attività. Non viene ancora eseguito nulla.
+
+4. Spunta l’accesso ai file solo se vuoi consentirlo, poi scegli Installa.
+
+5. L’estensione viene installata disattivata. Selezionala e spunta Attiva quando vuoi.
+
+I produttori non sono verificati, quindi installa estensioni solo da persone di cui ti fidi.
+
+### Impostazioni, codice e aggiornamenti
+
+Seleziona un’estensione per vedere cosa può fare, cosa non può fare e quando le sue attività sono state eseguite l’ultima volta. Impostazioni contiene le sue opzioni. I valori protetti possono essere sostituiti o cancellati, ma non mostrati di nuovo. Codice mostra i suoi file in sola lettura. Copia nei miei script crea una copia modificabile come script personale.
+
+Per aggiornare, scegli Installa da file… e seleziona un file più recente. La finestra di verifica mostra cosa è cambiato. Se l’aggiornamento chiede un nuovo accesso, devi approvarlo, e Non ora lascia la versione installata com’era. Impostazioni, chiavi e valori memorizzati vengono conservati e i download già in corso mantengono il codice con cui sono partiti.
+
+Rimuovi elimina le impostazioni, le chiavi e i valori memorizzati dell’estensione. La cronologia esecuzioni resta e i file che hai scaricato vengono conservati.
+
+### Script o estensione?
+
+Scrivi uno script per qualcosa che serve solo a te. Crea un’estensione per qualcosa che vuoi condividere o mantenere aggiornato. Vedi docs/extensions.md per il formato del pacchetto.
+
 ## Script
 
 L’editor e gli script caricati hanno ora schede separate. Cerca o crea gli script nell’elenco e apri l’editor completo dall’intestazione Lua o PowerShell. Salvataggio, esecuzione/arresto e registri facoltativi restano accanto al codice. I comandi dei file sono nel menu delle azioni dell’editor. Il cambio di vista conserva codice non salvato, impostazioni e posizione del cursore.
@@ -53,7 +85,7 @@ L’editor e gli script caricati hanno ora schede separate. Cerca o crea gli scr
 
 ### Script
 
-In Strumenti → Script crea regole per sito o estensione del file. La prima regola di instradamento corrispondente viene applicata. Nella sezione Script puoi usare Lua o PowerShell. Salva le modifiche prima di eseguire. Gli eventi comprendono esecuzione manuale, avvio dell’app, intervallo, completamento di download o coda. Attiva e salva l’evento automatico per usarlo. Arresta script termina l’esecuzione senza annullare le azioni già inviate all’app. Consulta i log esecuzioni per risultati ed errori.
+In Estensioni → Regole crea regole per sito o estensione del file. La prima regola di instradamento corrispondente viene applicata. In Estensioni → Script puoi usare Lua o PowerShell. Salva le modifiche prima di eseguire. Gli eventi comprendono esecuzione manuale, avvio dell’app, intervallo, completamento di download o coda. Attiva e salva l’evento automatico per usarlo. Arresta script termina l’esecuzione senza annullare le azioni già inviate all’app. Consulta i log esecuzioni per risultati ed errori.
 
 ## Script Lua
 
@@ -113,7 +145,7 @@ Open examples/core-api-automation.lua or examples/custom-site-reader.lua with Ed
 
 I fornitori Lua risolvono le sorgenti, elaborano i byte e verificano gli hash con i normali comandi di pausa e ripresa. Ogni download conserva la versione salvata dello script. I test usano solo file cifrati generati localmente. Dopo il salvataggio di un fornitore, le versioni precedenti non possono scrivere in questo profilo.
 
-Scripting → Script settings → Download provider → Save script → Add provider download.
+Estensioni → Script → Script settings → Download provider → Save script → Add provider download.
 
 API: `resolve(request)`, `refresh(request, previous)`, `transform(plan, bytes, offset)`, `finish(plan, result)`.
 

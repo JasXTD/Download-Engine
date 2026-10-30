@@ -16,23 +16,28 @@ impl crate::store::Store {
                 && script.trigger == crate::script_automation::Trigger::Provider,
             "Choose a Lua download provider"
         );
-        #[cfg(windows)]
-        {
-            let key = Zeroizing::new(super::crypto::unhex(hex)?);
-            ensure!(
-                matches!(key.len(), 16 | 24 | 32),
-                "AES key must be 16, 24 or 32 bytes"
-            );
-            let mut bytes = Zeroizing::new(PURPOSE.to_vec());
-            bytes.extend_from_slice(&key);
-            let sealed = crate::protected_data::seal(Uuid::parse_str(script_id)?, &mut bytes)?;
-            Ok(format!("{PREFIX}{}", STANDARD.encode(&sealed)))
-        }
-        #[cfg(not(windows))]
-        {
-            let _ = hex;
-            anyhow::bail!("Provider keys require Windows protected storage")
-        }
+        seal_key(Uuid::parse_str(script_id)?, hex)
+    }
+}
+
+/// A protected token for an AES key in hex, usable only under `scope`.
+pub(crate) fn seal_key(scope: Uuid, hex: &str) -> Result<String> {
+    #[cfg(windows)]
+    {
+        let key = Zeroizing::new(super::crypto::unhex(hex)?);
+        ensure!(
+            matches!(key.len(), 16 | 24 | 32),
+            "AES key must be 16, 24 or 32 bytes"
+        );
+        let mut bytes = Zeroizing::new(PURPOSE.to_vec());
+        bytes.extend_from_slice(&key);
+        let sealed = crate::protected_data::seal(scope, &mut bytes)?;
+        Ok(format!("{PREFIX}{}", STANDARD.encode(&sealed)))
+    }
+    #[cfg(not(windows))]
+    {
+        let _ = (scope, hex);
+        anyhow::bail!("Provider keys require Windows protected storage")
     }
 }
 

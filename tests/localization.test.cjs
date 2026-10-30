@@ -108,12 +108,12 @@ test('generated extension metadata is current and every browser loads localizati
 
 test('translated guides preserve stable topic order/count and executable code examples',()=>{
   const english=read('docs/user-guide.md').split(/\r?\n## /).slice(1);
-  assert.equal(english.length,12);
+  assert.equal(english.length,13);
   for(const lang of languages.slice(1)) {
     const topics=read(`docs/locales/${lang}/user-guide.md`).split(/\r?\n## /).slice(1);
     assert.equal(topics.length,english.length);
-    assert(topics[6].includes('xd.queues()')); assert(topics[6].includes('event.downloads'));
-    assert(topics[7].includes('.\\de-cli.exe --help'));
+    assert(topics[7].includes('xd.queues()')); assert(topics[7].includes('event.downloads'));
+    assert(topics[8].includes('.\\de-cli.exe --help'));
     assert(topics.every(topic=>topic.includes('### ')));
   }
 });

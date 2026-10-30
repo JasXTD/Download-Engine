@@ -1,3 +1,9 @@
+## 3.6.0 — 2026-10-31
+
+### Rozszerzenia
+
+Nowa strona Rozszerzenia zastępuje Skrypty i ma karty Zainstalowane, Skrypty, Reguły oraz Historia uruchomień. Rozszerzenie to jeden plik .de-extension.json łączący czytniki witryn, dostawców pobierania i zadania automatyzacji. Instalacja jest możliwa tylko z pliku lokalnego, a wydawcy nie są weryfikowani. Okno przeglądu pokazuje, co rozszerzenie może zrobić, po instalacji jest ono wyłączone, a aktualizacja musi poprosić o zgodę na nowy dostęp. Dostęp do sieci jest ograniczony do zadeklarowanych hostów. Zainstalowanie pierwszego rozszerzenia blokuje zapis profilu w starszych wersjach aplikacji.
+
 ## 3.5.2 — 2026-10-30
 
 ### Sprawdzaj aktualizacje przy uruchomieniu

@@ -86,6 +86,7 @@ pub fn decode(bytes: &[u8]) -> Result<Imported> {
         trigger: p.script.trigger,
         timeout_seconds: p.script.timeout_seconds,
         change_files: p.script.change_files,
+        extension: None,
     };
     script.validate()?;
     let requested_file_access = script.change_files;
@@ -122,6 +123,7 @@ mod tests {
             trigger,
             timeout_seconds: 30,
             change_files: false,
+            extension: None,
         }
     }
     #[test]

@@ -1,7 +1,7 @@
 # CLI and automation
 
 Download Engine 3.5.0 also supports **Download provider** scripts in the same
-Scripting page. Read [Lua provider API 1](lua-providers.md) for callbacks,
+Scripts tab. Read [Lua provider API 1](lua-providers.md) for callbacks,
 verified byte transforms, frozen revisions and offline examples. Submit a saved
 provider with `de-cli.exe scripts download ID URL --name FILE`; control its job
 through the normal download list or CLI pause/resume commands.
@@ -38,7 +38,7 @@ match this URL. If `PDF test` already exists, choose a different test queue name
    .\de-cli.exe queue create "PDF test"
    ```
 
-2. In **Scripting → New rule**, enter `Test PDF routing`. Leave **Enabled** on.
+2. In **Extensions → Rules → New rule**, enter `Test PDF routing`. Leave **Enabled** on.
    Choose **A download is added**, hostname `www.w3.org`, extension `pdf`, and
    destination **PDF test**. Save the rule. The queue should remain paused.
 
@@ -181,9 +181,9 @@ downloads, queues or rules before submitting a new request. `--no-start` is usef
 for scripts that should only talk to an already-running app; if none is running,
 the pending request is cancelled when the wait ends.
 
-## Scripting page
+## Rules and scripts
 
-Open **Scripting** in the top toolbar beside **Scheduler**, or use **Tools → Scripting**.
+Open **Extensions** in the top toolbar beside **Scheduler**, then choose **Rules** or **Scripts**. **Tools → Scripting** opens **Scripts** directly. [Installed extensions](extensions.md) share this page.
 Choose **New rule** to build either workflow:
 
 - **A download is added:** optionally match an exact site hostname and one file
@@ -239,7 +239,7 @@ flowchart LR
     CLI[CLI command] --> Inbox[SQLite command inbox]
     Inbox --> Scheduler[Desktop scheduler]
     Scheduler --> Download[Download engine]
-    UI[Scripting editor] --> Rules[Saved rules]
+    UI[Script editor] --> Rules[Saved rules]
     Scheduler --> Rules
     Rules --> Routing[Route new download or start queue]
     Routing --> History[Automation run history]
@@ -305,7 +305,7 @@ shell history should be treated as private application data.
 
 ## Custom scripts: Lua and PowerShell
 
-Open **Scripting → Scripts → Loaded scripts → New script**, edit the built-in example, then
+Open **Extensions → Scripts → Loaded scripts → New script**, edit the built-in example, then
 **Save script → Run script**. The editor header provides Save and Run/Stop. **Editor actions** contains file commands, Run with sample, Reload / discard edits and Remove script. Unsaved buffers survive background refresh and navigation;
 changing the selected script is disabled until you save or discard them.
 
@@ -316,7 +316,7 @@ run receipts retain their language. No separate Lua installation is needed.
 
 ### Start with the Lua guide
 
-Open **Scripting → Scripts → Lua guide** or **Help → Guide → Lua scripting**
+Open **Extensions → Scripts → Lua guide** or **Help → Guide → Lua scripting**
 (also shipped in the packaged [user guide](user-guide.md#lua-scripting)). It starts with a read-only script:
 create **Hello Lua**, leave **Language: Lua** and **Trigger: Manual only**, copy
 the code into the editor, then **Save script → Run script**. In **Run logs**,
@@ -324,7 +324,7 @@ expect **Succeeded**, `Hello from Lua!`, `Trigger: manual` and the queue names.
 
 The guide's next examples inspect downloads, add a real sample PDF to a reusable
 queue, watch new completions and handle errors. **Copy script** copies just the
-code. Return with the toolbar's **Scripting** button; unsaved edits are retained.
+code. Return with the toolbar's **Extensions** button; unsaved edits are retained.
 An automatic trigger needs its checkbox enabled and the script saved. Clicking
 **Run script** always produces a manual event, with an empty `event.downloads`.
 
@@ -402,7 +402,7 @@ copyright notices ship in `docs/licenses/lua-automation-LICENSES`.
 
 ### Live editor assistance
 
-Expand **Script settings** for the name, language, trigger, timeout and file permissions. Collapse it to give code more space. The library shows **Manual** for scripts run on request and **Automatic trigger on/off** for event-driven scripts; turning a trigger off still allows a manual run. Scripting uses the whole content area without the download sidebar.
+Expand **Script settings** for the name, language, trigger, timeout and file permissions. Collapse it to give code more space. The library shows **Manual** for scripts run on request and **Automatic trigger on/off** for event-driven scripts; turning a trigger off still allows a manual run. The page uses the whole content area without the download sidebar.
 
 **Loaded scripts** provides a searchable list of saved scripts, including disabled
 scripts, with language, trigger and enabled/running status. Use the **Loaded scripts**
@@ -533,11 +533,11 @@ Download Engine exposes the app-specific API above and only the listed standard 
 
 ### Upgraded editor walkthrough
 
-For a complete first run, see [the offline Lua walkthrough](user-guide.md#try-the-upgraded-core-api-without-downloading-anything). It covers a no-download parsing example, the bundled read-only report, custom site-reader testing, triggers, Stop and package sharing. The same guide is available from **Help → Guide → Lua scripting** and **Lua guide** in Scripting.
+For a complete first run, see [the offline Lua walkthrough](user-guide.md#try-the-upgraded-core-api-without-downloading-anything). It covers a no-download parsing example, the bundled read-only report, custom site-reader testing, triggers, Stop and package sharing. The same guide is available from **Help → Guide → Lua scripting** and **Lua guide** on the **Scripts** tab.
 
 ### Core API and shared scripts
 
-Use **Scripting → Scripts** for both automation and custom site readers. There is no separate plugin editor. The trigger decides which operations are available: ordinary scripts control downloads and queues; Site reader scripts resolve matching pages and return links for the normal download engine.
+Use **Extensions → Scripts** for both automation and custom site readers. To share them as one installable package, see [Extensions](extensions.md). The trigger decides which operations are available: ordinary scripts control downloads and queues; Site reader scripts resolve matching pages and return links for the normal download engine.
 
 Choose **Core API** in the Lua editor header to search available functions and copy their signatures. Autocomplete uses the same catalog. `xd.api_version` is currently **1**, `xd.app_version` is the installed app version, and `xd.script_kind` is `automation` or `site_reader`. Check `xd.supports("xd.fetch")` for function availability; this is not a permission grant. Existing `xd.add`, queue, file and stored-value functions retain their contracts.
 
@@ -561,12 +561,12 @@ Working examples are included as `examples/core-api-automation.lua` (read-only q
 Developers can also try the separate [offline Lua provider experiment](lua-provider-lab.md).
 It demonstrates custom processing of a generated encrypted file and checkpointed
 resume. Its experimental callbacks are not available in the installed app's
-Scripting page and do not establish support for any live streaming service.
+Scripts tab and do not establish support for any live streaming service.
 
 ## Site readers
 
 A site reader is a Lua script with the **Site reader** trigger. It reads video pages
-that Download Engine has no built-in reader for. Create one in **Scripting → Scripts → Loaded scripts → New
+that Download Engine has no built-in reader for. Create one in **Extensions → Scripts → Loaded scripts → New
 script**: keep **Language: Lua** (site readers are Lua only), choose **Trigger: Site
 reader** and add the pages it covers under **Pages**.
 

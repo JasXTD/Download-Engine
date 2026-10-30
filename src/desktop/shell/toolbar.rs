@@ -55,7 +55,7 @@ impl Action {
             Self::Clear => "Clear completed history",
             Self::Queues => "Queues",
             Self::Scheduler => "Scheduler",
-            Self::Scripts => "Scripting",
+            Self::Scripts => "Extensions",
             Self::Grabber => "Grabber",
             Self::Mcp => "MCP",
             Self::Logs => "Logs",
@@ -95,7 +95,7 @@ impl Action {
                 "Remove the selected entry and its partial data. Completed files are kept."
             }
             Self::Clear => "Clear completed entries from the selected queue. Saved files are kept.",
-            Self::Scripts => "Rules, scripts, site readers and run history",
+            Self::Scripts => "Extensions, scripts, rules and run history",
             Self::Grabber => "Find website files or save an offline website",
             Self::Mcp => "AI connection settings and server controls",
             _ => return self.label(),

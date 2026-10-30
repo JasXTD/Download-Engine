@@ -1577,6 +1577,7 @@ mod tests {
                 },
                 timeout_seconds: 60,
                 change_files: false,
+                extension: None,
             })
             .unwrap();
         // A page the reader covers opens like a built-in site, browser findings kept.

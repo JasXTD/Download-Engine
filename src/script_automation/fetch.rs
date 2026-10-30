@@ -60,6 +60,8 @@ struct Session {
     route: crate::proxy::Route,
     cookies: HashMap<String, BTreeMap<String, String>>,
     requests: usize,
+    /// An extension's declared hosts. Every request and redirect must match.
+    hosts: Option<Vec<String>>,
     #[cfg(test)]
     allow_local: bool,
 }
@@ -79,10 +81,16 @@ impl Fetcher {
                 route,
                 cookies: HashMap::new(),
                 requests: 0,
+                hosts: None,
                 #[cfg(test)]
                 allow_local: false,
             },
         })
+    }
+    /// Refuses every host outside `hosts`, including those a redirect leads to.
+    pub fn limit_hosts(mut self, hosts: Vec<String>) -> Self {
+        self.session.hosts = Some(hosts);
+        self
     }
     /// Test servers listen on loopback; real readers never reach it.
     #[cfg(test)]
@@ -146,6 +154,13 @@ impl Session {
                 self.requests < MAX_REQUESTS,
                 "A site reader can make at most {MAX_REQUESTS} requests per run"
             );
+            if let Some(hosts) = &self.hosts {
+                ensure!(
+                    crate::extensions::host_allowed(hosts, &host(&url)),
+                    "This extension did not declare {}",
+                    host(&url)
+                );
+            }
             self.requests += 1;
             let client = self.client(&url).await?;
             let mut builder = client

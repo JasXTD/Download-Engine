@@ -1,3 +1,9 @@
+## 3.6.0 — 2026-10-31
+
+### Extensiuns
+
+La nova pagina Extensiuns remplazza Scripts ed ha ils tabs Installadas, Scripts, Reglas e Cronologia d'execuziuns. Ina extensiun è ina suletta datoteca .de-extension.json che unescha lecturs da websites, furniturs da telechargiada ed incumbensas d'automatisaziun. L'installaziun è mo pussaivla ord ina datoteca locala; ils producents na vegnan betg verifitgads. Ina verificaziun mussa tge che l'extensiun po far, ella cumenza deactivada ed ina actualisaziun sto dumandar avant che survegnir access nov. Ses access al web è limità als hosts declarads. Suenter installar l'emprima extensiun na pon versiuns veglias betg pli scriver en quest profil.
+
 ## 3.5.2 — 2026-10-30
 
 ### Tschertgar actualisaziuns a l’avertura

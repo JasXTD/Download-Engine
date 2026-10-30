@@ -28,6 +28,7 @@ impl Store {
         let db = paths.data.join("queue.sqlite3");
         let mut conn = connect_database(&db)?;
         migrations::initialize(&mut conn, &paths.data)?;
+        crate::extensions::initialize(&conn)?;
         crate::provider::upgrade(&mut conn)?;
         crate::preferences::apply_install_language(&conn)?;
         let store = Self {

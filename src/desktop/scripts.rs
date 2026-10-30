@@ -99,6 +99,7 @@ impl State {
             trigger: Trigger::Manual,
             timeout_seconds: 300,
             change_files: false,
+            extension: None,
         });
         self.baseline = None;
         self.error = None;
@@ -106,6 +107,22 @@ impl State {
         self.pinned_run = false;
         self.output.clear();
         self.all_history = false;
+    }
+    #[cfg(test)]
+    pub(super) fn draft(&self) -> Option<&Script> {
+        self.draft.as_ref()
+    }
+    /// Whether the editor can be replaced without losing anyone's work.
+    pub(super) fn untouched(&self) -> bool {
+        file::untouched(self)
+    }
+    /// A new, unsaved script holding a copy of an extension's file.
+    pub(super) fn new_script_from(&mut self, name: &str, body: &str) {
+        self.new_script();
+        if let Some(draft) = &mut self.draft {
+            draft.name = name.into();
+            draft.body = body.into();
+        }
     }
     fn select(&mut self, script: Script) {
         self.provider_request.clear();
@@ -218,7 +235,7 @@ pub(super) fn refresh(store: &Store, state: &mut State) {
         Err(error) => state.load_error = Some(error.to_string()),
     }
 }
-fn trigger_name(trigger: &Trigger) -> &'static str {
+pub(super) fn trigger_name(trigger: &Trigger) -> &'static str {
     match trigger {
         Trigger::Manual => tr("Manual only"),
         Trigger::Startup => tr("App startup"),
@@ -230,7 +247,7 @@ fn trigger_name(trigger: &Trigger) -> &'static str {
         Trigger::Provider => tr("Download provider"),
     }
 }
-fn time(at: i64) -> String {
+pub(super) fn time(at: i64) -> String {
     chrono::DateTime::from_timestamp(at, 0)
         .map(|d| {
             d.with_timezone(&chrono::Local)

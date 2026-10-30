@@ -46,6 +46,38 @@ Insamling hittar fillänkar eller sparar en webbplats offline. Välj URL, djup, 
 
 Hantera köer grupperar filer och begränsar samtidiga hämtningar. Nya köer väntar på start eller schema. Schemaläggaren har start, paus och upprepning. Appen måste vara öppen, även i meddelandefältet. Automatisk avslutning, avstängning, strömsparläge och viloläge aktiveras separat; nedräkningen kan avbrytas.
 
+## Tillägg
+
+### Vad tillägg gör
+
+Tillägg ger webbplatsstöd och automatisering i ett enda paket. De körs i samma begränsade Lua-processer som dina skript, och varje tillägg visar vilka webbplatser det kan nå. De är något annat än webbläsartillägget som du läser in i webbläsaren.
+
+### Installera ett tillägg
+
+1. Öppna Tillägg i verktygsfältet högst upp. Fliken Installerade visar vad du har.
+
+2. Välj Installera från fil… och välj sedan en .de-extension.json-fil.
+
+3. Läs granskningsrutan. Den visar utgivaren, vad tillägget kan göra och dess jobb. Inget körs ännu.
+
+4. Markera filåtkomst bara om du vill tillåta den och välj sedan Installera.
+
+5. Tillägget installeras avstängt. Välj det och markera Aktiverad när du är redo.
+
+Utgivare verifieras inte, så installera bara tillägg från personer du litar på.
+
+### Inställningar, kod och uppdateringar
+
+Välj ett tillägg för att se vad det kan göra, vad det inte kan göra och när dess jobb senast kördes. Inställningar innehåller dess alternativ. Skyddade värden kan ersättas eller rensas men inte visas igen. Kod visar dess filer, skrivskyddade. Kopiera till mina skript skapar en redigerbar kopia som ett personligt skript.
+
+Om du vill uppdatera väljer du Installera från fil… och sedan en nyare fil. Granskningsrutan visar vad som har ändrats. Om uppdateringen begär ny åtkomst måste du godkänna den, och Inte nu lämnar den installerade versionen som den var. Inställningar, nycklar och sparade värden behålls, och hämtningar som redan pågår behåller koden de startade med.
+
+Ta bort raderar tilläggets inställningar, nycklar och sparade värden. Körhistoriken finns kvar och filer du har hämtat behålls.
+
+### Skript eller tillägg?
+
+Skriv ett skript för något som bara är för dig. Gör ett tillägg för något du vill dela eller hålla uppdaterat. Se docs/extensions.md för paketformatet.
+
 ## Skript
 
 Redigeraren och inlästa skript har nu separata flikar. Sök eller skapa skript i listan och öppna den fullständiga redigeraren från rubriken för Lua eller PowerShell. Spara, kör/stoppa och valfria loggar finns nära koden. Filkommandon ligger i redigerarens åtgärdsmeny. Byte av vy bevarar osparad kod, inställningar och markörens position.
@@ -53,7 +85,7 @@ Redigeraren och inlästa skript har nu separata flikar. Sök eller skapa skript 
 
 ### Skript
 
-I Verktyg → Skript skapar du regler efter webbplats eller filändelse. Välj Lua eller PowerShell under Skript, spara och kör. Utlösare: manuellt, appstart, intervall, slutförd hämtning eller kö. Ett skript överlappar inte sina egna körningar. Stopp avslutar skriptet men ångrar inte skickade hämtningskommandon. Utdata visas i körloggen.
+I Tillägg → Regler skapar du regler efter webbplats eller filändelse. Välj Lua eller PowerShell under Tillägg → Skript, spara och kör. Utlösare: manuellt, appstart, intervall, slutförd hämtning eller kö. Ett skript överlappar inte sina egna körningar. Stopp avslutar skriptet men ångrar inte skickade hämtningskommandon. Utdata visas i körloggen.
 
 ## Lua-skript
 
@@ -113,7 +145,7 @@ Open examples/core-api-automation.lua or examples/custom-site-reader.lua with Ed
 
 Lua-leverantörer löser källor, bearbetar byte och verifierar hashvärden med vanliga paus- och återupptagningskontroller. Varje nedladdning behåller sin sparade skriptversion. Testerna använder endast lokalt skapade krypterade filer. Efter att en leverantör sparats kan äldre appversioner inte skriva till profilen.
 
-Scripting → Script settings → Download provider → Save script → Add provider download.
+Tillägg → Skript → Script settings → Download provider → Save script → Add provider download.
 
 API: `resolve(request)`, `refresh(request, previous)`, `transform(plan, bytes, offset)`, `finish(plan, result)`.
 

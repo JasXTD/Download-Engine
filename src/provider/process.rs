@@ -12,6 +12,8 @@ use std::{
 use tokio_util::sync::CancellationToken;
 
 const FRAME_LIMIT: usize = 1024 * 1024;
+/// The first frame can hold a whole extension, and escaping can double its size.
+const INIT_FRAME_LIMIT: usize = 4 * FRAME_LIMIT;
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub(crate) enum Role {
@@ -19,12 +21,18 @@ pub(crate) enum Role {
     Processor,
 }
 pub(crate) fn read_frame(reader: &mut impl Read) -> Result<serde_json::Value> {
+    read_limited(reader, FRAME_LIMIT)
+}
+pub(crate) fn read_init_frame(reader: &mut impl Read) -> Result<serde_json::Value> {
+    read_limited(reader, INIT_FRAME_LIMIT)
+}
+fn read_limited(reader: &mut impl Read, limit: usize) -> Result<serde_json::Value> {
     let mut size = [0; 4];
     reader.read_exact(&mut size)?;
     let size = u32::from_le_bytes(size) as usize;
     ensure!(
-        size > 0 && size <= FRAME_LIMIT,
-        "Provider message exceeds 1 MiB"
+        size > 0 && size <= limit,
+        "Provider message exceeds its size limit"
     );
     let mut bytes = vec![0; size];
     reader.read_exact(&mut bytes)?;
@@ -32,7 +40,15 @@ pub(crate) fn read_frame(reader: &mut impl Read) -> Result<serde_json::Value> {
 }
 pub(crate) fn write_frame(writer: &mut impl Write, value: &serde_json::Value) -> Result<()> {
     let bytes = serde_json::to_vec(value)?;
-    ensure!(bytes.len() <= FRAME_LIMIT, "Provider message exceeds 1 MiB");
+    let limit = if value["op"] == "init" {
+        INIT_FRAME_LIMIT
+    } else {
+        FRAME_LIMIT
+    };
+    ensure!(
+        bytes.len() <= limit,
+        "Provider message exceeds its size limit"
+    );
     writer.write_all(&(bytes.len() as u32).to_le_bytes())?;
     writer.write_all(&bytes)?;
     writer.flush()?;
@@ -46,6 +62,9 @@ pub(crate) struct Worker {
     io: Option<thread::JoinHandle<()>>,
     timeout: Duration,
     role: Role,
+    /// An extension's processor sees file bytes and must not reach the web. Its
+    /// jobs that can reach the web read download errors, so its text stops here.
+    hide_errors: bool,
 }
 impl Drop for Worker {
     fn drop(&mut self) {
@@ -61,19 +80,21 @@ impl Worker {
         paths: &AppPaths,
         script: &Script,
         role: Role,
+        extension: Option<&crate::extensions::Context>,
         cancel: &CancellationToken,
     ) -> Result<Self> {
         let cli = std::env::current_exe()?
             .parent()
             .context("Missing application directory")?
             .join("de-cli.exe");
-        Self::start_at(&cli, paths, script, role, cancel)
+        Self::start_at(&cli, paths, script, role, extension, cancel)
     }
     pub(crate) fn start_at(
         cli: &std::path::Path,
         paths: &AppPaths,
         script: &Script,
         role: Role,
+        extension: Option<&crate::extensions::Context>,
         cancel: &CancellationToken,
     ) -> Result<Self> {
         script.validate()?;
@@ -114,9 +135,10 @@ impl Worker {
             io: Some(io),
             timeout: Duration::from_secs(script.timeout_seconds.min(MAX_CALLBACK_SECONDS).into()),
             role,
+            hide_errors: role == Role::Processor && extension.is_some(),
         };
         worker.call(
-            serde_json::json!({"op":"init","source":script.body,"role":role,"script_id":script.id}),
+            serde_json::json!({"op":"init","source":script.body,"role":role,"script_id":script.id,"extension":extension}),
             cancel,
         )?;
         Ok(worker)
@@ -139,6 +161,10 @@ impl Worker {
                 Ok(result) => {
                     let reply = result.context("Provider worker stopped unexpectedly")?;
                     if let Some(error) = reply.get("error").and_then(|v| v.as_str()) {
+                        ensure!(
+                            !self.hide_errors,
+                            "Provider: this extension's processor failed"
+                        );
                         anyhow::bail!("Provider: {error}");
                     }
                     return reply
@@ -202,5 +228,37 @@ impl Worker {
         let value = self.call(serde_json::json!({"op":"finish","plan":plan}), cancel)?;
         ensure!(value == true, "Provider finish must return true");
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn an_extension_processors_error_text_stays_in_the_worker() {
+        for (hide_errors, expected) in [
+            (true, "Provider: this extension's processor failed"),
+            (false, "Provider: file bytes"),
+        ] {
+            let (requests, _inbox) = mpsc::sync_channel(1);
+            let (replies, rx) = mpsc::sync_channel(1);
+            let mut worker = Worker {
+                process: None,
+                requests: Some(requests),
+                replies: rx,
+                io: None,
+                timeout: Duration::from_secs(5),
+                role: Role::Processor,
+                hide_errors,
+            };
+            replies
+                .send(Ok(serde_json::json!({"error":"file bytes"})))
+                .unwrap();
+            let error = worker
+                .call(serde_json::json!({}), &CancellationToken::new())
+                .unwrap_err();
+            assert_eq!(error.to_string(), expected);
+        }
     }
 }

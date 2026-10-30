@@ -158,6 +158,7 @@ fn add_checks_script_identity_at_execution_and_keeps_human_destinations() {
             },
             timeout_seconds: 30,
             change_files: true,
+            extension: None,
         })
         .unwrap();
     let sample = s.run_script_sample(&script.id, &id(), &[]).unwrap();
@@ -264,6 +265,7 @@ fn script_file_actions_need_permission_and_never_overwrite_or_leave_the_download
             trigger: Trigger::Manual,
             timeout_seconds: 30,
             change_files: false,
+            extension: None,
         })
         .unwrap();
     let run = s.run_script(&script.id, &id()).unwrap().id;
@@ -358,6 +360,7 @@ fn script_retries_are_limited_and_notifications_reach_the_desktop() {
             trigger: Trigger::Manual,
             timeout_seconds: 30,
             change_files: false,
+            extension: None,
         })
         .unwrap();
     let run = s.run_script(&script.id, &id()).unwrap().id;

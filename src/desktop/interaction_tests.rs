@@ -70,7 +70,7 @@ fn localized_pages_and_shared_dialogs_fit_both_window_sizes() {
                         let rect = text.galley.rect.translate(text.pos.to_vec2());
                         if matches!(language, Language::English | Language::Malay)
                             && rect.top() < 108.0
-                            && [tr("Scripting"), tr("Grabber")]
+                            && [tr("Extensions"), tr("Grabber")]
                                 .contains(&text.galley.job.text.as_str())
                         {
                             assert_eq!(
@@ -101,7 +101,7 @@ fn localized_pages_and_shared_dialogs_fit_both_window_sizes() {
         }
         app.open_guide("Lua scripting");
         assert_eq!(
-            app.guide_topic, 6,
+            app.guide_topic, 7,
             "Localized topic must keep its stable ID"
         );
     }
@@ -243,7 +243,7 @@ pub(super) fn click(app: &mut Desktop, ctx: &egui::Context, label: &str) {
             "Clear completed history",
             "Queues",
             "Scheduler",
-            "Scripting",
+            "Extensions",
             "Grabber",
             "MCP",
             "Logs",
@@ -572,7 +572,7 @@ fn toolbar_pages_remain_reachable_without_changing_the_download_selection() {
         app.interface.sidebar_labels = labels;
         click(&mut app, &ctx, "Queues");
         assert_eq!(app.view, View::Queues);
-        click(&mut app, &ctx, "Scripting");
+        click(&mut app, &ctx, "Extensions");
         assert_eq!(app.view, View::Automation);
         click(&mut app, &ctx, "Grabber");
         assert_eq!(app.dialog, Some(Dialog::Grabber));
@@ -585,7 +585,7 @@ fn toolbar_pages_remain_reachable_without_changing_the_download_selection() {
         assert_eq!(app.view, View::Logs);
         assert_eq!(app.dialog, Some(Dialog::PreferencesWindow));
         click(&mut app, &ctx, "Cancel");
-        click(&mut app, &ctx, "Scripting");
+        click(&mut app, &ctx, "Extensions");
         assert_eq!(app.view, View::Automation);
         assert_eq!(app.selected, selected);
         assert_eq!(app.queue_id, queue);

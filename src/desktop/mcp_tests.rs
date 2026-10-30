@@ -209,7 +209,7 @@ fn mcp_controls_copy_working_config_enforce_access_and_use_the_scheduler() {
     settle(&mut app, &ctx, |s| s.status == ServerStatus::Stopped);
     app.mcp = State::new(&app.store);
     settle(&mut app, &ctx, |s| s.status == ServerStatus::Running);
-    assert_eq!(mcp::check_connection(&app.store.paths, port).unwrap(), 19);
+    assert_eq!(mcp::check_connection(&app.store.paths, port).unwrap(), 20);
     click(&mut app, &ctx, "×");
     assert!(app.dialog.is_none());
     assert_eq!(app.view, View::Downloads);
@@ -490,7 +490,7 @@ fn mcp_popup_keeps_the_current_page_draft_and_pending_server_when_closed() {
         );
         std::thread::sleep(Duration::from_millis(10));
     }
-    assert_eq!(mcp::check_connection(&app.store.paths, port).unwrap(), 19);
+    assert_eq!(mcp::check_connection(&app.store.paths, port).unwrap(), 20);
     assert_eq!(app.view, View::Queues);
     assert!(app.dialog.is_none());
     click(&mut app, &ctx, "MCP");

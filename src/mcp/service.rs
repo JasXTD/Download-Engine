@@ -198,7 +198,7 @@ mod tests {
         until(&mut server, |s| *s == ServerStatus::Running);
         // Routine controls are available, but both script tools stay hidden
         // until a script-language capability is explicitly enabled.
-        assert_eq!(check_connection(&context.store.paths, port).unwrap(), 19);
+        assert_eq!(check_connection(&context.store.paths, port).unwrap(), 20);
         drop(server);
         let _released = TcpListener::bind((std::net::Ipv4Addr::LOCALHOST, port)).unwrap();
     }

@@ -227,6 +227,7 @@ fn slow_file_copy_keeps_commands_receipts_and_shutdown_responsive() {
             trigger: crate::script_automation::Trigger::Manual,
             timeout_seconds: 1,
             change_files: false,
+            extension: None,
         })
         .unwrap();
     let script_run = store

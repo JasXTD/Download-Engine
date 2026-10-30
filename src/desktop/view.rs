@@ -528,6 +528,8 @@ impl Desktop {
             Some(Dialog::Automation) => self.automation_dialog(&ctx, p),
             Some(Dialog::ScriptSample) => self.script_sample_dialog(&ctx, p),
             Some(Dialog::ScriptReplace) => self.script_replace_dialog(&ctx, p),
+            Some(Dialog::ExtensionReview) => self.extension_review_dialog(&ctx, p),
+            Some(Dialog::ExtensionRemove) => self.extension_remove_dialog(&ctx, p),
             Some(Dialog::Confirm) => self.confirmation_dialog(&ctx, p),
             Some(Dialog::About) => self.about_dialog(&ctx),
             Some(Dialog::CheckUpdates) => self.updates_dialog(&ctx, p),

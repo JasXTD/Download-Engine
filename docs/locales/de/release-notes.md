@@ -1,3 +1,9 @@
+## 3.6.0 — 2026-10-31
+
+### Erweiterungen
+
+Die neue Seite „Erweiterungen“ ersetzt „Skripte“ und bietet die Tabs Installiert, Skripte, Regeln und Ausführungsverlauf. Eine Erweiterung ist eine einzelne .de-extension.json-Datei, die Seitenleser, Downloadanbieter und Automatisierungsaufträge bündelt. Die Installation ist nur aus einer lokalen Datei möglich; Herausgeber werden nicht verifiziert. Eine Prüfung zeigt, was die Erweiterung kann. Sie startet deaktiviert, und ein Update muss vor neuem Zugriff um Zustimmung bitten. Ihr Webzugriff ist auf die angegebenen Hosts beschränkt. Nach der Installation der ersten Erweiterung können ältere App-Versionen dieses Profil nicht mehr beschreiben.
+
 ## 3.5.2 — 2026-10-30
 
 ### Beim Start nach Updates suchen

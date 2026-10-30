@@ -89,6 +89,7 @@ async fn lua_provider_publication_recovers_the_plaintext_anchor_and_checks_its_p
             trigger: Trigger::Provider,
             timeout_seconds: 5,
             change_files: false,
+            extension: None,
         })
         .unwrap();
     let root = fixture.store.paths.parts(&fixture.job.id).unwrap();

@@ -297,7 +297,7 @@ impl Desktop {
                     if empty {
                         ui.strong(tr("No supported video found"));
                         ui.label(tr("The browser did not find a direct video file or an HLS / DASH playlist on this page."));
-                        ui.label(tr("Turn on Detect media while browsing in the extension, play the video, then try Find videos again."));
+                        ui.label(tr("Turn on Detect media while browsing in the browser extension, play the video, then try Find videos again."));
                     } else {
                         ui.label(RichText::new(tr("Select files to download, or choose a stream quality.")).color(p.muted));
                         ui.add(view::line_edit(&mut draft.search).hint_text(tr("Search videos…")).desired_width(f32::INFINITY).char_limit(200));

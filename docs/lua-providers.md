@@ -1,9 +1,10 @@
 # Lua download providers — API 1
 
-Download Engine 3.5.0 runs user-written Lua providers from the existing Scripting
-page. A provider resolves a direct file URL and transforms downloaded bytes.
+Download Engine 3.5.0 runs user-written Lua providers from the Scripts tab of the
+Extensions page. A provider resolves a direct file URL and transforms downloaded bytes.
 Download Engine owns the network transfer, files, checkpoints and final hash
-verification. No recompilation or separate plugin system is needed.
+verification. No recompilation is needed. To share a provider with others, package it as
+an [extension](extensions.md).
 
 This release was tested with generated encrypted fixtures and a local HTTP
 server only. It does not establish compatibility with Crunchyroll, Widevine,
@@ -11,7 +12,7 @@ DRM licenses, or any other service's encryption/container format.
 
 ## Use a provider
 
-1. Open **Tools → Scripting → Loaded scripts → New script**.
+1. Open **Extensions → Scripts → Loaded scripts → New script**.
 2. In **Script settings**, keep **Lua** and choose **Download provider** as the
    trigger. The untouched starter is replaced with a provider template.
 3. Adapt its source resolution, trusted size/hashes and byte transformation to

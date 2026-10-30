@@ -13,8 +13,13 @@ It is a static GitHub Pages site published from `main`, folder `/docs`.
 - `docs/slideshow.js`: local screenshot rotation and playback controls.
 - `docs/images/`: app logo, reviewed screenshots with example data, theme-art
   thumbnails and the 1200 × 630 `social-preview.jpg`.
+- `docs/idm-alternative.html`: a search landing page for people looking for a free
+  IDM alternative. It uses no JavaScript, and its download buttons open the homepage's
+  download section, so a new release needs no change here. Keep its claims aligned
+  with the README: it must state that there is no complete IDM feature parity and
+  no affiliation with IDM.
 - `docs/.nojekyll`: publish the HTML and assets directly, without Jekyll processing.
-- `docs/sitemap.xml`: the canonical public homepage.
+- `docs/sitemap.xml`: the canonical public pages.
 
 No package installation, application build, external font, analytics script or
 browser storage is needed. Native HTML handles navigation and the FAQ. The small

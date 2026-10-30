@@ -5,8 +5,8 @@
 <h1 align="center">Download Engine</h1>
 
 <p align="center">
-  <strong>Download files and videos. Organize your queues. Automate the routine.</strong><br>
-  A native Windows download manager built in Rust, with browser integration and local automation.
+  <strong>A free, open-source download manager for Windows.</strong><br>
+  Download files and videos, organize your queues and automate the routine. Built in Rust, with browser integration.
 </p>
 
 <p align="center">
@@ -30,15 +30,16 @@
 
 ## What is Download Engine?
 
-Download Engine brings file transfers, supported video downloads, schedules, and
-browser handoffs into one desktop app. Add a link, review where it will be saved,
+Download Engine is a free, open-source download manager for Windows. It brings file
+transfers, supported video downloads, schedules, and browser handoffs into one
+desktop app. Add a link, review where it will be saved,
 and manage progress from a download list with queues and individual status windows.
 Use it interactively, run a portable copy, or connect your own scripts, extensions
 and AI client.
 
-The familiar layout is inspired by **Internet Download Manager (IDM)**. Download
-Engine is an independent project, is not affiliated with IDM, and does not claim
-complete IDM feature parity.
+Looking for a free **IDM alternative**? The familiar layout is inspired by
+**Internet Download Manager (IDM)**. Download Engine is an independent project, is
+not affiliated with IDM, and does not claim complete IDM feature parity.
 
 > **New in v3.6.0:** extensions, which package site support and automation into one
 > file you review before installing, and one **Extensions** page for your extensions,

@@ -8,7 +8,7 @@
   <meta name="referrer" content="strict-origin-when-cross-origin">
   <meta name="google-site-verification" content="PbceSkVGGFYJq6mRZNadT7UEKYjVgNl7pqSAtAaH_nE" />
   <title>Download Engine — Free Windows Download Manager</title>
-  <meta name="description" content="Free, open-source Windows download manager with Lua scripting, custom download providers, Web Grabber, offline websites, supported video downloads and browser integration.">
+  <meta name="description" content="Free, open-source download manager for Windows. Parallel downloads, pause and resume, queues, schedules, supported video downloads and browser integration.">
   <link rel="canonical" href="https://jasxtd.github.io/Download-Engine/">
   <link rel="icon" type="image/png" href="images/download-engine-logo.png">
   <meta property="og:type" content="website">
@@ -34,7 +34,7 @@
     "@type": "SoftwareApplication",
     "name": "Download Engine",
     "url": "https://jasxtd.github.io/Download-Engine/",
-    "description": "Free, open-source Windows download manager with Lua automation, custom download providers, Web Grabber, static website capture, supported public videos, custom themes and browser integration.",
+    "description": "Free, open-source download manager for Windows with parallel downloads, pause and resume, queues and schedules, supported public videos, Web Grabber, static website capture, Lua automation and browser integration.",
     "operatingSystem": "Windows x64",
     "applicationCategory": "UtilitiesApplication",
     "softwareVersion": "3.6.0",
@@ -62,8 +62,8 @@
     <section class="hero shell" aria-labelledby="hero-title">
       <div class="hero-copy">
         <a class="release-badge" href="#whats-new"><span class="badge-new">New in 3.6</span><span>Share Lua extensions</span><span class="badge-arrow" aria-hidden="true">→</span></a>
-        <h1 id="hero-title">Download more.<br><span>Keep control.</span></h1>
-        <p class="hero-description">Files, supported videos and offline websites.<br class="desktop-break"> Bring them together with Web Grabber, Lua scripting and queues that fit your workflow. Make the workspace yours with custom themes.</p>
+        <h1 id="hero-title"><span class="hero-kicker">Free download manager for Windows</span>Download more.<br><span>Keep control.</span></h1>
+        <p class="hero-description">An open-source <a href="idm-alternative.html">alternative to IDM</a> with parallel connections, pause and resume, queues and schedules. Add supported videos, offline websites, Web Grabber, Lua scripting and custom themes.</p>
         <a class="hero-video-sites" href="#video">YouTube <span>·</span> Bilibili <span>·</span> TikTok <span>·</span> Twitch <span>·</span> HLS &amp; DASH <span aria-hidden="true">↗</span></a>
         <div class="hero-actions"><a class="button button-primary" href="https://github.com/JasXTD/Download-Engine/releases/download/v3.6.0/DownloadEngine-3.6.0-UnsignedSetup.exe"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M4 15v6h16v-6"/></svg>Download for Windows</a><a class="button button-secondary" href="https://github.com/JasXTD/Download-Engine/releases/download/v3.6.0/DownloadEngine-3.6.0-Unsigned-windows-x64.zip">Get the portable ZIP <span aria-hidden="true">↗</span></a></div>
         <p class="hero-version">Stable v3.6.0 <span aria-hidden="true">·</span> Windows x64 <span aria-hidden="true">·</span> Free under MIT</p>
@@ -287,11 +287,11 @@ print(<span class="lua-string">"Download Engine"</span>, xd.app_version)</code><
       <details><summary>Do I need to install Lua or recompile the app?<span aria-hidden="true">+</span></summary><p>No. Lua is built in. Create an automation script, site reader or download provider in the Scripting editor, then save it. A script can use the functions available to its role; provider jobs retain the saved revision used when they were added. Start with the <a href="#scripting">read-only Lua example</a> or the <a href="https://github.com/JasXTD/Download-Engine/blob/main/docs/lua-providers.md">provider guide</a>.</p></details>
       <details><summary>Can it download every video?<span aria-hidden="true">+</span></summary><p>No. Built-in readers support selected public YouTube, Bilibili, TikTok and Twitch videos, plus compatible finished, unencrypted HLS and DASH streams from other sites. Live recording and DRM are unsupported. Website changes and access restrictions can affect availability. <a href="#video">Check supported sites and limits.</a></p></details>
       <details><summary>Does it work on macOS or Linux?<span aria-hidden="true">+</span></summary><p>Current packages support Windows x64. macOS, Linux and Android packages are not provided.</p></details>
-      <details><summary>Is this Internet Download Manager?<span aria-hidden="true">+</span></summary><p>Download Engine is an independent project inspired by Internet Download Manager (IDM). It is not affiliated with IDM and does not offer complete IDM feature parity.</p></details>
+      <details><summary>Is this Internet Download Manager?<span aria-hidden="true">+</span></summary><p>No. Download Engine is an independent, free and open-source project inspired by Internet Download Manager (IDM). It is not affiliated with IDM and does not offer complete IDM feature parity. <a href="idm-alternative.html">See what it offers as a free IDM alternative.</a></p></details>
       <details><summary>How do I update?<span aria-hidden="true">+</span></summary><p>The app checks the <a href="https://github.com/JasXTD/Download-Engine/releases/latest">latest GitHub release</a> when it opens, enabled by default. A newer version offers <strong>Get update</strong> or <strong>Later</strong>; current, offline and failed checks stay quiet. Turn this off in Preferences → Startup &amp; tray, or check manually from Help → Check for updates. Downloads and installation stay manual. Close the app before upgrading, preserve portable data and downloads, and reload developer-loaded extensions. Profile upgrades can prevent older builds from reopening your data, so keep a backup if you may need to go back.</p></details>
     </div></section>
   </main>
 
-  <footer class="site-footer shell"><div><a class="brand" href="./"><img src="images/download-engine-logo.png" width="32" height="32" alt=""><span>Download Engine</span></a><p>Made by Xetro. Free to use. Open to improve.</p></div><nav aria-label="Footer navigation"><a href="https://github.com/JasXTD/Download-Engine">GitHub</a><a href="https://github.com/JasXTD/Download-Engine/issues">Report an issue</a><a href="https://github.com/JasXTD/Download-Engine/blob/main/PRIVACY.md">Privacy</a><a href="https://github.com/JasXTD/Download-Engine/blob/main/SECURITY.md">Security</a><a href="https://github.com/JasXTD/Download-Engine/blob/main/LICENSE">License</a></nav></footer>
+  <footer class="site-footer shell"><div><a class="brand" href="./"><img src="images/download-engine-logo.png" width="32" height="32" alt=""><span>Download Engine</span></a><p>Made by Xetro. Free to use. Open to improve.</p></div><nav aria-label="Footer navigation"><a href="idm-alternative.html">Free IDM alternative</a><a href="https://github.com/JasXTD/Download-Engine">GitHub</a><a href="https://github.com/JasXTD/Download-Engine/issues">Report an issue</a><a href="https://github.com/JasXTD/Download-Engine/blob/main/PRIVACY.md">Privacy</a><a href="https://github.com/JasXTD/Download-Engine/blob/main/SECURITY.md">Security</a><a href="https://github.com/JasXTD/Download-Engine/blob/main/LICENSE">License</a></nav></footer>
 </body>
 </html>

@@ -1244,15 +1244,37 @@ mod tests {
     }
     #[test]
     fn completion_sound_setting_saves_with_notifications_and_cancel_keeps_it() {
+        let toggle_sound = |app: &mut Desktop, ctx: &egui::Context| {
+            let size = egui::vec2(1080.0, 800.0);
+            frame(app, ctx, size, vec![]);
+            frame(app, ctx, size, vec![]);
+            // The launch-update preference puts this last row below the fold.
+            // Scroll the category as a user would before clicking its control.
+            frame(
+                app,
+                ctx,
+                size,
+                vec![
+                    egui::Event::PointerMoved(egui::pos2(700.0, 400.0)),
+                    egui::Event::MouseWheel {
+                        unit: egui::MouseWheelUnit::Point,
+                        phase: egui::TouchPhase::Move,
+                        delta: egui::vec2(0.0, -600.0),
+                        modifiers: egui::Modifiers::NONE,
+                    },
+                ],
+            );
+            click(app, ctx, "Play a sound when downloads finish");
+        };
         let (_temp, mut app, ctx) = fixture();
         app.open_preferences_window();
         app.preferences_window.as_mut().unwrap().category = preferences_window::Category::Startup;
-        click(&mut app, &ctx, "Play a sound when downloads finish");
+        toggle_sound(&mut app, &ctx);
         click(&mut app, &ctx, "×");
         assert!(app.dialog.is_none() && !app.interface.completion_sound);
         app.open_preferences_window();
         app.preferences_window.as_mut().unwrap().category = preferences_window::Category::Startup;
-        click(&mut app, &ctx, "Play a sound when downloads finish");
+        toggle_sound(&mut app, &ctx);
         click(&mut app, &ctx, "Save");
         assert!(app.dialog.is_none());
         assert!(app.interface.completion_sound);

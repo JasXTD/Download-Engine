@@ -41,6 +41,7 @@
 # Local configuration, credentials and private signing certificates
 /AGENTS.md
 /.codex/
+/.claude/
 /.agents/
 /.aws/
 /.ssh/

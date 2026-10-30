@@ -113,6 +113,10 @@ extension payloads, preservation of test user files and unchanged native browser
 registrations, then removes its fixture data. It requires no antivirus or system
 proxy changes. See `docs/localization.md` for translation scope and provenance.
 
+For a focused packaging check, pass `--languages en,zh-CN,ar`. Each selected
+language still checks every bundled browser locale, the Extensions guide and all
+hash-pinned FFmpeg files. Omit the option to test every installer language.
+
 ## Windows memory checks
 
 Run the UI lifecycle check alone so other tests cannot distort its process counters:

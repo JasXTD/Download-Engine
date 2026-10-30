@@ -348,6 +348,7 @@ Source: "{#SourceRoot}\extension\manifest.firefox.json"; DestDir: "{app}\extensi
 Source: "{#SourceRoot}\docs\browser-release.md"; DestDir: "{app}\docs"; Flags: ignoreversion
 Source: "{#SourceRoot}\docs\youtube-port.md"; DestDir: "{app}\docs"; Flags: ignoreversion
 Source: "{#SourceRoot}\docs\automation.md"; DestDir: "{app}\docs"; Flags: ignoreversion
+Source: "{#SourceRoot}\docs\extensions.md"; DestDir: "{app}\docs"; Flags: ignoreversion
 Source: "{#SourceRoot}\examples\core-api-automation.lua"; DestDir: "{app}\examples"; Flags: ignoreversion
 Source: "{#SourceRoot}\examples\custom-site-reader.lua"; DestDir: "{app}\examples"; Flags: ignoreversion
 Source: "{#SourceRoot}\examples\download-provider.lua"; DestDir: "{app}\examples"; Flags: ignoreversion

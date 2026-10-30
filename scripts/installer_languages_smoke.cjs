@@ -6,7 +6,11 @@ const assert=require('node:assert/strict');
 const {spawnSync}=require('node:child_process');
 const {randomUUID,createHash}=require('node:crypto');
 const root=path.resolve(__dirname,'..');
-const languages=JSON.parse(fs.readFileSync(path.join(root,'locales/languages.json'),'utf8')).map(language=>language.code);
+const supportedLanguages=JSON.parse(fs.readFileSync(path.join(root,'locales/languages.json'),'utf8')).map(language=>language.code);
+const args=process.argv.slice(2);
+assert(args.length===0||(args.length===2&&args[0]==='--languages'),'Usage: node scripts/installer_languages_smoke.cjs [--languages en,zh-CN,ar]');
+const languages=args.length?args[1].split(','):supportedLanguages;
+assert(languages.length>0&&new Set(languages).size===languages.length&&languages.every(language=>supportedLanguages.includes(language)),'Choose distinct supported languages');
 const version=/^version = "([^"]+)"/m.exec(fs.readFileSync(path.join(root,'Cargo.toml'),'utf8'))[1];
 const installer=path.join(root,`dist/DownloadEngine-${version}-TestSetup.exe`);
 assert(fs.existsSync(installer),'Build the isolated test installer first');
@@ -58,12 +62,14 @@ try {
     assert.equal(JSON.parse(fs.readFileSync(path.join(program,'installer-language.json'),'utf8')),lang);
     for(const bin of ['de.exe','de-host.exe','de-cli.exe']) assert.equal(digest(path.join(program,bin)),digest(path.join(root,'target/release',bin)));
     for(const browser of ['chrome','edge','brave','firefox']) {
-      for(const locale of languages.map(language=>language.replace('-','_')))assert(fs.existsSync(path.join(program,'extensions',browser,'_locales',locale,'messages.json')));
+      for(const locale of supportedLanguages.map(language=>language.replace('-','_')))assert(fs.existsSync(path.join(program,'extensions',browser,'_locales',locale,'messages.json')));
       // Check the installed bytes, including files imported indirectly by the background/popup scripts.
       for(const file of fs.readdirSync(path.join(root,'extension')).filter(name=>/\.(js|css|html)$/.test(name)))
         assert.equal(digest(path.join(program,'extensions',browser,file)),digest(path.join(root,'extension',file)),`Missing or stale ${browser} runtime file: ${file}`);
     }
-    for(const guide of ['mega.md','wetransfer.md']) assert.equal(digest(path.join(program,'docs',guide)),digest(path.join(root,'docs',guide)));
+    for(const guide of ['mega.md','wetransfer.md','extensions.md']) assert.equal(digest(path.join(program,'docs',guide)),digest(path.join(root,'docs',guide)));
+    const mediaManifest=JSON.parse(fs.readFileSync(path.join(root,'tools/ffmpeg/media-manifest.json'),'utf8'));
+    for(const file of mediaManifest.files) assert.equal(digest(path.join(program,'tools/ffmpeg',file.path)),file.sha256,`Installed FFmpeg file: ${file.path}`);
     const cli=path.join(program,'de-cli.exe');
     const queues=run(cli,['queues'],env,15000);assert.equal(queues.status,0,queues.stderr);
     const reply=JSON.parse(queues.stdout);assert.equal(reply.ok,true);assert(Array.isArray(reply.result));assert(reply.result.some(queue=>queue.id==='main'));
@@ -96,7 +102,7 @@ try {
       if(index===1) assert.equal(spawnSync('reg.exe',['delete',startupKey,'/f'],{windowsHide:true,timeout:10000}).status,0);
     }
     assert.deepEqual(realStartup(),startupBefore,'The real Run key must remain unchanged');
-    checks.push({language:lang,installed:true,upgradePreservedPreferences:true,uninstallPreservedData:true,extensionCatalogs:languages.length*4,
+    checks.push({language:lang,installed:true,upgradePreservedPreferences:true,uninstallPreservedData:true,extensionCatalogs:supportedLanguages.length*4,ffmpegFilesVerified:mediaManifest.files.length,
       ...(startupCheck?{startupEntry:index===0?'own entry removed':'other copy entry kept'}:{})});
     // Only remove our verified isolated fixture, after recording preservation checks.
     removeIsolated(workspace);

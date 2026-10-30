@@ -205,10 +205,12 @@ behavior. Change the interface language under **Appearance → Language**, or pi
 
 ## Browser integration
 
-> **Browser-store approval is pending.** For now, the extension must be loaded
-> manually. Chrome, Edge, and Brave require **Developer mode** and **Load unpacked**.
-> Firefox uses **Load Temporary Add-on** instead and requires reloading the add-on
-> after every browser restart. Official store links will be added after approval.
+> **Firefox:** install the approved [Download Engine Extension](https://addons.mozilla.org/en-US/firefox/addon/download-engine-extension/)
+> from Firefox Add-ons. It stays installed after a restart, and Firefox keeps it updated.
+>
+> **Chrome, Edge, and Brave:** store approval is pending. For now, these browsers
+> require **Developer mode** and **Load unpacked**. Official store links will be
+> added after approval.
 
 Open **Tools → Browser setup**, select your browser, and follow its connection
 steps. The desktop communicates with the extension through a registered native
@@ -217,12 +219,11 @@ messaging host. Select **Check connection** in the extension popup to verify set
 | Browser | Setup and requirements |
 | --- | --- |
 | **Chrome, Edge, Brave** | Enable **Developer mode** on the browser's extensions page, choose **Load unpacked**, and select the folder shown by **Open extension folder** in Download Engine. Then follow the [Chromium connection steps](docs/reference.md#chrome-edge-and-brave). The Chromium manifest requires version 128 or newer of the underlying browser engine. Brave has its own desktop connection registration. |
-| **Firefox** | Choose **Load Temporary Add-on** on the debugging page shown by Browser setup, then select `manifest.json` from **Open extension folder**. Follow the [Firefox connection steps](docs/reference.md#firefox). The extension requires **Firefox 142 or newer**; Firefox/ESR 140 and Firefox 141 are unsupported. |
+| **Firefox** | Install the add-on from [Firefox Add-ons](https://addons.mozilla.org/en-US/firefox/addon/download-engine-extension/). Then open **Tools → Browser setup**, select **Firefox** and choose **Connect browser**; you can skip the page's first step. Follow the [Firefox connection steps](docs/reference.md#firefox). The extension requires **Firefox 142 or newer**; Firefox/ESR 140 and Firefox 141 are unsupported. |
 
-Keep Developer mode enabled while using the unpacked Chromium extension. Firefox's
-temporary add-on is removed when Firefox restarts; permanent installation requires
-Mozilla signing. The supplied extension ZIPs do not install themselves as approved
-store extensions.
+Keep Developer mode enabled while using the unpacked Chromium extension. The extension
+ZIPs on the releases page are for manual loading. The Firefox ZIP is unsigned, so
+Firefox removes it when it restarts; use Firefox Add-ons for everyday use.
 
 **Capture file downloads** and **Detect media while browsing** default to on once
 installation permissions are accepted. Existing off choices and capture filters

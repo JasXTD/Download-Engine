@@ -81,11 +81,12 @@ GitHub Pages deploys the `/docs` contents automatically. Check the repository's
 Actions page or Settings → Pages for the deployment result, then verify the
 published page and affected assets.
 
-Featured packages are explicitly pinned to **3.5.2**. Publish the v3.5.2 GitHub
+Featured packages are explicitly pinned to **3.6.0**. Publish the v3.6.0 GitHub
 release with all seven assets before or together with pushing this site, or the
 download buttons return 404. When a new release is
-published, update the version labels, seven asset URLs, release-notes URL and
-SoftwareApplication version/download URL together. Verify each asset exists in
+published, update the version labels, six asset URLs, release-notes URL and
+SoftwareApplication version/download URL together. The Firefox ZIP stays a release
+asset, but the site links to the signed Firefox Add-ons listing instead of it. Verify each asset exists in
 that release. The separate **Latest GitHub release** link always opens GitHub's
 current latest release. The website never downloads or runs an installer
 automatically.

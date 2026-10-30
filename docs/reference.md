@@ -843,23 +843,27 @@ as Chromium itself, find this registration first.
 
 ### Firefox
 
-1. In Download Engine, open **Browser setup** and choose **Firefox**.
-2. Copy the shown browser page into Firefox's address bar.
-3. Choose **Load Temporary Add-on** and select **manifest.json** from the
-   extension folder available through **Open extension folder**.
-4. Choose **Connect browser** in Download Engine, then **Check connection** in the popup.
+1. Install [Download Engine Extension](https://addons.mozilla.org/en-US/firefox/addon/download-engine-extension/)
+   from Firefox Add-ons. It stays installed after a restart, and Firefox keeps it updated.
+2. In Download Engine, open **Browser setup**, choose **Firefox**, then choose
+   **Connect browser**. You can skip the page's first step.
+3. Choose **Check connection** in the popup.
 
-The Firefox ID is already included; there is no ID to paste. Firefox removes this
-unsigned development add-on when it restarts. A permanent release needs Mozilla
-signing. The Chrome/Edge development folders are not store installations either.
-There is no browser-policy modification or signing bypass in the installer.
+The Firefox ID is already included; there is no ID to paste.
+
+To test a development build instead, copy the page shown in Browser setup into
+Firefox's address bar, choose **Load Temporary Add-on** and select **manifest.json**
+from the folder available through **Open extension folder**. Firefox removes this
+unsigned development add-on when it restarts. The Chrome/Edge development folders are
+not store installations either. There is no browser-policy modification or signing
+bypass in the installer.
 
 If automatic capture switches back off with **No such native application
 com.xetro.downloadengine**, the extension is loaded but the desktop connector is not
 registered. In the desktop app, choose **Tools → Browser setup → Firefox →
 Connect browser**, then reopen the extension and try **Browser options → Check
-connection**. Enable automatic capture again after it connects. Loading the
-temporary add-on alone does not register the desktop connector.
+connection**. Enable automatic capture again after it connects. Installing the
+add-on alone does not register the desktop connector.
 
 When a checkbox asks for optional permission, accepting completes that setting
 in the background even if Firefox closes the extension popup. Download Engine then

@@ -9,6 +9,8 @@
 # will likely look very different (and much more reasonable).
 # See Cargo.toml.orig for the original contents.
 
+# Modified by Download Engine: removed the aws-lc backend. See ../patch.md.
+
 [package]
 edition = "2024"
 name = "librqbit-core"
@@ -29,7 +31,6 @@ resolver = "2"
 [features]
 default = ["sha1-crypto-hash"]
 sha1-crypto-hash = ["sha1w/sha1-crypto-hash"]
-sha1-ring = ["sha1w/sha1-ring"]
 
 [lib]
 name = "librqbit_core"

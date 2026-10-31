@@ -9,6 +9,8 @@
 # will likely look very different (and much more reasonable).
 # See Cargo.toml.orig for the original contents.
 
+# Modified by Download Engine: removed the benchmark, which needs criterion. See ../patch.md.
+
 [package]
 edition = "2024"
 name = "librqbit-peer-protocol"
@@ -29,11 +31,6 @@ resolver = "2"
 [lib]
 name = "librqbit_peer_protocol"
 path = "src/lib.rs"
-
-[[bench]]
-name = "bench"
-path = "benches/bench.rs"
-harness = false
 
 [dependencies.anyhow]
 version = "1"
@@ -79,5 +76,3 @@ version = "2"
 [dependencies.tracing]
 version = "0.1"
 
-[dev-dependencies.criterion]
-version = "0.8"

@@ -1,3 +1,4 @@
+// Modified by Download Engine: removed axum web server support. See ../../patch.md.
 #[cfg(test)]
 mod tests;
 
@@ -20,6 +21,3 @@ pub use connect::{ConnectOpts, tcp_connect};
 pub use multicast::{MulticastOpts, MulticastUdpSocket};
 pub use socket::BindOpts;
 pub use traits::PollSendToVectored;
-
-#[cfg(feature = "axum")]
-pub use socket::axum::WrappedSocketAddr;

@@ -9,6 +9,8 @@
 # will likely look very different (and much more reasonable).
 # See Cargo.toml.orig for the original contents.
 
+# Modified by Download Engine: removed axum web server support and test logging. See ../patch.md.
+
 [package]
 edition = "2024"
 name = "librqbit-dualstack-sockets"
@@ -28,15 +30,6 @@ repository = "https://github.com/ikatson/librqbit-dualstack-sockets"
 [lib]
 name = "librqbit_dualstack_sockets"
 path = "src/lib.rs"
-
-[dependencies.axum]
-version = "0.8.4"
-features = [
-    "tokio",
-    "http1",
-]
-optional = true
-default-features = false
 
 [dependencies.backon]
 version = "1.5.1"
@@ -82,6 +75,3 @@ features = [
 [dev-dependencies.tracing]
 version = "0.1.41"
 
-[dev-dependencies.tracing-subscriber]
-version = "0.3.19"
-features = ["env-filter"]

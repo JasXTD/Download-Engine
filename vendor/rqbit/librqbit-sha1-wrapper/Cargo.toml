@@ -9,6 +9,8 @@
 # will likely look very different (and much more reasonable).
 # See Cargo.toml.orig for the original contents.
 
+# Modified by Download Engine: removed the aws-lc backend. See ../patch.md.
+
 [package]
 edition = "2024"
 name = "librqbit-sha1-wrapper"
@@ -29,18 +31,10 @@ resolver = "2"
 [features]
 default = ["sha1-crypto-hash"]
 sha1-crypto-hash = ["crypto-hash"]
-sha1-ring = ["aws-lc-rs"]
 
 [lib]
 name = "librqbit_sha1_wrapper"
 path = "src/lib.rs"
-
-[dependencies.assert_cfg]
-version = "0.1"
-
-[dependencies.aws-lc-rs]
-version = "1.12"
-optional = true
 
 [dependencies.crypto-hash]
 version = "0.3"

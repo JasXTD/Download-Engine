@@ -1,0 +1,27 @@
+# rqbit's protocol crates, copied into Download Engine. See patch.md.
+# The crates keep their published manifests, so this workspace points their
+# crates.io names at the copies here. The desktop app does not depend on them.
+[workspace]
+resolver = "3"
+members = [
+    "librqbit-bencode",
+    "librqbit-buffers",
+    "librqbit-clone-to-owned",
+    "librqbit-core",
+    "librqbit-dht",
+    "librqbit-dualstack-sockets",
+    "librqbit-peer-protocol",
+    "librqbit-sha1-wrapper",
+    "librqbit-tracker-comms",
+]
+
+[patch.crates-io]
+librqbit-bencode = { path = "librqbit-bencode" }
+librqbit-buffers = { path = "librqbit-buffers" }
+librqbit-clone-to-owned = { path = "librqbit-clone-to-owned" }
+librqbit-core = { path = "librqbit-core" }
+librqbit-dht = { path = "librqbit-dht" }
+librqbit-dualstack-sockets = { path = "librqbit-dualstack-sockets" }
+librqbit-peer-protocol = { path = "librqbit-peer-protocol" }
+librqbit-sha1-wrapper = { path = "librqbit-sha1-wrapper" }
+librqbit-tracker-comms = { path = "librqbit-tracker-comms" }

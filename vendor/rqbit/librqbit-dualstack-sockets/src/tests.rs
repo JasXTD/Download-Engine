@@ -1,3 +1,4 @@
+// Modified by Download Engine: removed test logging. See ../../patch.md.
 use crate::BindOpts;
 use crate::TcpListener;
 use crate::UdpSocket;
@@ -8,9 +9,7 @@ use std::net::{IpAddr, Ipv6Addr, SocketAddr};
 use std::time::Duration;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::time::timeout;
-use tracing::level_filters::LevelFilter;
 use tracing::trace;
-use tracing_subscriber::EnvFilter;
 
 const TIMEOUT: Duration = Duration::from_secs(100);
 
@@ -79,14 +78,6 @@ struct SendAssertion {
 }
 
 fn setup_test_logging() {
-    let _ = tracing_subscriber::fmt::Subscriber::builder()
-        .with_env_filter(
-            EnvFilter::builder()
-                .with_default_directive(LevelFilter::TRACE.into())
-                .from_env()
-                .unwrap(),
-        )
-        .try_init();
     unsafe { std::env::set_var("RUST_BACKTRACE", "1") }
 }
 

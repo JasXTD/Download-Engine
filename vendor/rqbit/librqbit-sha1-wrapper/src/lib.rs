@@ -1,3 +1,4 @@
+// Modified by Download Engine: removed the aws-lc backend. See ../../patch.md.
 // Wrapper for sha1/sha256 libraries to be able to swap them easily,
 // e.g. to measure performance, or change implementations depending on platform.
 //
@@ -23,11 +24,6 @@ pub trait ISha256 {
     {
         self.finish()
     }
-}
-
-assert_cfg::exactly_one! {
-    feature = "sha1-crypto-hash",
-    feature = "sha1-ring",
 }
 
 #[cfg(feature = "sha1-crypto-hash")]
@@ -85,72 +81,11 @@ mod crypto_hash_impl {
     }
 }
 
-#[cfg(feature = "sha1-ring")]
-mod ring_impl {
-    use super::{ISha1, ISha256};
-
-    use aws_lc_rs::digest::{Context, SHA1_FOR_LEGACY_USE_ONLY as SHA1, SHA256};
-
-    pub struct Sha1Ring {
-        ctx: Context,
-    }
-
-    impl ISha1 for Sha1Ring {
-        fn new() -> Self {
-            Self {
-                ctx: Context::new(&SHA1),
-            }
-        }
-
-        fn update(&mut self, buf: &[u8]) {
-            self.ctx.update(buf);
-        }
-
-        fn finish(self) -> [u8; 20] {
-            let result = self.ctx.finish();
-            debug_assert_eq!(result.as_ref().len(), 20);
-            let mut result_arr = [0u8; 20];
-            result_arr.copy_from_slice(result.as_ref());
-            result_arr
-        }
-    }
-
-    pub struct Sha256Ring {
-        ctx: Context,
-    }
-
-    impl ISha256 for Sha256Ring {
-        fn new() -> Self {
-            Self {
-                ctx: Context::new(&SHA256),
-            }
-        }
-
-        fn update(&mut self, buf: &[u8]) {
-            self.ctx.update(buf);
-        }
-
-        fn finish(self) -> [u8; 32] {
-            let result = self.ctx.finish();
-            debug_assert_eq!(result.as_ref().len(), 32);
-            let mut result_arr = [0u8; 32];
-            result_arr.copy_from_slice(result.as_ref());
-            result_arr
-        }
-    }
-}
-
 #[cfg(feature = "sha1-crypto-hash")]
 pub type Sha1 = crypto_hash_impl::Sha1CryptoHash;
 
-#[cfg(feature = "sha1-ring")]
-pub type Sha1 = ring_impl::Sha1Ring;
-
 #[cfg(feature = "sha1-crypto-hash")]
 pub type Sha256 = crypto_hash_impl::Sha256CryptoHash;
-
-#[cfg(feature = "sha1-ring")]
-pub type Sha256 = ring_impl::Sha256Ring;
 
 #[cfg(test)]
 mod tests {

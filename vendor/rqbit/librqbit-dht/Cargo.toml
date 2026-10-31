@@ -9,6 +9,8 @@
 # will likely look very different (and much more reasonable).
 # See Cargo.toml.orig for the original contents.
 
+# Modified by Download Engine: removed the example, which contacts public DHT servers. See ../patch.md.
+
 [package]
 edition = "2024"
 name = "librqbit-dht"
@@ -29,10 +31,6 @@ resolver = "2"
 [lib]
 name = "librqbit_dht"
 path = "src/lib.rs"
-
-[[example]]
-name = "dht"
-path = "examples/dht.rs"
 
 [dependencies.anyhow]
 version = "1"
@@ -118,6 +116,3 @@ version = "0.7"
 [dependencies.tracing]
 version = "0.1"
 
-[dev-dependencies.tracing-subscriber]
-version = "0.3"
-default-features = false

@@ -1,3 +1,4 @@
+// Modified by Download Engine: removed test logging. See ../../../patch.md.
 use std::{
     net::{Ipv4Addr, Ipv6Addr, SocketAddrV4, SocketAddrV6},
     time::Duration,
@@ -32,7 +33,6 @@ pub fn setup_test_logging() {
     if std::env::var("RUST_LOG").is_err() {
         unsafe { std::env::set_var("RUST_LOG", "trace") };
     }
-    let _ = tracing_subscriber::fmt::try_init();
 }
 
 #[tokio::test]

@@ -1,3 +1,4 @@
+// Modified by Download Engine: removed a test that contacts a public tracker. See ../../patch.md.
 use std::{
     collections::{HashMap, hash_map::Entry},
     ffi::CStr,
@@ -434,70 +435,4 @@ mod tests {
         dbg!(tid, response);
     }
 
-    #[ignore]
-    #[tokio::test]
-    async fn test_announce() {
-        let sock = tokio::net::UdpSocket::bind("0.0.0.0:0").await.unwrap();
-        sock.connect("opentor.net:6969").await.unwrap();
-
-        let tid = new_transaction_id();
-        let mut write_buf = [0u8; 16384];
-        let mut read_buf = vec![0u8; 4096];
-
-        let len = Request::Connect.serialize(tid, &mut write_buf).unwrap();
-
-        sock.send(&write_buf[..len]).await.unwrap();
-
-        let size = sock.recv(&mut read_buf).await.unwrap();
-
-        let (rtid, response) = Response::parse(&read_buf[..size], false).unwrap();
-        assert_eq!(tid, rtid);
-        let connection_id = match response {
-            Response::Connect(connection_id) => {
-                dbg!(connection_id)
-            }
-            other => panic!("unexpected response {:?}", other),
-        };
-
-        let hash = Id20::from_str("775459190aa65566591634203f8d9f17d341f969").unwrap();
-
-        let tid = new_transaction_id();
-        let request = Request::Announce(
-            connection_id,
-            AnnounceFields {
-                info_hash: hash,
-                peer_id: generate_peer_id(b"-xx1234-"),
-                downloaded: 0,
-                left: 0,
-                uploaded: 0,
-                event: EVENT_NONE,
-                key: 0, // whatever that is?
-                port: 24563,
-            },
-        );
-        let size = request.serialize(tid, &mut write_buf).unwrap();
-
-        sock.send(&write_buf[..size]).await.unwrap();
-        let size = sock.recv(&mut read_buf).await.unwrap();
-
-        {
-            let mut f = std::fs::OpenOptions::new()
-                .create(true)
-                .truncate(true)
-                .write(true)
-                .open("/tmp/proto.bin")
-                .unwrap();
-            f.write_all(&read_buf[..size]).unwrap();
-        }
-
-        dbg!(&read_buf[..size]);
-        let (rtid, response) = Response::parse(&read_buf[..size], false).unwrap();
-        assert_eq!(tid, rtid);
-        match response {
-            Response::Announce(r) => {
-                dbg!(r);
-            }
-            other => panic!("unexpected response {:?}", other),
-        }
-    }
 }

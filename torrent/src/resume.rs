@@ -87,7 +87,7 @@ pub fn load(state_dir: &Path, meta: &TorrentMeta, storage: &Storage) -> Option<B
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::testkit::{TempFolder, meta_of, sample_bytes, single_file_torrent};
+    use crate::testkit::{TempFolder, meta_of, sample_bytes, single_file_torrent, touch_later};
     use std::sync::Arc;
 
     fn setup(folder: &TempFolder) -> (Arc<TorrentMeta>, Storage, PathBuf) {
@@ -128,7 +128,9 @@ mod tests {
         let folder = TempFolder::new();
         let (meta, storage, state) = setup(&folder);
         save(&state, &meta, &storage, &two_pieces(&meta)).unwrap();
-        fs::write(folder.path().join("output").join("a.bin"), [1u8; 40_000]).unwrap();
+        let path = folder.path().join("output").join("a.bin");
+        fs::write(&path, [1u8; 40_000]).unwrap();
+        touch_later(&path);
         assert_eq!(load(&state, &meta, &storage), None);
     }
 

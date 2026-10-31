@@ -5,7 +5,7 @@ use std::collections::{HashMap, HashSet, VecDeque};
 use std::io;
 use std::net::{IpAddr, SocketAddr};
 use std::path::PathBuf;
-use std::sync::atomic::{AtomicBool, AtomicU32, AtomicU64, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU32, AtomicU64, AtomicUsize, Ordering};
 use std::sync::{Arc, OnceLock};
 use std::time::Duration;
 
@@ -37,6 +37,11 @@ use crate::resume;
 use crate::storage::Storage;
 
 const MAX_PEERS: usize = 50;
+/// Peers we reach out to ourselves. The rest of `MAX_PEERS` stays free for peers that
+/// connect to us.
+const MAX_OUTGOING: usize = 40;
+/// Most addresses from trackers are dead, and each takes seconds to give up on.
+const MAX_CONNECTING: usize = 16;
 const CONNECT_TIMEOUT: Duration = Duration::from_secs(10);
 const MAX_METADATA_ATTEMPTS: usize = 8;
 const METADATA_TIMEOUT: Duration = Duration::from_secs(60);
@@ -111,6 +116,10 @@ pub struct TorrentOptions {
     pub state_dir: Option<PathBuf>,
     /// For "Add and choose later": wait for `select` once a magnet link's files are known.
     pub choose_later: bool,
+    /// Whether to connect to peers. Off, the torrent only uses connections given to it.
+    pub connect_out: bool,
+    /// Whether peer lists from strangers may name this computer. Only for local testing.
+    pub allow_loopback: bool,
 }
 
 #[derive(Serialize, Debug, Clone)]
@@ -156,6 +165,7 @@ pub(crate) struct TorrentCore {
     pub context: Context,
     pub options: TorrentOptions,
     pub wasted: AtomicU64,
+    crashed_connections: AtomicU32,
     downloaded: AtomicU64,
     uploaded: AtomicU64,
     only: Mutex<Option<Vec<usize>>>,
@@ -187,6 +197,7 @@ impl TorrentCore {
             context,
             options,
             wasted: AtomicU64::new(0),
+            crashed_connections: AtomicU32::new(0),
             downloaded: AtomicU64::new(0),
             uploaded: AtomicU64::new(0),
             only: Mutex::new(only),
@@ -281,6 +292,7 @@ pub(crate) struct Live {
     found: mpsc::UnboundedSender<SocketAddr>,
     links: Mutex<HashMap<u64, Arc<PeerLink>>>,
     next_key: AtomicU64,
+    connecting: AtomicUsize,
 }
 
 impl Live {
@@ -416,15 +428,29 @@ struct PeerBook {
     banned: HashSet<IpAddr>,
 }
 
+fn can_reach(addr: SocketAddr) -> bool {
+    let ip = addr.ip().to_canonical();
+    let reserved = match ip {
+        // 0.x.x.x is not an address, and 240 and above are reserved or broadcast.
+        IpAddr::V4(ip) => ip.octets()[0] == 0 || ip.octets()[0] >= 240,
+        IpAddr::V6(ip) => ip.is_unspecified(),
+    };
+    addr.port() != 0 && !reserved && !ip.is_multicast()
+}
+
 impl PeerBook {
+    /// Adds a peer the user named.
     fn add(&mut self, addr: SocketAddr) {
-        let ip = addr.ip();
-        let usable = addr.port() != 0
-            && !ip.is_unspecified()
-            && !ip.is_multicast()
-            && ip != std::net::Ipv4Addr::BROADCAST;
-        if usable && self.peers.len() < MAX_KNOWN_PEERS {
+        if can_reach(addr) && self.peers.len() < MAX_KNOWN_PEERS {
             self.peers.entry(addr).or_default();
+        }
+    }
+
+    /// Adds a peer from a tracker, the DHT or another peer. Those are strangers, and they
+    /// must not be able to make this computer connect to services on itself.
+    fn add_found(&mut self, addr: SocketAddr, allow_loopback: bool) {
+        if allow_loopback || !addr.ip().to_canonical().is_loopback() {
+            self.add(addr);
         }
     }
 
@@ -642,9 +668,6 @@ impl Torrent {
         let cancel = cancel.child_token();
         let _stop_search = cancel.clone().drop_guard();
         let (found_tx, mut found) = mpsc::unbounded_channel();
-        for peer in &self.options.peers {
-            let _ = found_tx.send(*peer);
-        }
         if let Some(discovery) = &self.context.discovery {
             discovery.start(Search {
                 info_hash: self.info_hash,
@@ -656,12 +679,16 @@ impl Torrent {
             });
         }
         let mut book = PeerBook::default();
+        for peer in &self.options.peers {
+            book.add(*peer);
+        }
+        let allow_loopback = self.options.allow_loopback;
         let mut attempts: JoinSet<(SocketAddr, Result<bytes::Bytes>)> = JoinSet::new();
         let mut tick = tokio::time::interval(Duration::from_secs(1));
         loop {
             tokio::select! {
                 _ = cancel.cancelled() => return None,
-                Some(peer) = found.recv() => book.add(peer),
+                Some(peer) = found.recv() => book.add_found(peer, allow_loopback),
                 Some(done) = attempts.join_next(), if !attempts.is_empty() => {
                     let Ok((addr, result)) = done else {
                         continue;
@@ -679,7 +706,7 @@ impl Torrent {
                 }
                 _ = tick.tick() => {}
             }
-            while attempts.len() < MAX_METADATA_ATTEMPTS {
+            while self.options.connect_out && attempts.len() < MAX_METADATA_ATTEMPTS {
                 let Some(addr) = book.next_ready(Instant::now()) else {
                     break;
                 };
@@ -722,6 +749,13 @@ impl Torrent {
                 hello: None,
             })
             .map_err(|_| anyhow!("this torrent is stopping"))
+    }
+
+    /// How many connections ended in a panic. Anything above zero is a bug.
+    pub fn crashed_connections(&self) -> u32 {
+        self.core
+            .get()
+            .map_or(0, |core| core.crashed_connections.load(Ordering::Relaxed))
     }
 
     pub fn stats(&self) -> TorrentStats {
@@ -781,6 +815,10 @@ impl Torrent {
 }
 
 async fn connect(addr: SocketAddr) -> Result<BoxedStream> {
+    // Tests on Windows run on the user's own computer, and must never reach a network.
+    #[cfg(all(test, windows))]
+    panic!("a test tried to connect to {addr}");
+    #[cfg_attr(all(test, windows), allow(unreachable_code))]
     let stream = timeout(CONNECT_TIMEOUT, tcp_connect(addr, ConnectOpts::default()))
         .await
         .context("timed out connecting")??;
@@ -825,6 +863,7 @@ async fn connect_and_serve(live: Arc<Live>, addr: SocketAddr) -> bool {
         _ = cancel.cancelled() => return false,
         connected = connect(addr) => connected,
     };
+    live.connecting.fetch_sub(1, Ordering::Relaxed);
     match connected {
         Ok(stream) => serve_peer(live, stream, Some(addr), None).await,
         Err(error) => {
@@ -907,6 +946,7 @@ async fn run_swarm(core: Arc<TorrentCore>, cancel: CancellationToken) -> Option<
         found: found_tx.clone(),
         links: Mutex::default(),
         next_key: AtomicU64::new(0),
+        connecting: AtomicUsize::new(0),
     });
     *core.live.lock() = Some(live.clone());
 
@@ -959,6 +999,8 @@ async fn run_swarm(core: Arc<TorrentCore>, cancel: CancellationToken) -> Option<
                     let refused = addr.is_some_and(|addr| book.is_banned(addr));
                     if peers.len() < MAX_PEERS && !refused {
                         peers.spawn(tracked(addr, serve_peer(live.clone(), stream, addr, hello)));
+                    } else {
+                        debug_log!("refused a connection, {} peers", peers.len());
                     }
                 }
             },
@@ -974,11 +1016,9 @@ async fn run_swarm(core: Arc<TorrentCore>, cancel: CancellationToken) -> Option<
                 }
             }
             Some(done) = peers.join_next(), if !peers.is_empty() => {
-                if let Ok((Some(addr), useful)) = done {
-                    book.ended(addr, useful, Instant::now());
-                }
+                peer_ended(&core, &mut book, done);
             }
-            Some(peer) = found.recv() => book.add(peer),
+            Some(peer) = found.recv() => book.add_found(peer, core.options.allow_loopback),
             _ = tick.tick() => {
                 seconds = seconds.wrapping_add(1);
                 update_rates(&core);
@@ -996,12 +1036,13 @@ async fn run_swarm(core: Arc<TorrentCore>, cancel: CancellationToken) -> Option<
             hashing.spawn_blocking(move || (piece, storage.piece_matches(piece)));
         }
         // A finished torrent waits for peers to come to it.
-        if !core.picker.lock().is_finished() {
+        if core.options.connect_out && !core.picker.lock().is_finished() {
             let now = Instant::now();
-            while peers.len() < MAX_PEERS {
+            while may_connect(peers.len(), live.connecting.load(Ordering::Relaxed)) {
                 let Some(addr) = book.next_ready(now) else {
                     break;
                 };
+                live.connecting.fetch_add(1, Ordering::Relaxed);
                 peers.spawn(tracked(Some(addr), connect_and_serve(live.clone(), addr)));
             }
         }
@@ -1011,7 +1052,9 @@ async fn run_swarm(core: Arc<TorrentCore>, cancel: CancellationToken) -> Option<
     cancel.cancel();
     search_cancel.cancel();
     *core.live.lock() = None;
-    while peers.join_next().await.is_some() {}
+    while let Some(done) = peers.join_next().await {
+        peer_ended(&core, &mut book, done);
+    }
     while let Ok(event) = events.try_recv() {
         if let Event::PieceComplete(piece) = event {
             waiting.push_back(piece);
@@ -1029,6 +1072,25 @@ async fn run_swarm(core: Arc<TorrentCore>, cancel: CancellationToken) -> Option<
     save_in_background(&core).await;
     core.storage.close();
     outcome
+}
+
+fn may_connect(connections: usize, connecting: usize) -> bool {
+    connections < MAX_OUTGOING && connecting < MAX_CONNECTING
+}
+
+fn peer_ended(
+    core: &TorrentCore,
+    book: &mut PeerBook,
+    done: Result<(Option<SocketAddr>, bool), tokio::task::JoinError>,
+) {
+    match done {
+        Ok((Some(addr), useful)) => book.ended(addr, useful, Instant::now()),
+        Ok((None, _)) => {}
+        Err(error) => {
+            core.crashed_connections.fetch_add(1, Ordering::Relaxed);
+            debug_log!("a peer connection crashed: {error}");
+        }
+    }
 }
 
 /// Pushing files to disk can take seconds, and must not hold up the other torrents.
@@ -1096,17 +1158,59 @@ mod tests {
     #[test]
     fn test_useless_addresses_are_not_kept() {
         let mut book = PeerBook::default();
-        for bad in [
+        let bad = [
             "1.2.3.4:0",
             "0.0.0.0:80",
+            "0.196.171.30:48137",
             "224.0.0.1:80",
+            "246.69.85.169:27338",
             "255.255.255.255:80",
-        ] {
-            book.add(address(bad));
+            "[::]:80",
+            "[ff02::1]:80",
+            "[::ffff:0.1.2.3]:80",
+        ];
+        for address_text in bad {
+            book.add(address(address_text));
         }
-        assert!(book.peers.is_empty());
+        assert!(book.peers.is_empty(), "{:?}", book.peers.keys());
         book.add(address("1.2.3.4:6881"));
         assert_eq!(book.peers.len(), 1);
+    }
+
+    #[test]
+    fn test_strangers_cannot_point_us_at_this_computer() {
+        let mut book = PeerBook::default();
+        for local in [
+            "127.0.0.1:80",
+            "127.9.9.9:80",
+            "[::1]:80",
+            "[::ffff:127.0.0.1]:80",
+        ] {
+            book.add_found(address(local), false);
+        }
+        assert!(book.peers.is_empty(), "{:?}", book.peers.keys());
+        book.add_found(address("1.2.3.4:6881"), false);
+        book.add_found(address("127.0.0.1:80"), true);
+        assert_eq!(book.peers.len(), 2);
+    }
+
+    #[test]
+    fn test_the_user_may_name_a_peer_on_this_computer() {
+        let mut book = PeerBook::default();
+        book.add(address("127.0.0.1:6881"));
+        assert_eq!(book.peers.len(), 1);
+    }
+
+    #[test]
+    fn test_connection_attempts_leave_room_for_others() {
+        assert!(may_connect(0, 0));
+        assert!(!may_connect(0, MAX_CONNECTING), "too many under way");
+        assert!(may_connect(MAX_OUTGOING - 1, MAX_CONNECTING - 1));
+        assert!(
+            !may_connect(MAX_OUTGOING, 0),
+            "the rest is for incoming peers"
+        );
+        const { assert!(MAX_OUTGOING < MAX_PEERS) };
     }
 
     #[test]
@@ -1184,6 +1288,7 @@ mod tests {
             found,
             links: Mutex::default(),
             next_key: AtomicU64::new(0),
+            connecting: AtomicUsize::new(0),
         })
     }
 

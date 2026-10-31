@@ -1,9 +1,9 @@
 //! Builds small torrents, throwaway folders and scripted peers for tests.
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicU32, Ordering};
-use std::time::Duration;
+use std::time::{Duration, SystemTime};
 
 use bytes::{Bytes, BytesMut};
 use librqbit_core::hash_id::Id20;
@@ -203,6 +203,14 @@ pub fn write_files(folder: &TempFolder, files: &[(&str, &[u8])]) {
     }
 }
 
+/// Moves a file's time on. Two quick writes can get the same time from a coarse disk clock,
+/// so a test that changes a file sets the time itself.
+pub fn touch_later(path: &Path) {
+    let file = std::fs::File::options().write(true).open(path).unwrap();
+    file.set_modified(SystemTime::now() + Duration::from_secs(5))
+        .unwrap();
+}
+
 /// Starts a torrent over complete files, and waits until it knows they are complete.
 pub async fn seed_of(
     meta: &Arc<TorrentMeta>,
@@ -229,7 +237,8 @@ impl FakePeer {
         send_handshake(&mut two, torrent.info_hash(), Id20::new([id; 20]))
             .await
             .unwrap();
-        read_handshake(&mut two).await.unwrap();
+        let answered = read_handshake(&mut two).await;
+        assert!(answered.is_ok(), "no handshake: {:?}", torrent.stats());
         Self {
             stream: two,
             buffer: BytesMut::new(),

@@ -13,7 +13,7 @@ use crate::metadata;
 use crate::testkit::{
     FakePeer, PATIENCE, TempFolder, context, is_done, is_live, join, limited_context, meta_of,
     multi_file_torrent, multi_file_torrent_with, options_for, sample_bytes, seed_of,
-    single_file_torrent, start_torrent, wait_until, write_files,
+    single_file_torrent, start_torrent, touch_later, wait_until, write_files,
 };
 use crate::torrent::{Torrent, TorrentOptions};
 
@@ -249,8 +249,8 @@ async fn test_a_file_changed_after_the_record_is_checked_again() {
     let path = folder.path().join("a.bin");
     let mut changed = data.clone();
     changed[0] ^= 1;
-    tokio::time::sleep(Duration::from_millis(20)).await;
     std::fs::write(&path, &changed).unwrap();
+    touch_later(&path);
 
     let again = Torrent::from_meta(
         meta.clone(),
@@ -651,4 +651,98 @@ async fn test_a_private_torrent_does_not_offer_peer_exchange() {
         })
         .await;
     assert!(told);
+}
+
+/// A small repeatable random number source.
+struct Dice(u64);
+
+impl Dice {
+    fn next(&mut self) -> u64 {
+        self.0 ^= self.0 << 13;
+        self.0 ^= self.0 >> 7;
+        self.0 ^= self.0 << 17;
+        self.0
+    }
+
+    fn below(&mut self, limit: u64) -> u64 {
+        self.next() % limit
+    }
+}
+
+fn frame(id: u8, body: &[u8]) -> Vec<u8> {
+    let length = body.len() as u32 + 1;
+    [&length.to_be_bytes()[..], &[id], body].concat()
+}
+
+/// Something shaped like a peer message, whose values are mostly wrong.
+fn random_message(dice: &mut Dice) -> Vec<u8> {
+    let index = dice.below(30) as u32;
+    let begin = dice.below(3) as u32 * CHUNK as u32 + dice.below(2) as u32;
+    let length = [0, 1, 1000, 16384, 16385, 1 << 20, u32::MAX][dice.below(7) as usize];
+    let numbers = [index, begin, length].map(u32::to_be_bytes).concat();
+    match dice.below(10) {
+        0 => {
+            let body = sample_bytes(dice.below(60) as usize, dice.next());
+            frame(dice.below(25) as u8, &body)
+        }
+        1 => frame(4, &index.to_be_bytes()),
+        2 => frame(5, &sample_bytes(dice.below(5) as usize, dice.next())),
+        3 => frame(6, &numbers),
+        4 => frame(8, &numbers),
+        5 => {
+            let size = [1, 100, CHUNK, CHUNK + 1][dice.below(4) as usize];
+            let head = [index, begin].map(u32::to_be_bytes).concat();
+            frame(7, &[head, sample_bytes(size, dice.next())].concat())
+        }
+        6 => {
+            let size = dice.below(1 << 26);
+            let queue = dice.below(100_000);
+            let body = format!(
+                "d1:md6:ut_pexi1e11:ut_metadatai3ee4:reqqi{queue}e13:metadata_sizei{size}ee"
+            );
+            frame(20, &[&[0], body.as_bytes()].concat())
+        }
+        7 => {
+            let piece = dice.below(50);
+            let body = format!("d8:msg_typei{}e5:piecei{piece}ee", dice.below(4));
+            frame(20, &[&[3], body.as_bytes()].concat())
+        }
+        8 => {
+            let addresses = sample_bytes(6 * dice.below(4) as usize, dice.next());
+            let head = format!("d5:added{}:", addresses.len());
+            frame(20, &[b"\x01", head.as_bytes(), &addresses, b"e"].concat())
+        }
+        _ => sample_bytes(dice.below(20) as usize, dice.next()),
+    }
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn test_random_messages_cannot_crash_a_connection_or_spoil_a_download() {
+    let data = sample_bytes(640_000, 32);
+    let meta = meta_of(&single_file_torrent("a.bin", &data, PIECE));
+    let (one, two) = (TempFolder::new(), TempFolder::new());
+    let seed = seed_of(&meta, &one, &[("a.bin", &data)]).await;
+    let leech = live_torrent(&meta, &two, 2).await;
+
+    let mut dice = Dice(0x9E37_79B9_7F4A_7C15);
+    for round in 0..600u32 {
+        let target = if round % 2 == 0 { &seed } else { &leech };
+        let mut peer = FakePeer::join(target, 100 + (round % 100) as u8).await;
+        for _ in 0..=dice.below(30) {
+            let message = random_message(&mut dice);
+            peer.send_raw(&message).await;
+        }
+        drop(peer);
+        while target.stats().peers > 20 {
+            tokio::time::sleep(Duration::from_millis(1)).await;
+        }
+    }
+
+    assert_eq!(seed.crashed_connections(), 0);
+    assert_eq!(leech.crashed_connections(), 0);
+    join(&seed, &leech);
+    wait_until(&leech, "the download to finish", is_done).await;
+    leech.pause().await;
+    assert_eq!(leech.crashed_connections(), 0);
+    assert!(std::fs::read(two.path().join("a.bin")).unwrap() == data);
 }

@@ -24,6 +24,7 @@ pub struct DiscoveryOptions {
     pub listen_port: Option<u16>,
     pub use_trackers: bool,
     pub use_dht: bool,
+    pub dht_bootstrap: Option<Vec<String>>,
     pub state_dir: Option<PathBuf>,
 }
 
@@ -75,15 +76,17 @@ impl Discovery {
         self.dht
             .get_or_init(|| async {
                 let cancel = Some(self.cancel.clone());
+                let bootstrap = self.options.dht_bootstrap.clone();
                 let dht = match &self.options.state_dir {
                     Some(state_dir) => {
                         let config = DhtPersistenceConfig {
                             dump_interval: None,
                             config_filename: state_dir.join("dht.json"),
                         };
-                        PersistentDht::create(config, None, false, None, cancel, None).await
+                        PersistentDht::create(config, None, false, bootstrap, cancel, None).await
                     }
                     None => DhtBuilder::with_config(DhtConfig {
+                        bootstrap_addrs: bootstrap,
                         cancellation_token: cancel,
                         ..Default::default()
                     })

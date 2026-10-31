@@ -34,7 +34,11 @@ pub struct SessionOptions {
     pub seed: bool,
     pub use_trackers: bool,
     pub use_dht: bool,
+    /// The DHT's first contacts, or None for the public ones.
+    pub dht_bootstrap: Option<Vec<String>>,
     pub state_dir: Option<PathBuf>,
+    /// Whether peer lists from strangers may name this computer. Only for local testing.
+    pub allow_loopback_peers: bool,
 }
 
 #[derive(Clone, Default)]
@@ -81,6 +85,7 @@ impl Session {
                     listen_port: options.listen_port,
                     use_trackers: options.use_trackers,
                     use_dht: options.use_dht,
+                    dht_bootstrap: options.dht_bootstrap.clone(),
                     state_dir: options.state_dir.clone(),
                 },
                 cancel.clone(),
@@ -117,6 +122,8 @@ impl Session {
             listen_port: self.options.listen_port,
             state_dir: self.options.state_dir.clone(),
             choose_later: add.choose_later,
+            connect_out: true,
+            allow_loopback: self.options.allow_loopback_peers,
         }
     }
 

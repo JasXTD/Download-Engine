@@ -14,6 +14,8 @@ pub mod torrent;
 
 #[cfg(test)]
 mod hard_tests;
+#[cfg(all(test, unix))]
+mod network_tests;
 #[cfg(test)]
 mod testkit;
 #[cfg(test)]

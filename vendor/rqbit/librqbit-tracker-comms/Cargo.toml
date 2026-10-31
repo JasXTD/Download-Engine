@@ -9,6 +9,8 @@
 # will likely look very different (and much more reasonable).
 # See Cargo.toml.orig for the original contents.
 
+# Modified by Download Engine: removed an unused dependency. See ../patch.md.
+
 [package]
 edition = "2024"
 name = "librqbit-tracker-comms"
@@ -47,9 +49,6 @@ package = "librqbit-bencode"
 [dependencies.buffers]
 version = "9.1.0"
 package = "librqbit-buffers"
-
-[dependencies.byteorder]
-version = "1"
 
 [dependencies.futures]
 version = "0.3"

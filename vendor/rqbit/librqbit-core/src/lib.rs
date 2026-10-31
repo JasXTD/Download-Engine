@@ -1,7 +1,6 @@
-// Modified by Download Engine: added safe_name. See ../../patch.md.
+// Modified by Download Engine: added safe_name, removed directories. See ../../patch.md.
 pub mod compact_ip;
 pub mod constants;
-pub mod directories;
 mod error;
 pub mod hash_id;
 pub mod lengths;

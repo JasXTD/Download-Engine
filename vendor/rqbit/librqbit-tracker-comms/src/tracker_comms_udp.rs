@@ -420,13 +420,7 @@ impl UdpTrackerClient {
 
 #[cfg(test)]
 mod tests {
-    use std::{io::Write, str::FromStr};
-
-    use librqbit_core::{hash_id::Id20, peer_id::generate_peer_id};
-
-    use crate::tracker_comms_udp::{
-        AnnounceFields, EVENT_NONE, Request, Response, new_transaction_id,
-    };
+    use crate::tracker_comms_udp::Response;
 
     #[test]
     fn test_parse_announce() {
@@ -434,5 +428,4 @@ mod tests {
         let (tid, response) = Response::parse(b, false).unwrap();
         dbg!(tid, response);
     }
-
 }

@@ -9,7 +9,7 @@
 # will likely look very different (and much more reasonable).
 # See Cargo.toml.orig for the original contents.
 
-# Modified by Download Engine: removed the benchmark, which needs criterion. See ../patch.md.
+# Modified by Download Engine: removed the benchmark and an unused dependency. See ../patch.md.
 
 [package]
 edition = "2024"
@@ -39,9 +39,6 @@ version = "1"
 version = "9.1.0"
 default-features = false
 package = "librqbit-bencode"
-
-[dependencies.bitvec]
-version = "1"
 
 [dependencies.buffers]
 version = "9.1.0"

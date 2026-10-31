@@ -1,9 +1,9 @@
+// Modified by Download Engine: removed the default rqbit folder. See ../../patch.md.
 // TODO: this now stores only the routing table, but we also need AT LEAST the same socket address...
 
 use anyhow::Context;
 use futures::FutureExt;
 use futures::future::BoxFuture;
-use librqbit_core::directories::get_configuration_directory;
 use librqbit_core::spawn_utils::spawn_with_cancel;
 use librqbit_dualstack_sockets::BindDevice;
 use serde::{Deserialize, Serialize};
@@ -22,12 +22,11 @@ use crate::{Dht, DhtConfig, DhtState};
 
 /// Configuration for DHT persistence (periodic dump of routing table and peer store).
 /// When provided, the DHT state will be serialized to disk periodically.
-#[derive(Default)]
 pub struct DhtPersistenceConfig {
     /// How often to dump state. Defaults to 60s.
     pub dump_interval: Option<Duration>,
-    /// Path to the JSON file. Uses OS-specific default if None.
-    pub config_filename: Option<PathBuf>,
+    /// Path to the JSON file.
+    pub config_filename: PathBuf,
 }
 
 /// Compute the DHT listen address from the explicit/stored port preferences and
@@ -94,11 +93,6 @@ fn dump_dht(dht: &Dht, filename: &Path, tempfile_name: &Path) -> anyhow::Result<
 }
 
 impl PersistentDht {
-    pub fn default_persistence_filename() -> anyhow::Result<PathBuf> {
-        let dirs = get_configuration_directory("dht")?;
-        let path = dirs.cache_dir().join("dht.json");
-        Ok(path)
-    }
 
     #[inline(never)]
     pub fn create<'a>(
@@ -110,10 +104,7 @@ impl PersistentDht {
         bind_device: Option<&'a BindDevice>,
     ) -> BoxFuture<'a, anyhow::Result<Dht>> {
         async move {
-            let config_filename = match persistence_config.config_filename {
-                Some(f) => f,
-                None => Self::default_persistence_filename()?,
-            };
+            let config_filename = persistence_config.config_filename;
 
             info!(
                 filename=?config_filename,

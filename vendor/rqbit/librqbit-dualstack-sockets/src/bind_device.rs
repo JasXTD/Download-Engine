@@ -1,6 +1,4 @@
-#[cfg(test)]
-pub(crate) mod tests;
-
+// Modified by Download Engine: removed a test that contacts a public address. See ../../patch.md.
 use crate::Error;
 use std::{ffi::CString, num::NonZeroU32, str::FromStr};
 
@@ -24,7 +22,7 @@ impl BindDevice {
     }
 
     #[cfg(windows)]
-    pub fn new_from_name(name: &str) -> crate::Result<Self> {
+    pub fn new_from_name(_name: &str) -> crate::Result<Self> {
         Err(Error::BindDeviceNotSupported)
     }
 

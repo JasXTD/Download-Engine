@@ -1,15 +1,20 @@
-// Modified by Download Engine: replaced rand and backon. See ../../patch.md.
+// Modified by Download Engine: replaced rand, backon and async-stream. See ../../patch.md.
 use std::collections::HashSet;
 use std::net::SocketAddr;
 use std::net::SocketAddrV4;
 use std::net::SocketAddrV6;
+use std::pin::Pin;
 use std::sync::Arc;
+use std::task::Context as TaskContext;
+use std::task::Poll;
 use std::time::Duration;
 
 use anyhow::Context;
 use anyhow::bail;
 use futures::FutureExt;
+use futures::Stream;
 use futures::StreamExt;
+use futures::future::BoxFuture;
 use futures::future::Either;
 use futures::stream::BoxStream;
 use futures::stream::FuturesUnordered;
@@ -25,6 +30,26 @@ use crate::tracker_comms_udp;
 use crate::tracker_comms_udp::UdpTrackerClient;
 use librqbit_core::backoff::Backoff;
 use librqbit_core::hash_id::Id20;
+
+/// The peers a torrent's trackers find. Trackers only run while this stream is polled,
+/// dropping it stops them, and it ends once they have all stopped.
+struct TrackerPeers {
+    trackers: Option<BoxFuture<'static, ()>>,
+    peers: tokio::sync::mpsc::Receiver<SocketAddr>,
+}
+
+impl Stream for TrackerPeers {
+    type Item = SocketAddr;
+
+    fn poll_next(mut self: Pin<&mut Self>, cx: &mut TaskContext<'_>) -> Poll<Option<SocketAddr>> {
+        if let Some(trackers) = &mut self.trackers
+            && trackers.as_mut().poll(cx).is_ready()
+        {
+            self.trackers = None;
+        }
+        self.peers.poll_recv(cx)
+    }
+}
 
 pub struct TrackerComms {
     info_hash: Id20,
@@ -168,10 +193,9 @@ impl TrackerComms {
 
         tracing::trace!(?trackers);
 
-        let (tx, mut rx) = tokio::sync::mpsc::channel::<SocketAddr>(16);
+        let (tx, rx) = tokio::sync::mpsc::channel::<SocketAddr>(16);
 
-        let s = async_stream::stream! {
-            use futures::StreamExt;
+        let run_trackers = async move {
             let comms = Arc::new(Self {
                 info_hash,
                 peer_id,
@@ -186,23 +210,20 @@ impl TrackerComms {
             for tracker in trackers {
                 futures.push(comms.add_tracker(tracker, &udp_client))
             }
-            while !(futures.is_empty()) {
-                tokio::select! {
-                    addr = rx.recv() => {
-                        if let Some(addr) = addr {
-                            yield addr;
-                        }
-                    }
-                    e = futures.next(), if !futures.is_empty() => {
-                        if let Some(Err(e)) = e {
-                            debug!("error: {e}");
-                        }
-                    }
+            while let Some(result) = futures.next().await {
+                if let Err(e) = result {
+                    debug!("error: {e}");
                 }
             }
         };
 
-        Some(s.boxed())
+        Some(
+            TrackerPeers {
+                trackers: Some(run_trackers.boxed()),
+                peers: rx,
+            }
+            .boxed(),
+        )
     }
 
     fn add_tracker(
@@ -433,5 +454,47 @@ impl TrackerComms {
                 Err(e)
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn test_every_peer_arrives_and_the_stream_ends_with_its_trackers() {
+        // More peers than the channel holds, so sending depends on the stream being polled.
+        let expected: Vec<SocketAddr> = (0..100u16)
+            .map(|port| SocketAddr::from(([127, 0, 0, 1], port)))
+            .collect();
+        let found = expected.clone();
+        let (tx, rx) = tokio::sync::mpsc::channel(16);
+        let trackers = async move {
+            for peer in found {
+                tx.send(peer).await.unwrap();
+            }
+        };
+        let stream = TrackerPeers {
+            trackers: Some(trackers.boxed()),
+            peers: rx,
+        };
+        assert_eq!(stream.collect::<Vec<_>>().await, expected);
+    }
+
+    #[tokio::test]
+    async fn test_dropping_the_stream_stops_the_trackers() {
+        let (_tx, rx) = tokio::sync::mpsc::channel(16);
+        let (running, stopped) = tokio::sync::oneshot::channel::<()>();
+        let trackers = async move {
+            let _running = running;
+            std::future::pending::<()>().await;
+        };
+        let mut stream = TrackerPeers {
+            trackers: Some(trackers.boxed()),
+            peers: rx,
+        };
+        assert!(stream.next().now_or_never().is_none());
+        drop(stream);
+        assert!(stopped.await.is_err());
     }
 }

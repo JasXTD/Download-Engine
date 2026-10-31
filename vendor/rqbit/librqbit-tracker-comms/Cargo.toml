@@ -35,9 +35,6 @@ path = "src/lib.rs"
 [dependencies.anyhow]
 version = "1"
 
-[dependencies.async-stream]
-version = "0.3"
-
 [dependencies.bencode]
 version = "9.1.0"
 default-features = false
@@ -49,6 +46,9 @@ package = "librqbit-buffers"
 
 [dependencies.futures]
 version = "0.3"
+default-features = false
+features = ["std"]
+package = "futures-util"
 
 [dependencies.itertools]
 version = "0.15"
@@ -73,9 +73,6 @@ version = "1"
 
 [dependencies.serde_derive]
 version = "1"
-
-[dependencies.serde_with]
-version = "3"
 
 [dependencies.tokio]
 version = "1"

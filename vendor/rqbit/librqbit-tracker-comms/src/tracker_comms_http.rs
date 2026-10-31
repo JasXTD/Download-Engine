@@ -1,9 +1,8 @@
-// Modified by Download Engine: replaced urlencoding with a small function. See ../../patch.md.
+// Modified by Download Engine: replaced urlencoding and serde_with. See ../../patch.md.
 use buffers::ByteBuf;
 use itertools::Either;
 use serde::Deserializer;
 use serde_derive::Deserialize;
-use serde_with::serde_as;
 use std::{
     marker::PhantomData,
     net::{IpAddr, SocketAddr, SocketAddrV4, SocketAddrV6},
@@ -88,10 +87,8 @@ where
     where
         D: Deserializer<'de>,
     {
-        #[serde_as]
         #[derive(Deserialize)]
         struct DictPeer {
-            #[serde_as(as = "serde_with::DisplayFromStr")]
             ip: IpAddr,
             port: u16,
         }

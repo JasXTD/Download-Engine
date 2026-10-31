@@ -79,6 +79,8 @@ private Docker network, using `run-lab.cjs test ours`.
 
 ## Not done yet
 
+- HTTPS trackers only work in the app's build, which brings the TLS library. Built alone,
+  this folder only reaches plain HTTP and UDP trackers.
 - There is no peer encryption, uTP, web seeds or router port mapping.
 - Peer exchange is only read. The engine doesn't send peer lists of its own.
 - `add` reuses files already in `output`, so the app must choose a fresh folder for a new

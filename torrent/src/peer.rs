@@ -626,7 +626,7 @@ impl Reader {
             return;
         }
         let size = self.live.core.meta.info_bytes.len() as u32;
-        if piece < size.div_ceil(CHUNK_SIZE) && !self.live.core.options.no_upload {
+        if piece < size.div_ceil(CHUNK_SIZE) && !self.live.core.uploads_off() {
             self.link.queue_metadata(Out::MetadataPiece(piece));
         } else {
             self.link.queue_metadata(Out::MetadataReject(piece));
@@ -663,6 +663,7 @@ impl Reader {
             return Ok(());
         }
         core.context.down.take(size as u32).await;
+        core.options.allowance.take(size as u32).await;
 
         let offset = lengths.chunk_absolute_offset(&info);
         let storage = core.storage.clone();

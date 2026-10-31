@@ -8,9 +8,11 @@ use std::path::{Path, PathBuf};
 
 use librqbit_core::hash_id::Id20;
 use serde::{Deserialize, Serialize};
+use url::Url;
 
 use crate::bitfield::Bitfield;
 use crate::meta::TorrentMeta;
+use crate::metadata::MAX_METADATA_SIZE;
 use crate::storage::{FileStamp, Storage};
 
 const VERSION: u32 = 1;
@@ -25,6 +27,11 @@ struct Saved {
 
 fn path_for(state_dir: &Path, info_hash: Id20) -> PathBuf {
     state_dir.join(format!("{}.resume.json", info_hash.as_string()))
+}
+
+/// The torrent's details, saved so that coming back to it needs nothing from strangers.
+fn info_path_for(state_dir: &Path, info_hash: Id20) -> PathBuf {
+    state_dir.join(format!("{}.info", info_hash.as_string()))
 }
 
 fn to_hex(bytes: &[u8]) -> String {
@@ -82,6 +89,39 @@ pub fn load(state_dir: &Path, meta: &TorrentMeta, storage: &Storage) -> Option<B
         return None;
     }
     Bitfield::from_wire(&from_hex(&saved.have)?, meta.lengths.total_pieces())
+}
+
+/// Saves a torrent's details.
+pub fn save_info(state_dir: &Path, meta: &TorrentMeta) -> io::Result<()> {
+    fs::create_dir_all(state_dir)?;
+    let path = info_path_for(state_dir, meta.info_hash);
+    let temporary = path.with_extension("tmp");
+    fs::write(&temporary, &meta.info_bytes)?;
+    fs::rename(&temporary, &path)
+}
+
+/// Returns a torrent's saved details. They only count if they still match the hash.
+pub fn load_info(state_dir: &Path, info_hash: Id20, trackers: Vec<Url>) -> Option<TorrentMeta> {
+    let path = info_path_for(state_dir, info_hash);
+    if fs::metadata(&path).ok()?.len() > u64::from(MAX_METADATA_SIZE) {
+        return None;
+    }
+    let bytes = fs::read(path).ok()?;
+    TorrentMeta::from_info_bytes(info_hash, bytes.into(), trackers).ok()
+}
+
+/// Removes everything remembered about a torrent. Its downloaded files stay where they are.
+pub fn forget(state_dir: &Path, info_hash: Id20) -> io::Result<()> {
+    for path in [
+        path_for(state_dir, info_hash),
+        info_path_for(state_dir, info_hash),
+    ] {
+        match fs::remove_file(path) {
+            Err(error) if error.kind() != io::ErrorKind::NotFound => return Err(error),
+            _ => {}
+        }
+    }
+    Ok(())
 }
 
 #[cfg(test)]

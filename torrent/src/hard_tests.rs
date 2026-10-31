@@ -2,6 +2,7 @@
 //! starting over, damaged data, and peers that lie or misbehave.
 
 use std::sync::Arc;
+use std::sync::atomic::Ordering;
 use std::time::{Duration, SystemTime};
 
 use buffers::ByteBuf;
@@ -792,11 +793,9 @@ async fn test_with_uploads_off_a_peer_gets_nothing() {
     let meta = meta_of(&single_file_torrent("a.bin", &data, PIECE));
     let folder = TempFolder::new();
     write_files(&folder, &[("a.bin", &data)]);
-    let options = TorrentOptions {
-        no_upload: true,
-        ..options_for(folder.path())
-    };
-    let seed = Torrent::from_meta(meta.clone(), options, context(1)).unwrap();
+    let context = context(1);
+    context.no_upload.store(true, Ordering::Relaxed);
+    let seed = Torrent::from_meta(meta.clone(), options_for(folder.path()), context).unwrap();
     seed.start().await;
     wait_until(&seed, "the seed to check", is_done).await;
 

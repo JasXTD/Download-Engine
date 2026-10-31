@@ -16,7 +16,7 @@ use tokio::io::{AsyncReadExt, AsyncWrite, AsyncWriteExt};
 use crate::peer::{BoxedStream, CLIENT_NAME, frame_len, read_handshake, send_handshake};
 
 /// Real torrents need far less. This stops a peer from claiming a size that fills the memory.
-const MAX_METADATA_SIZE: u32 = 32 * 1024 * 1024;
+pub(crate) const MAX_METADATA_SIZE: u32 = 32 * 1024 * 1024;
 const REQUEST_WINDOW: u32 = 8;
 /// A bitfield can arrive first, and it can be larger than other messages.
 const MAX_FRAME: usize = 1 << 20;

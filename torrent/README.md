@@ -26,6 +26,8 @@ The formats and network protocols come from the crates copied into `../vendor/rq
 
 - Everything from a peer, tracker, torrent file or magnet link comes from a stranger. Check
   each number before using it, and give each queue a limit.
+- A tracker address must not lead to this computer or its network, and a tracker can't
+  redirect us anywhere.
 - A piece counts only after its SHA-1 matches.
 - File names on disk come only from `TorrentFile::path`. `display` is for showing.
 - Reading from a peer must never wait on writing to it, or two peers can block each other.
@@ -44,6 +46,10 @@ Each line on stdin is a JSON object with a `cmd`, and gets one reply line: `{"ok
 | `files` | `torrent` (path) or `name` | The file list and info hash. |
 | `add` | `name`, `output`, then `torrent` (path) or `magnet`, and optional `only`, `peers`, `choose_later` | The info hash. |
 | `select` | `name`, `only` | Changes the chosen files at any time. |
+| `import` | `torrent` (path) | Saves the torrent's details, so its magnet link needs nothing else. Returns the same as `files`, with a `magnet`. |
+| `remove` | `name`, optional `forget` | Stops a torrent and lets go of its files. `forget` also deletes what was saved about it. |
+| `configure` | `upload_limit`, `no_upload` | Changes uploading for every torrent at once. |
+| `allow` | `name`, `until` | Lets a torrent receive `until` bytes in all, or any amount with null. Returns `received`. |
 | `stats` | | Every torrent's state and progress, and session totals. |
 | `pause`, `resume` | `name` | |
 | `stop_all`, `resume_all` | | The names affected. |
@@ -71,7 +77,6 @@ private Docker network, using `run-lab.cjs test ours`.
 
 ## Not done yet
 
-- HTTPS trackers need a TLS library, which comes with the app's crates in step 4.
 - There is no peer encryption, uTP, web seeds or router port mapping.
 - Peer exchange is only read. The engine doesn't send peer lists of its own.
 - `add` reuses files already in `output`, so the app must choose a fresh folder for a new

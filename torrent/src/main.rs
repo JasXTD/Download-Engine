@@ -6,9 +6,10 @@ use std::net::SocketAddr;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use anyhow::{Context, Result, bail};
+use anyhow::{Context, Result, bail, ensure};
 use de_torrent::meta::TorrentMeta;
 use de_torrent::session::{AddOptions, Session, SessionOptions};
+use librqbit_core::magnet::Magnet;
 use serde::Deserialize;
 use serde_json::{Value, json};
 use tokio::io::{AsyncBufReadExt, BufReader};
@@ -35,6 +36,23 @@ enum Command {
         name: String,
         only: Option<Vec<usize>>,
     },
+    Import {
+        torrent: String,
+    },
+    Remove {
+        name: String,
+        #[serde(default)]
+        forget: bool,
+    },
+    Configure {
+        upload_limit: Option<u32>,
+        #[serde(default)]
+        no_upload: bool,
+    },
+    Allow {
+        name: String,
+        until: Option<u64>,
+    },
     Stats,
     Pause {
         name: String,
@@ -55,23 +73,50 @@ enum Command {
     Exit,
 }
 
+/// Far above any real torrent. This keeps a huge file from filling the memory.
+const MAX_TORRENT_FILE: u64 = 64 * 1024 * 1024;
+
+async fn read_torrent_file(path: &str) -> Result<Vec<u8>> {
+    let size = tokio::fs::metadata(path)
+        .await
+        .with_context(|| format!("Could not read {path}"))?
+        .len();
+    ensure!(size <= MAX_TORRENT_FILE, "This torrent file is too large");
+    tokio::fs::read(path)
+        .await
+        .with_context(|| format!("Could not read {path}"))
+}
+
 fn file_list(meta: &TorrentMeta) -> Value {
     let files: Vec<Value> = meta
         .files
         .iter()
         .enumerate()
-        .map(|(index, file)| json!({ "index": index, "path": file.display, "len": file.len }))
+        .map(|(index, file)| {
+            json!({
+                "index": index,
+                "path": file.display,
+                "saved_as": file.path,
+                "len": file.len,
+                "virtual": file.virtual_file,
+            })
+        })
         .collect();
-    json!({ "files": files, "info_hash": meta.info_hash.as_string(), "name": meta.name })
+    let trackers = meta.trackers.iter().map(ToString::to_string).collect();
+    let magnet = Magnet::from_id20(meta.info_hash, trackers, None);
+    json!({
+        "files": files,
+        "info_hash": meta.info_hash.as_string(),
+        "name": meta.name,
+        "magnet": magnet.to_string(),
+    })
 }
 
 async fn handle(session: &Arc<Session>, command: Command) -> Result<Value> {
     match command {
         Command::Files { torrent, name } => match (torrent, name) {
             (Some(path), _) => {
-                let bytes = tokio::fs::read(&path)
-                    .await
-                    .with_context(|| format!("Could not read {path}"))?;
+                let bytes = read_torrent_file(&path).await?;
                 Ok(file_list(&TorrentMeta::from_torrent_file(&bytes)?))
             }
             (None, Some(name)) => {
@@ -100,9 +145,7 @@ async fn handle(session: &Arc<Session>, command: Command) -> Result<Value> {
             };
             let info_hash = match (torrent, magnet) {
                 (Some(path), None) => {
-                    let bytes = tokio::fs::read(&path)
-                        .await
-                        .with_context(|| format!("Could not read {path}"))?;
+                    let bytes = read_torrent_file(&path).await?;
                     session.add_torrent_file(name, &bytes, add).await?
                 }
                 (None, Some(link)) => session.add_magnet(name, &link, add).await?,
@@ -114,6 +157,22 @@ async fn handle(session: &Arc<Session>, command: Command) -> Result<Value> {
             session.torrent(&name)?.select(only)?;
             Ok(json!({}))
         }
+        Command::Import { torrent } => {
+            let bytes = read_torrent_file(&torrent).await?;
+            Ok(file_list(&session.import(&bytes)?))
+        }
+        Command::Remove { name, forget } => {
+            session.remove(&name, forget).await?;
+            Ok(json!({}))
+        }
+        Command::Configure {
+            upload_limit,
+            no_upload,
+        } => {
+            session.configure(upload_limit, no_upload);
+            Ok(json!({}))
+        }
+        Command::Allow { name, until } => Ok(json!({ "received": session.allow(&name, until)? })),
         Command::Stats => Ok(serde_json::to_value(session.stats())?),
         Command::Pause { name } => {
             session.pause(&name).await?;

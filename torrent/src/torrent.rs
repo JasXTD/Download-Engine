@@ -32,7 +32,7 @@ use crate::peer::{
     BoxedStream, Hello, Out, PeerLink, read_handshake, run_connection, send_handshake,
 };
 use crate::picker::{Chunk, Picker};
-use crate::rate::ByteLimiter;
+use crate::rate::{Allowance, ByteLimiter};
 use crate::resume;
 use crate::storage::Storage;
 
@@ -52,7 +52,11 @@ const RECHOKE_SECONDS: u32 = 10;
 const MAX_STRIKES: u32 = 3;
 const MAX_KNOWN_PEERS: usize = 5000;
 const FIRST_RETRY: Duration = Duration::from_secs(2);
-const LAST_RETRY: Duration = Duration::from_secs(300);
+/// Tries in a row that came to nothing before an address is mostly left alone. Trackers keep
+/// handing out dead addresses, and security software reports each attempt to the user.
+const QUICK_TRIES: u32 = 5;
+/// A peer can come back, so a long torrent still looks in on it now and then.
+const RETRY_AFTER_GIVING_UP: Duration = Duration::from_secs(3600);
 
 fn hash_workers() -> usize {
     std::thread::available_parallelism().map_or(1, |count| count.get().clamp(1, 4))
@@ -101,6 +105,8 @@ pub struct Context {
     pub down: Arc<ByteLimiter>,
     pub totals: Arc<Totals>,
     pub discovery: Option<Arc<Discovery>>,
+    /// Sends no torrent data to anyone, at the cost of some peers giving us less in return.
+    pub no_upload: Arc<AtomicBool>,
 }
 
 #[derive(Clone, Default)]
@@ -120,8 +126,7 @@ pub struct TorrentOptions {
     pub connect_out: bool,
     /// Whether peer lists from strangers may name this computer. Only for local testing.
     pub allow_loopback: bool,
-    /// Sends no torrent data to anyone, at the cost of some peers giving us less in return.
-    pub no_upload: bool,
+    pub allowance: Arc<Allowance>,
 }
 
 #[derive(Serialize, Debug, Clone)]
@@ -225,6 +230,10 @@ impl TorrentCore {
             .totals
             .downloaded
             .fetch_add(bytes, Ordering::Relaxed);
+    }
+
+    pub fn uploads_off(&self) -> bool {
+        self.context.no_upload.load(Ordering::Relaxed)
     }
 
     pub fn request_for(&self, chunk: Chunk) -> Option<Request> {
@@ -346,7 +355,7 @@ impl Live {
 
     /// Starts uploading to a peer at once when a slot is free. Otherwise it waits its turn.
     pub fn try_unchoke(&self, link: &PeerLink) {
-        if self.core.options.no_upload {
+        if self.core.uploads_off() {
             return;
         }
         let open = self
@@ -362,7 +371,8 @@ impl Live {
     /// Decides who gets an upload slot. Peers that give us the most keep their slots,
     /// because that rewards sharing. One slot rotates, so that new peers get a chance.
     fn rechoke(&self, seen: &mut HashMap<u64, u64>, seeding: bool, turn: u32) {
-        if self.core.options.no_upload {
+        if self.core.uploads_off() {
+            self.choke_all();
             return;
         }
         let links = self.links();
@@ -391,6 +401,12 @@ impl Live {
             }
         }
         for link in links.iter().filter(|link| !link.is_interested()) {
+            link.choke();
+        }
+    }
+
+    fn choke_all(&self) {
+        for link in self.links() {
             link.choke();
         }
     }
@@ -480,8 +496,12 @@ impl PeerBook {
         if let Some(entry) = self.peers.get_mut(&addr) {
             entry.connected = false;
             entry.failures = if useful { 0 } else { entry.failures + 1 };
-            let wait = FIRST_RETRY.saturating_mul(1 << entry.failures.min(10));
-            entry.next_try = Some(now + wait.min(LAST_RETRY));
+            let wait = if entry.failures < QUICK_TRIES {
+                FIRST_RETRY.saturating_mul(1 << entry.failures)
+            } else {
+                RETRY_AFTER_GIVING_UP
+            };
+            entry.next_try = Some(now + wait);
         }
     }
 
@@ -603,6 +623,17 @@ impl Torrent {
         }
     }
 
+    /// Stops sending data to this torrent's peers straight away.
+    pub(crate) fn stop_uploading(&self) {
+        if let Some(live) = self.core.get().and_then(|core| core.live()) {
+            live.choke_all();
+        }
+    }
+
+    pub fn allowance(&self) -> &Allowance {
+        &self.options.allowance
+    }
+
     /// Chooses which files to download, at any time.
     pub fn select(&self, only: Option<Vec<usize>>) -> Result<()> {
         if let Some(meta) = self.meta.get() {
@@ -639,6 +670,11 @@ impl Torrent {
                 let Some(meta) = self.fetch_metadata(cancel).await else {
                     return Ok(());
                 };
+                if let Some(state_dir) = &self.options.state_dir
+                    && let Err(error) = resume::save_info(state_dir, &meta)
+                {
+                    debug_log!("could not save the torrent's details: {error}");
+                }
                 let _ = self.meta.set(meta.clone());
                 meta
             }
@@ -1252,17 +1288,38 @@ mod tests {
         book.add(peer);
         let mut now = Instant::now();
         let mut last_wait = Duration::ZERO;
-        for _ in 0..12 {
+        for _ in 1..QUICK_TRIES {
             assert_eq!(book.next_ready(now), Some(peer));
             book.ended(peer, false, now);
             let next = book.peers[&peer].next_try.unwrap();
             let wait = next - now;
-            assert!(wait >= last_wait && wait <= LAST_RETRY, "{wait:?}");
+            assert!(wait > last_wait, "{wait:?}");
             assert!(book.next_ready(now).is_none());
             last_wait = wait;
             now = next;
         }
-        assert_eq!(last_wait, LAST_RETRY);
+        assert!(last_wait < Duration::from_secs(60), "{last_wait:?}");
+    }
+
+    #[test]
+    fn test_a_dead_address_is_mostly_left_alone_after_a_few_tries() {
+        let mut book = PeerBook::default();
+        let peer = address("1.2.3.4:6881");
+        book.add(peer);
+        let mut now = Instant::now();
+        let start = now;
+        let mut tries = 0;
+        while now < start + Duration::from_secs(4 * 3600) {
+            assert_eq!(book.next_ready(now), Some(peer));
+            book.ended(peer, false, now);
+            tries += 1;
+            now = book.peers[&peer].next_try.unwrap();
+        }
+        assert_eq!(
+            tries,
+            QUICK_TRIES + 3,
+            "one try an hour after the first few"
+        );
     }
 
     #[test]

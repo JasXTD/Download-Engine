@@ -151,6 +151,7 @@ pub fn limited_context(id: u8, upload_limit: Option<u32>) -> Context {
         down: Arc::new(ByteLimiter::new(None)),
         totals: Arc::new(Totals::default()),
         discovery: None,
+        no_upload: Arc::default(),
     }
 }
 

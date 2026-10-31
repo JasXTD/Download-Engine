@@ -1,5 +1,10 @@
-// Modified by Download Engine: replaced rand. See ../../patch.md.
-use std::{collections::VecDeque, net::SocketAddr, str::FromStr, sync::atomic::AtomicU32};
+// Modified by Download Engine: replaced rand and dashmap. See ../../patch.md.
+use std::{
+    collections::{HashMap, VecDeque},
+    net::SocketAddr,
+    str::FromStr,
+    sync::atomic::AtomicU32,
+};
 
 use bencode::ByteBufOwned;
 use chrono::{DateTime, Utc};
@@ -33,7 +38,7 @@ pub struct PeerStore {
     max_remembered_peers: u32,
     max_distance: Id20,
     tokens: RwLock<VecDeque<StoredToken>>,
-    peers: dashmap::DashMap<Id20, Vec<StoredPeer>>,
+    peers: RwLock<HashMap<Id20, Vec<StoredPeer>>>,
     peers_len: AtomicU32,
 }
 
@@ -43,7 +48,7 @@ impl Serialize for PeerStore {
         S: serde::Serializer,
     {
         struct SerializePeers<'a> {
-            peers: &'a dashmap::DashMap<Id20, Vec<StoredPeer>>,
+            peers: &'a RwLock<HashMap<Id20, Vec<StoredPeer>>>,
         }
 
         impl Serialize for SerializePeers<'_> {
@@ -52,8 +57,8 @@ impl Serialize for PeerStore {
                 S: serde::Serializer,
             {
                 let mut m = serializer.serialize_map(None)?;
-                for entry in self.peers.iter() {
-                    m.serialize_entry(&entry.key().as_string(), &entry.value())?;
+                for (info_hash, peers) in self.peers.read().iter() {
+                    m.serialize_entry(&info_hash.as_string(), peers)?;
                 }
                 m.end()
             }
@@ -86,7 +91,7 @@ impl<'de> Deserialize<'de> for PeerStore {
             max_remembered_peers: u32,
             max_distance: Id20,
             tokens: VecDeque<StoredToken>,
-            peers: dashmap::DashMap<Id20, Vec<StoredPeer>>,
+            peers: HashMap<Id20, Vec<StoredPeer>>,
         }
 
         Tmp::deserialize(deserializer).map(|tmp| Self {
@@ -95,8 +100,8 @@ impl<'de> Deserialize<'de> for PeerStore {
             max_remembered_peers: tmp.max_remembered_peers,
             max_distance: tmp.max_distance,
             tokens: RwLock::new(tmp.tokens),
-            peers_len: AtomicU32::new(tmp.peers.iter().map(|e| e.value().len() as u32).sum()),
-            peers: tmp.peers,
+            peers_len: AtomicU32::new(tmp.peers.values().map(|v| v.len() as u32).sum()),
+            peers: RwLock::new(tmp.peers),
         })
     }
 }
@@ -109,7 +114,7 @@ impl PeerStore {
             max_remembered_peers: 1000,
             max_distance: Id20::from_str("00000fffffffffffffffffffffffffffffffffff").unwrap(),
             tokens: RwLock::new(VecDeque::new()),
-            peers: dashmap::DashMap::new(),
+            peers: RwLock::new(HashMap::new()),
             peers_len: AtomicU32::new(0),
         }
     }
@@ -149,10 +154,10 @@ impl PeerStore {
             addr.set_port(announce.port);
         }
 
-        use dashmap::mapref::entry::Entry;
-        let peers_entry = self.peers.entry(announce.info_hash);
+        use std::collections::hash_map::Entry;
+        let mut peers = self.peers.write();
         let peers_len = self.peers_len.load(std::sync::atomic::Ordering::SeqCst);
-        match peers_entry {
+        match peers.entry(announce.info_hash) {
             Entry::Occupied(mut occ) => {
                 if let Some(s) = occ.get_mut().iter_mut().find(|s| s.addr == addr) {
                     s.time = Utc::now();
@@ -185,7 +190,7 @@ impl PeerStore {
     }
 
     pub fn get_for_info_hash(&self, info_hash: Id20, want: Want) -> Vec<CompactSocketAddr> {
-        if let Some(stored_peers) = self.peers.get(&info_hash) {
+        if let Some(stored_peers) = self.peers.read().get(&info_hash) {
             return stored_peers
                 .iter()
                 .filter(|p| {
@@ -204,5 +209,120 @@ impl PeerStore {
     #[allow(dead_code)]
     pub fn garbage_collect_peers(&self) {
         todo!()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::sync::atomic::Ordering::SeqCst;
+
+    /// Close enough to a store with an all-zero id to be accepted.
+    fn near_hash(last: u8) -> Id20 {
+        let mut bytes = [0u8; 20];
+        bytes[19] = last;
+        Id20::new(bytes)
+    }
+
+    fn peer(port: u16) -> SocketAddr {
+        SocketAddr::from(([127, 0, 0, 1], port))
+    }
+
+    fn announce_with(token: &[u8], info_hash: Id20, port: u16) -> AnnouncePeer<ByteBufOwned> {
+        AnnouncePeer {
+            id: near_hash(1),
+            implied_port: 1,
+            info_hash,
+            port,
+            token: token.into(),
+        }
+    }
+
+    fn announce(store: &PeerStore, info_hash: Id20, addr: SocketAddr) -> bool {
+        let token = store.gen_token_for(near_hash(1), addr);
+        store.store_peer(&announce_with(&token, info_hash, 0), addr)
+    }
+
+    fn stored(store: &PeerStore, info_hash: Id20) -> Vec<SocketAddr> {
+        let mut addrs: Vec<SocketAddr> = store
+            .get_for_info_hash(info_hash, Want::Both)
+            .into_iter()
+            .map(|p| p.0)
+            .collect();
+        addrs.sort();
+        addrs
+    }
+
+    #[test]
+    fn test_stored_peers_come_back_for_their_torrent() {
+        let store = PeerStore::new(Id20::default());
+        assert!(announce(&store, near_hash(5), peer(1)));
+        assert!(announce(&store, near_hash(5), peer(2)));
+        assert!(announce(&store, near_hash(6), peer(3)));
+        assert_eq!(stored(&store, near_hash(5)), [peer(1), peer(2)]);
+        assert_eq!(stored(&store, near_hash(6)), [peer(3)]);
+        assert_eq!(stored(&store, near_hash(7)), []);
+    }
+
+    #[test]
+    fn test_announced_port_is_used_unless_implied() {
+        let store = PeerStore::new(Id20::default());
+        let token = store.gen_token_for(near_hash(1), peer(1));
+        let mut message = announce_with(&token, near_hash(5), 6881);
+        message.implied_port = 0;
+        assert!(store.store_peer(&message, peer(1)));
+        assert_eq!(stored(&store, near_hash(5)), [peer(6881)]);
+    }
+
+    #[test]
+    fn test_wrong_token_is_refused() {
+        let store = PeerStore::new(Id20::default());
+        let token = store.gen_token_for(near_hash(1), peer(1));
+        let mut wrong = token;
+        wrong[0] ^= 1;
+        assert!(!store.store_peer(&announce_with(&wrong, near_hash(5), 0), peer(1)));
+        // A token only works from the address it was given to.
+        assert!(!store.store_peer(&announce_with(&token, near_hash(5), 0), peer(2)));
+        assert_eq!(stored(&store, near_hash(5)), []);
+    }
+
+    #[test]
+    fn test_torrent_far_from_our_id_is_refused() {
+        let store = PeerStore::new(Id20::default());
+        assert!(!announce(&store, Id20::new([0xff; 20]), peer(1)));
+    }
+
+    #[test]
+    fn test_same_peer_is_stored_once() {
+        let store = PeerStore::new(Id20::default());
+        assert!(announce(&store, near_hash(5), peer(1)));
+        assert!(announce(&store, near_hash(5), peer(1)));
+        assert_eq!(stored(&store, near_hash(5)), [peer(1)]);
+        assert_eq!(store.peers_len.load(SeqCst), 1);
+    }
+
+    #[test]
+    fn test_full_store_refuses_new_peers_but_keeps_known_ones() {
+        let mut store = PeerStore::new(Id20::default());
+        store.max_remembered_peers = 2;
+        assert!(announce(&store, near_hash(5), peer(1)));
+        assert!(announce(&store, near_hash(6), peer(2)));
+        assert!(!announce(&store, near_hash(5), peer(3)));
+        assert!(!announce(&store, near_hash(7), peer(3)));
+        assert!(announce(&store, near_hash(5), peer(1)));
+        assert_eq!(store.peers_len.load(SeqCst), 2);
+    }
+
+    #[test]
+    fn test_saved_store_loads_with_the_same_peers() {
+        let store = PeerStore::new(Id20::default());
+        assert!(announce(&store, near_hash(5), peer(1)));
+        assert!(announce(&store, near_hash(5), peer(2)));
+        assert!(announce(&store, near_hash(6), peer(3)));
+        let json = serde_json::to_string(&store).unwrap();
+        let loaded: PeerStore = serde_json::from_str(&json).unwrap();
+        assert_eq!(stored(&loaded, near_hash(5)), [peer(1), peer(2)]);
+        assert_eq!(stored(&loaded, near_hash(6)), [peer(3)]);
+        assert_eq!(loaded.peers_len.load(SeqCst), 3);
     }
 }

@@ -101,6 +101,8 @@ version = "0.7"
 
 [dependencies.tracing]
 version = "0.1"
+default-features = false
+features = ["std"]
 
 [dependencies.url]
 version = "2"

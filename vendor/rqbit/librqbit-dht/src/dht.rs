@@ -1,6 +1,7 @@
-// Modified by Download Engine: replaced backon and leaky-bucket with small functions. See ../../patch.md.
+// Modified by Download Engine: replaced backon, leaky-bucket and dashmap. See ../../patch.md.
 use std::{
     cmp::Reverse,
+    collections::HashMap,
     net::{Ipv6Addr, SocketAddr, SocketAddrV4, SocketAddrV6},
     str::FromStr,
     sync::{
@@ -22,7 +23,6 @@ use crate::{
     routing_table::{InsertResult, NodeStatus, RoutingTable},
 };
 use bencode::ByteBufOwned;
-use dashmap::DashMap;
 use futures::{
     FutureExt, Stream, StreamExt, TryFutureExt, future::BoxFuture, stream::FuturesUnordered,
 };
@@ -36,7 +36,7 @@ use librqbit_core::{
     spawn_utils::{spawn, spawn_with_cancel},
 };
 use librqbit_dualstack_sockets::{BindDevice, UdpSocket};
-use parking_lot::RwLock;
+use parking_lot::{Mutex, RwLock};
 
 use serde::Serialize;
 use tokio::sync::mpsc::{Sender, UnboundedReceiver, UnboundedSender, channel, unbounded_channel};
@@ -561,7 +561,7 @@ pub struct DhtState {
 
     // Created requests: (transaction_id, addr) => Requests.
     // If we get a response, it gets removed from here.
-    inflight_by_transaction_id: DashMap<(u16, SocketAddr), OutstandingRequest>,
+    inflight_by_transaction_id: Mutex<HashMap<(u16, SocketAddr), OutstandingRequest>>,
 
     routing_table_v4: RwLock<RoutingTable>,
     routing_table_v6: RwLock<RoutingTable>,
@@ -609,6 +609,7 @@ impl DhtState {
         let key = (tid, addr);
         let (tx, rx) = tokio::sync::oneshot::channel();
         self.inflight_by_transaction_id
+            .lock()
             .insert(key, OutstandingRequest { done: tx });
         trace!("sending {message:?}");
         match self.worker_sender.send(WorkerSendRequest {
@@ -618,7 +619,7 @@ impl DhtState {
         }) {
             Ok(_) => {}
             Err(_) => {
-                self.inflight_by_transaction_id.remove(&key);
+                self.inflight_by_transaction_id.lock().remove(&key);
                 return Err(Error::DhtDead);
             }
         };
@@ -628,11 +629,11 @@ impl DhtState {
                 r
             }),
             Ok(Err(_)) => {
-                self.inflight_by_transaction_id.remove(&key);
+                self.inflight_by_transaction_id.lock().remove(&key);
                 Err(Error::DhtDead)
             }
             Err(_) => {
-                self.inflight_by_transaction_id.remove(&key);
+                self.inflight_by_transaction_id.lock().remove(&key);
                 Err(Error::ResponseTimeout(RESPONSE_TIMEOUT))
             }
         }
@@ -764,11 +765,8 @@ impl DhtState {
                 let tid = msg
                     .get_our_transaction_id()
                     .ok_or(Error::BadTransactionId)?;
-                let request = match self
-                    .inflight_by_transaction_id
-                    .remove(&(tid, addr))
-                    .map(|(_, v)| v)
-                {
+                let request = self.inflight_by_transaction_id.lock().remove(&(tid, addr));
+                let request = match request {
                     Some(req) => req,
                     None => {
                         trace!(?msg, "outstanding request not found");
@@ -916,7 +914,7 @@ impl DhtState {
     pub fn get_stats(&self) -> DhtStats {
         DhtStats {
             id: self.id,
-            outstanding_requests: self.inflight_by_transaction_id.len(),
+            outstanding_requests: self.inflight_by_transaction_id.lock().len(),
             routing_table_size: self.routing_table_v4.read().len(),
             routing_table_size_v6: self.routing_table_v6.read().len(),
         }
@@ -972,9 +970,8 @@ fn is_datagram_error(e: &std::io::Error) -> bool {
 
 impl DhtWorker {
     fn on_send_error(&self, tid: u16, addr: SocketAddr, err: crate::Error) {
-        if let Some((_, OutstandingRequest { done })) =
-            self.dht.inflight_by_transaction_id.remove(&(tid, addr))
-        {
+        let request = self.dht.inflight_by_transaction_id.lock().remove(&(tid, addr));
+        if let Some(OutstandingRequest { done }) = request {
             let _ = done.send(Err(err)).is_err();
         };
     }

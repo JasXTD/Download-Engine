@@ -55,10 +55,6 @@ features = ["serde"]
 version = "9.1.0"
 package = "librqbit-clone-to-owned"
 
-[dependencies.dashmap]
-version = "6"
-features = ["serde"]
-
 [dependencies.futures]
 version = "0.3"
 default-features = false
@@ -77,6 +73,7 @@ version = "0.12"
 
 [dependencies.serde]
 version = "1"
+features = ["derive"]
 
 [dependencies.serde_derive]
 version = "1"
@@ -101,6 +98,8 @@ version = "0.7"
 
 [dependencies.tracing]
 version = "0.1"
+default-features = false
+features = ["std"]
 
 [dev-dependencies.tokio]
 version = "1"

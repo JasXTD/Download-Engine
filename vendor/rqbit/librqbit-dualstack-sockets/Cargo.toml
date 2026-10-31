@@ -47,6 +47,8 @@ features = ["net"]
 
 [dependencies.tracing]
 version = "0.1.41"
+default-features = false
+features = ["std"]
 
 [dev-dependencies.anyhow]
 version = "1"
@@ -59,7 +61,4 @@ features = [
     "io-util",
     "time",
 ]
-
-[dev-dependencies.tracing]
-version = "0.1.41"
 

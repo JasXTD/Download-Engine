@@ -643,7 +643,7 @@ fn the_file_list_of_a_magnet_link_comes_from_peers_and_can_be_cancelled() {
 fn turning_torrents_off_stops_a_running_torrent_and_its_helper() {
     let bench = Bench::new(sample("big.bin", &[("big.bin", 4_000_000)], 3));
     let details = bench.details();
-    bench.set_speed_limit(Some(256 * 1024));
+    bench.set_speed_limit(Some(64 * 1024));
     let job = bench.add(&details, vec![0]);
     bench.wait(
         "some progress",
@@ -733,7 +733,7 @@ fn a_proxy_stops_torrents_from_starting() {
 fn removing_a_paused_torrent_clears_its_temporary_folder() {
     let bench = Bench::new(sample("big.bin", &[("big.bin", 4_000_000)], 5));
     let details = bench.details();
-    bench.set_speed_limit(Some(128 * 1024));
+    bench.set_speed_limit(Some(64 * 1024));
     let job = bench.add(&details, vec![0]);
     bench.wait(
         "some progress",

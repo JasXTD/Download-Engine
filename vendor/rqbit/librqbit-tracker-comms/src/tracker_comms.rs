@@ -1,4 +1,4 @@
-// Modified by Download Engine: replaced rand. See ../../patch.md.
+// Modified by Download Engine: replaced rand and backon. See ../../patch.md.
 use std::collections::HashSet;
 use std::net::SocketAddr;
 use std::net::SocketAddrV4;
@@ -8,8 +8,6 @@ use std::time::Duration;
 
 use anyhow::Context;
 use anyhow::bail;
-use backon::ExponentialBuilder;
-use backon::Retryable;
 use futures::FutureExt;
 use futures::StreamExt;
 use futures::future::Either;
@@ -25,6 +23,7 @@ use url::Url;
 use crate::tracker_comms_http;
 use crate::tracker_comms_udp;
 use crate::tracker_comms_udp::UdpTrackerClient;
+use librqbit_core::backoff::Backoff;
 use librqbit_core::hash_id::Id20;
 
 pub struct TrackerComms {
@@ -241,18 +240,17 @@ impl TrackerComms {
         let mut event = Some(tracker_comms_http::TrackerRequestEvent::Started);
 
         loop {
-            let interval = (|| self.tracker_one_request_http(&tracker_url, event))
-                .retry(
-                    ExponentialBuilder::new()
-                        .without_max_times()
-                        .with_jitter()
-                        .with_factor(2.)
-                        .with_min_delay(Duration::from_secs(10))
-                        .with_max_delay(Duration::from_secs(600)),
-                )
-                .notify(|err, retry_in| debug!(?retry_in, "error calling tracker: {err:#}"))
-                .await
-                .context("this shouldn't fail")?;
+            let mut backoff = Backoff::new(Duration::from_secs(10), Duration::from_secs(600));
+            let interval = loop {
+                match self.tracker_one_request_http(&tracker_url, event).await {
+                    Ok(interval) => break interval,
+                    Err(err) => {
+                        let retry_in = backoff.next_delay();
+                        debug!(?retry_in, "error calling tracker: {err:#}");
+                        tokio::time::sleep(retry_in).await;
+                    }
+                }
+            };
 
             event = None;
             let interval = self.force_tracker_interval.unwrap_or(interval);
@@ -341,21 +339,21 @@ impl TrackerComms {
             }
 
             // This should retry forever until the addrs are resolved.
-            let addrs = (async || {
-                udp_tracker_to_socket_addrs(host.clone(), port)
+            let mut backoff = Backoff::new(Duration::from_secs(1), Duration::from_secs(60));
+            let addrs = loop {
+                let resolved = udp_tracker_to_socket_addrs(host.clone(), port)
                     .instrument(trace_span!("resolve", ?host))
                     .await
-                    .or_else(|err| prev_addrs.ok_or(err))
-            })
-            .retry(
-                ExponentialBuilder::new()
-                    .without_max_times()
-                    .with_max_delay(Duration::from_secs(60))
-                    .with_jitter(),
-            )
-            .notify(|err, retry| debug!(retry_in=?retry, "error resolving tracker: {err:#}"))
-            .await
-            .context("this shouldn't happen: failed resolving tracker addrs")?;
+                    .or_else(|err| prev_addrs.ok_or(err));
+                match resolved {
+                    Ok(addrs) => break addrs,
+                    Err(err) => {
+                        let retry_in = backoff.next_delay();
+                        debug!(?retry_in, "error resolving tracker: {err:#}");
+                        tokio::time::sleep(retry_in).await;
+                    }
+                }
+            };
 
             prev_addrs = Some(addrs);
 

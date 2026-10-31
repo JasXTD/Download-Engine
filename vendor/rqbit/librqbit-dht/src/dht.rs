@@ -1,3 +1,4 @@
+// Modified by Download Engine: replaced backon and leaky-bucket with small functions. See ../../patch.md.
 use std::{
     cmp::Reverse,
     net::{Ipv6Addr, SocketAddr, SocketAddrV4, SocketAddrV6},
@@ -17,17 +18,17 @@ use crate::{
         FindNodeRequest, GetPeersRequest, Message, MessageKind, Node, PingRequest, Response, Want,
     },
     peer_store::PeerStore,
+    rate_limit::RateLimiter,
     routing_table::{InsertResult, NodeStatus, RoutingTable},
 };
-use backon::{ExponentialBuilder, Retryable};
 use bencode::ByteBufOwned;
 use dashmap::DashMap;
 use futures::{
     FutureExt, Stream, StreamExt, TryFutureExt, future::BoxFuture, stream::FuturesUnordered,
 };
 
-use leaky_bucket::RateLimiter;
 use librqbit_core::{
+    backoff::Backoff,
     compact_ip::{CompactSerialize, CompactSerializeFixedLen},
     crate_version,
     hash_id::Id20,
@@ -77,22 +78,6 @@ struct MaybeUsefulNode {
     returned_peers: bool,
 }
 
-fn make_rate_limiter() -> RateLimiter {
-    // TODO: move to configuration, i'm lazy.
-    let dht_queries_per_second = std::env::var("DHT_QUERIES_PER_SECOND")
-        .map(|v| v.parse().expect("couldn't parse DHT_QUERIES_PER_SECOND"))
-        .unwrap_or(250usize);
-
-    let per_100_ms = dht_queries_per_second / 10;
-
-    RateLimiter::builder()
-        .initial(per_100_ms)
-        .max(dht_queries_per_second)
-        .interval(Duration::from_millis(100))
-        .fair(false)
-        .refill(per_100_ms)
-        .build()
-}
 
 trait RecursiveRequestCallbacks: Sized + Send + Sync + 'static {
     fn on_request_start(&self, req: &RecursiveRequest<Self>, target_node: Id20, addr: SocketAddr);
@@ -612,7 +597,7 @@ impl DhtState {
             routing_table_v6: RwLock::new(routing_table_v6),
             worker_sender: sender,
             listen_addr,
-            rate_limiter: make_rate_limiter(),
+            rate_limiter: RateLimiter::new(),
             peer_store,
             cancellation_token,
         }
@@ -1018,19 +1003,24 @@ impl DhtWorker {
     }
 
     async fn bootstrap_hostname_with_backoff(&self, addr: &str) -> crate::Result<()> {
-        let backoff = ExponentialBuilder::new()
-            .with_max_delay(Duration::from_secs(60))
-            .with_jitter()
-            .with_total_delay(Some(Duration::from_secs(86400)))
-            .without_max_times();
-
-        (|| self.bootstrap_hostname(addr))
-            .retry(backoff)
-            .notify(|error, retry_in| {
-                warn!(?retry_in, ?addr, "error in bootstrap: {error:#}");
-            })
-            .instrument(debug_span!("bootstrap", hostname = addr))
-            .await
+        const GIVE_UP_AFTER: Duration = Duration::from_secs(86400);
+        let started = now();
+        let mut backoff = Backoff::new(Duration::from_secs(1), Duration::from_secs(60));
+        async {
+            loop {
+                match self.bootstrap_hostname(addr).await {
+                    Ok(()) => return Ok(()),
+                    Err(error) if started.elapsed() >= GIVE_UP_AFTER => return Err(error),
+                    Err(error) => {
+                        let retry_in = backoff.next_delay();
+                        warn!(?retry_in, ?addr, "error in bootstrap: {error:#}");
+                        tokio::time::sleep(retry_in).await;
+                    }
+                }
+            }
+        }
+        .instrument(debug_span!("bootstrap", hostname = addr))
+        .await
     }
 
     async fn bootstrap(&self, bootstrap_addrs: &[String]) -> crate::Result<()> {

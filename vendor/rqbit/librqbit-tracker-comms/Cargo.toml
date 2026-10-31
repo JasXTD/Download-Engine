@@ -38,9 +38,6 @@ version = "1"
 [dependencies.async-stream]
 version = "0.3"
 
-[dependencies.backon]
-version = "1.5"
-
 [dependencies.bencode]
 version = "9.1.0"
 default-features = false

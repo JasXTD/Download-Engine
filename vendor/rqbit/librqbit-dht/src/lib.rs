@@ -1,8 +1,10 @@
+// Modified by Download Engine: added rate_limit. See ../../patch.md.
 mod bprotocol;
 mod dht;
 mod error;
 mod peer_store;
 mod persistence;
+mod rate_limit;
 mod routing_table;
 mod utils;
 

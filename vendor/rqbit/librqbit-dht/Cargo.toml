@@ -35,10 +35,6 @@ path = "src/lib.rs"
 [dependencies.anyhow]
 version = "1"
 
-[dependencies.backon]
-version = "1.5"
-features = ["tokio-sleep"]
-
 [dependencies.bencode]
 version = "9.1.0"
 default-features = false
@@ -65,9 +61,6 @@ features = ["serde"]
 
 [dependencies.futures]
 version = "0.3"
-
-[dependencies.leaky-bucket]
-version = "1.1"
 
 [dependencies.librqbit-core]
 version = "9.1.0"
@@ -105,4 +98,8 @@ version = "0.7"
 
 [dependencies.tracing]
 version = "0.1"
+
+[dev-dependencies.tokio]
+version = "1"
+features = ["test-util"]
 

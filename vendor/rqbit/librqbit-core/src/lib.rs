@@ -1,4 +1,5 @@
-// Modified by Download Engine: added safe_name and random, removed directories. See ../../patch.md.
+// Modified by Download Engine: added backoff, safe_name and random, removed directories. See ../../patch.md.
+pub mod backoff;
 pub mod compact_ip;
 pub mod constants;
 mod error;

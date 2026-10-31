@@ -24,7 +24,6 @@ pub struct ParsedTorrent<BufType> {
 }
 
 /// Parse torrent metainfo from bytes (includes info_hash).
-#[cfg(feature = "sha1-crypto-hash")]
 pub fn torrent_from_bytes<'de>(
     buf: &'de [u8],
 ) -> Result<TorrentMetaV1<ByteBuf<'de>>, bencode::DeserializeError> {
@@ -546,7 +545,6 @@ mod tests {
     }
 
     #[test]
-    #[cfg(feature = "sha1-crypto-hash")]
     fn test_deserialize_torrent_with_info_hash() {
         let torrent: TorrentMetaV1Borrowed = torrent_from_bytes(TORRENT_BYTES).unwrap();
         assert_eq!(
@@ -597,7 +595,6 @@ mod tests {
     }
 
     #[test]
-    #[cfg(feature = "sha1-crypto-hash")]
     fn test_private_real_torrent() {
         let buf = include_bytes!("resources/test/private.torrent");
         let torrent: TorrentMetaV1Borrowed = from_bytes(buf).unwrap();

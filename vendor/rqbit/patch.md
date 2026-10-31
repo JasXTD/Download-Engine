@@ -68,10 +68,11 @@ application.
 | `serde_with` | Serde's own reading of IP addresses from text |
 | `dashmap` | `HashMap` behind a `parking_lot` lock in `librqbit-dht` |
 | `futures` | `futures-util`, under the name `futures`, without default features |
+| `crypto-hash` | `sha1` and `sha2` in `librqbit-sha1-wrapper` |
 
 `bitvec`, `indexmap` and `tokio-stream` had no callers. `tracing` no longer uses its default
-features, because nothing here uses its `#[instrument]` macro. `librqbit-sha1-wrapper`
-still uses `crypto-hash`, which is due to be replaced with `sha1` and `sha2`.
+features, because nothing here uses its `#[instrument]` macro. The `sha1-crypto-hash` feature
+is gone, because hashing now has one implementation and is always available.
 
 ### Problems fixed
 
@@ -124,10 +125,10 @@ cargo test --workspace --exclude librqbit-dualstack-sockets --no-fail-fast -- --
 ```
 
 The left-out tests open listening sockets, which can bring up Windows Firewall prompts. Run
-them on Linux in a container with no network:
+them on Linux in a container with no network, where the whole workspace can be tested:
 
 ```sh
-cargo test --offline --locked -p librqbit-dualstack-sockets -p librqbit-dht --no-fail-fast
+cargo test --offline --locked --workspace --no-fail-fast
 ```
 
 ## Checking or updating the copy

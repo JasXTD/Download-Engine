@@ -9,7 +9,7 @@
 # will likely look very different (and much more reasonable).
 # See Cargo.toml.orig for the original contents.
 
-# Modified by Download Engine: removed the aws-lc backend. See ../patch.md.
+# Modified by Download Engine: hashes with sha1 and sha2, removed the aws-lc backend. See ../patch.md.
 
 [package]
 edition = "2024"
@@ -28,14 +28,12 @@ license = "Apache-2.0"
 repository = "https://github.com/ikatson/rqbit"
 resolver = "2"
 
-[features]
-default = ["sha1-crypto-hash"]
-sha1-crypto-hash = ["crypto-hash"]
-
 [lib]
 name = "librqbit_sha1_wrapper"
 path = "src/lib.rs"
 
-[dependencies.crypto-hash]
-version = "0.3"
-optional = true
+[dependencies.sha1]
+version = "0.10"
+
+[dependencies.sha2]
+version = "0.10"

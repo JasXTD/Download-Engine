@@ -340,7 +340,21 @@ async fn write_loop(
             }
             continue;
         };
-        live.core.context.up.take(request.length).await;
+        // Waiting for upload allowance can take seconds, and our requests to this same peer
+        // must not wait with it, or a low upload limit would slow the download too.
+        let allowance = live.core.context.up.take(request.length);
+        tokio::pin!(allowance);
+        loop {
+            tokio::select! {
+                _ = &mut allowance => break,
+                _ = link.writer_wake.notified() => {
+                    let used = serialize_control(live, link, &mut control)?;
+                    timeout(WRITE_TIMEOUT, write_half.write_all(&control[..used]))
+                        .await
+                        .context("timed out sending to a peer")??;
+                }
+            }
+        }
         block = read_block(live, request, block).await?;
         timeout(WRITE_TIMEOUT, write_half.write_all(&block))
             .await
@@ -585,6 +599,10 @@ impl Reader {
     fn on_extended(&mut self, message: ExtendedMessage<ByteBuf<'_>>) -> Result<()> {
         match message {
             ExtendedMessage::Handshake(handshake) => {
+                if let Some(client) = &handshake.v {
+                    let client = String::from_utf8_lossy(client.as_ref());
+                    debug_log!("peer {:?} runs {}", self.link.addr, client.escape_debug());
+                }
                 *self.link.extended_ids.lock() = handshake.peer_extended_messages();
                 if let Some(limit) = handshake.reqq {
                     self.peer_queue_limit = (limit as usize).clamp(1, MAX_QUEUE);
@@ -608,7 +626,7 @@ impl Reader {
             return;
         }
         let size = self.live.core.meta.info_bytes.len() as u32;
-        if piece < size.div_ceil(CHUNK_SIZE) {
+        if piece < size.div_ceil(CHUNK_SIZE) && !self.live.core.options.no_upload {
             self.link.queue_metadata(Out::MetadataPiece(piece));
         } else {
             self.link.queue_metadata(Out::MetadataReject(piece));

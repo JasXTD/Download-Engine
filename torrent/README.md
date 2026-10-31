@@ -53,7 +53,7 @@ A torrent's `state` is one of `metadata`, `ready`, `initializing`, `live`, `fini
 `paused` or `error`.
 
 Options: `--port`, `--upload-limit`, `--download-limit`, `--state-dir`, `--no-seed`,
-`--trackers`, `--dht`. Trackers, the DHT and incoming connections are off unless asked for.
+`--no-upload`, `--trackers`, `--dht`. Trackers, the DHT and incoming connections are off unless asked for.
 Set `DE_TORRENT_DEBUG=1` to write diagnostics to stderr.
 
 ## Testing

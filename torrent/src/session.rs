@@ -39,6 +39,8 @@ pub struct SessionOptions {
     pub state_dir: Option<PathBuf>,
     /// Whether peer lists from strangers may name this computer. Only for local testing.
     pub allow_loopback_peers: bool,
+    /// Sends no torrent data to anyone.
+    pub no_upload: bool,
 }
 
 #[derive(Clone, Default)]
@@ -124,6 +126,7 @@ impl Session {
             choose_later: add.choose_later,
             connect_out: true,
             allow_loopback: self.options.allow_loopback_peers,
+            no_upload: self.options.no_upload,
         }
     }
 

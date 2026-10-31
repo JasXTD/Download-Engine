@@ -120,6 +120,8 @@ pub struct TorrentOptions {
     pub connect_out: bool,
     /// Whether peer lists from strangers may name this computer. Only for local testing.
     pub allow_loopback: bool,
+    /// Sends no torrent data to anyone, at the cost of some peers giving us less in return.
+    pub no_upload: bool,
 }
 
 #[derive(Serialize, Debug, Clone)]
@@ -132,6 +134,8 @@ pub struct TorrentStats {
     pub file_progress: Vec<u64>,
     pub downloaded_bytes: u64,
     pub uploaded_bytes: u64,
+    /// Bytes that arrived but weren't needed, because another peer got there first.
+    pub wasted_bytes: u64,
     pub download_bps: u64,
     pub upload_bps: u64,
     pub peers: usize,
@@ -342,6 +346,9 @@ impl Live {
 
     /// Starts uploading to a peer at once when a slot is free. Otherwise it waits its turn.
     pub fn try_unchoke(&self, link: &PeerLink) {
+        if self.core.options.no_upload {
+            return;
+        }
         let open = self
             .links()
             .iter()
@@ -355,6 +362,9 @@ impl Live {
     /// Decides who gets an upload slot. Peers that give us the most keep their slots,
     /// because that rewards sharing. One slot rotates, so that new peers get a chance.
     fn rechoke(&self, seen: &mut HashMap<u64, u64>, seeding: bool, turn: u32) {
+        if self.core.options.no_upload {
+            return;
+        }
         let links = self.links();
         let mut interested: Vec<(u64, Arc<PeerLink>)> = links
             .iter()
@@ -775,6 +785,7 @@ impl Torrent {
                 file_progress: Vec::new(),
                 downloaded_bytes: 0,
                 uploaded_bytes: 0,
+                wasted_bytes: 0,
                 download_bps: 0,
                 upload_bps: 0,
                 peers: 0,
@@ -806,6 +817,7 @@ impl Torrent {
             file_progress,
             downloaded_bytes: core.downloaded.load(Ordering::Relaxed),
             uploaded_bytes: core.uploaded.load(Ordering::Relaxed),
+            wasted_bytes: core.wasted.load(Ordering::Relaxed),
             download_bps: rates.down as u64,
             upload_bps: rates.up as u64,
             peers: core.live().map_or(0, |live| live.links.lock().len()),

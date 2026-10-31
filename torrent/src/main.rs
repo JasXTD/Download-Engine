@@ -183,6 +183,7 @@ fn options_from(arguments: &[String]) -> Result<SessionOptions> {
             }
             "--state-dir" => options.state_dir = Some(Path::new(value()?).to_path_buf()),
             "--no-seed" => options.seed = false,
+            "--no-upload" => options.no_upload = true,
             "--trackers" => options.use_trackers = true,
             "--dht" => options.use_dht = true,
             other => bail!("unknown option {other}"),

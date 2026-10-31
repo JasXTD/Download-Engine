@@ -6,6 +6,8 @@ use std::time::{Duration, SystemTime};
 
 use buffers::ByteBuf;
 use librqbit_core::hash_id::Id20;
+use librqbit_peer_protocol::extended::ExtendedMessage;
+use librqbit_peer_protocol::extended::ut_metadata::UtMetadata;
 use librqbit_peer_protocol::{Message, Piece, Request};
 
 use crate::meta::TorrentMeta;
@@ -745,4 +747,80 @@ async fn test_random_messages_cannot_crash_a_connection_or_spoil_a_download() {
     leech.pause().await;
     assert_eq!(leech.crashed_connections(), 0);
     assert!(std::fs::read(two.path().join("a.bin")).unwrap() == data);
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn test_uploading_under_a_limit_does_not_hold_up_requests() {
+    let half = 10 * PIECE as usize;
+    let data = sample_bytes(2 * half, 34);
+    let meta = meta_of(&single_file_torrent("a.bin", &data, PIECE));
+    let folder = TempFolder::new();
+    write_files(&folder, &[("a.bin", &only_this_part(&data, 0..half))]);
+    let relay = Torrent::from_meta(
+        meta.clone(),
+        options_for(folder.path()),
+        limited_context(2, Some(1024)),
+    )
+    .unwrap();
+    relay.start().await;
+    wait_until(&relay, "the torrent to go live", is_live).await;
+
+    let mut peer = FakePeer::join(&relay, 9).await;
+    peer.send(Message::Interested).await;
+    assert!(
+        peer.wait_for(|message| matches!(message, Message::Unchoke))
+            .await
+    );
+    // At this limit, these blocks use up the allowance for many seconds.
+    for begin in [0, CHUNK as u32] {
+        peer.send(Message::Request(Request::new(0, begin, CHUNK as u32)))
+            .await;
+    }
+    tokio::time::sleep(Duration::from_millis(200)).await;
+
+    // The same peer now offers what we need, and asking for it must not wait for that.
+    peer.send(Message::Bitfield(ByteBuf(&[0xff, 0xff, 0xf0])))
+        .await;
+    peer.send(Message::Unchoke).await;
+    let asked = tokio::time::timeout(Duration::from_secs(2), peer.next_request()).await;
+    assert!(matches!(asked, Ok(Some(_))), "the request was held up");
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn test_with_uploads_off_a_peer_gets_nothing() {
+    let data = sample_bytes(100_000, 35);
+    let meta = meta_of(&single_file_torrent("a.bin", &data, PIECE));
+    let folder = TempFolder::new();
+    write_files(&folder, &[("a.bin", &data)]);
+    let options = TorrentOptions {
+        no_upload: true,
+        ..options_for(folder.path())
+    };
+    let seed = Torrent::from_meta(meta.clone(), options, context(1)).unwrap();
+    seed.start().await;
+    wait_until(&seed, "the seed to check", is_done).await;
+
+    let mut peer = FakePeer::join(&seed, 9).await;
+    peer.send(Message::Interested).await;
+    peer.send(Message::Request(Request::new(0, 0, CHUNK as u32)))
+        .await;
+    let body = b"d1:md6:ut_pexi1e11:ut_metadatai3eee";
+    peer.send_raw(&frame(20, &[&[0], &body[..]].concat())).await;
+    peer.send_raw(&frame(20, b"\x03d8:msg_typei0e5:piecei0ee"))
+        .await;
+    assert!(
+        peer.wait_for(|message| matches!(
+            message,
+            Message::Extended(ExtendedMessage::UtMetadata(UtMetadata::Reject(0)))
+        ))
+        .await,
+        "the torrent's details count as uploading too"
+    );
+    let unchoked = tokio::time::timeout(
+        Duration::from_secs(1),
+        peer.wait_for(|message| matches!(message, Message::Unchoke | Message::Piece(_))),
+    )
+    .await;
+    assert!(unchoked.is_err(), "a peer was offered data");
+    assert_eq!(seed.stats().uploaded_bytes, 0);
 }

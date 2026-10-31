@@ -1,3 +1,4 @@
+// Modified by Download Engine: added errors for invalid torrent lengths. See ../../patch.md.
 #[derive(thiserror::Error, Debug)]
 pub enum Error {
     #[error("expected multi-file torrent to have at least one file")]
@@ -12,6 +13,10 @@ pub enum Error {
     BadTorrentSeparatorInName,
     #[error("torrent with 0 length is useless")]
     BadTorrentZeroLength,
+    #[error("torrent has a piece length of 0")]
+    BadTorrentZeroPieceLength,
+    #[error("torrent is too large")]
+    BadTorrentTooLarge,
     #[error("invalid piece index {0}")]
     InvalidPieceIndex(u32),
     #[error("no files in torrent")]

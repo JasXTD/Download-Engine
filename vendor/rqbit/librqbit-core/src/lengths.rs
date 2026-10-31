@@ -1,3 +1,4 @@
+// Modified by Download Engine: rejected lengths that crashed or wrapped. See ../../patch.md.
 use crate::{Error, constants::CHUNK_SIZE};
 
 pub fn last_element_size<T>(total_length: T, piece_length: T) -> T
@@ -76,8 +77,8 @@ impl Lengths {
     ) -> crate::Result<Lengths> {
         let total_length = torrent
             .iter_file_details_raw(encoding_rs::UTF_8)?
-            .map(|d| d.len)
-            .sum();
+            .try_fold(0u64, |total, file| total.checked_add(file.len))
+            .ok_or(Error::BadTorrentTooLarge)?;
         Lengths::new(total_length, torrent.piece_length)
     }
 
@@ -85,12 +86,20 @@ impl Lengths {
         if total_length == 0 {
             return Err(Error::BadTorrentZeroLength);
         }
-        let total_pieces = total_length.div_ceil(piece_length as u64) as u32;
+        if piece_length == 0 {
+            return Err(Error::BadTorrentZeroPieceLength);
+        }
+        let total_pieces = total_length.div_ceil(piece_length as u64);
+        let chunks_per_piece = (piece_length as u64).div_ceil(CHUNK_SIZE as u64);
+        // Piece and chunk numbers are kept in 32 bits, which allows about 70 TiB.
+        if total_pieces.saturating_mul(chunks_per_piece) > u32::MAX as u64 {
+            return Err(Error::BadTorrentTooLarge);
+        }
         Ok(Self {
             piece_length,
             total_length,
-            chunks_per_piece: (piece_length as u64).div_ceil(CHUNK_SIZE as u64) as u32,
-            last_piece_id: total_pieces - 1,
+            chunks_per_piece: chunks_per_piece as u32,
+            last_piece_id: total_pieces as u32 - 1,
             last_piece_length: last_element_size(total_length, piece_length as u64) as u32,
         })
     }
@@ -303,6 +312,29 @@ mod tests {
 
     fn make_lengths() -> Lengths {
         Lengths::new(1174243328, 262144).unwrap()
+    }
+
+    #[test]
+    fn test_zero_piece_length_is_an_error() {
+        assert!(Lengths::new(100, 0).is_err());
+    }
+
+    #[test]
+    fn test_more_pieces_or_chunks_than_32_bits_is_an_error() {
+        assert!(Lengths::new(u64::MAX, 16384).is_err());
+        assert!(Lengths::new(1 << 32, 1).is_err());
+        // 2^23 pieces of 2^10 chunks each is 2^33 chunks.
+        assert!(Lengths::new(1 << 47, 1 << 24).is_err());
+    }
+
+    #[test]
+    fn test_largest_torrent_keeps_its_numbers() {
+        let piece_length = 1u32 << 24;
+        let chunks_per_piece = u64::from(piece_length).div_ceil(CHUNK_SIZE as u64);
+        let pieces = u64::from(u32::MAX) / chunks_per_piece;
+        let lengths = Lengths::new(pieces * u64::from(piece_length), piece_length).unwrap();
+        assert_eq!(u64::from(lengths.total_pieces()), pieces);
+        assert_eq!(u64::from(lengths.total_chunks()), pieces * chunks_per_piece);
     }
 
     #[test]

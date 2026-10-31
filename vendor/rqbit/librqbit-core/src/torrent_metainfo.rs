@@ -731,6 +731,25 @@ mod tests {
     }
 
     #[test]
+    fn test_file_lengths_too_large_to_add_up_are_an_error() {
+        let buf = concat!(
+            "d4:infod5:filesl",
+            "d6:lengthi9223372036854775808e4:pathl1:aee",
+            "d6:lengthi9223372036854775808e4:pathl1:bee",
+            "e4:name3:dir12:piece lengthi16384e6:pieces20:xxxxxxxxxxxxxxxxxxxxee"
+        );
+        let torrent = torrent_from_bytes(buf.as_bytes()).unwrap();
+        assert!(torrent.info.data.validate().is_err());
+    }
+
+    #[test]
+    fn test_zero_piece_length_is_an_error() {
+        let buf = "d4:infod6:lengthi100e4:name1:a12:piece lengthi0e6:pieces20:xxxxxxxxxxxxxxxxxxxxee";
+        let torrent = torrent_from_bytes(buf.as_bytes()).unwrap();
+        assert!(torrent.info.data.validate().is_err());
+    }
+
+    #[test]
     fn test_ordinary_names_are_not_changed() {
         for name in [
             "Big Buck Bunny.mkv",

@@ -1,4 +1,4 @@
-// Modified by Download Engine: removed a test that contacts a public tracker. See ../../patch.md.
+// Modified by Download Engine: removed a test that contacts a public tracker, replaced rand. See ../../patch.md.
 use std::{
     collections::{HashMap, hash_map::Entry},
     ffi::CStr,
@@ -11,7 +11,6 @@ use anyhow::{Context, bail};
 use librqbit_core::{hash_id::Id20, spawn_utils::spawn_with_cancel};
 use librqbit_dualstack_sockets::{BindDevice, UdpSocket};
 use parking_lot::RwLock;
-use rand::RngExt;
 use tokio_util::sync::CancellationToken;
 use tracing::{debug, debug_span, trace, warn};
 
@@ -31,7 +30,7 @@ const CONNECTION_ID_MAGIC: ConnectionId = 0x41727101980;
 pub type TransactionId = u32;
 
 pub fn new_transaction_id() -> TransactionId {
-    rand::rng().random()
+    librqbit_core::random::random_u32()
 }
 
 #[derive(Debug)]

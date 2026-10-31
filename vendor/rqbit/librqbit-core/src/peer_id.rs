@@ -1,5 +1,6 @@
+// Modified by Download Engine: replaced rand. See ../../patch.md.
 use crate::hash_id::Id20;
-use rand::{self, Rng};
+use crate::random;
 
 /// Return the version of the invoking crate as a tuple
 #[macro_export]
@@ -102,7 +103,7 @@ pub fn generate_peer_id(fingerprint: &[u8]) -> Id20 {
     let mut peer_id = [0u8; 20];
 
     peer_id[..8].copy_from_slice(fingerprint);
-    rand::rng().fill_bytes(&mut peer_id[8..]);
+    random::fill(&mut peer_id[8..]);
 
     Id20::new(peer_id)
 }

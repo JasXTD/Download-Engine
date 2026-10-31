@@ -1,3 +1,4 @@
+// Modified by Download Engine: replaced rand. See ../../patch.md.
 use std::collections::HashSet;
 use std::net::SocketAddr;
 use std::net::SocketAddrV4;
@@ -180,7 +181,7 @@ impl TrackerComms {
                 tx,
                 announce_port,
                 reqwest_client,
-                key: rand::random(),
+                key: librqbit_core::random::random_u32(),
             });
             let mut futures = FuturesUnordered::new();
             for tracker in trackers {

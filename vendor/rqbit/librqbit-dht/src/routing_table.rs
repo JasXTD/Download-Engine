@@ -1,7 +1,7 @@
+// Modified by Download Engine: replaced rand. See ../../patch.md.
 use std::{net::SocketAddr, time::Instant};
 
-use librqbit_core::hash_id::Id20;
-use rand::Rng;
+use librqbit_core::{hash_id::Id20, random};
 use serde::{Deserialize, Serialize, Serializer, ser::SerializeStruct};
 use tracing::{debug, trace};
 
@@ -131,7 +131,7 @@ impl<'a> Iterator for BucketTreeIterator<'a> {
 
 pub fn generate_random_id(start: &Id20, bits: u8) -> Id20 {
     let mut data = [0u8; 20];
-    rand::rng().fill_bytes(&mut data);
+    random::fill(&mut data);
     let mut data = Id20::new(data);
     let remaining_bits = 160 - bits;
     for bit in 0..remaining_bits {
@@ -577,8 +577,7 @@ mod tests {
         time::Instant,
     };
 
-    use librqbit_core::hash_id::Id20;
-    use rand::RngExt;
+    use librqbit_core::{hash_id::Id20, random};
 
     use crate::routing_table::compute_split_start_end;
 
@@ -643,13 +642,13 @@ mod tests {
 
     fn random_id_20() -> Id20 {
         let mut id20 = [0u8; 20];
-        rand::rng().fill(&mut id20);
+        random::fill(&mut id20);
         Id20::new(id20)
     }
 
     fn generate_socket_addr() -> SocketAddr {
         let mut ipv4_addr = [0u8; 6];
-        rand::rng().fill(&mut ipv4_addr);
+        random::fill(&mut ipv4_addr);
         let ip = Ipv4Addr::new(ipv4_addr[0], ipv4_addr[1], ipv4_addr[2], ipv4_addr[3]);
         let port = ((ipv4_addr[4] as u16) << 8) + (ipv4_addr[5] as u16);
         SocketAddrV4::new(ip, port).into()

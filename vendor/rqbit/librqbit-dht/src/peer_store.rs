@@ -1,10 +1,10 @@
+// Modified by Download Engine: replaced rand. See ../../patch.md.
 use std::{collections::VecDeque, net::SocketAddr, str::FromStr, sync::atomic::AtomicU32};
 
 use bencode::ByteBufOwned;
 use chrono::{DateTime, Utc};
-use librqbit_core::{compact_ip::CompactSocketAddr, hash_id::Id20};
+use librqbit_core::{compact_ip::CompactSocketAddr, hash_id::Id20, random};
 use parking_lot::RwLock;
-use rand::Rng;
 use serde::{
     Deserialize, Serialize,
     ser::{SerializeMap, SerializeStruct},
@@ -116,7 +116,7 @@ impl PeerStore {
 
     pub fn gen_token_for(&self, node_id: Id20, addr: SocketAddr) -> [u8; 4] {
         let mut token = [0u8; 4];
-        rand::rng().fill_bytes(&mut token);
+        random::fill(&mut token);
         let mut tokens = self.tokens.write();
         tokens.push_back(StoredToken {
             token,

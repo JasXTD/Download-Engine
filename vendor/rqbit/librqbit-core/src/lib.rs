@@ -1,3 +1,4 @@
+// Modified by Download Engine: added safe_name. See ../../patch.md.
 pub mod compact_ip;
 pub mod constants;
 pub mod directories;
@@ -6,6 +7,7 @@ pub mod hash_id;
 pub mod lengths;
 pub mod magnet;
 pub mod peer_id;
+pub mod safe_name;
 pub mod spawn_utils;
 pub mod speed_estimator;
 pub mod torrent_metainfo;

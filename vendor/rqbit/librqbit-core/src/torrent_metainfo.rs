@@ -1,4 +1,5 @@
-// Modified by Download Engine: removed the aws-lc backend and moved a test file. See ../../patch.md.
+// Modified by Download Engine: makes file names safe on Windows, removed the aws-lc
+// backend and moved a test file. See ../../patch.md.
 use bencode::WithRawBytes;
 use buffers::{ByteBuf, ByteBufOwned};
 use bytes::Bytes;
@@ -9,7 +10,7 @@ use serde_derive::{Deserialize, Serialize};
 use std::{borrow::Cow, collections::HashSet, iter::once, path::PathBuf};
 use tracing::debug;
 
-use crate::{Error, hash_id::Id20, lengths::Lengths};
+use crate::{Error, hash_id::Id20, lengths::Lengths, safe_name::safe_path_component};
 
 pub type TorrentMetaV1Borrowed<'a> = TorrentMetaV1<ByteBuf<'a>>;
 pub type TorrentMetaV1Owned = TorrentMetaV1<ByteBufOwned>;
@@ -160,17 +161,20 @@ where
         self.iter_components().map(|c| c.into_owned()).collect()
     }
 
-    /// Convert path components into a PathBuf, for use with local FS.
+    /// Convert path components into a relative PathBuf, for use with local FS. Every
+    /// part goes through `safe_path_component`, so the result stays inside any folder
+    /// it is joined to.
     pub fn to_pathbuf(&self) -> PathBuf {
         let mut buf = PathBuf::new();
         for bit in self.iter_components() {
-            buf.push(&*bit)
+            buf.push(safe_path_component(&bit))
         }
         buf
     }
 
     /// Iterate path components as strings. Will decode using the detected encoding, replacing
-    /// unknown characters with a placeholder.
+    /// unknown characters with a placeholder. These are the torrent's own names, for display
+    /// only: use `to_pathbuf` to build a path.
     pub fn iter_components(&self) -> impl Iterator<Item = Cow<'a, str>> + use<'a, BufType> {
         let encoding = self.encoding;
         self.iter_components_bytes()
@@ -262,6 +266,11 @@ impl<BufType: AsRef<[u8]>> ValidatedTorrentMetaV1Info<BufType> {
             .filter(|n| !n.is_empty())
     }
 
+    /// The torrent's name as a safe folder name. `name` is for display only.
+    pub fn safe_name(&self) -> Option<String> {
+        self.name().map(|name| safe_path_component(&name))
+    }
+
     pub fn info(&self) -> &TorrentMetaV1Info<BufType> {
         &self.info
     }
@@ -350,7 +359,7 @@ impl<BufType: AsRef<[u8]>> TorrentMetaV1Info<BufType> {
         // v1+v2 torrents with repeated pad lengths validate; duplicate
         // non-padding filenames still error (they would genuinely share one
         // on-disk file).
-        let mut unique_filenames = HashSet::<PathBuf>::new();
+        let mut unique_filenames = HashSet::<String>::new();
         let mut unique_checkable = 0usize;
         for fd in validated.iter_file_details() {
             if fd.attrs().padding {
@@ -361,7 +370,8 @@ impl<BufType: AsRef<[u8]>> TorrentMetaV1Info<BufType> {
             if pb.as_os_str().is_empty() {
                 return Err(Error::BadTorrentFileNoName);
             }
-            unique_filenames.insert(pb);
+            // Compare the names as saved, ignoring case as Windows does.
+            unique_filenames.insert(pb.to_string_lossy().to_lowercase());
         }
         if unique_filenames.len() != unique_checkable {
             return Err(Error::BadTorrentDuplicateFilenames);
@@ -522,6 +532,7 @@ where
 #[cfg(test)]
 mod tests {
     use bencode::{BencodeValue, from_bytes};
+    use std::path::{Component, Path};
 
     use super::*;
 
@@ -625,6 +636,182 @@ mod tests {
             matches!(err, Error::BadTorrentDuplicateFilenames),
             "duplicate real filenames must still be rejected, got {err:?}"
         );
+    }
+
+    // Each of these passed the checks in `validate` and left the download folder
+    // on Windows, because joining a path that starts with a drive replaces the folder.
+    const ESCAPING_NAMES: &[&[&str]] = &[
+        &["C:evil.dll"],
+        &["D:evil.exe"],
+        &["movie", "C:evil.dll"],
+        &["C:", "evil.dll"],
+        &["C:..", "evil.dll"],
+        &["c:", "windows", "evil.dll"],
+    ];
+
+    fn saved_paths(bytes: &[u8]) -> Vec<PathBuf> {
+        let torrent = from_bytes::<TorrentMetaV1Borrowed>(bytes).unwrap();
+        let validated = torrent.info.data.validate().unwrap();
+        validated
+            .iter_file_details()
+            .map(|file| file.filename.to_pathbuf())
+            .collect()
+    }
+
+    fn saved_path(parts: &[&str]) -> PathBuf {
+        saved_paths(&harness_paths("torrent", &[parts])).remove(0)
+    }
+
+    fn assert_stays_inside_folder(path: &Path) {
+        let folder = Path::new(if cfg!(windows) {
+            r"D:\Downloads\Movie"
+        } else {
+            "/downloads/movie"
+        });
+        assert!(
+            path.components().all(|c| matches!(c, Component::Normal(_))),
+            "{path:?} is not a plain relative path"
+        );
+        assert!(
+            folder.join(path).starts_with(folder),
+            "{path:?} leaves the download folder"
+        );
+    }
+
+    #[test]
+    fn test_names_cannot_leave_the_download_folder() {
+        for parts in ESCAPING_NAMES {
+            assert_stays_inside_folder(&saved_path(parts));
+        }
+    }
+
+    #[test]
+    fn test_single_file_name_cannot_leave_the_download_folder() {
+        for name in ["C:evil.dll", "D:evil.exe", "C:.."] {
+            assert_stays_inside_folder(&saved_paths(&harness_single(name)).remove(0));
+        }
+    }
+
+    #[test]
+    fn test_changed_names_save_inside_the_folder_on_disk() {
+        let folder = std::env::temp_dir().join(format!("de-names-{}", std::process::id()));
+        std::fs::create_dir_all(&folder).unwrap();
+        let folder = folder.canonicalize().unwrap();
+        for parts in ESCAPING_NAMES {
+            let path = folder.join(saved_path(parts));
+            std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+            std::fs::write(&path, b"lab").unwrap();
+            let real = path.canonicalize().unwrap();
+            assert!(real.starts_with(&folder), "{parts:?} landed at {real:?}");
+        }
+        std::fs::remove_dir_all(&folder).unwrap();
+    }
+
+    #[test]
+    fn test_names_windows_cannot_save_are_changed() {
+        for (name, expected) in [
+            ("file.txt:hidden", "file.txt_hidden"),
+            ("name::$DATA", "name__$DATA"),
+            ("trailing.", "trailing"),
+            ("trailing ", "trailing"),
+            ("dots...", "dots"),
+            ("...", "_"),
+            ("CON", "_CON"),
+            ("con.txt", "_con.txt"),
+            ("NUL.tar.gz", "_NUL.tar.gz"),
+            ("COM1", "_COM1"),
+            ("lpt9.log", "_lpt9.log"),
+            ("CONIN$", "_CONIN$"),
+            ("a<b>c|d?e*f\"g", "a_b_c_d_e_f_g"),
+            ("tab\there", "tab_here"),
+            ("rtl\u{202e}gpj.exe", "rtl_gpj.exe"),
+        ] {
+            assert_eq!(saved_path(&[name]), PathBuf::from(expected), "{name:?}");
+        }
+    }
+
+    #[test]
+    fn test_ordinary_names_are_not_changed() {
+        for name in [
+            "Big Buck Bunny.mkv",
+            "日本語のファイル.txt",
+            "ملف عربي.mp4",
+            "archive.tar.gz",
+            ".hidden",
+            "COM10",
+            "console.log",
+            "auxiliary.txt",
+            "nullable.rs",
+        ] {
+            assert_eq!(saved_path(&[name]), PathBuf::from(name), "{name:?}");
+        }
+    }
+
+    #[test]
+    fn test_torrent_name_is_a_safe_folder_name() {
+        let bytes = harness_paths("C:evil", &[&["a.bin"]]);
+        let torrent = from_bytes::<TorrentMetaV1Borrowed>(&bytes).unwrap();
+        let validated = torrent.info.data.validate().unwrap();
+        assert_eq!(validated.name().as_deref(), Some("C:evil"));
+        assert_eq!(validated.safe_name().as_deref(), Some("C_evil"));
+    }
+
+    #[test]
+    fn test_long_names_are_shortened() {
+        let path = saved_path(&["x".repeat(500).as_str()]);
+        assert_eq!(path.as_os_str().len(), 160);
+    }
+
+    #[test]
+    fn test_names_that_are_the_same_file_on_windows_are_rejected() {
+        for (first, second) in [
+            ("Read Me.txt", "READ ME.TXT"),
+            ("same.txt", "same.txt."),
+            ("same.txt", "same.txt "),
+            ("a:b", "a_b"),
+            ("CON", "_con"),
+        ] {
+            let bytes = harness_multi_named("dup", &[(first, 10), (second, 10)]);
+            let torrent = from_bytes::<TorrentMetaV1Borrowed>(&bytes).unwrap();
+            let err = torrent.info.data.validate().unwrap_err();
+            assert!(
+                matches!(err, Error::BadTorrentDuplicateFilenames),
+                "{first:?} and {second:?} must be rejected, got {err:?}"
+            );
+        }
+    }
+
+    fn harness_paths(name: &str, files: &[&[&str]]) -> Vec<u8> {
+        let mut flist = vec![b'l'];
+        for parts in files {
+            let mut path = vec![b'l'];
+            for bit in *parts {
+                path.extend_from_slice(&bstr(bit.as_bytes()));
+            }
+            path.push(b'e');
+            flist.extend_from_slice(&bdict(&[
+                (b"length".as_slice(), bint(10)),
+                (b"path".as_slice(), path),
+            ]));
+        }
+        flist.push(b'e');
+        harness_multi_with_files(name, flist)
+    }
+
+    fn harness_single(name: &str) -> Vec<u8> {
+        let info = bdict(&[
+            (b"length".as_slice(), bint(10)),
+            (b"name".as_slice(), bstr(name.as_bytes())),
+            (b"piece length".as_slice(), bint(16384)),
+            (b"pieces".as_slice(), bstr(&[0u8; 20])),
+        ]);
+        let mut top = vec![b'd'];
+        top.extend_from_slice(&bstr(b"announce"));
+        top.extend_from_slice(&bstr(b"http"));
+        top.extend_from_slice(&bstr(b"info"));
+        top.extend_from_slice(&info);
+        top.push(b'e');
+        top
     }
 
     fn bstr(b: &[u8]) -> Vec<u8> {

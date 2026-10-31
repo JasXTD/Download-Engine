@@ -110,20 +110,6 @@ pub fn load_info(state_dir: &Path, info_hash: Id20, trackers: Vec<Url>) -> Optio
     TorrentMeta::from_info_bytes(info_hash, bytes.into(), trackers).ok()
 }
 
-/// Removes everything remembered about a torrent. Its downloaded files stay where they are.
-pub fn forget(state_dir: &Path, info_hash: Id20) -> io::Result<()> {
-    for path in [
-        path_for(state_dir, info_hash),
-        info_path_for(state_dir, info_hash),
-    ] {
-        match fs::remove_file(path) {
-            Err(error) if error.kind() != io::ErrorKind::NotFound => return Err(error),
-            _ => {}
-        }
-    }
-    Ok(())
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -31,6 +31,7 @@ pub mod script_automation;
 pub mod store;
 pub mod synchronization;
 pub mod tiktok;
+pub mod torrent;
 pub mod twitch;
 pub mod updates;
 pub mod website_grabber;

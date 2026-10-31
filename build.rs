@@ -58,7 +58,7 @@ fn main() {
         status.success(),
         "Compiling the Download Engine icon and version resource failed"
     );
-    for binary in ["de", "de-cli", "de-host"] {
+    for binary in ["de", "de-cli", "de-host", "de-torrent"] {
         println!("cargo:rustc-link-arg-bin={binary}={}", resource.display());
     }
 }

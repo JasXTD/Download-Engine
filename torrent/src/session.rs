@@ -220,16 +220,10 @@ impl Session {
             .collect()
     }
 
-    /// Stops a torrent and lets go of its files, which stay on disk. With `forget`, what
-    /// this session remembers about it goes too.
-    pub async fn remove(&self, name: &str, forget: bool) -> Result<()> {
-        let torrent = self.torrent(name)?;
-        torrent.pause().await;
+    /// Stops a torrent and lets go of its files, which stay on disk.
+    pub async fn remove(&self, name: &str) -> Result<()> {
+        self.torrent(name)?.pause().await;
         self.torrents.lock().remove(name);
-        if forget && let Some(state_dir) = &self.options.state_dir {
-            resume::forget(state_dir, torrent.info_hash())
-                .context("Could not remove the torrent's saved details")?;
-        }
         Ok(())
     }
 
@@ -387,15 +381,6 @@ mod tests {
         }
     }
 
-    fn state_files(folder: &TempFolder) -> Vec<String> {
-        let mut names: Vec<String> = std::fs::read_dir(folder.path())
-            .unwrap()
-            .map(|entry| entry.unwrap().file_name().to_string_lossy().into_owned())
-            .collect();
-        names.sort();
-        names
-    }
-
     fn magnet_for(meta: &TorrentMeta) -> String {
         format!("magnet:?xt=urn:btih:{}", meta.info_hash.as_string())
     }
@@ -417,7 +402,7 @@ mod tests {
                 .is_err(),
             "it is already here"
         );
-        session.remove("one", false).await.unwrap();
+        session.remove("one").await.unwrap();
         assert!(session.torrent("one").is_err());
         session
             .add_torrent_file("two".into(), &file, add_options(output.path()))
@@ -430,7 +415,7 @@ mod tests {
     async fn test_removing_an_unknown_torrent_is_an_error() {
         let state = TempFolder::new();
         let session = Session::new(session_options(state.path())).await.unwrap();
-        assert!(session.remove("nothing", true).await.is_err());
+        assert!(session.remove("nothing").await.is_err());
     }
 
     #[tokio::test]
@@ -486,29 +471,20 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_forgetting_a_torrent_leaves_nothing_of_it_here() {
+    async fn test_a_removed_torrent_has_let_go_of_its_files() {
         let (state, output) = (TempFolder::new(), TempFolder::new());
         let data = sample_bytes(40_000, 43);
         let file = single_file_torrent("a.bin", &data, PIECE);
         std::fs::write(output.path().join("a.bin"), &data).unwrap();
         let session = Session::new(session_options(state.path())).await.unwrap();
-        session.import(&file).unwrap();
         session
             .add_torrent_file("one".into(), &file, add_options(output.path()))
             .await
             .unwrap();
         let torrent = session.torrent("one").unwrap();
         wait_until(&torrent, "the check", |stats| stats.finished).await;
-        session.remove("one", false).await.unwrap();
-        assert_eq!(state_files(&state).len(), 2, "{:?}", state_files(&state));
-
-        session
-            .add_torrent_file("two".into(), &file, add_options(output.path()))
-            .await
-            .unwrap();
-        session.remove("two", true).await.unwrap();
-        assert!(state_files(&state).is_empty(), "{:?}", state_files(&state));
-        assert_eq!(std::fs::read(output.path().join("a.bin")).unwrap(), data);
+        session.remove("one").await.unwrap();
+        std::fs::rename(output.path().join("a.bin"), output.path().join("b.bin")).unwrap();
     }
 
     #[tokio::test]

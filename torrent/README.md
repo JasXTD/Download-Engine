@@ -1,8 +1,10 @@
 # Torrent engine
 
 Download Engine's own BitTorrent engine. It builds `de-torrent`, a separate program that the
-app will start and drive with JSON lines on stdin and stdout. It isn't connected to the app
-yet, and it has its own `Cargo.toml` and `Cargo.lock` until it is.
+app starts only while a torrent is active, and drives with JSON lines on stdin and stdout.
+
+This folder also works alone, with its own `Cargo.lock`, which is how the tests below and the
+lab build it. `src/torrent` in the app is the other end of the pipe.
 
 The formats and network protocols come from the crates copied into `../vendor/rqbit`. See
 `../vendor/rqbit/patch.md` for what was changed in them. The engine itself is ours.
@@ -20,7 +22,7 @@ The formats and network protocols come from the crates copied into `../vendor/rq
 | `src/discovery.rs` | Finds peers through trackers and the DHT. |
 | `src/resume.rs` | Remembers finished pieces between runs. |
 | `src/session.rs` | All torrents, the listener, and what they share. |
-| `src/main.rs` | The `de-torrent` program. |
+| `src/cli.rs` | The `de-torrent` program. The app builds it as `src/bin/de-torrent.rs`. |
 
 ## Rules to keep
 
@@ -47,7 +49,7 @@ Each line on stdin is a JSON object with a `cmd`, and gets one reply line: `{"ok
 | `add` | `name`, `output`, then `torrent` (path) or `magnet`, and optional `only`, `peers`, `choose_later` | The info hash. |
 | `select` | `name`, `only` | Changes the chosen files at any time. |
 | `import` | `torrent` (path) | Saves the torrent's details, so its magnet link needs nothing else. Returns the same as `files`, with a `magnet`. |
-| `remove` | `name`, optional `forget` | Stops a torrent and lets go of its files. `forget` also deletes what was saved about it. |
+| `remove` | `name` | Stops a torrent and lets go of its files, which stay on disk. |
 | `configure` | `upload_limit`, `no_upload` | Changes uploading for every torrent at once. |
 | `allow` | `name`, `until` | Lets a torrent receive `until` bytes in all, or any amount with null. Returns `received`. |
 | `stats` | | Every torrent's state and progress, and session totals. |

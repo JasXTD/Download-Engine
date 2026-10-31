@@ -9,6 +9,8 @@ use std::{
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Phase {
     Connecting,
+    TorrentDetails,
+    LookingForPeers,
     CheckingSaved,
     Downloading,
     Assembling,
@@ -21,6 +23,8 @@ impl Phase {
     pub fn label(self) -> &'static str {
         match self {
             Self::Connecting => "Connecting",
+            Self::TorrentDetails => "Getting file list",
+            Self::LookingForPeers => "Looking for peers",
             Self::CheckingSaved => "Checking saved progress",
             Self::Downloading => "Downloading",
             Self::Assembling => "Assembling and verifying file",
@@ -71,11 +75,22 @@ pub struct MediaSnapshot {
     pub state: SegmentState,
 }
 
+/// A running torrent as its worker last saw it.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct TorrentSnapshot {
+    pub peers: usize,
+    pub download_speed: u64,
+    pub upload_speed: u64,
+    pub uploaded: u64,
+    pub file_progress: Arc<[u64]>,
+}
+
 #[derive(Clone)]
 struct Entry {
     phase: Phase,
     segments: Vec<SegmentSnapshot>,
     media: Vec<MediaSnapshot>,
+    torrent: Option<TorrentSnapshot>,
 }
 
 #[derive(Clone, Default)]
@@ -107,6 +122,7 @@ impl Activity {
                 phase: Phase::Connecting,
                 segments: Vec::new(),
                 media: Vec::new(),
+                torrent: None,
             },
         );
         Guard {
@@ -121,6 +137,7 @@ impl Activity {
                 phase,
                 segments,
                 media: Vec::new(),
+                torrent: None,
             },
         );
     }
@@ -159,6 +176,14 @@ impl Activity {
     pub(crate) fn remove_media(&self, id: &str, index: usize) {
         if let Some(entry) = self.entries().get_mut(id) {
             entry.media.retain(|part| part.index != index);
+        }
+    }
+    pub fn torrent(&self, id: &str) -> Option<TorrentSnapshot> {
+        self.entries().get(id)?.torrent.clone()
+    }
+    pub(crate) fn set_torrent(&self, id: &str, torrent: TorrentSnapshot) {
+        if let Some(entry) = self.entries().get_mut(id) {
+            entry.torrent = Some(torrent);
         }
     }
     pub(crate) fn set(&self, id: &str, phase: Phase) {

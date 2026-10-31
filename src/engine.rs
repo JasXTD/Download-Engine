@@ -207,6 +207,7 @@ pub async fn run(
                 if job.plan.is_some()
                     || job.hls.is_some()
                     || job.ftp.is_some()
+                    || job.torrent.is_some()
                     || job.downloaded == 0
                 {
                     job.status = Status::Queued;
@@ -279,6 +280,9 @@ async fn transfer(
     limiter: &Limiter,
 ) -> Result<Option<FinishedFile>> {
     limiter.check_quota().await?;
+    if job.torrent.is_some() {
+        return crate::torrent::transfer(store, job, cancel, limiter).await;
+    }
     if let Some(file) = synchronization::check(store, job, cancel).await? {
         return Ok(Some(file));
     }

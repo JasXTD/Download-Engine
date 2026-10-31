@@ -154,6 +154,8 @@ pub struct Job {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub ftp: Option<crate::ftp::State>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub torrent: Option<crate::torrent::State>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub remote: Option<crate::synchronization::RemoteFile>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub synchronization: Option<crate::synchronization::State>,
@@ -172,6 +174,26 @@ pub struct Job {
 impl Job {
     pub fn validate_persisted(&self) -> Result<()> {
         validate_job_id(&self.id)?;
+        if let Some(torrent) = &self.torrent {
+            torrent.validate(&self.url)?;
+            ensure!(
+                self.provider.is_none()
+                    && self.hls.is_none()
+                    && self.ftp.is_none()
+                    && self.plan.is_none()
+                    && self.remote.is_none()
+                    && self.synchronization.is_none()
+                    && self.expected_file.is_none()
+                    && self.authentication.is_none()
+                    && self.link_fallback.is_none(),
+                "Invalid saved torrent download state"
+            );
+        } else {
+            ensure!(
+                !crate::torrent::is_magnet(&self.url),
+                "Missing saved torrent download state"
+            );
+        }
         if let Some(provider) = &self.provider {
             provider.validate()?;
             ensure!(
@@ -241,6 +263,31 @@ impl Job {
         request_id: String,
     ) -> Result<Self> {
         let url = validate_download_url(url)?;
+        Self::for_url(&url, name, directory, request_id)
+    }
+
+    /// Only the Add download window makes these. A magnet link is not a download URL, so
+    /// scripts, the browser, MCP and the command line can't add one.
+    pub fn new_torrent(
+        link: &str,
+        name: &str,
+        directory: PathBuf,
+        request_id: String,
+        stage: crate::torrent::Stage,
+    ) -> Result<Self> {
+        let info_hash = crate::torrent::info_hash(link)?;
+        let url = reqwest::Url::parse(link.trim())?;
+        let mut job = Self::for_url(&url, Some(name), directory, request_id)?;
+        job.torrent = Some(crate::torrent::State { info_hash, stage });
+        Ok(job)
+    }
+
+    fn for_url(
+        url: &reqwest::Url,
+        name: Option<&str>,
+        directory: PathBuf,
+        request_id: String,
+    ) -> Result<Self> {
         if request_id.is_empty() || request_id.len() > 128 {
             bail!("Invalid request identifier");
         }
@@ -270,7 +317,8 @@ impl Job {
             plan: None,
             provider: None,
             hls: None,
-            ftp: crate::ftp::State::new(&url),
+            ftp: crate::ftp::State::new(url),
+            torrent: None,
             remote: None,
             synchronization: None,
             integrity: crate::integrity::State::default(),

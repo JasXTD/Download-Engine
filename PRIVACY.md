@@ -1,6 +1,6 @@
 # Privacy policy
 
-Last updated: 2026-10-28
+Last updated: 2026-11-01
 
 This policy covers the official Download Engine project website, browser extensions
 and their integration with the Download Engine desktop application for Windows. The project
@@ -76,6 +76,24 @@ No automatic copy of your download list, detected media or login cookies is sent
 to a project-operated collection server. The project does not sell this data or
 use it for advertising, credit scoring or unrelated profiling. Maintainers do not
 have remote access to your local profile through the extension.
+
+## Torrents
+
+Torrents are off until you turn them on, in Preferences or when you add your first torrent.
+While they are off, the torrent helper doesn't run and nothing is sent.
+
+A torrent works differently from other downloads, because your computer connects directly
+to other people instead of to one server. While a torrent is active:
+
+- Other people downloading the same torrent can see your IP address and that you are
+  downloading it. Trackers and the distributed hash table (DHT) see the same.
+- Your computer sends pieces of the torrent to those people, unless you turn off
+  "Upload while downloading" in Preferences. Uploading stops when the download finishes.
+- A proxy can't hide your address from them, so torrents won't start while a proxy is on.
+
+The helper sends the torrent's identifying hash, your progress, and the app's name and
+version. It doesn't send your name, email address or any account details. The project
+doesn't run a tracker and receives none of this.
 
 ## Optional update checks
 

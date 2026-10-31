@@ -17,6 +17,8 @@ pub enum Category {
     Music,
     Video,
     Other,
+    /// A way to filter the list, not a kind of file, so it has no folder rule.
+    Torrents,
 }
 impl Category {
     pub const ALL: [Self; 6] = [
@@ -36,6 +38,7 @@ impl Category {
             Self::Music => "Music",
             Self::Video => "Video",
             Self::Other => "Other",
+            Self::Torrents => "Torrents",
         }
     }
     pub fn examples(self) -> &'static str {
@@ -46,6 +49,7 @@ impl Category {
             Self::Music => "MP3, FLAC, WAV, M4A, OGG",
             Self::Video => "MP4, MKV, WEBM, AVI, MOV",
             Self::Other => "Images, unknown types, and files without an extension",
+            Self::Torrents => "",
         }
     }
     /// Use the final suffix only: report.pdf.exe is a program. Never treat a
@@ -77,6 +81,9 @@ impl Job {
     pub fn category(&self) -> Category {
         if self.hls.is_some() {
             return Category::Video;
+        }
+        if self.torrent.is_some() {
+            return Category::Torrents;
         }
         Category::from_filename(&self.name)
     }

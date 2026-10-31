@@ -51,7 +51,7 @@ function Get-ReleaseSourceFiles {
     $inventoryPath = Resolve-ReleasePath -Root $Root -Relative 'scripts/release-source-inventory.json'
     $inventory = Get-Content -LiteralPath $inventoryPath -Raw -Encoding UTF8 | ConvertFrom-Json
     if ($inventory.schema -ne 1 -or @($inventory.files).Count -eq 0) { throw 'Invalid source release inventory.' }
-    $roots = @('assets','docs','examples','extension','installer','locales','scripts','src','tests','tools/ffmpeg','vendor')
+    $roots = @('assets','docs','examples','extension','installer','locales','scripts','src','tests','tools/ffmpeg','torrent','vendor')
     $topFiles = @('Cargo.toml','Cargo.lock','build.rs','README.md','SECURITY.md','PRIVACY.md','CHANGELOG.md','LICENSE','THIRD-PARTY-NOTICES.md','.gitattributes','.gitignore')
     $listed = [Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
     foreach ($relative in $inventory.files) {
@@ -91,7 +91,7 @@ function Get-ReleaseSourceFiles {
             $relative = "$directory/$($entry.Name)"
             $null = Resolve-ReleasePath -Root $Root -Relative $relative
             if ($entry.PSIsContainer) {
-                if ($entry.Name -notin @('__pycache__','.git','node_modules','.venv','venv')) { $pending.Enqueue($relative) }
+                if ($entry.Name -notin @('__pycache__','.git','node_modules','.venv','venv') -and $relative -cne 'torrent/target') { $pending.Enqueue($relative) }
             } elseif ($relative -cne 'tools/ffmpeg/ffmpeg.exe') {
                 $null = $actual.Add($relative)
             }

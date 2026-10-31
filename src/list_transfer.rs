@@ -115,7 +115,10 @@ pub struct Collected {
 
 /// Specialized jobs are omitted: a plain URL cannot retain their processing.
 pub fn is_stream(job: &Job) -> bool {
-    job.provider.is_some() || job.hls.is_some() || crate::hls::is_playlist_url(&job.url)
+    job.provider.is_some()
+        || job.hls.is_some()
+        || job.torrent.is_some()
+        || crate::hls::is_playlist_url(&job.url)
 }
 
 #[derive(Serialize)]

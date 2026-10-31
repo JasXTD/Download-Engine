@@ -3,7 +3,8 @@
 These nine directories are published crates from [rqbit](https://github.com/ikatson/rqbit),
 copied here so that Download Engine can maintain them itself. They form a separate Cargo
 workspace: `Cargo.toml` in this directory maps each crate name to its directory through
-`[patch.crates-io]`. The application does not use them yet.
+`[patch.crates-io]`, and the application's `Cargo.toml` does the same. The engine in
+`torrent/` is what uses them.
 
 | Directory | Version | crates.io SHA-256 |
 | --- | --- | --- |

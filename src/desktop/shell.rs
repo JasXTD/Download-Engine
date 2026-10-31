@@ -292,6 +292,7 @@ pub(super) fn category_icon(category: Category) -> &'static str {
         Category::Documents => "\u{e8a5}",
         Category::Compressed => "archive",
         Category::Other => "\u{e7c3}",
+        Category::Torrents => "\u{e716}",
     }
 }
 
@@ -415,6 +416,10 @@ impl Desktop {
                             }
                             if ui.button(tr("Add batch")).clicked() {
                                 self.open_queue_dialog(Dialog::Batch);
+                                ui.close();
+                            }
+                            if ui.button(tr("Open torrent file…")).clicked() {
+                                self.open_torrent_file();
                                 ui.close();
                             }
                             ui.separator();
@@ -654,7 +659,9 @@ impl Desktop {
                             ui.label(RichText::new(tr("File types")).small().color(p.muted));
                             ui.add_space(if small { 3.0 } else { 6.0 });
                         }
+                        let torrents_on = self.torrents.settings.enabled;
                         for category in [
+                            Category::Torrents,
                             Category::Programs,
                             Category::Video,
                             Category::Music,
@@ -668,6 +675,10 @@ impl Desktop {
                                     *kind == category && self.filter.accepts(*status)
                                 })
                                 .count();
+                            // Torrents stay out of sight until someone uses them.
+                            if category == Category::Torrents && count == 0 && !torrents_on {
+                                continue;
+                            }
                             if navigation(
                                 ui,
                                 tr(category.label()),

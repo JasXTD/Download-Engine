@@ -274,6 +274,14 @@ impl Host {
         self.shared().test_peers = peers;
     }
 
+    /// Lets tests see what happens when the helper dies.
+    #[doc(hidden)]
+    pub fn kill_for_tests(&self) {
+        if let Some(helper) = &self.shared().helper {
+            helper.kill();
+        }
+    }
+
     pub(super) fn test_peers(&self) -> Vec<SocketAddr> {
         self.shared().test_peers.clone()
     }

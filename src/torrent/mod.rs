@@ -414,7 +414,7 @@ impl Store {
 
     /// Records the chosen files. A running download picks them up from the scheduler.
     pub(crate) fn choose_torrent_files(&self, id: &str, chosen: Vec<usize>) -> Result<Files> {
-        let mut files = self.torrent_files_or_list(id)?;
+        let mut files = self.torrent_file_list(id)?;
         files.chosen = chosen;
         files.validate()?;
         save_files(&self.connect()?, id, &files)?;
@@ -422,7 +422,7 @@ impl Store {
     }
 
     /// The saved list, which has no chosen files yet while someone is choosing.
-    fn torrent_files_or_list(&self, id: &str) -> Result<Files> {
+    pub fn torrent_file_list(&self, id: &str) -> Result<Files> {
         let data: Option<String> = self
             .connect()?
             .query_row(
@@ -676,7 +676,35 @@ async fn share_speed_limits(
     }
 }
 
-/// Files that only a paused or waiting torrent can show, for the status window.
+/// How much room a folder's drive has. A folder that doesn't exist yet uses the nearest
+/// one above it, because that's where it will be made.
+pub fn free_space(folder: &Path) -> Option<u64> {
+    let folder = folder.ancestors().find(|path| path.is_dir())?;
+    #[cfg(windows)]
+    {
+        use std::os::windows::ffi::OsStrExt;
+        use windows_sys::Win32::Storage::FileSystem::GetDiskFreeSpaceExW;
+        let wide: Vec<u16> = folder.as_os_str().encode_wide().chain(Some(0)).collect();
+        let mut free = 0u64;
+        // The path ends in a zero, and only the first output is asked for.
+        let done = unsafe {
+            GetDiskFreeSpaceExW(
+                wide.as_ptr(),
+                &mut free,
+                std::ptr::null_mut(),
+                std::ptr::null_mut(),
+            )
+        };
+        (done != 0).then_some(free)
+    }
+    #[cfg(not(windows))]
+    {
+        let _ = folder;
+        None
+    }
+}
+
+/// Whether a torrent has its file list and waits for someone to choose from it.
 pub fn waiting_for_choice(job: &Job) -> bool {
     job.status == Status::Paused
         && job

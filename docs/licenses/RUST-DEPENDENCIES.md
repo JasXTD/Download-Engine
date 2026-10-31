@@ -1,10 +1,28 @@
 # Rust dependency licenses
 
-These are locked Cargo dependencies, unmodified except epaint (see below). Download Engine's MIT license does not replace their licenses. Alternative licenses remain alternatives; self_cell is used under Apache-2.0. This inventory includes build/test dependencies as well as runtime dependencies.
+These are locked Cargo dependencies, unmodified except epaint, librqbit-bencode, librqbit-buffers, librqbit-clone-to-owned, librqbit-core, librqbit-dht, librqbit-dualstack-sockets, librqbit-peer-protocol, librqbit-sha1-wrapper, librqbit-tracker-comms (see below). Download Engine's MIT license does not replace their licenses. Alternative licenses remain alternatives; self_cell is used under Apache-2.0. This inventory includes build/test dependencies as well as runtime dependencies.
 
 MPL-covered source and published crates that omit workspace license files are included in `sources/`. A `.crate` file is a gzip-compressed tar archive; extract it with `tar -xzf filename.crate`. The included source is the unmodified upstream crate; its SHA-256 is checked against Cargo.lock, or for a modified crate against the published crates.io checksum. Other source links identify the exact published versions.
 
 Download Engine builds a modified copy of epaint 0.36.2 (bidirectional text layout, so Latin text and numbers keep their order inside right-to-left text). The modified source is `vendor/epaint` in the Download Engine source release; `vendor/epaint/patch.md` lists the changed files.
+
+Download Engine builds a modified copy of librqbit-bencode 9.1.0 (the BitTorrent formats and network protocols, adapted and maintained for Download Engine). The modified source is `vendor/rqbit/librqbit-bencode` in the Download Engine source release; `vendor/rqbit/patch.md` lists the changed files.
+
+Download Engine builds a modified copy of librqbit-buffers 9.1.0 (the BitTorrent formats and network protocols, adapted and maintained for Download Engine). The modified source is `vendor/rqbit/librqbit-buffers` in the Download Engine source release; `vendor/rqbit/patch.md` lists the changed files.
+
+Download Engine builds a modified copy of librqbit-clone-to-owned 9.1.0 (the BitTorrent formats and network protocols, adapted and maintained for Download Engine). The modified source is `vendor/rqbit/librqbit-clone-to-owned` in the Download Engine source release; `vendor/rqbit/patch.md` lists the changed files.
+
+Download Engine builds a modified copy of librqbit-core 9.1.0 (the BitTorrent formats and network protocols, adapted and maintained for Download Engine). The modified source is `vendor/rqbit/librqbit-core` in the Download Engine source release; `vendor/rqbit/patch.md` lists the changed files.
+
+Download Engine builds a modified copy of librqbit-dht 9.1.0 (the BitTorrent formats and network protocols, adapted and maintained for Download Engine). The modified source is `vendor/rqbit/librqbit-dht` in the Download Engine source release; `vendor/rqbit/patch.md` lists the changed files.
+
+Download Engine builds a modified copy of librqbit-dualstack-sockets 0.7.0 (the BitTorrent formats and network protocols, adapted and maintained for Download Engine). The modified source is `vendor/rqbit/librqbit-dualstack-sockets` in the Download Engine source release; `vendor/rqbit/patch.md` lists the changed files.
+
+Download Engine builds a modified copy of librqbit-peer-protocol 9.1.0 (the BitTorrent formats and network protocols, adapted and maintained for Download Engine). The modified source is `vendor/rqbit/librqbit-peer-protocol` in the Download Engine source release; `vendor/rqbit/patch.md` lists the changed files.
+
+Download Engine builds a modified copy of librqbit-sha1-wrapper 9.1.0 (the BitTorrent formats and network protocols, adapted and maintained for Download Engine). The modified source is `vendor/rqbit/librqbit-sha1-wrapper` in the Download Engine source release; `vendor/rqbit/patch.md` lists the changed files.
+
+Download Engine builds a modified copy of librqbit-tracker-comms 9.1.0 (the BitTorrent formats and network protocols, adapted and maintained for Download Engine). The modified source is `vendor/rqbit/librqbit-tracker-comms` in the Download Engine source release; `vendor/rqbit/patch.md` lists the changed files.
 
 - **accesskit 0.24.1** — Apache-2.0. [LICENSE-Apache-2.0](rust/accesskit-0.24.1/LICENSE-Apache-2.0); [included source](sources/accesskit-0.24.1.crate).
 - **adler2 2.0.1** — 0BSD OR MIT OR Apache-2.0. [LICENSE-0BSD](rust/adler2-2.0.1/LICENSE-0BSD), [LICENSE-APACHE](rust/adler2-2.0.1/LICENSE-APACHE), [LICENSE-MIT](rust/adler2-2.0.1/LICENSE-MIT).
@@ -25,9 +43,11 @@ Download Engine builds a modified copy of epaint 0.36.2 (bidirectional text layo
 - **cc 1.6.0** — MIT OR Apache-2.0. [LICENSE-APACHE](rust/cc-1.6.0/LICENSE-APACHE), [LICENSE-MIT](rust/cc-1.6.0/LICENSE-MIT).
 - **cfg_aliases 0.2.2** — MIT. [LICENSE](rust/cfg_aliases-0.2.2/LICENSE).
 - **cfg-if 1.0.5** — MIT OR Apache-2.0. [LICENSE-APACHE](rust/cfg-if-1.0.5/LICENSE-APACHE), [LICENSE-MIT](rust/cfg-if-1.0.5/LICENSE-MIT).
+- **chardetng 1.0.0** — Apache-2.0 OR MIT. [COPYRIGHT](rust/chardetng-1.0.0/COPYRIGHT), [LICENSE-APACHE](rust/chardetng-1.0.0/LICENSE-APACHE), [LICENSE-MIT](rust/chardetng-1.0.0/LICENSE-MIT).
 - **chrono 0.4.45** — MIT OR Apache-2.0. [LICENSE.txt](rust/chrono-0.4.45/LICENSE.txt).
 - **clipboard-win 5.4.3** — BSL-1.0. [LICENSE-BSL-1.0](rust/clipboard-win-5.4.3/LICENSE-BSL-1.0); [included source](sources/clipboard-win-5.4.3.crate).
 - **color 0.3.3** — Apache-2.0 OR MIT. [LICENSE-APACHE](rust/color-0.3.3/LICENSE-APACHE), [LICENSE-MIT](rust/color-0.3.3/LICENSE-MIT).
+- **core_detect 1.0.0** — MIT/Apache-2.0. [LICENSE-APACHE](rust/core_detect-1.0.0/LICENSE-APACHE), [LICENSE-MIT](rust/core_detect-1.0.0/LICENSE-MIT).
 - **cpufeatures 0.2.17** — MIT OR Apache-2.0. [LICENSE-APACHE](rust/cpufeatures-0.2.17/LICENSE-APACHE), [LICENSE-MIT](rust/cpufeatures-0.2.17/LICENSE-MIT).
 - **crc32fast 1.5.2** — MIT OR Apache-2.0. [LICENSE-APACHE](rust/crc32fast-1.5.2/LICENSE-APACHE), [LICENSE-MIT](rust/crc32fast-1.5.2/LICENSE-MIT).
 - **crypto-common 0.1.7** — MIT OR Apache-2.0. [LICENSE-APACHE](rust/crypto-common-0.1.7/LICENSE-APACHE), [LICENSE-MIT](rust/crypto-common-0.1.7/LICENSE-MIT).
@@ -50,6 +70,7 @@ Download Engine builds a modified copy of epaint 0.36.2 (bidirectional text layo
 - **egui-winit 0.36.2** — Apache-2.0. [LICENSE-Apache-2.0](rust/egui-winit-0.36.2/LICENSE-Apache-2.0); [included source](sources/egui-winit-0.36.2.crate).
 - **either 1.19.0** — MIT OR Apache-2.0. [LICENSE-APACHE](rust/either-1.19.0/LICENSE-APACHE), [LICENSE-MIT](rust/either-1.19.0/LICENSE-MIT).
 - **emath 0.36.2** — Apache-2.0. [LICENSE-Apache-2.0](rust/emath-0.36.2/LICENSE-Apache-2.0); [included source](sources/emath-0.36.2.crate).
+- **encoding_rs 0.8.42** — (Apache-2.0 OR MIT) AND BSD-3-Clause. [COPYRIGHT](rust/encoding_rs-0.8.42/COPYRIGHT), [LICENSE-APACHE](rust/encoding_rs-0.8.42/LICENSE-APACHE), [LICENSE-MIT](rust/encoding_rs-0.8.42/LICENSE-MIT), [LICENSE-WHATWG](rust/encoding_rs-0.8.42/LICENSE-WHATWG).
 - **epaint_default_fonts 0.36.2** — (MIT OR Apache-2.0) AND OFL-1.1 AND Ubuntu-font-1.0. [emoji-icon-font-mit-license.txt](rust/epaint_default_fonts-0.36.2/fonts/emoji-icon-font-mit-license.txt), [Hack-Regular.txt](rust/epaint_default_fonts-0.36.2/fonts/Hack-Regular.txt), [OFL.txt](rust/epaint_default_fonts-0.36.2/fonts/OFL.txt), [UFL.txt](rust/epaint_default_fonts-0.36.2/fonts/UFL.txt).
 - **epaint 0.36.2** — Apache-2.0, modified copy. [LICENSE-Apache-2.0](rust/epaint-0.36.2/LICENSE-Apache-2.0); [included source](sources/epaint-0.36.2.crate).
 - **erased-serde 0.4.10** — MIT OR Apache-2.0. [LICENSE-APACHE](rust/erased-serde-0.4.10/LICENSE-APACHE), [LICENSE-MIT](rust/erased-serde-0.4.10/LICENSE-MIT).
@@ -115,6 +136,15 @@ Download Engine builds a modified copy of epaint 0.36.2 (bidirectional text layo
 - **kurbo 0.13.1** — Apache-2.0 OR MIT. [LICENSE-APACHE](rust/kurbo-0.13.1/LICENSE-APACHE), [LICENSE-MIT](rust/kurbo-0.13.1/LICENSE-MIT).
 - **libc 0.2.190** — MIT OR Apache-2.0. [LICENSE-APACHE](rust/libc-0.2.190/LICENSE-APACHE), [LICENSE-MIT](rust/libc-0.2.190/LICENSE-MIT).
 - **libloading 0.8.9** — ISC. [LICENSE](rust/libloading-0.8.9/LICENSE).
+- **librqbit-bencode 9.1.0** — Apache-2.0, modified copy. [LICENSE-Apache-2.0](rust/librqbit-bencode-9.1.0/LICENSE-Apache-2.0).
+- **librqbit-buffers 9.1.0** — Apache-2.0, modified copy. [LICENSE-Apache-2.0](rust/librqbit-buffers-9.1.0/LICENSE-Apache-2.0).
+- **librqbit-clone-to-owned 9.1.0** — Apache-2.0, modified copy. [LICENSE-Apache-2.0](rust/librqbit-clone-to-owned-9.1.0/LICENSE-Apache-2.0).
+- **librqbit-core 9.1.0** — Apache-2.0, modified copy. [LICENSE-Apache-2.0](rust/librqbit-core-9.1.0/LICENSE-Apache-2.0).
+- **librqbit-dht 9.1.0** — Apache-2.0, modified copy. [LICENSE-Apache-2.0](rust/librqbit-dht-9.1.0/LICENSE-Apache-2.0).
+- **librqbit-dualstack-sockets 0.7.0** — Apache-2.0, modified copy. [LICENSE](rust/librqbit-dualstack-sockets-0.7.0/LICENSE).
+- **librqbit-peer-protocol 9.1.0** — Apache-2.0, modified copy. [LICENSE-Apache-2.0](rust/librqbit-peer-protocol-9.1.0/LICENSE-Apache-2.0).
+- **librqbit-sha1-wrapper 9.1.0** — Apache-2.0, modified copy. [LICENSE-Apache-2.0](rust/librqbit-sha1-wrapper-9.1.0/LICENSE-Apache-2.0).
+- **librqbit-tracker-comms 9.1.0** — Apache-2.0, modified copy. [LICENSE-Apache-2.0](rust/librqbit-tracker-comms-9.1.0/LICENSE-Apache-2.0).
 - **libsqlite3-sys 0.38.2** — MIT. [LICENSE](rust/libsqlite3-sys-0.38.2/LICENSE), [LICENSE](rust/libsqlite3-sys-0.38.2/sqlcipher/LICENSE).
 - **linebender_resource_handle 0.1.1** — Apache-2.0 OR MIT. [AUTHORS](rust/linebender_resource_handle-0.1.1/AUTHORS), [LICENSE-APACHE](rust/linebender_resource_handle-0.1.1/LICENSE-APACHE), [LICENSE-MIT](rust/linebender_resource_handle-0.1.1/LICENSE-MIT).
 - **litemap 0.8.3** — Unicode-3.0. [LICENSE](rust/litemap-0.8.3/LICENSE).
@@ -131,6 +161,7 @@ Download Engine builds a modified copy of epaint 0.36.2 (bidirectional text layo
 - **mlua 0.12.2** — MIT. [LICENSE](rust/mlua-0.12.2/LICENSE).
 - **mlua-sys 0.13.0** — MIT. [LICENSE-MIT-mlua](rust/mlua-sys-0.13.0/LICENSE-MIT-mlua); [included source](sources/mlua-sys-0.13.0.crate).
 - **moxcms 0.8.1** — BSD-3-Clause OR Apache-2.0. [LICENSE-APACHE.md](rust/moxcms-0.8.1/LICENSE-APACHE.md), [LICENSE.md](rust/moxcms-0.8.1/LICENSE.md).
+- **multiversion_no_op 1.0.0** — Apache-2.0 OR MIT. [COPYRIGHT](rust/multiversion_no_op-1.0.0/COPYRIGHT), [LICENSE-APACHE](rust/multiversion_no_op-1.0.0/LICENSE-APACHE), [LICENSE-MIT](rust/multiversion_no_op-1.0.0/LICENSE-MIT).
 - **native-tls 0.2.18** — MIT OR Apache-2.0. [LICENSE-APACHE](rust/native-tls-0.2.18/LICENSE-APACHE), [LICENSE-MIT](rust/native-tls-0.2.18/LICENSE-MIT).
 - **new_debug_unreachable 1.0.6** — MIT. [LICENSE-MIT](rust/new_debug_unreachable-1.0.6/LICENSE-MIT).
 - **nohash-hasher 0.2.0** — Apache-2.0 OR MIT. [LICENSE-APACHE](rust/nohash-hasher-0.2.0/LICENSE-APACHE), [LICENSE-MIT](rust/nohash-hasher-0.2.0/LICENSE-MIT).
@@ -165,6 +196,7 @@ Download Engine builds a modified copy of epaint 0.36.2 (bidirectional text layo
 - **rustc_version 0.4.1** — MIT OR Apache-2.0. [LICENSE-APACHE](rust/rustc_version-0.4.1/LICENSE-APACHE), [LICENSE-MIT](rust/rustc_version-0.4.1/LICENSE-MIT).
 - **rustc-hash 2.1.3** — Apache-2.0 OR MIT. [LICENSE-APACHE](rust/rustc-hash-2.1.3/LICENSE-APACHE), [LICENSE-MIT](rust/rustc-hash-2.1.3/LICENSE-MIT).
 - **rustls-pki-types 1.15.1** — MIT OR Apache-2.0. [LICENSE-APACHE](rust/rustls-pki-types-1.15.1/LICENSE-APACHE), [LICENSE-MIT](rust/rustls-pki-types-1.15.1/LICENSE-MIT).
+- **rustversion 1.0.23** — MIT OR Apache-2.0. [LICENSE-APACHE](rust/rustversion-1.0.23/LICENSE-APACHE), [LICENSE-MIT](rust/rustversion-1.0.23/LICENSE-MIT).
 - **same-file 1.0.6** — Unlicense/MIT. [COPYING](rust/same-file-1.0.6/COPYING), [LICENSE-MIT](rust/same-file-1.0.6/LICENSE-MIT).
 - **schannel 0.1.29** — MIT. [LICENSE.md](rust/schannel-0.1.29/LICENSE.md).
 - **scopeguard 1.2.0** — MIT OR Apache-2.0. [LICENSE-APACHE](rust/scopeguard-1.2.0/LICENSE-APACHE), [LICENSE-MIT](rust/scopeguard-1.2.0/LICENSE-MIT).
@@ -178,9 +210,11 @@ Download Engine builds a modified copy of epaint 0.36.2 (bidirectional text layo
 - **serde 1.0.229** — MIT OR Apache-2.0. [LICENSE-APACHE](rust/serde-1.0.229/LICENSE-APACHE), [LICENSE-MIT](rust/serde-1.0.229/LICENSE-MIT).
 - **serde-value 0.7.0** — MIT. [COPYING](rust/serde-value-0.7.0/COPYING).
 - **servo_arc 0.4.3** — MIT OR Apache-2.0. [LICENSE-APACHE](rust/servo_arc-0.4.3/LICENSE-APACHE), [LICENSE-MIT](rust/servo_arc-0.4.3/LICENSE-MIT).
+- **sha1 0.10.6** — MIT OR Apache-2.0. [LICENSE-APACHE](rust/sha1-0.10.6/LICENSE-APACHE), [LICENSE-MIT](rust/sha1-0.10.6/LICENSE-MIT).
 - **sha2 0.10.9** — MIT OR Apache-2.0. [LICENSE-APACHE](rust/sha2-0.10.9/LICENSE-APACHE), [LICENSE-MIT](rust/sha2-0.10.9/LICENSE-MIT).
 - **shlex 2.0.1** — MIT OR Apache-2.0. [LICENSE-APACHE](rust/shlex-2.0.1/LICENSE-APACHE), [LICENSE-MIT](rust/shlex-2.0.1/LICENSE-MIT).
 - **simd-adler32 0.3.10** — MIT. [LICENSE.md](rust/simd-adler32-0.3.10/LICENSE.md).
+- **simdutf8 0.1.5** — MIT OR Apache-2.0. [LICENSE-Apache](rust/simdutf8-0.1.5/LICENSE-Apache), [LICENSE-MIT](rust/simdutf8-0.1.5/LICENSE-MIT).
 - **siphasher 1.0.4** — MIT OR Apache-2.0. [COPYING](rust/siphasher-1.0.4/COPYING), [LICENSE-APACHE](rust/siphasher-1.0.4/LICENSE-APACHE), [LICENSE-MIT](rust/siphasher-1.0.4/LICENSE-MIT).
 - **skrifa 0.44.0** — MIT OR Apache-2.0. [LICENSE-APACHE](rust/skrifa-0.44.0/LICENSE-APACHE), [LICENSE-MIT](rust/skrifa-0.44.0/LICENSE-MIT).
 - **slab 0.4.12** — MIT. [LICENSE](rust/slab-0.4.12/LICENSE).

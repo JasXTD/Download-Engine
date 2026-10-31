@@ -4,6 +4,7 @@ use download_engine::{
     bandwidth,
     model::{Job, Status},
     paths::AppPaths,
+    quota,
     scheduler::{Command, Scheduler},
     store::Store,
     torrent::{Details, OFF_MESSAGE, Settings, Stage},
@@ -424,16 +425,25 @@ fn a_torrent_resumed_while_off_fails_without_starting_the_helper() {
     let bench = Bench::new(single());
     let details = bench.details();
     bench.wait_for_helper_to_stop();
-    bench
-        .scheduler
-        .send(Command::PauseQueue(MAIN.into()))
+    // A new queue doesn't run, so this download can't start before the switch goes off.
+    let queue = bench.store.create_queue("Held").unwrap();
+    let job = bench
+        .store
+        .add_torrent(
+            &details,
+            vec![0],
+            Some(&bench.folder),
+            &queue.id,
+            uuid::Uuid::new_v4().to_string(),
+        )
         .unwrap();
-    let job = bench.add(&details, vec![0]);
     bench.set_enabled(false);
+    bench.wait("the pause", |job| job.status == Status::Paused, &job.id);
     // Nothing a script or a schedule does can get around the switch.
+    bench.scheduler.send(Command::StartQueue(queue.id)).unwrap();
     bench
         .scheduler
-        .send(Command::StartQueue(MAIN.into()))
+        .send(Command::Resume(job.id.clone()))
         .unwrap();
     let deadline = Instant::now() + PATIENCE;
     let failed = loop {
@@ -773,6 +783,64 @@ fn deleting_a_finished_torrent_leaves_what_the_user_added_to_its_folder() {
     assert!(folder.join("notes.txt").exists());
     assert!(!folder.join("a.bin").exists());
     assert!(!folder.join("sub").exists());
+}
+
+#[test]
+fn a_helper_that_dies_is_replaced_and_the_download_carries_on() {
+    let bench = Bench::new(sample("big.bin", &[("big.bin", 4_000_000)], 6));
+    let details = bench.details();
+    bench.set_speed_limit(Some(512 * 1024));
+    let job = bench.add(&details, vec![0]);
+    bench.wait(
+        "some progress",
+        |job| job.status == Status::Downloading && job.downloaded > 0,
+        &job.id,
+    );
+    bench.store.torrents.kill_for_tests();
+    bench.wait(
+        "the automatic retry",
+        |job| job.retry.attempts > 0 || job.status == Status::Complete,
+        &job.id,
+    );
+    bench.set_speed_limit(None);
+    let finished = bench.wait_complete(&job.id);
+    assert_eq!(
+        std::fs::read(finished.saved_path.unwrap()).unwrap(),
+        bench.seeder.sample.data
+    );
+}
+
+#[test]
+fn a_data_quota_holds_a_torrent_and_counts_its_traffic() {
+    let bench = Bench::new(sample("big.bin", &[("big.bin", 3_000_000)], 7));
+    let details = bench.details();
+    let hour = 1024 * 1024;
+    bench
+        .scheduler
+        .send(Command::Quota(quota::Update {
+            request: uuid::Uuid::new_v4(),
+            limits: quota::Limits {
+                hourly: Some(hour),
+                daily: None,
+            },
+        }))
+        .unwrap();
+    while !bench.store.quota_status().unwrap().limits.enabled() {
+        std::thread::sleep(Duration::from_millis(5));
+    }
+    // Slow enough for the worker's next look at the traffic to come before the end.
+    bench.set_speed_limit(Some(512 * 1024));
+    let job = bench.add(&details, vec![0]);
+    let held = bench.wait("the quota", |job| job.quota_waiting, &job.id);
+    assert_eq!(
+        held.status,
+        Status::Queued,
+        "it continues when the quota allows"
+    );
+    assert!(bench.store.quota_status().unwrap().blocked());
+    assert!(!bench.folder.join("big.bin").exists());
+    bench.wait_for_helper_to_stop();
+    assert_eq!(bench.leftovers().len(), 1, "progress is kept");
 }
 
 #[test]

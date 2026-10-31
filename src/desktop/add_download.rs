@@ -196,6 +196,12 @@ impl Desktop {
     }
 
     pub(super) fn add_dialog(&mut self, ctx: &egui::Context, p: Palette) {
+        if self.add_login.job.is_none()
+            && let Some(source) = torrents::Source::detect(&self.url)
+        {
+            return self.add_torrent_dialog(ctx, p, source);
+        }
+        self.forget_torrent_draft();
         let focused = ctx.memory(|memory| memory.focused());
         let popup_was_open = egui::Popup::is_any_open(ctx);
         self.poll_add_save();
@@ -207,7 +213,7 @@ impl Desktop {
         let mut preview_zip = false;
         let response = form_dialog::modal("add-download", p).show(ctx, |ui| {
                 cancel = form_dialog::header(ui, tr("Add download"),
-                    tr("Paste a direct file link: HTTP, HTTPS, FTP or FTPS."),
+                    tr("Paste a file link, magnet link or torrent file."),
                     form_dialog::Icon::Download, p, !saving);
                 ui.add_enabled_ui(!saving, |ui| {
                     egui::ScrollArea::vertical().id_salt("add-form")

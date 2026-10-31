@@ -37,6 +37,7 @@ mod settings_page;
 mod speed_limits;
 mod theme;
 mod theme_assets;
+mod torrents;
 mod updates;
 use formatting::*;
 use theme::Palette;
@@ -153,6 +154,7 @@ enum Dialog {
     ScriptReplace,
     ExtensionReview,
     ExtensionRemove,
+    TorrentChoice,
 }
 
 enum LinkState {
@@ -358,6 +360,7 @@ pub struct Desktop {
     add_authentication: bool,
     add_queue: Option<String>,
     add_login: add_login::Draft,
+    torrents: torrents::State,
     add_request: Option<background_io::Task<add_download::Added>>,
     settings_summary: settings_page::Summary,
     preferences_window: Option<preferences_window::State>,
@@ -394,6 +397,7 @@ pub struct Desktop {
 
 impl Desktop {
     pub fn new(store: Store, scheduler: Scheduler, lock: File) -> Self {
+        let torrent_settings = store.torrent_settings().unwrap_or_default();
         let _language = download_engine::i18n::scope(
             store
                 .interface_preferences()
@@ -483,6 +487,7 @@ impl Desktop {
             add_authentication: false,
             add_queue: None,
             add_login: add_login::Draft::default(),
+            torrents: torrents::State::new(torrent_settings),
             add_request: None,
             settings_summary: settings_page::Summary::default(),
             preferences_window: None,
@@ -622,6 +627,7 @@ impl Desktop {
                     if let Some(state) = &mut app.preferences_window {
                         state.category = match mode.as_str() {
                             "preferences-downloads" => Category::Downloads,
+                            "preferences-torrents" => Category::Torrents,
                             "preferences-connection" => Category::Connection,
                             "preferences-browser" | "settings-bottom" => Category::Browser,
                             "preferences-mcp" => Category::Browser,
@@ -956,7 +962,7 @@ impl Desktop {
                 .find(|job| &job.id == id)
                 .cloned()
                 .or_else(|| self.cached_status_job(id))
-            && self.open_link_fallback(&job)
+            && (self.open_link_fallback(&job) || self.torrent_needs_attention(&job))
         {
             return;
         }

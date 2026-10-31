@@ -214,6 +214,7 @@ impl Desktop {
                     .into(),
             ),
             "add" => self.open_add(),
+            mode if mode.starts_with("torrent-") => self.torrent_preview(mode),
             "clipboard-offer" => self.clipboard_sample(),
             "list-export" | "list-import" | "list-import-details" => {
                 self.list_transfer_sample(mode)

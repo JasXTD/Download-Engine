@@ -1,84 +1,12 @@
 //! Whole transfers between two engines, joined by in-memory pipes. No sockets are opened,
 //! so these run anywhere and can't reach a network.
 
-use std::sync::Arc;
-use std::time::Duration;
-
-use librqbit_core::hash_id::Id20;
-use tokio::time::timeout;
-
-use crate::meta::TorrentMeta;
-use crate::rate::ByteLimiter;
-use crate::testkit::{TempFolder, meta_of, multi_file_torrent, sample_bytes, single_file_torrent};
-use crate::torrent::{Context, Torrent, TorrentOptions, TorrentStats, Totals};
+use crate::testkit::{
+    TempFolder, is_done, is_live, join, meta_of, multi_file_torrent, sample_bytes, seed_of,
+    single_file_torrent, start_torrent, wait_until,
+};
 
 const PIECE: u32 = 32 * 1024;
-const PATIENCE: Duration = Duration::from_secs(30);
-
-fn context(id: u8) -> Context {
-    Context {
-        peer_id: Id20::new([id; 20]),
-        up: Arc::new(ByteLimiter::new(None)),
-        down: Arc::new(ByteLimiter::new(None)),
-        totals: Arc::new(Totals::default()),
-        discovery: None,
-    }
-}
-
-fn start_torrent(meta: &Arc<TorrentMeta>, output: std::path::PathBuf, id: u8) -> Arc<Torrent> {
-    let options = TorrentOptions {
-        output,
-        seed: true,
-        ..Default::default()
-    };
-    Torrent::from_meta(meta.clone(), options, context(id)).unwrap()
-}
-
-async fn wait_until(torrent: &Torrent, what: &str, done: impl Fn(&TorrentStats) -> bool) {
-    let waited = timeout(PATIENCE, async {
-        loop {
-            let stats = torrent.stats();
-            assert!(stats.error.is_none(), "{what}: {:?}", stats.error);
-            if done(&stats) {
-                return;
-            }
-            tokio::time::sleep(Duration::from_millis(5)).await;
-        }
-    })
-    .await;
-    assert!(waited.is_ok(), "timed out: {what}: {:?}", torrent.stats());
-}
-
-fn is_live(stats: &TorrentStats) -> bool {
-    stats.state == "live"
-}
-
-fn is_done(stats: &TorrentStats) -> bool {
-    stats.state == "live" && stats.finished
-}
-
-fn join(left: &Torrent, right: &Torrent) {
-    let (one, two) = tokio::io::duplex(256 * 1024);
-    left.connect_stream(Box::new(one)).unwrap();
-    right.connect_stream(Box::new(two)).unwrap();
-}
-
-/// Starts a torrent over complete files, and waits until it knows they are complete.
-async fn seed_of(
-    meta: &Arc<TorrentMeta>,
-    folder: &TempFolder,
-    files: &[(&str, &[u8])],
-) -> Arc<Torrent> {
-    for (name, data) in files {
-        let path = folder.path().join(name);
-        std::fs::create_dir_all(path.parent().unwrap()).unwrap();
-        std::fs::write(path, data).unwrap();
-    }
-    let seed = start_torrent(meta, folder.path(), 1);
-    seed.start().await;
-    wait_until(&seed, "the seed to check its files", is_done).await;
-    seed
-}
 
 #[tokio::test(flavor = "multi_thread")]
 async fn test_one_peer_downloads_one_file() {

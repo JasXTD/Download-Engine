@@ -1,4 +1,5 @@
-// Modified by Download Engine: removed byteorder. See ../../../patch.md.
+// Modified by Download Engine: removed byteorder, and a handshake can now leave out an
+// extension, which private torrents need. See ../../../patch.md.
 use std::io::{Cursor, Write};
 
 use bencode::BencodeValue;
@@ -26,7 +27,9 @@ use super::MY_EXTENDED_UT_METADATA;
 
 #[derive(Debug, Default, Serialize, Deserialize, Clone, Copy, PartialEq, Eq)]
 pub struct PeerExtendedMessageIds {
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub ut_metadata: Option<u8>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub ut_pex: Option<u8>,
 }
 
@@ -196,6 +199,19 @@ mod tests {
             let msg = res.unwrap();
             assert!(matches!(msg, ExtendedMessage::Handshake(..)));
         }
+    }
+
+    #[test]
+    fn test_a_handshake_can_leave_out_an_extension() {
+        let mut handshake = ExtendedHandshake::<ByteBuf>::new();
+        handshake.m.ut_pex = None;
+        let msg = ExtendedMessage::Handshake(handshake);
+        let mut buf = [0u8; 100];
+        let sz = msg
+            .serialize(&mut buf, &|| PeerExtendedMessageIds::my())
+            .unwrap();
+        let de = ExtendedMessage::deserialize(DoubleBufHelper::new(&buf[..sz], &[])).unwrap();
+        assert_eq!(msg, de);
     }
 
     #[test]

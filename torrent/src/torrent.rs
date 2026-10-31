@@ -1035,11 +1035,11 @@ async fn save_in_background(core: &Arc<TorrentCore>) {
     let _ = tokio::task::spawn_blocking(move || core.save_progress()).await;
 }
 
-fn tracked(
+async fn tracked(
     addr: Option<SocketAddr>,
-    work: impl Future<Output = bool> + Send + 'static,
-) -> impl Future<Output = (Option<SocketAddr>, bool)> + Send + 'static {
-    async move { (addr, work.await) }
+    work: impl Future<Output = bool>,
+) -> (Option<SocketAddr>, bool) {
+    (addr, work.await)
 }
 
 fn apply_hash(

@@ -13,6 +13,8 @@ pub mod storage;
 pub mod torrent;
 
 #[cfg(test)]
+mod hard_tests;
+#[cfg(test)]
 mod testkit;
 #[cfg(test)]
 mod transfer_tests;

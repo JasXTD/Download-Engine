@@ -98,6 +98,9 @@ All of these come from data that strangers control, and each has a regression te
   past about 70 TiB are refused.
 - Trackers: peers still queued when the last tracker stopped were lost. `TrackerPeers`
   delivers them before the stream ends.
+- Extended handshakes: leaving out an extension failed the whole message, because bencode
+  has no empty value. Private torrents must leave out peer exchange, so absent ids are now
+  skipped when writing.
 
 ### Moved test files
 

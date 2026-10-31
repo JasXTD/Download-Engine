@@ -36,14 +36,15 @@ fn to_hex(bytes: &[u8]) -> String {
 }
 
 fn from_hex(text: &str) -> Option<Vec<u8>> {
-    let pairs = text.as_bytes().chunks_exact(2);
-    if !pairs.remainder().is_empty() {
+    let (pairs, rest) = text.as_bytes().as_chunks::<2>();
+    if !rest.is_empty() {
         return None;
     }
     pairs
-        .map(|pair| {
-            let high = char::from(pair[0]).to_digit(16)?;
-            let low = char::from(pair[1]).to_digit(16)?;
+        .iter()
+        .map(|[high, low]| {
+            let high = char::from(*high).to_digit(16)?;
+            let low = char::from(*low).to_digit(16)?;
             Some((high << 4 | low) as u8)
         })
         .collect()

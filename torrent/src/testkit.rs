@@ -1,12 +1,23 @@
-//! Builds small torrents and throwaway folders for tests.
+//! Builds small torrents, throwaway folders and scripted peers for tests.
 
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicU32, Ordering};
+use std::time::Duration;
 
+use bytes::{Bytes, BytesMut};
+use librqbit_core::hash_id::Id20;
+use librqbit_peer_protocol::{Message, Request};
 use sha1w::{ISha1, Sha1};
+use tokio::io::{AsyncReadExt, AsyncWriteExt, DuplexStream};
+use tokio::time::timeout;
 
 use crate::meta::TorrentMeta;
+use crate::peer::{frame_len, read_handshake, send_handshake};
+use crate::rate::ByteLimiter;
+use crate::torrent::{Context, Torrent, TorrentOptions, TorrentStats, Totals};
+
+pub const PATIENCE: Duration = Duration::from_secs(30);
 
 /// A folder that is removed when the test ends.
 pub struct TempFolder(PathBuf);
@@ -127,4 +138,162 @@ pub fn multi_file_torrent_with(
 
 pub fn meta_of(torrent: &[u8]) -> Arc<TorrentMeta> {
     Arc::new(TorrentMeta::from_torrent_file(torrent).unwrap())
+}
+
+pub fn context(id: u8) -> Context {
+    limited_context(id, None)
+}
+
+pub fn limited_context(id: u8, upload_limit: Option<u32>) -> Context {
+    Context {
+        peer_id: Id20::new([id; 20]),
+        up: Arc::new(ByteLimiter::new(upload_limit)),
+        down: Arc::new(ByteLimiter::new(None)),
+        totals: Arc::new(Totals::default()),
+        discovery: None,
+    }
+}
+
+pub fn options_for(output: PathBuf) -> TorrentOptions {
+    TorrentOptions {
+        output,
+        seed: true,
+        ..Default::default()
+    }
+}
+
+pub fn start_torrent(meta: &Arc<TorrentMeta>, output: PathBuf, id: u8) -> Arc<Torrent> {
+    Torrent::from_meta(meta.clone(), options_for(output), context(id)).unwrap()
+}
+
+pub async fn wait_until(torrent: &Torrent, what: &str, done: impl Fn(&TorrentStats) -> bool) {
+    let waited = timeout(PATIENCE, async {
+        loop {
+            let stats = torrent.stats();
+            assert!(stats.error.is_none(), "{what}: {:?}", stats.error);
+            if done(&stats) {
+                return;
+            }
+            tokio::time::sleep(Duration::from_millis(5)).await;
+        }
+    })
+    .await;
+    assert!(waited.is_ok(), "timed out: {what}: {:?}", torrent.stats());
+}
+
+pub fn is_live(stats: &TorrentStats) -> bool {
+    stats.state == "live"
+}
+
+pub fn is_done(stats: &TorrentStats) -> bool {
+    stats.state == "live" && stats.finished
+}
+
+pub fn join(left: &Torrent, right: &Torrent) {
+    let (one, two) = tokio::io::duplex(256 * 1024);
+    left.connect_stream(Box::new(one)).unwrap();
+    right.connect_stream(Box::new(two)).unwrap();
+}
+
+pub fn write_files(folder: &TempFolder, files: &[(&str, &[u8])]) {
+    for (name, data) in files {
+        let path = folder.path().join(name);
+        std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+        std::fs::write(path, data).unwrap();
+    }
+}
+
+/// Starts a torrent over complete files, and waits until it knows they are complete.
+pub async fn seed_of(
+    meta: &Arc<TorrentMeta>,
+    folder: &TempFolder,
+    files: &[(&str, &[u8])],
+) -> Arc<Torrent> {
+    write_files(folder, files);
+    let seed = start_torrent(meta, folder.path(), 1);
+    seed.start().await;
+    wait_until(&seed, "the seed to check its files", is_done).await;
+    seed
+}
+
+/// A peer that does exactly what a test tells it to, including what no good peer would do.
+pub struct FakePeer {
+    stream: DuplexStream,
+    buffer: BytesMut,
+}
+
+impl FakePeer {
+    pub async fn join(torrent: &Torrent, id: u8) -> Self {
+        let (one, mut two) = tokio::io::duplex(1 << 20);
+        torrent.connect_stream(Box::new(one)).unwrap();
+        send_handshake(&mut two, torrent.info_hash(), Id20::new([id; 20]))
+            .await
+            .unwrap();
+        read_handshake(&mut two).await.unwrap();
+        Self {
+            stream: two,
+            buffer: BytesMut::new(),
+        }
+    }
+
+    pub async fn send(&mut self, message: Message<'_>) {
+        let mut out = vec![0u8; 256 * 1024];
+        let len = message.serialize(&mut out, &Default::default).unwrap();
+        self.send_raw(&out[..len]).await;
+    }
+
+    pub async fn send_raw(&mut self, bytes: &[u8]) {
+        // The engine may already have hung up, and tests check for that separately.
+        let _ = self.stream.write_all(bytes).await;
+    }
+
+    /// The next whole message from the engine, or None once it has hung up.
+    pub async fn next_frame(&mut self, wait: Duration) -> Option<Bytes> {
+        loop {
+            if let Some(len) = frame_len(&self.buffer, 1 << 24).unwrap() {
+                return Some(self.buffer.split_to(len).freeze());
+            }
+            match timeout(wait, self.stream.read_buf(&mut self.buffer)).await {
+                Ok(Ok(count)) if count > 0 => {}
+                _ => return None,
+            }
+        }
+    }
+
+    /// The next block request from the engine, skipping everything else.
+    pub async fn next_request(&mut self) -> Option<Request> {
+        while let Some(frame) = self.next_frame(PATIENCE).await {
+            if let Ok((Message::Request(request), _)) = Message::deserialize(&frame, &[]) {
+                return Some(request);
+            }
+        }
+        None
+    }
+
+    /// Waits for the engine to say one thing, skipping everything else.
+    pub async fn wait_for(&mut self, wanted: impl Fn(&Message<'_>) -> bool) -> bool {
+        while let Some(frame) = self.next_frame(PATIENCE).await {
+            if let Ok((message, _)) = Message::deserialize(&frame, &[])
+                && wanted(&message)
+            {
+                return true;
+            }
+        }
+        false
+    }
+
+    /// Whether the engine hangs up, reading all it says until then.
+    pub async fn is_dropped(&mut self) -> bool {
+        let dropped = timeout(Duration::from_secs(10), async {
+            loop {
+                self.buffer.reserve(64 * 1024);
+                match self.stream.read_buf(&mut self.buffer).await {
+                    Ok(0) | Err(_) => return,
+                    Ok(_) => self.buffer.clear(),
+                }
+            }
+        })
+        .await;
+        dropped.is_ok()
+    }
 }

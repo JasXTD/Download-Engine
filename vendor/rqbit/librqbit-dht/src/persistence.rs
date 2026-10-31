@@ -93,7 +93,6 @@ fn dump_dht(dht: &Dht, filename: &Path, tempfile_name: &Path) -> anyhow::Result<
 }
 
 impl PersistentDht {
-
     #[inline(never)]
     pub fn create<'a>(
         persistence_config: DhtPersistenceConfig,

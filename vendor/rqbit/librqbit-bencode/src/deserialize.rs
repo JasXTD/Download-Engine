@@ -111,7 +111,10 @@ impl<'de> BencodeDeserializer<'de> {
 /// Returns the length of the number at the start of `buf`, which must stop at `end`.
 fn number_len(buf: &[u8], end: u8) -> Result<usize, Error> {
     let sign = usize::from(buf.first() == Some(&b'-'));
-    let digits = buf[sign..].iter().take_while(|b| b.is_ascii_digit()).count();
+    let digits = buf[sign..]
+        .iter()
+        .take_while(|b| b.is_ascii_digit())
+        .count();
     if digits == 0 || buf.get(sign + digits) != Some(&end) {
         return Err(Error::InvalidValue);
     }
@@ -772,8 +775,10 @@ mod tests {
         }
 
         assert_eq!(
-            from_bytes::<S>(b"d3:bigi99999999999999999999e4:listli-99999999999999999999ee3:keyi42ee")
-                .unwrap(),
+            from_bytes::<S>(
+                b"d3:bigi99999999999999999999e4:listli-99999999999999999999ee3:keyi42ee"
+            )
+            .unwrap(),
             S { key: 42 }
         );
         assert!(from_bytes::<S>(b"d3:bigi9x9e3:keyi42ee").is_err());

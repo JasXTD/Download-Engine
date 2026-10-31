@@ -78,7 +78,6 @@ struct MaybeUsefulNode {
     returned_peers: bool,
 }
 
-
 trait RecursiveRequestCallbacks: Sized + Send + Sync + 'static {
     fn on_request_start(&self, req: &RecursiveRequest<Self>, target_node: Id20, addr: SocketAddr);
     fn on_request_end(
@@ -970,7 +969,11 @@ fn is_datagram_error(e: &std::io::Error) -> bool {
 
 impl DhtWorker {
     fn on_send_error(&self, tid: u16, addr: SocketAddr, err: crate::Error) {
-        let request = self.dht.inflight_by_transaction_id.lock().remove(&(tid, addr));
+        let request = self
+            .dht
+            .inflight_by_transaction_id
+            .lock()
+            .remove(&(tid, addr));
         if let Some(OutstandingRequest { done }) = request {
             let _ = done.send(Err(err)).is_err();
         };

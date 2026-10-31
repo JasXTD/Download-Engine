@@ -744,7 +744,8 @@ mod tests {
 
     #[test]
     fn test_zero_piece_length_is_an_error() {
-        let buf = "d4:infod6:lengthi100e4:name1:a12:piece lengthi0e6:pieces20:xxxxxxxxxxxxxxxxxxxxee";
+        let buf =
+            "d4:infod6:lengthi100e4:name1:a12:piece lengthi0e6:pieces20:xxxxxxxxxxxxxxxxxxxxee";
         let torrent = torrent_from_bytes(buf.as_bytes()).unwrap();
         assert!(torrent.info.data.validate().is_err());
     }

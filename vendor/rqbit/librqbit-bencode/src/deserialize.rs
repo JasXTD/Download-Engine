@@ -1,7 +1,8 @@
+// Modified by Download Engine: replaced atoi with checked parsing. See ../../patch.md.
 use std::marker::PhantomData;
+use std::str::FromStr;
 
 use arrayvec::ArrayVec;
-use atoi::{FromRadix10, FromRadix10Signed};
 use buffers::ByteBuf;
 use clone_to_owned::CloneToOwned;
 use serde::{Deserialize, Serialize, forward_to_deserialize_any};
@@ -69,27 +70,25 @@ impl<'de> BencodeDeserializer<'de> {
         }
     }
 
-    fn parse_integer<I>(&mut self, atoi: impl Fn(&'de [u8]) -> (I, usize)) -> Result<I, Error> {
+    /// Reads a number that stops at `end`, then moves past `end`. Bencode comes from
+    /// strangers, so a number too large for `I` is an error, never a wrapped value.
+    fn parse_number<I: FromStr>(&mut self, end: u8) -> Result<I, Error> {
+        let len = number_len(self.buf, end)?;
+        let number = std::str::from_utf8(&self.buf[..len]).map_err(|_| Error::InvalidValue)?;
+        let value = number.parse().map_err(|_| Error::InvalidValue)?;
+        self.buf = &self.buf[len + 1..];
+        Ok(value)
+    }
+
+    fn parse_integer<I: FromStr>(&mut self) -> Result<I, Error> {
         self.parse_first_byte(b'i', Error::InvalidValue)?;
-        match atoi(self.buf) {
-            (v, len) if len > 0 && self.buf.get(len) == Some(&b'e') => {
-                self.buf = &self.buf[len + 1..];
-                Ok(v)
-            }
-            _ => Err(Error::InvalidValue),
-        }
+        self.parse_number(b'e')
     }
 
     fn parse_bytes(&mut self) -> Result<&'de [u8], Error> {
-        let b = match usize::from_radix_10(self.buf) {
-            (v, len) if len > 0 && self.buf.get(len) == Some(&b':') => {
-                self.buf = unsafe { self.buf.get_unchecked(len + 1..) };
-                let (bytes, rest) = self.buf.split_at_checked(v).ok_or(Error::Eof)?;
-                self.buf = rest;
-                bytes
-            }
-            _ => return Err(Error::InvalidValue),
-        };
+        let len: usize = self.parse_number(b':')?;
+        let (b, rest) = self.buf.split_at_checked(len).ok_or(Error::Eof)?;
+        self.buf = rest;
         if self.parsing_key && self.field_context.try_push(ByteBuf(b)).is_err() {
             self.field_context_did_not_fit = self.field_context_did_not_fit.saturating_add(1);
         }
@@ -107,6 +106,16 @@ impl<'de> BencodeDeserializer<'de> {
         self.depth += 1;
         Ok(())
     }
+}
+
+/// Returns the length of the number at the start of `buf`, which must stop at `end`.
+fn number_len(buf: &[u8], end: u8) -> Result<usize, Error> {
+    let sign = usize::from(buf.first() == Some(&b'-'));
+    let digits = buf[sign..].iter().take_while(|b| b.is_ascii_digit()).count();
+    if digits == 0 || buf.get(sign + digits) != Some(&end) {
+        return Err(Error::InvalidValue);
+    }
+    Ok(sign + digits)
 }
 
 /// Deserialize a bencode value. If there are trailing bytes, will error.
@@ -239,7 +248,7 @@ impl<'de> serde::de::Deserializer<'de> for &mut BencodeDeserializer<'de> {
     where
         V: serde::de::Visitor<'de>,
     {
-        let value = self.parse_integer::<u8>(u8::from_radix_10)?;
+        let value = self.parse_integer::<u8>()?;
         if value > 1 {
             return Err(Error::InvalidBool(value));
         }
@@ -250,56 +259,56 @@ impl<'de> serde::de::Deserializer<'de> for &mut BencodeDeserializer<'de> {
     where
         V: serde::de::Visitor<'de>,
     {
-        visitor.visit_i8(self.parse_integer(i8::from_radix_10_signed)?)
+        visitor.visit_i8(self.parse_integer()?)
     }
 
     fn deserialize_i16<V>(self, visitor: V) -> Result<V::Value, Self::Error>
     where
         V: serde::de::Visitor<'de>,
     {
-        visitor.visit_i16(self.parse_integer(i16::from_radix_10_signed)?)
+        visitor.visit_i16(self.parse_integer()?)
     }
 
     fn deserialize_i32<V>(self, visitor: V) -> Result<V::Value, Self::Error>
     where
         V: serde::de::Visitor<'de>,
     {
-        visitor.visit_i32(self.parse_integer(i32::from_radix_10_signed)?)
+        visitor.visit_i32(self.parse_integer()?)
     }
 
     fn deserialize_i64<V>(self, visitor: V) -> Result<V::Value, Self::Error>
     where
         V: serde::de::Visitor<'de>,
     {
-        visitor.visit_i64(self.parse_integer(i64::from_radix_10_signed)?)
+        visitor.visit_i64(self.parse_integer()?)
     }
 
     fn deserialize_u8<V>(self, visitor: V) -> Result<V::Value, Self::Error>
     where
         V: serde::de::Visitor<'de>,
     {
-        visitor.visit_u8(self.parse_integer(u8::from_radix_10)?)
+        visitor.visit_u8(self.parse_integer()?)
     }
 
     fn deserialize_u16<V>(self, visitor: V) -> Result<V::Value, Self::Error>
     where
         V: serde::de::Visitor<'de>,
     {
-        visitor.visit_u16(self.parse_integer(u16::from_radix_10)?)
+        visitor.visit_u16(self.parse_integer()?)
     }
 
     fn deserialize_u32<V>(self, visitor: V) -> Result<V::Value, Self::Error>
     where
         V: serde::de::Visitor<'de>,
     {
-        visitor.visit_u32(self.parse_integer(u32::from_radix_10)?)
+        visitor.visit_u32(self.parse_integer()?)
     }
 
     fn deserialize_u64<V>(self, visitor: V) -> Result<V::Value, Self::Error>
     where
         V: serde::de::Visitor<'de>,
     {
-        visitor.visit_u64(self.parse_integer(u64::from_radix_10)?)
+        visitor.visit_u64(self.parse_integer()?)
     }
 
     fn deserialize_f32<V>(self, _visitor: V) -> Result<V::Value, Self::Error>
@@ -472,6 +481,12 @@ impl<'de> serde::de::Deserializer<'de> for &mut BencodeDeserializer<'de> {
     where
         V: serde::de::Visitor<'de>,
     {
+        // Bencode integers have no size limit, so a huge one that nothing reads is fine.
+        if self.parse_first_byte(b'i', Error::InvalidValue).is_ok() {
+            let len = number_len(self.buf, b'e')?;
+            self.buf = &self.buf[len + 1..];
+            return visitor.visit_unit();
+        }
         self.deserialize_any(visitor)
     }
 }
@@ -710,6 +725,58 @@ mod tests {
 
         // trailing bytes
         assert!(from_bytes::<u32>(b"i42ee").is_err());
+    }
+
+    #[test]
+    fn test_int_too_large_for_its_type_is_an_error() {
+        assert!(from_bytes::<u8>(b"i256e").is_err());
+        assert!(from_bytes::<i8>(b"i128e").is_err());
+        assert!(from_bytes::<i8>(b"i-129e").is_err());
+        assert!(from_bytes::<u64>(b"i18446744073709551616e").is_err());
+        assert!(from_bytes::<i64>(b"i9223372036854775808e").is_err());
+        assert!(from_bytes::<bool>(b"i257e").is_err());
+
+        assert_eq!(from_bytes::<u8>(b"i255e").unwrap(), 255);
+        assert_eq!(from_bytes::<i8>(b"i-128e").unwrap(), -128);
+        assert_eq!(
+            from_bytes::<u64>(b"i18446744073709551615e").unwrap(),
+            u64::MAX
+        );
+        assert_eq!(
+            from_bytes::<i64>(b"i-9223372036854775808e").unwrap(),
+            i64::MIN
+        );
+    }
+
+    #[test]
+    fn test_int_needs_digits() {
+        assert!(from_bytes::<i64>(b"i-e").is_err());
+        assert!(from_bytes::<i64>(b"i+5e").is_err());
+        assert!(from_bytes::<u64>(b"i+5e").is_err());
+        assert!(from_bytes::<u64>(b"i-5e").is_err());
+    }
+
+    #[test]
+    fn test_string_length_too_large_is_an_error() {
+        // 2^64 + 5. Wrapped around, this would read "hello".
+        assert!(from_bytes::<ByteBuf<'_>>(b"18446744073709551621:hello").is_err());
+        assert!(from_bytes::<ByteBuf<'_>>(b"-1:h").is_err());
+        assert!(from_bytes::<ByteBuf<'_>>(b":hello").is_err());
+    }
+
+    #[test]
+    fn test_huge_int_in_an_unknown_field_is_skipped() {
+        #[derive(serde_derive::Deserialize, Eq, PartialEq, Debug)]
+        struct S {
+            key: u32,
+        }
+
+        assert_eq!(
+            from_bytes::<S>(b"d3:bigi99999999999999999999e4:listli-99999999999999999999ee3:keyi42ee")
+                .unwrap(),
+            S { key: 42 }
+        );
+        assert!(from_bytes::<S>(b"d3:bigi9x9e3:keyi42ee").is_err());
     }
 
     #[test]

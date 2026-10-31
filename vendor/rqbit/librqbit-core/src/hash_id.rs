@@ -1,6 +1,6 @@
+// Modified by Download Engine: replaced hex and data-encoding with small functions. See ../../patch.md.
 use bytes::Bytes;
 use clone_to_owned::CloneToOwned;
-use data_encoding::BASE32;
 use serde::{Deserialize, Deserializer, Serialize};
 use std::str::FromStr;
 
@@ -13,7 +13,7 @@ impl<const N: usize> Id<N> {
     }
 
     pub fn as_string(&self) -> String {
-        hex::encode(self.0)
+        format!("{self:?}")
     }
 
     pub fn from_bytes(b: &[u8]) -> anyhow::Result<Self> {
@@ -83,26 +83,58 @@ impl<const N: usize> std::fmt::Debug for Id<N> {
     }
 }
 
+fn decode_hex<const N: usize>(s: &str) -> Option<[u8; N]> {
+    if s.len() != N * 2 {
+        return None;
+    }
+    let mut out = [0u8; N];
+    for (byte, pair) in out.iter_mut().zip(s.as_bytes().chunks_exact(2)) {
+        let high = char::from(pair[0]).to_digit(16)?;
+        let low = char::from(pair[1]).to_digit(16)?;
+        *byte = (high << 4 | low) as u8;
+    }
+    Some(out)
+}
+
+/// Decodes RFC 4648 base32, which magnet links can use for their hash. Anything that
+/// doesn't decode to exactly N bytes is rejected, because the input is not trusted.
+fn decode_base32<const N: usize>(s: &str) -> Option<[u8; N]> {
+    let mut out = [0u8; N];
+    let mut written = 0;
+    let mut bits = 0u32;
+    let mut pending = 0;
+    for c in s.trim_end_matches('=').bytes() {
+        let digit = match c {
+            b'A'..=b'Z' => c - b'A',
+            b'2'..=b'7' => c - b'2' + 26,
+            _ => return None,
+        };
+        bits = bits << 5 | u32::from(digit);
+        pending += 5;
+        if pending >= 8 {
+            pending -= 8;
+            *out.get_mut(written)? = (bits >> pending) as u8;
+            bits &= (1 << pending) - 1;
+            written += 1;
+        }
+    }
+    (written == N && bits == 0).then_some(out)
+}
+
 impl<const N: usize> FromStr for Id<N> {
     type Err = anyhow::Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let mut out = [0u8; N];
         let base32_encoded_size = (N as f64 / 5f64).ceil() as usize * 8;
         if s.len() == N * 2 {
-            hex::decode_to_slice(s, &mut out)?;
-            Ok(Id(out))
+            decode_hex(s)
+                .map(Id)
+                .ok_or_else(|| anyhow::anyhow!("fail to decode hex string {s}"))
             // try decode as base32
         } else if s.len() == base32_encoded_size {
-            match BASE32.decode(s.as_bytes()) {
-                Ok(decoded) => {
-                    out.copy_from_slice(&decoded);
-                    Ok(Id(out))
-                }
-                Err(err) => {
-                    anyhow::bail!("fail to decode base32 string {}: {}", s, err)
-                }
-            }
+            decode_base32(s)
+                .map(Id)
+                .ok_or_else(|| anyhow::anyhow!("fail to decode base32 string {s}"))
         } else {
             anyhow::bail!(
                 "expected a hex string of length {} or {}",
@@ -145,11 +177,9 @@ impl<'de, const N: usize> Deserialize<'de> for Id<N> {
                 if v.len() != N * 2 {
                     return Err(E::invalid_length(40, &self));
                 }
-                let mut out = [0u8; N];
-                match hex::decode_to_slice(v, &mut out) {
-                    Ok(_) => Ok(Id(out)),
-                    Err(e) => Err(E::custom(e)),
-                }
+                decode_hex(v)
+                    .map(Id)
+                    .ok_or_else(|| E::custom("invalid hex string"))
             }
 
             fn visit_borrowed_bytes<E>(self, v: &'de [u8]) -> Result<Self::Value, E>
@@ -254,5 +284,45 @@ mod tests {
         let id = Id32::new([2u8; 32]);
         let owned = id.clone_to_owned(None);
         assert_eq!(owned, id);
+    }
+
+    #[test]
+    fn test_hex_accepts_either_case_and_prints_lowercase() {
+        let lower = "cfe1119f124881ca70f7306f32e292194c88c195";
+        let id = Id20::from_str(&lower.to_uppercase()).unwrap();
+        assert_eq!(id, Id20::from_str(lower).unwrap());
+        assert_eq!(id.as_string(), lower);
+    }
+
+    #[test]
+    fn test_invalid_hex_is_an_error() {
+        // The right length, but not hex. The second one is 20 two-byte characters.
+        assert!(Id20::from_str(&"g".repeat(40)).is_err());
+        assert!(Id20::from_str(&"é".repeat(20)).is_err());
+    }
+
+    #[test]
+    fn test_invalid_base32_is_an_error() {
+        // A magnet link can carry any of these. Padding used to leave too few bytes and crash.
+        for s in [
+            format!("{}=", "A".repeat(31)),
+            format!("{}===", "A".repeat(29)),
+            "=".repeat(32),
+            "a".repeat(32),
+            "1".repeat(32),
+            "é".repeat(16),
+        ] {
+            assert!(Id20::from_str(&s).is_err(), "{s}");
+        }
+    }
+
+    #[test]
+    fn test_base32_of_32_bytes_is_padded() {
+        let id = Id32::from_str(&format!("{}====", "A".repeat(52))).unwrap();
+        assert_eq!(id, Id32::default());
+        // The last digit carries four bits past the 32 bytes, and they must be zero.
+        assert!(Id32::from_str(&format!("{}B====", "A".repeat(51))).is_err());
+        // Padding belongs only at the end.
+        assert!(Id32::from_str(&format!("AAAAAAA={}===", "A".repeat(45))).is_err());
     }
 }

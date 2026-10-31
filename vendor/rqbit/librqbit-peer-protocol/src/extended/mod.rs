@@ -1,10 +1,10 @@
-use std::io::Cursor;
+// Modified by Download Engine: removed byteorder. See ../../../patch.md.
+use std::io::{Cursor, Write};
 
 use bencode::BencodeValue;
 use bencode::bencode_serialize_to_writer;
 use buffers::ByteBuf;
 use buffers::ByteBufT;
-use byteorder::WriteBytesExt;
 use serde_derive::Deserialize;
 use serde_derive::Serialize;
 use ut_pex::UtPex;
@@ -56,25 +56,25 @@ impl<'a> ExtendedMessage<ByteBuf<'a>> {
         let mut out = Cursor::new(out);
         match self {
             ExtendedMessage::Dyn(msg_id, v) => {
-                out.write_u8(*msg_id)?;
+                out.write_all(&[*msg_id])?;
                 bencode_serialize_to_writer(v, &mut out)?;
             }
             ExtendedMessage::Handshake(h) => {
-                out.write_u8(0)?;
+                out.write_all(&[0])?;
                 bencode_serialize_to_writer(h, &mut out)?;
             }
             ExtendedMessage::UtMetadata(u) => {
                 let emsg_id = peer_extended_msg_ids()
                     .ut_metadata
                     .ok_or(SerializeError::NeedUtMetadata)?;
-                out.write_u8(emsg_id)?;
+                out.write_all(&[emsg_id])?;
                 u.serialize(&mut out)?;
             }
             ExtendedMessage::UtPex(m) => {
                 let emsg_id = peer_extended_msg_ids()
                     .ut_pex
                     .ok_or(SerializeError::NeedPex)?;
-                out.write_u8(emsg_id)?;
+                out.write_all(&[emsg_id])?;
                 bencode_serialize_to_writer(m, &mut out)?;
             }
         }

@@ -46,15 +46,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "atoi"
-version = "3.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d12c37257553c19e9aee6cba77814fdc9e07844abfc8b3a2c377cd920ee5a993"
-dependencies = [
- "num-traits",
-]
-
-[[package]]
 name = "atomic-waker"
 version = "1.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -109,12 +100,6 @@ name = "bumpalo"
 version = "3.20.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "72f5acc6cb2ba439de613abc23857ec3d78374d8ed5ac84e9d11336e87da8649"
-
-[[package]]
-name = "byteorder"
-version = "1.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1fd0f2584146f6f2ef48085050886acf353beff7305ebd1ae69500e27c67f64b"
 
 [[package]]
 name = "bytes"
@@ -279,12 +264,6 @@ dependencies = [
  "parking_lot_core",
  "serde",
 ]
-
-[[package]]
-name = "data-encoding"
-version = "2.11.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4583a4551df46e2792f82ceeac45e850d2e2d5debba0b91f102385cda5b11f06"
 
 [[package]]
 name = "defmt"
@@ -895,7 +874,6 @@ version = "9.1.0"
 dependencies = [
  "anyhow",
  "arrayvec",
- "atoi",
  "bytes",
  "librqbit-buffers",
  "librqbit-clone-to-owned",
@@ -928,9 +906,7 @@ dependencies = [
  "anyhow",
  "bytes",
  "chardetng",
- "data-encoding",
  "encoding_rs",
- "hex 0.4.3",
  "itertools",
  "librqbit-bencode",
  "librqbit-buffers",
@@ -993,7 +969,6 @@ name = "librqbit-peer-protocol"
 version = "9.1.0"
 dependencies = [
  "anyhow",
- "byteorder",
  "bytes",
  "itertools",
  "librqbit-bencode",
@@ -1036,7 +1011,6 @@ dependencies = [
  "tokio-util",
  "tracing",
  "url",
- "urlencoding",
 ]
 
 [[package]]
@@ -1717,12 +1691,6 @@ dependencies = [
  "percent-encoding",
  "serde",
 ]
-
-[[package]]
-name = "urlencoding"
-version = "2.1.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "daf8dba3b7eb870caf1ddeed7bc9d2a049f3cfdfae7cb521b087cc33ae4c49da"
 
 [[package]]
 name = "utf8_iter"

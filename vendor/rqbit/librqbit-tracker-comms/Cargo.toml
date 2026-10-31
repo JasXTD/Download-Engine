@@ -9,7 +9,7 @@
 # will likely look very different (and much more reasonable).
 # See Cargo.toml.orig for the original contents.
 
-# Modified by Download Engine: removed an unused dependency. See ../patch.md.
+# Modified by Download Engine: removed small dependencies. See ../patch.md.
 
 [package]
 edition = "2024"
@@ -96,5 +96,3 @@ version = "0.1"
 version = "2"
 default-features = false
 
-[dependencies.urlencoding]
-version = "2"

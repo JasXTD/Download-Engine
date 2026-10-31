@@ -9,7 +9,7 @@
 # will likely look very different (and much more reasonable).
 # See Cargo.toml.orig for the original contents.
 
-# Modified by Download Engine: removed the aws-lc backend and the default rqbit folders. See ../patch.md.
+# Modified by Download Engine: removed the aws-lc backend, the default rqbit folders and small dependencies. See ../patch.md.
 
 [package]
 edition = "2024"
@@ -58,14 +58,8 @@ version = "1"
 version = "9.1.0"
 package = "librqbit-clone-to-owned"
 
-[dependencies.data-encoding]
-version = "2"
-
 [dependencies.encoding_rs]
 version = "0.8"
-
-[dependencies.hex]
-version = "0.4"
 
 [dependencies.itertools]
 version = "0.15"

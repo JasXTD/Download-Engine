@@ -1,3 +1,4 @@
+// Modified by Download Engine: replaced urlencoding with a small function. See ../../patch.md.
 use buffers::ByteBuf;
 use itertools::Either;
 use serde::Deserializer;
@@ -161,15 +162,26 @@ impl TrackerResponse<'_> {
     }
 }
 
+/// Percent-encodes raw bytes, so a tracker reads back exactly the bytes of the id.
+fn push_percent_encoded(out: &mut String, bytes: &[u8]) {
+    use std::fmt::Write;
+    for &byte in bytes {
+        if byte.is_ascii_alphanumeric() || matches!(byte, b'-' | b'.' | b'_' | b'~') {
+            out.push(char::from(byte));
+        } else {
+            write!(out, "%{byte:02X}").unwrap();
+        }
+    }
+}
+
 impl TrackerRequest<'_> {
     pub fn as_querystring(&self) -> String {
         use std::fmt::Write;
-        use urlencoding as u;
         let mut s = String::new();
         s.push_str("info_hash=");
-        s.push_str(u::encode_binary(&self.info_hash.0).as_ref());
+        push_percent_encoded(&mut s, &self.info_hash.0);
         s.push_str("&peer_id=");
-        s.push_str(u::encode_binary(&self.peer_id.0).as_ref());
+        push_percent_encoded(&mut s, &self.peer_id.0);
         if let Some(event) = self.event {
             write!(
                 s,
@@ -228,7 +240,41 @@ mod tests {
             key: None,
             trackerid: None,
         };
-        dbg!(request.as_querystring());
+        assert_eq!(
+            request.as_querystring(),
+            concat!(
+                "info_hash=%01%02%03%04%05%06%07%08%09%0A%0B%0C%0D%0E%0F%10%11%12%13%14",
+                "&peer_id=%01%02%03%04%05%06%07%08%09%0A%0B%0C%0D%0E%0F%10%11%12%13%14",
+                "&event=started&port=6881&uploaded=0&downloaded=0&left=1048576",
+                "&compact=1&no_peer_id=0&ip=127.0.0.1",
+            )
+        );
+    }
+
+    #[test]
+    fn test_ids_keep_only_url_safe_bytes() {
+        let id = Id20::new(*b"azAZ09-_.~ %&+=/\xff\x00\x7f\x80");
+        let request = TrackerRequest {
+            info_hash: &id,
+            peer_id: &id,
+            port: 6881,
+            uploaded: 0,
+            downloaded: 0,
+            left: 0,
+            compact: true,
+            no_peer_id: false,
+            event: None,
+            ip: None,
+            numwant: None,
+            key: None,
+            trackerid: None,
+        };
+        let encoded = "azAZ09-_.~%20%25%26%2B%3D%2F%FF%00%7F%80";
+        assert!(
+            request
+                .as_querystring()
+                .starts_with(&format!("info_hash={encoded}&peer_id={encoded}&port="))
+        );
     }
 
     #[test]

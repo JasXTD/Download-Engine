@@ -1,4 +1,4 @@
-// Modified by Download Engine: moved a test file into this crate. See ../../patch.md.
+// Modified by Download Engine: moved a test file into this crate, removed byteorder. See ../../patch.md.
 // BitTorrent peer protocol implementation: parsing, serialization etc.
 //
 // Can be used outside of librqbit.
@@ -9,7 +9,6 @@ pub mod extended;
 use std::hint::unreachable_unchecked;
 
 use buffers::{ByteBuf, ByteBufOwned};
-use byteorder::{BE, ByteOrder};
 use bytes::Bytes;
 use clone_to_owned::CloneToOwned;
 use extended::PeerExtendedMessageIds;
@@ -128,12 +127,12 @@ pub enum MessageDeserializeError {
 
 pub fn serialize_piece_preamble(chunk: &ChunkInfo, mut buf: &mut [u8]) -> usize {
     let len_prefix = MSGID_LEN as u32 + INTEGER_LEN as u32 * 2 + chunk.size;
-    BE::write_u32(&mut buf[0..4], len_prefix);
+    buf[0..4].copy_from_slice(&len_prefix.to_be_bytes());
     buf[4] = MSGID_PIECE;
 
     buf = &mut buf[5..];
-    BE::write_u32(&mut buf[0..4], chunk.piece_index.get());
-    BE::write_u32(&mut buf[4..8], chunk.offset);
+    buf[0..4].copy_from_slice(&chunk.piece_index.get().to_be_bytes());
+    buf[4..8].copy_from_slice(&chunk.offset.to_be_bytes());
 
     PIECE_MESSAGE_PREAMBLE_LEN
 }
@@ -418,9 +417,9 @@ impl Message<'_> {
                 const I32_3: usize = I32 * 3;
                 let req = buf.consume::<I32_3>().unwrap();
                 let request = Request {
-                    index: BE::read_u32(&req[0..I32]),
-                    begin: BE::read_u32(&req[I32..I32 * 2]),
-                    length: BE::read_u32(&req[I32 * 2..I32 * 3]),
+                    index: u32::from_be_bytes(req[0..I32].try_into().unwrap()),
+                    begin: u32::from_be_bytes(req[I32..I32 * 2].try_into().unwrap()),
+                    length: u32::from_be_bytes(req[I32 * 2..I32 * 3].try_into().unwrap()),
                 };
                 let req = if msg_id == MSGID_REQUEST {
                     Message::Request(request)
@@ -500,7 +499,7 @@ impl Handshake {
         }
 
         let h = Handshake {
-            reserved: BE::read_u64(&b[20..28]),
+            reserved: u64::from_be_bytes(b[20..28].try_into().unwrap()),
             info_hash: Id20::new(b[28..48].try_into().unwrap()),
             peer_id: Id20::new(b[48..68].try_into().unwrap()),
         };
@@ -576,6 +575,41 @@ mod tests {
         let (de, dlen) = Handshake::deserialize(&buf).unwrap();
         assert_eq!(dlen, len);
         assert_eq!(se, de);
+    }
+
+    #[test]
+    fn test_handshake_reserved_bytes_keep_wire_order() {
+        // The fifth-from-zero reserved byte is where BEP 10 puts the extension bit.
+        let mut buf = [0u8; 68];
+        buf[0] = 19;
+        buf[1..20].copy_from_slice(PSTR_BT1.as_bytes());
+        buf[25] = 0x10;
+        let (handshake, _) = Handshake::deserialize(&buf).unwrap();
+        assert!(handshake.supports_extended());
+    }
+
+    #[test]
+    fn test_serialize_piece_preamble() {
+        let lengths = librqbit_core::lengths::Lengths::new(1 << 20, 1 << 16).unwrap();
+        let piece = lengths.validate_piece_index(2).unwrap();
+        let chunk = lengths.iter_chunk_infos(piece).nth(1).unwrap();
+        let mut buf = [0xffu8; PIECE_MESSAGE_PREAMBLE_LEN];
+        let len = serialize_piece_preamble(&chunk, &mut buf);
+        assert_eq!(len, PIECE_MESSAGE_PREAMBLE_LEN);
+        assert_eq!(buf[0..4], 0x4009u32.to_be_bytes());
+        assert_eq!(buf[4], MSGID_PIECE);
+        assert_eq!(buf[5..9], 2u32.to_be_bytes());
+        assert_eq!(buf[9..13], 0x4000u32.to_be_bytes());
+    }
+
+    #[test]
+    fn test_extended_message_starts_with_its_id() {
+        let msg = Message::Extended(ExtendedMessage::Handshake(ExtendedHandshake::new()));
+        let mut out = [0u8; 100];
+        msg.serialize(&mut out, &Default::default).unwrap();
+        assert_eq!(out[4], MSGID_EXTENDED);
+        assert_eq!(out[5], 0, "the extended handshake is id 0");
+        assert_eq!(out[6], b'd', "its body is a bencode dictionary");
     }
 
     #[test]

@@ -94,7 +94,7 @@ pub(super) fn apply(
         Command::TorrentSettings => {
             let settings = store.torrent_settings()?;
             store.torrents.configure(&settings);
-            if !settings.enabled {
+            if !settings.enabled || store.proxy_blocks_torrents()? {
                 for job in store.list()? {
                     if job.torrent.is_some()
                         && matches!(job.status, Status::Queued | Status::Downloading)

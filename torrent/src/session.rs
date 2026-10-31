@@ -185,10 +185,8 @@ impl Session {
             .iter()
             .filter_map(|tracker| usable_tracker(tracker))
             .collect();
-        let mut add = add;
-        if add.only.is_none() {
-            add.only = magnet.get_select_only();
-        }
+        // A link's own `so=` list is ignored, because a stranger's link must not choose
+        // what gets downloaded.
         let options = self.torrent_options(add);
         let saved = self
             .options
@@ -441,6 +439,30 @@ mod tests {
         let torrent = session.torrent("one").unwrap();
         wait_until(&torrent, "the file list", |stats| stats.state == "ready").await;
         assert_eq!(torrent.meta().unwrap().files[0].len, 40_000);
+        session.shutdown().await;
+    }
+
+    #[tokio::test]
+    async fn test_a_magnet_link_cannot_choose_its_own_files() {
+        let (state, output) = (TempFolder::new(), TempFolder::new());
+        let file = single_file_torrent("a.bin", &sample_bytes(40_000, 44), PIECE);
+        let meta = meta_of(&file);
+        let session = Session::new(session_options(state.path())).await.unwrap();
+        session.import(&file).unwrap();
+        session
+            .add_magnet(
+                "one".into(),
+                &format!("{}&so=0", magnet_for(&meta)),
+                AddOptions {
+                    output: output.path(),
+                    choose_later: true,
+                    ..Default::default()
+                },
+            )
+            .await
+            .unwrap();
+        let torrent = session.torrent("one").unwrap();
+        wait_until(&torrent, "the file list", |stats| stats.state == "ready").await;
         session.shutdown().await;
     }
 

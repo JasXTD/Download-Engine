@@ -265,6 +265,13 @@ impl Draft {
         self.details.is_some() || self.existing.is_some() || self.error.is_some()
     }
 }
+/// Dropping the fetch waits for its thread, so the search has to end first. Otherwise a
+/// file list that never arrives would hold up closing the app.
+impl Drop for Draft {
+    fn drop(&mut self) {
+        self.cancel.cancel();
+    }
+}
 
 enum Question {
     AddWindow,
@@ -1133,6 +1140,14 @@ mod tests {
         job.status = Status::Paused;
         assert_eq!(list_status(&job, true, 0, false), "Torrents are off");
         assert_eq!(list_status(&job, true, 0, true), "Paused");
+    }
+
+    #[test]
+    fn dropping_a_draft_ends_its_search() {
+        let draft = Draft::new(Source::Magnet(LINK.into()));
+        let search = draft.cancel.clone();
+        drop(draft);
+        assert!(search.is_cancelled());
     }
 
     #[test]

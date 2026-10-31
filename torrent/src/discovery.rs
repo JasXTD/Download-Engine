@@ -1,7 +1,7 @@
 //! Finds peers through trackers and the DHT, using the copied crates.
 
 use std::collections::HashSet;
-use std::net::{Ipv4Addr, SocketAddr};
+use std::net::SocketAddr;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
@@ -9,7 +9,10 @@ use std::time::Duration;
 use anyhow::Result;
 use librqbit_core::hash_id::Id20;
 use librqbit_dht::{Dht, DhtBuilder, DhtConfig, DhtPersistenceConfig, PersistentDht};
-use librqbit_tracker_comms::{TorrentStatsProvider, TrackerComms, UdpTrackerClient};
+use librqbit_tracker_comms::{
+    TorrentStatsProvider, TrackerComms, UdpTrackerClient, is_local_address,
+};
+use reqwest::dns::{Addrs, Name, Resolve, Resolving};
 use tokio::sync::{OnceCell, mpsc};
 use tokio_util::sync::CancellationToken;
 use url::{Host, Url};
@@ -54,13 +57,6 @@ pub struct Search {
 /// Whether an address leads to this computer or its own network. A tracker address comes
 /// from a stranger, and must not make us send requests to a router or a local service.
 fn stays_local(url: &Url) -> bool {
-    fn ipv4_stays_local(ip: Ipv4Addr) -> bool {
-        ip.is_private()
-            || ip.is_loopback()
-            || ip.is_link_local()
-            || ip.is_broadcast()
-            || ip.octets()[0] == 0
-    }
     // Only web addresses have their hosts read as numbers. A udp:// one keeps plain text,
     // which the system would still read as a number, so read every host as a web address.
     let Some(web) = url
@@ -70,17 +66,8 @@ fn stays_local(url: &Url) -> bool {
         return true;
     };
     match web.host() {
-        Some(Host::Ipv4(ip)) => ipv4_stays_local(ip),
-        Some(Host::Ipv6(ip)) => match ip.to_ipv4_mapped() {
-            Some(ip) => ipv4_stays_local(ip),
-            None => {
-                let first = ip.segments()[0];
-                ip.is_loopback()
-                    || ip.is_unspecified()
-                    || first & 0xfe00 == 0xfc00
-                    || first & 0xffc0 == 0xfe80
-            }
-        },
+        Some(Host::Ipv4(ip)) => is_local_address(ip.into()),
+        Some(Host::Ipv6(ip)) => is_local_address(ip.into()),
         Some(Host::Domain(name)) => {
             let name = name.trim_end_matches('.');
             name == "localhost" || name.ends_with(".localhost") || name.ends_with(".local")
@@ -89,16 +76,38 @@ fn stays_local(url: &Url) -> bool {
     }
 }
 
+/// Looks up tracker names and keeps only public addresses. The address in a tracker's URL
+/// isn't enough to go on, because any name can point anywhere.
+struct PublicNames;
+
+impl Resolve for PublicNames {
+    fn resolve(&self, name: Name) -> Resolving {
+        Box::pin(async move {
+            let found = tokio::net::lookup_host((name.as_str(), 0)).await?;
+            let public: Vec<SocketAddr> = found
+                .filter(|address| !is_local_address(address.ip()))
+                .collect();
+            if public.is_empty() {
+                return Err(format!("{} has no public address", name.as_str()).into());
+            }
+            Ok(Box::new(public.into_iter()) as Addrs)
+        })
+    }
+}
+
 impl Discovery {
     pub fn new(options: DiscoveryOptions, cancel: CancellationToken) -> Result<Arc<Self>> {
         // A tracker comes from a stranger, so it gets no say in where this client goes next.
-        let http = reqwest::Client::builder()
+        let mut http = reqwest::Client::builder()
             .user_agent(crate::peer::CLIENT_NAME)
             .no_proxy()
             .redirect(reqwest::redirect::Policy::none())
             .connect_timeout(TRACKER_CONNECT_TIMEOUT)
-            .timeout(TRACKER_TIMEOUT)
-            .build()?;
+            .timeout(TRACKER_TIMEOUT);
+        if !options.allow_local_trackers {
+            http = http.dns_resolver(Arc::new(PublicNames));
+        }
+        let http = http.build()?;
         Ok(Arc::new(Self {
             options,
             http,
@@ -111,10 +120,14 @@ impl Discovery {
     async fn udp_client(&self) -> Option<UdpTrackerClient> {
         self.udp
             .get_or_init(|| async {
-                UdpTrackerClient::new(self.cancel.clone(), None)
-                    .await
-                    .inspect_err(|error| debug_log!("UDP trackers are off: {error:#}"))
-                    .ok()
+                UdpTrackerClient::new(
+                    self.cancel.clone(),
+                    None,
+                    !self.options.allow_local_trackers,
+                )
+                .await
+                .inspect_err(|error| debug_log!("UDP trackers are off: {error:#}"))
+                .ok()
             })
             .await
             .clone()
@@ -238,6 +251,12 @@ mod tests {
         ] {
             assert!(stays_local(&Url::parse(address).unwrap()), "{address}");
         }
+    }
+
+    #[tokio::test]
+    async fn test_a_name_that_leads_here_is_not_used() {
+        let name = "localhost".parse().unwrap();
+        assert!(PublicNames.resolve(name).await.is_err());
     }
 
     #[test]

@@ -1307,6 +1307,16 @@ impl Desktop {
         }
     }
     pub(super) fn open_file(&mut self, job: &Job) {
+        // A torrent with several files is a folder, so there is one thing to open: that.
+        if job.torrent.is_some()
+            && job
+                .saved_path
+                .as_deref()
+                .is_some_and(std::path::Path::is_dir)
+        {
+            self.show_folder(job);
+            return;
+        }
         match self.store.antivirus_settings() {
             Ok(settings) if settings.enabled => {
                 self.review_scan(job, true);
@@ -1537,7 +1547,10 @@ impl Desktop {
             self.stop_selected_downloads();
             ui.close();
         }
-        if job.status == Status::Complete && ui.button(tr("Redownload")).clicked() {
+        if job.status == Status::Complete
+            && job.torrent.is_none()
+            && ui.button(tr("Redownload")).clicked()
+        {
             self.duplicate_download(ui.ctx(), job);
             ui.close();
         }

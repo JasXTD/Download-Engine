@@ -1,4 +1,5 @@
-// Modified by Download Engine: removed a test that contacts a public tracker, replaced rand. See ../../patch.md.
+// Modified by Download Engine: removed a test that contacts a public tracker, replaced rand,
+// added public_only. See ../../patch.md.
 use std::{
     collections::{HashMap, hash_map::Entry},
     ffi::CStr,
@@ -245,6 +246,7 @@ struct ClientLocked {
 struct ClientShared {
     sock: UdpSocket,
     locked: RwLock<ClientLocked>,
+    public_only: bool,
 }
 
 #[derive(Clone)]
@@ -265,9 +267,11 @@ impl Drop for TransactionIdGuard<'_> {
 }
 
 impl UdpTrackerClient {
+    /// With `public_only`, tracker names that lead to this computer or its network are ignored.
     pub async fn new(
         cancel_token: CancellationToken,
         bind_device: Option<&BindDevice>,
+        public_only: bool,
     ) -> anyhow::Result<Self> {
         let addr = SocketAddr::new(IpAddr::V6(Ipv6Addr::UNSPECIFIED), 0);
         let sock = UdpSocket::bind_udp(
@@ -283,6 +287,7 @@ impl UdpTrackerClient {
             state: Arc::new(ClientShared {
                 sock,
                 locked: RwLock::new(Default::default()),
+                public_only,
             }),
         };
 
@@ -292,6 +297,10 @@ impl UdpTrackerClient {
         });
 
         Ok(client)
+    }
+
+    pub(crate) fn public_only(&self) -> bool {
+        self.state.public_only
     }
 
     async fn run(self) -> anyhow::Result<()> {

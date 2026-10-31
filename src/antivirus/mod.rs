@@ -516,6 +516,10 @@ fn scan_using(
     let mut permit = None;
     let result = (|| -> Result<()> {
         settings.validate()?;
+        ensure!(
+            !path.is_dir(),
+            "This torrent is a folder, which Download Engine can't scan yet. Scan it from File Explorer or your security app."
+        );
         let parents = process::guard_parents(&path)?;
         let (hash, file) = integrity::hash_file(&path, cancel)?;
         report.sha256 = Some(hash);

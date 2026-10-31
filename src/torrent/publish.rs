@@ -153,6 +153,8 @@ pub(super) async fn finish(store: &Store, job: &mut Job) -> Result<FinishedFile>
     let path = match lone_file(&files) {
         Some(file) => {
             let source = root.join(&file.saved_as);
+            // A torrent's own name can differ from its file's, and lacks the extension.
+            job.name = file.saved_as.to_string_lossy().into_owned();
             let path = crate::engine::publish_without_overwrite(store, job, &source).await?;
             delete_file(&source)?;
             std::fs::remove_dir(&root).context("Cannot remove the temporary torrent folder")?;
@@ -203,7 +205,8 @@ pub(crate) fn discard(store: &Store, job: &Job) -> Result<()> {
 }
 
 /// Deletes a finished torrent. A folder may also hold what the user put there, so only the
-/// files this download saved go, and only folders that end up empty.
+/// files this download saved go, and only folders that end up empty. A file that has
+/// changed size is no longer the one that was downloaded, so it stays too.
 pub(crate) fn delete_saved(store: &Store, job: &Job, path: &Path) -> Result<()> {
     let info = std::fs::symlink_metadata(path)
         .with_context(|| format!("Cannot find {}", path.display()))?;
@@ -216,6 +219,7 @@ pub(crate) fn delete_saved(store: &Store, job: &Job, path: &Path) -> Result<()> 
         match std::fs::symlink_metadata(&target) {
             Err(error) if is_missing(&error) => {}
             Err(error) => return Err(error.into()),
+            Ok(info) if info.len() != file.len => {}
             Ok(_) => download_file::delete_completed(&target)?,
         }
         remove_empty_folders(path, &target);

@@ -283,7 +283,8 @@ impl Store {
             "cmd": "add",
             "name": name,
             "magnet": link.trim(),
-            "output": self.paths.data.join("torrents"),
+            // Nothing is written while choosing, and this folder never gets made.
+            "output": self.paths.data.join("torrents").join(&name),
             "choose_later": true,
             "peers": self.torrents.test_peers(),
         }))?;

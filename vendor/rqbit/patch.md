@@ -99,6 +99,9 @@ All of these come from data that strangers control, and each has a regression te
   past about 70 TiB are refused.
 - Trackers: peers still queued when the last tracker stopped were lost. `TrackerPeers`
   delivers them before the stream ends.
+- Trackers: a name that led to this computer or its network was used anyway.
+  `is_local_address` and the `public_only` argument of `UdpTrackerClient::new` keep UDP
+  trackers away from those addresses. The engine does the same for HTTP trackers.
 - Extended handshakes: leaving out an extension failed the whole message, because bencode
   has no empty value. Private torrents must leave out peer exchange, so absent ids are now
   skipped when writing.
@@ -114,7 +117,7 @@ keeps them in a crate that is not copied here.
 - Nothing checks that a torrent's `pieces` field has one hash for every piece. `get_hash`
   returns `None` for a missing one, and the engine must treat that as an invalid torrent.
 - A magnet link's `so=` values are not checked against the torrent's file list, and its
-  `dn=` name is not made safe. The engine must do both.
+  `dn=` name is not made safe. The engine ignores `so=`, and the application cleans `dn=`.
 - Peer encryption, rarest-first piece selection, web seeds, uTP, router port mapping and
   local peer discovery are not in these crates.
 - `scripts/Build-LicenseBundle.cjs`, `scripts/release-source-inventory.json` and the notices

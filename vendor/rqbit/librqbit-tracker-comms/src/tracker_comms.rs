@@ -1,5 +1,7 @@
-// Modified by Download Engine: replaced rand, backon and async-stream. See ../../patch.md.
+// Modified by Download Engine: replaced rand, backon and async-stream, and added public-only
+// name lookups. See ../../patch.md.
 use std::collections::HashSet;
+use std::net::IpAddr;
 use std::net::SocketAddr;
 use std::net::SocketAddrV4;
 use std::net::SocketAddrV6;
@@ -127,9 +129,38 @@ enum UdpTrackerResolveResult {
     Two(SocketAddrV4, SocketAddrV6),
 }
 
+/// Whether an address belongs to this computer or the network it is on. A tracker's name
+/// comes from a stranger, and must not lead to a router or a local service.
+pub fn is_local_address(ip: IpAddr) -> bool {
+    match ip.to_canonical() {
+        IpAddr::V4(ip) => {
+            let [first, second, ..] = ip.octets();
+            ip.is_private()
+                || ip.is_loopback()
+                || ip.is_link_local()
+                || ip.is_broadcast()
+                || ip.is_multicast()
+                || first == 0
+                || first >= 240
+                || (first == 100 && (64..=127).contains(&second))
+                || (first == 198 && (second == 18 || second == 19))
+        }
+        IpAddr::V6(ip) => {
+            let first = ip.segments()[0];
+            ip.is_loopback()
+                || ip.is_unspecified()
+                || ip.is_multicast()
+                || first & 0xfe00 == 0xfc00
+                || first & 0xffc0 == 0xfe80
+                || first & 0xffc0 == 0xfec0
+        }
+    }
+}
+
 async fn udp_tracker_to_socket_addrs(
     host: url::Host<&str>,
     port: u16,
+    public_only: bool,
 ) -> anyhow::Result<UdpTrackerResolveResult> {
     let res = match host {
         url::Host::Domain(name) => {
@@ -140,6 +171,7 @@ async fn udp_tracker_to_socket_addrs(
             for addr in tokio::net::lookup_host((name, port))
                 .await
                 .with_context(|| format!("error looking up hostname {name}"))?
+                .filter(|addr| !public_only || !is_local_address(addr.ip()))
             {
                 match (v4, v6, addr) {
                     (None, _, SocketAddr::V4(addr)) => v4 = Some(addr),
@@ -362,7 +394,7 @@ impl TrackerComms {
             // This should retry forever until the addrs are resolved.
             let mut backoff = Backoff::new(Duration::from_secs(1), Duration::from_secs(60));
             let addrs = loop {
-                let resolved = udp_tracker_to_socket_addrs(host.clone(), port)
+                let resolved = udp_tracker_to_socket_addrs(host.clone(), port, client.public_only())
                     .instrument(trace_span!("resolve", ?host))
                     .await
                     .or_else(|err| prev_addrs.ok_or(err));
@@ -496,5 +528,46 @@ mod tests {
         assert!(stream.next().now_or_never().is_none());
         drop(stream);
         assert!(stopped.await.is_err());
+    }
+}
+
+#[cfg(test)]
+mod local_address_tests {
+    use super::*;
+
+    #[test]
+    fn local_addresses_are_recognized() {
+        for address in [
+            "127.0.0.1",
+            "10.0.0.1",
+            "172.16.0.1",
+            "192.168.1.1",
+            "169.254.169.254",
+            "100.64.0.1",
+            "198.18.0.1",
+            "0.0.0.0",
+            "224.0.0.1",
+            "240.0.0.1",
+            "255.255.255.255",
+            "::1",
+            "::",
+            "fc00::1",
+            "fe80::1",
+            "ff02::1",
+            "::ffff:192.168.1.1",
+            "::ffff:127.0.0.1",
+        ] {
+            assert!(is_local_address(address.parse().unwrap()), "{address}");
+        }
+        for address in ["93.184.216.34", "1.1.1.1", "2606:4700::1111"] {
+            assert!(!is_local_address(address.parse().unwrap()), "{address}");
+        }
+    }
+
+    #[tokio::test]
+    async fn test_a_name_for_this_computer_is_refused_when_only_public_addresses_count() {
+        let host = url::Host::Domain("localhost");
+        assert!(udp_tracker_to_socket_addrs(host.clone(), 80, false).await.is_ok());
+        assert!(udp_tracker_to_socket_addrs(host, 80, true).await.is_err());
     }
 }

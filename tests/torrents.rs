@@ -24,6 +24,8 @@ use tokio::{
 };
 
 const PATIENCE: Duration = Duration::from_secs(60);
+/// Every look at the store opens a database, and many tests run at once.
+const POLL: Duration = Duration::from_millis(100);
 const PIECE: usize = 16384;
 const MAIN: &str = download_engine::queue::MAIN_QUEUE;
 
@@ -306,7 +308,7 @@ impl Bench {
                 job.error
             );
             assert!(job.status != Status::Failed, "{what}: {:?}", job.error);
-            std::thread::sleep(Duration::from_millis(20));
+            std::thread::sleep(POLL);
         }
     }
 
@@ -322,7 +324,7 @@ impl Bench {
         let deadline = Instant::now() + PATIENCE;
         while self.store.torrents.is_running() {
             assert!(Instant::now() < deadline, "the helper kept running");
-            std::thread::sleep(Duration::from_millis(20));
+            std::thread::sleep(POLL);
         }
     }
 
@@ -354,7 +356,7 @@ impl Bench {
             }))
             .unwrap();
         while self.store.bandwidth_limits().unwrap().global != rate {
-            std::thread::sleep(Duration::from_millis(5));
+            std::thread::sleep(POLL);
         }
     }
 
@@ -452,7 +454,7 @@ fn a_torrent_resumed_while_off_fails_without_starting_the_helper() {
             break saved;
         }
         assert!(Instant::now() < deadline, "{:?}", saved.status);
-        std::thread::sleep(Duration::from_millis(20));
+        std::thread::sleep(POLL);
     };
     assert_eq!(failed.error.as_deref(), Some(OFF_MESSAGE));
     assert!(!bench.store.torrents.is_running());
@@ -721,7 +723,7 @@ fn a_proxy_stops_torrents_from_starting() {
             break;
         }
         assert!(Instant::now() < deadline);
-        std::thread::sleep(Duration::from_millis(20));
+        std::thread::sleep(POLL);
     }
     assert!(!bench.store.torrents.is_running());
     assert_eq!(bench.seeder.connections.load(Ordering::Relaxed), 0);
@@ -753,7 +755,7 @@ fn removing_a_paused_torrent_clears_its_temporary_folder() {
     let deadline = Instant::now() + PATIENCE;
     while bench.store.get(&job.id).unwrap().is_some() {
         assert!(Instant::now() < deadline);
-        std::thread::sleep(Duration::from_millis(20));
+        std::thread::sleep(POLL);
     }
     assert_eq!(bench.leftovers(), Vec::<String>::new());
     assert_eq!(bench.state_files(), Vec::<String>::new());
@@ -767,6 +769,7 @@ fn deleting_a_finished_torrent_leaves_what_the_user_added_to_its_folder() {
     let finished = bench.wait_complete(&job.id);
     let folder = finished.saved_path.clone().unwrap();
     std::fs::write(folder.join("notes.txt"), b"mine").unwrap();
+    std::fs::write(folder.join("c.bin"), b"replaced by the user").unwrap();
 
     bench
         .scheduler
@@ -778,11 +781,116 @@ fn deleting_a_finished_torrent_leaves_what_the_user_added_to_its_folder() {
     let deadline = Instant::now() + PATIENCE;
     while bench.store.get(&job.id).unwrap().is_some() {
         assert!(Instant::now() < deadline);
-        std::thread::sleep(Duration::from_millis(20));
+        std::thread::sleep(POLL);
     }
     assert!(folder.join("notes.txt").exists());
+    assert!(
+        folder.join("c.bin").exists(),
+        "it isn't the downloaded file now"
+    );
     assert!(!folder.join("a.bin").exists());
     assert!(!folder.join("sub").exists());
+}
+
+#[test]
+fn a_finished_torrent_in_a_synchronized_queue_does_not_break_the_list() {
+    let bench = Bench::new(single());
+    let details = bench.details();
+    let queue = bench.store.create_sync_queue("Mirrors").unwrap();
+    let job = bench
+        .store
+        .add_torrent(
+            &details,
+            vec![0],
+            Some(&bench.folder),
+            &queue.id,
+            uuid::Uuid::new_v4().to_string(),
+        )
+        .unwrap();
+    bench
+        .scheduler
+        .send(Command::StartQueue(queue.id.clone()))
+        .unwrap();
+    bench.wait_complete(&job.id);
+    bench
+        .scheduler
+        .send(Command::PauseQueue(queue.id.clone()))
+        .unwrap();
+    bench.scheduler.send(Command::StartQueue(queue.id)).unwrap();
+    std::thread::sleep(Duration::from_secs(1));
+    assert_eq!(bench.store.list().unwrap().len(), 1);
+    let saved = bench.store.get(&job.id).unwrap().unwrap();
+    assert_eq!(saved.status, Status::Complete);
+    assert!(saved.synchronization.is_none());
+}
+
+#[test]
+fn a_magnet_link_cannot_choose_its_own_files() {
+    let bench = Bench::new(several());
+    let link = format!("{}&so=0", magnet(&bench.seeder.sample));
+    let details = bench.fetch(&link).unwrap();
+    assert_eq!(details.files.len(), 3);
+    bench.wait_for_helper_to_stop();
+    assert_eq!(bench.seeder.sent.load(Ordering::Relaxed), 0, "no file data");
+
+    let job = bench
+        .store
+        .add_magnet_for_later(
+            &link,
+            Some(&bench.folder),
+            MAIN,
+            uuid::Uuid::new_v4().to_string(),
+        )
+        .unwrap();
+    bench.wait(
+        "the file list",
+        |job| job.torrent.as_ref().unwrap().stage == Stage::Choosing,
+        &job.id,
+    );
+    assert_eq!(bench.seeder.sent.load(Ordering::Relaxed), 0, "no file data");
+}
+
+#[test]
+fn a_proxy_turned_on_stops_a_running_torrent() {
+    let bench = Bench::new(sample("big.bin", &[("big.bin", 4_000_000)], 9));
+    let details = bench.details();
+    // Slow enough to outlast a busy scheduler, which can take seconds to get to the command.
+    bench.set_speed_limit(Some(64 * 1024));
+    let job = bench.add(&details, vec![0]);
+    bench.wait(
+        "some progress",
+        |job| job.status == Status::Downloading && job.downloaded > 0,
+        &job.id,
+    );
+    let proxy = bench.store.proxy_settings().unwrap();
+    bench
+        .store
+        .save_proxy_settings(
+            &proxy,
+            download_engine::proxy::Settings {
+                mode: download_engine::proxy::Mode::Custom,
+                endpoint: "http://127.0.0.1:9".into(),
+                ..Default::default()
+            },
+            download_engine::proxy::LoginChange::Remove,
+        )
+        .unwrap();
+    bench.scheduler.send(Command::TorrentSettings).unwrap();
+    bench.wait("the pause", |job| job.status == Status::Paused, &job.id);
+    bench.wait_for_helper_to_stop();
+}
+
+#[test]
+fn a_lone_file_keeps_its_own_name_inside_a_differently_named_torrent() {
+    let bench = Bench::new(sample("Ubuntu 22", &[("ubuntu.iso", 100_000)], 10));
+    let details = bench.details();
+    assert_eq!(details.name, "Ubuntu 22");
+    let job = bench.add(&details, vec![0]);
+    let finished = bench.wait_complete(&job.id);
+    assert_eq!(
+        finished.saved_path.as_deref(),
+        Some(bench.folder.join("ubuntu.iso").as_path())
+    );
 }
 
 #[test]

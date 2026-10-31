@@ -659,6 +659,7 @@ impl Reader {
         self.recent_bytes += size;
         self.timeouts = 0;
         if !core.picker.lock().wants_chunk(chunk) {
+            core.count_downloaded(size);
             core.wasted.fetch_add(size, Ordering::Relaxed);
             return Ok(());
         }

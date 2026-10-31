@@ -1,8 +1,13 @@
+// Modified by Download Engine: limited the size of the file selection. See ../../patch.md.
 use std::str::FromStr;
 
 use anyhow::Context;
 
 use crate::hash_id::{Id20, Id32};
+
+/// A magnet link can come from any web page, so its `so=` file selection must not be able
+/// to fill the memory. This is far more files than any real torrent has.
+const MAX_SELECTED_FILES: usize = 1 << 20;
 
 /// A parsed magnet link.
 pub struct Magnet {
@@ -110,13 +115,18 @@ impl Magnet {
                         if let Some((start, end)) = file_desc.split_once('-') {
                             let maybe_start_idx: Result<usize, _> = start.parse();
                             let maybe_end_idx: Result<usize, _> = end.parse();
-                            if let (Ok(start_idx), Ok(end_idx)) = (maybe_start_idx, maybe_end_idx) {
+                            if let (Ok(start_idx), Ok(end_idx)) = (maybe_start_idx, maybe_end_idx)
+                                && end_idx.saturating_sub(start_idx)
+                                    < MAX_SELECTED_FILES.saturating_sub(files.len())
+                            {
                                 files.extend(start_idx..=end_idx);
                             }
                         } else {
                             // Handling single file index
                             let idx = file_desc.parse();
-                            if let Ok(idx) = idx {
+                            if let Ok(idx) = idx
+                                && files.len() < MAX_SELECTED_FILES
+                            {
                                 files.push(idx);
                             }
                         }
@@ -190,6 +200,34 @@ mod tests {
     use crate::Id20;
 
     use super::Magnet;
+
+    fn selected(so: &str) -> Option<Vec<usize>> {
+        let hash = "a621779b5e3d486e127c3efbca9b6f8d135f52e5";
+        Magnet::parse(&format!("magnet:?xt=urn:btih:{hash}&so={so}"))
+            .unwrap()
+            .get_select_only()
+    }
+
+    #[test]
+    fn test_file_selection() {
+        assert_eq!(selected("0,2,4,6-8"), Some(vec![0, 2, 4, 6, 7, 8]));
+        assert_eq!(selected("x,3,2-y"), Some(vec![3]));
+        assert_eq!(selected("x"), None);
+    }
+
+    #[test]
+    fn test_huge_file_selection_is_ignored() {
+        // A link can come from any web page. These used to crash or fill the memory.
+        assert_eq!(selected("0-18446744073709551615"), None);
+        assert_eq!(selected("0-99999999999"), None);
+        assert_eq!(selected("3,0-99999999999,5"), Some(vec![3, 5]));
+    }
+
+    #[test]
+    fn test_file_selection_has_a_total_limit() {
+        let selection = selected(&["0-999999"; 3].join(",")).unwrap();
+        assert_eq!(selection.len(), 1_000_000);
+    }
 
     #[test]
     fn test_parse_magnet_as_url() {

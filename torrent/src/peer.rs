@@ -193,6 +193,11 @@ impl PeerLink {
         self.interested.load(Ordering::Acquire)
     }
 
+    #[cfg(test)]
+    pub fn mark_interested(&self) {
+        self.interested.store(true, Ordering::Release);
+    }
+
     pub fn choke(&self) {
         if !self.choking.swap(true, Ordering::AcqRel) {
             let mut outbox = self.outbox.lock();
@@ -583,6 +588,7 @@ impl Reader {
                 *self.link.extended_ids.lock() = handshake.peer_extended_messages();
                 if let Some(limit) = handshake.reqq {
                     self.peer_queue_limit = (limit as usize).clamp(1, MAX_QUEUE);
+                    self.queue_target = self.queue_target.min(self.peer_queue_limit);
                 }
             }
             ExtendedMessage::UtMetadata(UtMetadata::Request(piece)) => {
@@ -688,8 +694,17 @@ impl Reader {
                 && let Some(request) = self.live.core.request_for(chunk)
             {
                 self.link.push(Out::Cancel(request));
+                // The block may already be on its way, which is no fault of the peer's.
+                self.remember_released(chunk);
             }
         }
+    }
+
+    fn remember_released(&mut self, chunk: Chunk) {
+        if self.released.len() >= MAX_RELEASED {
+            self.released.clear();
+        }
+        self.released.insert(chunk);
     }
 
     fn fill_requests(&mut self) {
@@ -736,15 +751,15 @@ impl Reader {
         if self.in_flight.is_empty() {
             return;
         }
-        if self.released.len() > MAX_RELEASED {
-            self.released.clear();
-        }
+        let given_up: Vec<Chunk> = self.in_flight.drain().map(|(chunk, _)| chunk).collect();
         let mut picker = self.live.core.picker.lock();
-        for (chunk, _) in self.in_flight.drain() {
-            picker.release(chunk);
-            self.released.insert(chunk);
+        for chunk in &given_up {
+            picker.release(*chunk);
         }
         drop(picker);
+        for chunk in given_up {
+            self.remember_released(chunk);
+        }
         self.live.nudge_all();
     }
 

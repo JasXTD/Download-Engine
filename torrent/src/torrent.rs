@@ -1,9 +1,9 @@
 //! One torrent from start to finish: fetching its details if it came from a magnet link,
 //! checking what is already on disk, then running the swarm until it is paused or done.
 
-use std::collections::{HashMap, VecDeque};
+use std::collections::{HashMap, HashSet, VecDeque};
 use std::io;
-use std::net::SocketAddr;
+use std::net::{IpAddr, SocketAddr};
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, AtomicU32, AtomicU64, Ordering};
 use std::sync::{Arc, OnceLock};
@@ -407,13 +407,13 @@ struct PeerEntry {
     next_try: Option<Instant>,
     failures: u32,
     connected: bool,
-    banned: bool,
 }
 
 /// Every peer heard of, and when each should be tried next.
 #[derive(Default)]
 struct PeerBook {
     peers: HashMap<SocketAddr, PeerEntry>,
+    banned: HashSet<IpAddr>,
 }
 
 impl PeerBook {
@@ -429,18 +429,14 @@ impl PeerBook {
     }
 
     fn next_ready(&mut self, now: Instant) -> Option<SocketAddr> {
-        let (addr, entry) = self.peers.iter_mut().find(|(_, entry)| {
-            !entry.connected && !entry.banned && entry.next_try.is_none_or(|next| next <= now)
+        let banned = &self.banned;
+        let (addr, entry) = self.peers.iter_mut().find(|(addr, entry)| {
+            !entry.connected
+                && !banned.contains(&addr.ip())
+                && entry.next_try.is_none_or(|next| next <= now)
         })?;
         entry.connected = true;
         Some(*addr)
-    }
-
-    fn connected_from_outside(&mut self, addr: SocketAddr) {
-        self.add(addr);
-        if let Some(entry) = self.peers.get_mut(&addr) {
-            entry.connected = true;
-        }
     }
 
     /// Waits longer each time a peer is no use, and only briefly after one that was.
@@ -454,9 +450,11 @@ impl PeerBook {
     }
 
     fn ban(&mut self, addr: SocketAddr) {
-        if let Some(entry) = self.peers.get_mut(&addr) {
-            entry.banned = true;
-        }
+        self.banned.insert(addr.ip());
+    }
+
+    fn is_banned(&self, addr: SocketAddr) -> bool {
+        self.banned.contains(&addr.ip())
     }
 }
 
@@ -545,6 +543,12 @@ impl Torrent {
         {
             return;
         }
+        // Nothing should see this torrent as paused while its task gets going.
+        self.set_phase(if self.meta.get().is_some() {
+            Phase::Checking
+        } else {
+            Phase::Metadata
+        });
         let cancel = CancellationToken::new();
         let task = tokio::spawn(self.clone().lifetime(cancel.clone()));
         *run = Some(RunHandle { cancel, task });
@@ -952,10 +956,8 @@ async fn run_swarm(core: Arc<TorrentCore>, cancel: CancellationToken) -> Option<
                 }
                 Event::Ban(addr) => book.ban(addr),
                 Event::Stream { stream, addr, hello } => {
-                    if peers.len() < MAX_PEERS {
-                        if let Some(addr) = addr {
-                            book.connected_from_outside(addr);
-                        }
+                    let refused = addr.is_some_and(|addr| book.is_banned(addr));
+                    if peers.len() < MAX_PEERS && !refused {
                         peers.spawn(tracked(addr, serve_peer(live.clone(), stream, addr, hello)));
                     }
                 }
@@ -1070,7 +1072,7 @@ fn update_rates(core: &TorrentCore) {
     rates.last_up = up;
 }
 
-/// A peer stream from discovery ends when its source stops. Used by session tests.
+/// Passes on peers from a search until it ends or nobody is listening.
 pub(crate) async fn drain_addresses<S>(mut stream: S, found: mpsc::UnboundedSender<SocketAddr>)
 where
     S: futures_util::Stream<Item = SocketAddr> + Unpin,
@@ -1079,5 +1081,170 @@ where
         if found.send(addr).is_err() {
             break;
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::testkit::{TempFolder, context, meta_of, options_for, single_file_torrent};
+
+    fn address(text: &str) -> SocketAddr {
+        text.parse().unwrap()
+    }
+
+    #[test]
+    fn test_useless_addresses_are_not_kept() {
+        let mut book = PeerBook::default();
+        for bad in [
+            "1.2.3.4:0",
+            "0.0.0.0:80",
+            "224.0.0.1:80",
+            "255.255.255.255:80",
+        ] {
+            book.add(address(bad));
+        }
+        assert!(book.peers.is_empty());
+        book.add(address("1.2.3.4:6881"));
+        assert_eq!(book.peers.len(), 1);
+    }
+
+    #[test]
+    fn test_the_book_has_a_size_limit() {
+        let mut book = PeerBook::default();
+        for port in 1..=u16::MAX {
+            for host in 1..=2u8 {
+                book.add(SocketAddr::from(([10, 0, 0, host], port)));
+            }
+        }
+        assert_eq!(book.peers.len(), MAX_KNOWN_PEERS);
+    }
+
+    #[test]
+    fn test_a_peer_in_use_is_not_offered_twice() {
+        let mut book = PeerBook::default();
+        book.add(address("1.2.3.4:6881"));
+        let now = Instant::now();
+        assert!(book.next_ready(now).is_some());
+        assert!(book.next_ready(now).is_none());
+    }
+
+    #[test]
+    fn test_each_failure_waits_longer_up_to_a_limit() {
+        let mut book = PeerBook::default();
+        let peer = address("1.2.3.4:6881");
+        book.add(peer);
+        let mut now = Instant::now();
+        let mut last_wait = Duration::ZERO;
+        for _ in 0..12 {
+            assert_eq!(book.next_ready(now), Some(peer));
+            book.ended(peer, false, now);
+            let next = book.peers[&peer].next_try.unwrap();
+            let wait = next - now;
+            assert!(wait >= last_wait && wait <= LAST_RETRY, "{wait:?}");
+            assert!(book.next_ready(now).is_none());
+            last_wait = wait;
+            now = next;
+        }
+        assert_eq!(last_wait, LAST_RETRY);
+    }
+
+    #[test]
+    fn test_a_useful_peer_is_tried_again_soon() {
+        let mut book = PeerBook::default();
+        let peer = address("1.2.3.4:6881");
+        book.add(peer);
+        let now = Instant::now();
+        book.next_ready(now);
+        book.ended(peer, false, now);
+        book.next_ready(book.peers[&peer].next_try.unwrap());
+        book.ended(peer, true, now);
+        assert_eq!(book.peers[&peer].next_try, Some(now + FIRST_RETRY));
+    }
+
+    #[test]
+    fn test_a_banned_address_is_never_tried_on_any_port() {
+        let mut book = PeerBook::default();
+        book.add(address("1.2.3.4:6881"));
+        book.add(address("1.2.3.4:6882"));
+        book.ban(address("1.2.3.4:1"));
+        assert!(book.is_banned(address("1.2.3.4:9999")));
+        assert!(book.next_ready(Instant::now()).is_none());
+    }
+
+    fn live_for_tests(folder: &TempFolder) -> Arc<Live> {
+        let meta = meta_of(&single_file_torrent("a", &[1u8; 100], 16384));
+        let core = TorrentCore::new(meta, options_for(folder.path()), context(1), None).unwrap();
+        let (events, _) = mpsc::unbounded_channel();
+        let (found, _) = mpsc::unbounded_channel();
+        Arc::new(Live {
+            core,
+            cancel: CancellationToken::new(),
+            events,
+            found,
+            links: Mutex::default(),
+            next_key: AtomicU64::new(0),
+        })
+    }
+
+    #[test]
+    fn test_we_do_not_connect_to_ourselves_or_twice_to_one_peer() {
+        let folder = TempFolder::new();
+        let live = live_for_tests(&folder);
+        assert!(live.register(Id20::new([1; 20]), None).is_none());
+        assert!(live.register(Id20::new([2; 20]), None).is_some());
+        assert!(live.register(Id20::new([2; 20]), None).is_none());
+    }
+
+    #[test]
+    fn test_the_best_peers_keep_upload_slots_and_one_slot_rotates() {
+        let folder = TempFolder::new();
+        let live = live_for_tests(&folder);
+        let links: Vec<Arc<PeerLink>> = (0..7u8)
+            .map(|index| {
+                let link = live.register(Id20::new([index + 10; 20]), None).unwrap();
+                link.mark_interested();
+                // Peer 6 gives the most, and peer 0 the least.
+                link.downloaded
+                    .store(u64::from(index) * 1000 + 1, Ordering::Relaxed);
+                link
+            })
+            .collect();
+        let unchoked = |links: &[Arc<PeerLink>]| -> Vec<usize> {
+            (0..links.len())
+                .filter(|index| !links[*index].is_choking())
+                .collect()
+        };
+
+        let mut seen = HashMap::new();
+        live.rechoke(&mut seen, false, 0);
+        let first = unchoked(&links);
+        assert_eq!(first.len(), UPLOAD_SLOTS);
+        assert!(first.ends_with(&[4, 5, 6]), "{first:?}");
+
+        // The same gains again, on a later turn, must move the rotating slot.
+        for (index, link) in links.iter().enumerate() {
+            link.downloaded
+                .fetch_add(index as u64 * 1000 + 1, Ordering::Relaxed);
+        }
+        live.rechoke(&mut seen, false, 1);
+        let second = unchoked(&links);
+        assert_eq!(second.len(), UPLOAD_SLOTS);
+        assert!(second.ends_with(&[4, 5, 6]), "{second:?}");
+        assert_ne!(first[0], second[0]);
+    }
+
+    #[test]
+    fn test_a_peer_gets_a_free_slot_at_once_but_not_a_fifth() {
+        let folder = TempFolder::new();
+        let live = live_for_tests(&folder);
+        let links: Vec<Arc<PeerLink>> = (0..5u8)
+            .map(|index| live.register(Id20::new([index + 10; 20]), None).unwrap())
+            .collect();
+        for link in &links {
+            live.try_unchoke(link);
+        }
+        let open = links.iter().filter(|link| !link.is_choking()).count();
+        assert_eq!(open, UPLOAD_SLOTS);
     }
 }

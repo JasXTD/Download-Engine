@@ -30,8 +30,17 @@ cleanup() {
 }
 trap cleanup EXIT
 export LC_ALL=C TZ=UTC SOURCE_DATE_EPOCH=1789687190
-if ! command -v sha256sum >/dev/null; then
-    sha256sum() { shasum -a 256 "$@"; }
+if [[ $(uname -s) == Darwin ]] || ! command -v sha256sum >/dev/null; then
+    # macOS can provide a sha256sum compatibility utility which rejects a check
+    # without a filename. Use its installed shasum and make stdin explicit for
+    # the canonical patch's before/after checksum here-documents.
+    sha256sum() {
+        if [[ $# -eq 1 && $1 == --check ]]; then
+            shasum -a 256 --check -
+        else
+            shasum -a 256 "$@"
+        fi
+    }
 fi
 if [[ $(uname -s) == Darwin ]] && ! command sed --version >/dev/null 2>&1; then
     # The canonical patch uses GNU sed's c command. Apple's sed needs both the

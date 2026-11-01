@@ -25,9 +25,22 @@ if ! command -v sha256sum >/dev/null; then
     sha256sum() { shasum -a 256 "$@"; }
     export -f sha256sum
 fi
-if [[ $(uname -s) == Darwin ]]; then
-    # The verified downstream patch uses GNU sed's in-place argument syntax.
-    sed() { if [[ ${1:-} == -i ]]; then shift; command sed -i '' "$@"; else command sed "$@"; fi; }
+if [[ $(uname -s) == Darwin ]] && ! command sed --version >/dev/null 2>&1; then
+    # The canonical patch uses GNU sed's c command. Apple's sed needs both the
+    # empty backup suffix and a final newline; its legacy parser also strips
+    # unescaped leading whitespace from replacement lines. Preserve the exact
+    # patched bytes so the canonical output checksums remain authoritative.
+    sed() {
+        if [[ ${1:-} == -i ]]; then
+            shift
+            local program=$1
+            shift
+            program=$(printf '%s\n' "$program" | /usr/bin/sed '2,$s/^[[:space:]]/\\&/')
+            /usr/bin/sed -i '' "$program"$'\n' "$@"
+        else
+            /usr/bin/sed "$@"
+        fi
+    }
     export -f sed
 fi
 cd "$repo/tools/ffmpeg/source"

@@ -121,7 +121,7 @@ pub fn ensure_running(paths: &AppPaths) -> Result<()> {
     let executable = std::env::current_exe()?
         .parent()
         .context("Missing application folder")?
-        .join("de.exe");
+        .join(download_engine::paths::executable_name("de"));
     let mut child = launch(&executable).context("Desktop application could not start")?;
     let deadline = std::time::Instant::now() + std::time::Duration::from_secs(5);
     loop {

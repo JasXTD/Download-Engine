@@ -417,12 +417,7 @@ impl Desktop {
     }
 
     pub(super) fn open_folder_async(&mut self, directory: PathBuf) {
-        self.launch_folder_async(directory, |path| {
-            std::process::Command::new(download_engine::paths::file_browser()?)
-                .arg(path)
-                .spawn()?;
-            Ok(())
-        });
+        self.launch_folder_async(directory, |path| download_engine::paths::open_folder(&path));
     }
 
     fn launch_folder_async(

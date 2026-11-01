@@ -5,7 +5,16 @@ use std::{
 };
 
 pub(super) fn ffmpeg() -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tools/ffmpeg/ffmpeg.exe")
+    #[cfg(windows)]
+    {
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tools/ffmpeg/ffmpeg.exe")
+    }
+    #[cfg(unix)]
+    {
+        PathBuf::from(option_env!("DOWNLOAD_ENGINE_FFMPEG_PATH").expect(
+            "Build the pinned native FFmpeg and set DOWNLOAD_ENGINE_FFMPEG_PATH before testing",
+        ))
+    }
 }
 pub(super) fn execute(command: &mut Command) -> Vec<u8> {
     #[cfg(windows)]

@@ -10,6 +10,42 @@ use tokio_util::sync::CancellationToken;
 
 pub(super) use crate::download_file::{guard_parents, validate_path};
 
+pub(super) fn scanner_path(path: &Path) -> Result<PathBuf> {
+    validate_executable(path)?;
+    #[cfg(unix)]
+    {
+        // Package managers commonly use symlinks. Resolve the user's selected
+        // installed scanner, then validate and open that exact native executable.
+        use std::os::unix::fs::{FileExt, PermissionsExt};
+        let path =
+            std::fs::canonicalize(path).context("The antivirus executable is unavailable")?;
+        validate_executable(&path)?;
+        let file = crate::download_file::read_completed(&path)?;
+        let mut magic = [0; 4];
+        file.read_exact_at(&mut magic, 0)?;
+        ensure!(
+            file.metadata()?.permissions().mode() & 0o111 != 0,
+            "The antivirus program is not executable"
+        );
+        ensure!(
+            matches!(
+                magic,
+                [0x7f, b'E', b'L', b'F']
+                    | [0xcf, 0xfa, 0xed, 0xfe]
+                    | [0xfe, 0xed, 0xfa, 0xcf]
+                    | [0xca, 0xfe, 0xba, 0xbe]
+                    | [0xbe, 0xba, 0xfe, 0xca]
+                    | [0xca, 0xfe, 0xba, 0xbf]
+                    | [0xbf, 0xba, 0xfe, 0xca]
+            ),
+            "Select a native antivirus program; scripts and shell launchers are unsupported"
+        );
+        Ok(path)
+    }
+    #[cfg(not(unix))]
+    Ok(path.to_owned())
+}
+
 #[cfg(windows)]
 pub(super) fn known_folder(id: &windows_core::GUID) -> Result<PathBuf> {
     use windows::Win32::{
@@ -128,7 +164,7 @@ pub(super) fn scan(
     } else {
         PathBuf::from(&settings.executable)
     };
-    validate_executable(&exe)?;
+    let exe = scanner_path(&exe)?;
     ensure!(
         !same_file::is_same_file(&exe, file)?,
         "The downloaded file cannot be used as its own scanner"
@@ -249,7 +285,7 @@ fn run(command: &mut Command, cancel: &CancellationToken, timeout: Duration) -> 
         if started.elapsed() >= timeout {
             break (None, Some(Verdict::TimedOut));
         }
-        if let Some(status) = running.child.try_wait()? {
+        if let Some(status) = running.try_wait()? {
             break (status.code(), None);
         }
         std::thread::sleep(Duration::from_millis(40));

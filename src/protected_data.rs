@@ -79,7 +79,8 @@ fn transform(id: Uuid, bytes: &mut [u8], encrypt: bool) -> Result<Zeroizing<Vec<
         unsafe { std::slice::from_raw_parts(output.0.pbData, output.0.cbData as usize) }.to_vec(),
     ))
 }
-#[cfg(not(windows))]
-fn transform(_id: Uuid, _bytes: &mut [u8], _encrypt: bool) -> Result<Zeroizing<Vec<u8>>> {
-    anyhow::bail!("Protected data requires Windows protected storage")
-}
+#[cfg(unix)]
+#[path = "protected_data/unix.rs"]
+mod unix;
+#[cfg(unix)]
+use unix::transform;

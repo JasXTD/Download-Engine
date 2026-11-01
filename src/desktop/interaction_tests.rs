@@ -1026,7 +1026,7 @@ fn table_actions_fit_the_minimum_window_in_both_appearances() {
                 "{label} is outside the window: {rect:?}"
             );
         }
-        for label in ["first.zip", "\u{e768}"] {
+        for label in ["first.zip", if cfg!(windows) { "\u{e768}" } else { "▶" }] {
             let clipped = output.shapes.iter().rfind(|clipped| matches!(&clipped.shape, egui::epaint::Shape::Text(t) if t.galley.job.text.trim() == label)).unwrap();
             let egui::epaint::Shape::Text(text) = &clipped.shape else {
                 unreachable!()
@@ -1739,6 +1739,7 @@ fn speed_controls_fit_minimum_window_in_both_themes_and_without_selection() {
         }
     }
 }
+#[cfg(windows)]
 #[test]
 fn preferences_cancel_save_and_failed_save_preserve_the_right_state() {
     let (_temp, mut app, ctx) = fixture();
@@ -2227,6 +2228,7 @@ fn duplicate_preserves_the_original_file_and_requires_fresh_authentication() {
     }
 }
 
+#[cfg(windows)]
 #[test]
 fn startup_rows_follow_the_entry_and_save_without_the_run_key() {
     // Unit-test builds use an in-memory Run entry, never the Windows registry.

@@ -22,7 +22,6 @@ fn parser_accepts_unicode_paths_and_valid_magnets_only() {
         "",
         "--antivirus-scan-request",
         "https://example.com/a.torrent",
-        "file:///a.torrent",
         "magnet:?dn=bad",
         "a.exe",
         "a\ntorrent",
@@ -32,6 +31,27 @@ fn parser_accepts_unicode_paths_and_valid_magnets_only() {
             Target::parse(OsStr::new(text), dir.path()).is_err(),
             "{text}"
         );
+    }
+    #[cfg(windows)]
+    assert!(Target::parse(OsStr::new("file:///a.torrent"), dir.path()).is_err());
+    #[cfg(unix)]
+    {
+        let path = dir.path().join("sample 文件.torrent");
+        let url = reqwest::Url::from_file_path(&path).unwrap();
+        assert!(
+            matches!(Target::parse(OsStr::new(url.as_str()), dir.path()).unwrap(), Target::TorrentFile(p) if p == path)
+        );
+        for value in [
+            "file://other-host/a.torrent",
+            "file:///a.torrent?command=x",
+            "file:///a.torrent#x",
+            "file:///a.exe",
+        ] {
+            assert!(
+                Target::parse(OsStr::new(value), dir.path()).is_err(),
+                "{value}"
+            );
+        }
     }
 }
 #[test]

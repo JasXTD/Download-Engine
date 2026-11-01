@@ -229,7 +229,7 @@ fn powershell(source: &str, cancel: &CancellationToken) -> Result<Vec<Diagnostic
             Instant::now() < deadline,
             "PowerShell syntax check timed out"
         );
-        if let Some(status) = process.child.try_wait()? {
+        if let Some(status) = process.try_wait()? {
             break status;
         }
         thread::sleep(Duration::from_millis(20));

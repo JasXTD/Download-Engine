@@ -68,7 +68,6 @@ pub(super) fn token(paths: &AppPaths) -> Result<Zeroizing<String>> {
 mod tests {
     use super::*;
     #[test]
-    #[cfg(windows)]
     fn token_lock_times_out_and_recovers_after_release() {
         let root = tempfile::tempdir().unwrap();
         let paths = AppPaths {
@@ -100,7 +99,6 @@ mod tests {
     }
 
     #[test]
-    #[cfg(windows)]
     fn concurrent_token_openers_share_one_protected_secret() {
         let root = tempfile::tempdir().unwrap();
         let paths = AppPaths {
@@ -127,7 +125,6 @@ mod tests {
     }
 
     #[test]
-    #[cfg(windows)]
     fn token_is_stable_encrypted_and_corruption_is_not_silently_replaced() {
         let root = tempfile::tempdir().unwrap();
         let paths = AppPaths {

@@ -281,7 +281,14 @@ impl Desktop {
                             ui,
                             p,
                             tr("Theme"),
-                            (tr("Follow Windows or pick a fixed theme."), p.muted),
+                            (
+                                tr(if cfg!(windows) {
+                                    "Follow Windows or pick a fixed theme."
+                                } else {
+                                    "Follow the system or pick a fixed theme."
+                                }),
+                                p.muted,
+                            ),
                             "\u{e790}",
                             "",
                             width + TRAILING,
@@ -573,6 +580,7 @@ impl Desktop {
                     {
                         editor = Some(Editor::Browsers);
                     }
+                    #[cfg(windows)]
                     toggle(
                         ui,
                         p,
@@ -625,105 +633,123 @@ impl Desktop {
         p: Palette,
         state: &mut preferences_window::State,
     ) {
-        use crate::startup::State;
-        self.startup.refresh_if_stale();
-        let available = self.startup.state().is_ok();
-        let detail = match self.startup.state() {
-            Ok(State::OtherCopy(_)) => {
-                tr("Another Download Engine copy starts with Windows. Turn on to use this copy.")
-            }
-            Ok(State::Missing(_)) => {
-                tr("Download Engine is set to start a missing program. Turn on to use this copy.")
-            }
-            Ok(State::Blocked) => tr("Turned off in Task Manager. Turn on to allow it again."),
-            Ok(State::On | State::Off) => tr("Open Download Engine when you sign in to Windows."),
-            Err(error) => error,
-        };
-        section(ui, p, tr("STARTUP"), |ui| {
-            ui.add_enabled_ui(available, |ui| {
+        #[cfg(not(windows))]
+        {
+            section(ui, p, tr("Updates"), |ui| {
                 toggle(
                     ui,
                     p,
-                    tr("Start with Windows"),
-                    detail,
-                    "\u{e7e8}",
-                    &mut state.startup,
+                    tr("Check for updates on launch"),
+                    tr("Check GitHub when Download Engine opens. You choose whether to update."),
+                    "\u{e895}",
+                    &mut state.interface.check_updates_on_launch,
                 );
             });
-            ui.add_enabled_ui(available && state.startup, |ui| {
-                toggle(
-                    ui,
-                    p,
-                    tr("Start in the tray"),
-                    tr("Stay hidden in the notification area until you open it."),
-                    "\u{e921}",
-                    &mut state.start_hidden,
-                );
-            });
-        });
-        section(ui, p, tr("Tray & notifications"), |ui| {
-            toggle(
-                ui,
-                p,
-                tr("Check for updates on launch"),
-                tr("Check GitHub when Download Engine opens. You choose whether to update."),
-                "\u{e895}",
-                &mut state.interface.check_updates_on_launch,
-            );
-            ui.add_enabled_ui(
-                self.tray_available() || state.behavior.close_to_tray,
-                |ui| {
+        }
+        #[cfg(windows)]
+        {
+            use crate::startup::State;
+            self.startup.refresh_if_stale();
+            let available = self.startup.state().is_ok();
+            let detail = match self.startup.state() {
+                Ok(State::OtherCopy(_)) => tr(
+                    "Another Download Engine copy starts with Windows. Turn on to use this copy.",
+                ),
+                Ok(State::Missing(_)) => tr(
+                    "Download Engine is set to start a missing program. Turn on to use this copy.",
+                ),
+                Ok(State::Blocked) => tr("Turned off in Task Manager. Turn on to allow it again."),
+                Ok(State::On | State::Off) => {
+                    tr("Open Download Engine when you sign in to Windows.")
+                }
+                Err(error) => error,
+            };
+            section(ui, p, tr("STARTUP"), |ui| {
+                ui.add_enabled_ui(available, |ui| {
                     toggle(
                         ui,
                         p,
-                        tr("Close window to the tray"),
-                        tr("Window behavior"),
-                        "\u{e7ed}",
-                        &mut state.behavior.close_to_tray,
+                        tr("Start with Windows"),
+                        detail,
+                        "\u{e7e8}",
+                        &mut state.startup,
                     );
-                },
-            );
-            if !self.tray_available() {
-                ui.label(
-                    RichText::new(tr(
-                        "The tray is currently unavailable; closing will exit safely.",
-                    ))
-                    .small()
-                    .color(p.muted),
+                });
+                ui.add_enabled_ui(available && state.startup, |ui| {
+                    toggle(
+                        ui,
+                        p,
+                        tr("Start in the tray"),
+                        tr("Stay hidden in the notification area until you open it."),
+                        "\u{e921}",
+                        &mut state.start_hidden,
+                    );
+                });
+            });
+            section(ui, p, tr("Tray & notifications"), |ui| {
+                toggle(
+                    ui,
+                    p,
+                    tr("Check for updates on launch"),
+                    tr("Check GitHub when Download Engine opens. You choose whether to update."),
+                    "\u{e895}",
+                    &mut state.interface.check_updates_on_launch,
                 );
-            }
-            toggle(
-                ui,
-                p,
-                tr("Notify when a download finishes"),
-                "",
-                "\u{e7ed}",
-                &mut state.behavior.notify_complete,
-            );
-            toggle(
-                ui,
-                p,
-                tr("Notify when a download needs attention"),
-                "",
-                "\u{e7ed}",
-                &mut state.behavior.notify_failed,
-            );
-            toggle(
-                ui,
-                p,
-                tr("Show notifications from scripts"),
-                "",
-                "\u{e7ed}",
-                &mut state.behavior.notify_scripts,
-            );
-            toggle(
-                ui,
-                p,
-                tr("Play a sound when downloads finish"),
-                "",
-                "\u{e767}",
-                &mut state.interface.completion_sound,
-            );
-        });
+                ui.add_enabled_ui(
+                    self.tray_available() || state.behavior.close_to_tray,
+                    |ui| {
+                        toggle(
+                            ui,
+                            p,
+                            tr("Close window to the tray"),
+                            tr("Window behavior"),
+                            "\u{e7ed}",
+                            &mut state.behavior.close_to_tray,
+                        );
+                    },
+                );
+                if !self.tray_available() {
+                    ui.label(
+                        RichText::new(tr(
+                            "The tray is currently unavailable; closing will exit safely.",
+                        ))
+                        .small()
+                        .color(p.muted),
+                    );
+                }
+                toggle(
+                    ui,
+                    p,
+                    tr("Notify when a download finishes"),
+                    "",
+                    "\u{e7ed}",
+                    &mut state.behavior.notify_complete,
+                );
+                toggle(
+                    ui,
+                    p,
+                    tr("Notify when a download needs attention"),
+                    "",
+                    "\u{e7ed}",
+                    &mut state.behavior.notify_failed,
+                );
+                toggle(
+                    ui,
+                    p,
+                    tr("Show notifications from scripts"),
+                    "",
+                    "\u{e7ed}",
+                    &mut state.behavior.notify_scripts,
+                );
+                toggle(
+                    ui,
+                    p,
+                    tr("Play a sound when downloads finish"),
+                    "",
+                    "\u{e767}",
+                    &mut state.interface.completion_sound,
+                );
+            });
+        }
     }
 }

@@ -62,6 +62,7 @@ impl Desktop {
                         ui.label(RichText::new("http:// · https:// · socks5:// (local DNS) · socks5h:// (proxy DNS)").small().color(p.muted));
                         egui::ComboBox::from_id_salt("proxy-auth-method").selected_text(tr(form.draft.authentication.label())).show_ui(ui, |ui| {
                             for method in [service::Authentication::Basic, service::Authentication::Ntlm, service::Authentication::Negotiate] {
+                                if !cfg!(windows) && method != service::Authentication::Basic { continue; }
                                 ui.selectable_value(&mut form.draft.authentication, method, tr(method.label()));
                             }
                         });
@@ -84,7 +85,7 @@ impl Desktop {
                             secret_input(ui, "proxy-password", &mut form.password, true, 2048);
                         }
                         if form.login != LoginChoice::Remove {
-                            ui.label(RichText::new(tr("Saved in Windows Credential Manager, separately from website logins.")).small().color(p.muted));
+                            ui.label(RichText::new(tr(if cfg!(windows) { "Saved in Windows Credential Manager, separately from website logins." } else { "Saved in your system keyring, separately from website logins." })).small().color(p.muted));
                             if service::endpoint(&form.draft.endpoint).is_ok_and(|u| !service::encrypted_or_loopback(&u)) {
                                 ui.colored_label(p.warning, if form.draft.authentication == service::Authentication::Basic { tr("This proxy sends the login without encryption. Use only a trusted proxy.") } else { tr("This HTTP proxy connection is unencrypted. Use only a trusted proxy.") });
                                 ui.square_checkbox(&mut form.draft.allow_unencrypted_login, tr("Allow unencrypted login to this proxy"));

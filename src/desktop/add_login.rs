@@ -57,8 +57,14 @@ impl Desktop {
                     AuthKind::Bearer,
                     tr("Bearer token"),
                 );
-                ui.selectable_value(&mut self.add_login.method, AuthKind::Ntlm, "NTLM");
-                ui.selectable_value(&mut self.add_login.method, AuthKind::Negotiate, "Negotiate");
+                if cfg!(windows) {
+                    ui.selectable_value(&mut self.add_login.method, AuthKind::Ntlm, "NTLM");
+                    ui.selectable_value(
+                        &mut self.add_login.method,
+                        AuthKind::Negotiate,
+                        "Negotiate",
+                    );
+                }
             });
         }
         if previous != self.add_login.method {
@@ -111,7 +117,9 @@ impl Desktop {
             token.state.store(ui.ctx(), token.response.id);
         }
         let help = ui.label(
-            RichText::new(if matches!(self.add_login.method, AuthKind::Ntlm | AuthKind::Negotiate) {
+            RichText::new(if !cfg!(windows) {
+                tr("For this file server only. Saved in your system keyring.")
+            } else if matches!(self.add_login.method, AuthKind::Ntlm | AuthKind::Negotiate) {
                 tr("For this server only. Choose Direct or a Custom HTTP proxy in Preferences → Connection → Proxy. Saved in Windows Credential Manager.")
             } else { tr("For this file server only. Saved in Windows Credential Manager.") })
                 .small()

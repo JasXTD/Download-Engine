@@ -226,13 +226,7 @@ impl Desktop {
         } else if let Some(path) = open {
             #[cfg(not(test))]
             let result = if path.is_dir() {
-                download_engine::paths::file_browser().and_then(|browser| {
-                    std::process::Command::new(browser)
-                        .arg(path)
-                        .spawn()
-                        .map(|_| ())
-                        .map_err(Into::into)
-                })
+                download_engine::paths::open_folder(&path)
             } else {
                 download_engine::paths::open_download(&path)
             };

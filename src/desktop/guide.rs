@@ -3,6 +3,9 @@ use super::*;
 
 static DOCUMENT: std::sync::LazyLock<String> =
     std::sync::LazyLock::new(|| include_str!("../../docs/user-guide.md").replace("\r\n", "\n"));
+#[cfg(unix)]
+static NATIVE: std::sync::LazyLock<String> =
+    std::sync::LazyLock::new(|| include_str!("../../docs/native-guide.md").replace("\r\n", "\n"));
 static SIMPLIFIED: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
     include_str!("../../docs/locales/zh-CN/user-guide.md").replace("\r\n", "\n")
 });
@@ -57,11 +60,32 @@ fn topics() -> Vec<(&'static str, &'static str)> {
         Language::Romansh => &ADDITIONAL[14],
         _ => &DOCUMENT,
     };
-    document
+    let topics: Vec<_> = document
         .split("\n## ")
         .skip(1)
         .filter_map(|section| section.split_once('\n'))
-        .collect()
+        .collect();
+    #[cfg(unix)]
+    let topics = {
+        let mut topics = topics;
+        // Keep the same translated topic labels and stable English IDs. Only
+        // platform-specific articles change; the shared feature guides remain.
+        for (name, body) in NATIVE
+            .split("\n## ")
+            .skip(1)
+            .filter_map(|section| section.split_once('\n'))
+        {
+            if let Some(index) = DOCUMENT
+                .split("\n## ")
+                .skip(1)
+                .position(|section| section.lines().next() == Some(name))
+            {
+                topics[index].1 = body;
+            }
+        }
+        topics
+    };
+    topics
 }
 
 impl Desktop {
@@ -448,7 +472,11 @@ mod tests {
         frame(&mut app, &ctx, size, pointer(true));
         let output = frame(&mut app, &ctx, size, pointer(false));
         assert!(output.platform_output.commands.iter().any(|command| {
-            matches!(command, egui::OutputCommand::CopyText(text) if text.starts_with(".\\de-cli.exe --help\n") && text.ends_with(".\\de-cli.exe list"))
+            matches!(command, egui::OutputCommand::CopyText(text) if if cfg!(windows) {
+                text.starts_with(".\\de-cli.exe --help\n") && text.ends_with(".\\de-cli.exe list")
+            } else {
+                text.starts_with("./de-cli --help\n") && text.ends_with("./de-cli list")
+            })
         }));
         click(&mut app, &ctx, "Download list");
         assert_eq!(app.view, View::Downloads);

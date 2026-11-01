@@ -422,6 +422,8 @@ impl Desktop {
             ),
         };
         let (startup, startup_error) = crate::startup::Settings::load(&store);
+        // Windows startup registration is not an error on another platform.
+        let startup_error = if cfg!(windows) { startup_error } else { None };
         let mut app = Self {
             download_status: download_status::State::default(),
             mcp: mcp::State::new(&store),
@@ -736,6 +738,7 @@ impl Desktop {
         app
     }
 
+    #[cfg(windows)]
     pub fn attach_tray(&mut self, ctx: &egui::Context) {
         let _language = download_engine::i18n::scope(self.interface.language);
         // Screenshot fixtures must not place sample notifications on the user's desktop.

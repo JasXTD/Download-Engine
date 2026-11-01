@@ -36,6 +36,9 @@ pub enum Provider {
     Bitdefender,
 }
 impl Provider {
+    pub fn available(self) -> bool {
+        cfg!(windows) || matches!(self, Self::ClamAv | Self::Custom)
+    }
     pub fn label(self) -> &'static str {
         match self {
             Self::Defender => "Microsoft Defender",
@@ -121,8 +124,18 @@ impl Default for Settings {
     fn default() -> Self {
         Self {
             enabled: false,
-            provider: Provider::Defender,
-            executable: String::new(),
+            provider: if cfg!(windows) {
+                Provider::Defender
+            } else {
+                Provider::ClamAv
+            },
+            executable: if cfg!(windows) {
+                String::new()
+            } else if cfg!(target_os = "macos") {
+                "/opt/homebrew/bin/clamscan".into()
+            } else {
+                "/usr/bin/clamscan".into()
+            },
             arguments: vec!["{file}".into()],
             clean_exit: None,
             detected_exit: None,
@@ -150,8 +163,12 @@ impl Settings {
             ensure!(
                 Path::new(&self.executable)
                     .file_name()
-                    .is_some_and(|s| s.eq_ignore_ascii_case("clamscan.exe")),
-                "Select ClamAV's clamscan.exe"
+                    .is_some_and(|s| s.eq_ignore_ascii_case(if cfg!(windows) {
+                        "clamscan.exe"
+                    } else {
+                        "clamscan"
+                    })),
+                "Select ClamAV's clamscan executable"
             );
         }
         if self.provider == Provider::Custom {
@@ -194,9 +211,35 @@ fn validate_executable(path: &Path) -> Result<()> {
         .context("Select an antivirus executable")?
         .to_string_lossy()
         .to_ascii_lowercase();
+    #[cfg(windows)]
     ensure!(
         name.ends_with(".exe"),
         "Select the antivirus .exe directly; scripts and shell commands are unsupported"
+    );
+    #[cfg(unix)]
+    ensure!(
+        ![
+            "sh",
+            "bash",
+            "dash",
+            "zsh",
+            "fish",
+            "pwsh",
+            "python",
+            "python3",
+            "perl",
+            "ruby",
+            "node",
+            "env",
+            "osascript",
+            "open",
+            "xdg-open"
+        ]
+        .contains(&name.as_str())
+            && !["sh", "py", "pl", "rb", "ps1", "js"]
+                .iter()
+                .any(|extension| path.extension().is_some_and(|value| value == *extension)),
+        "Select a native antivirus executable, not a script or interpreter"
     );
     ensure!(
         ![

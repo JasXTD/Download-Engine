@@ -749,8 +749,8 @@ impl Desktop {
                         .show(ui, |ui| {
                             ui.set_width(ui.available_width());
                             ui.collapsing(tr("Use the CLI from PowerShell"), |ui| {
-                                ui.label(tr("Run de-cli.exe from the application folder. Results are JSON for scripts."));
-                                ui.monospace(".\\de-cli.exe --help\n.\\de-cli.exe list\n.\\de-cli.exe queue start main");
+                                ui.label(if cfg!(windows) { tr("Run de-cli.exe from the application folder. Results are JSON for scripts.") } else { "Run de-cli from the application folder. Results are JSON for scripts." });
+                                ui.monospace(if cfg!(windows) { ".\\de-cli.exe --help\n.\\de-cli.exe list\n.\\de-cli.exe queue start main" } else { "./de-cli --help\n./de-cli list\n./de-cli queue start main" });
                                 ui.label(
                                     RichText::new(tr("See docs/automation.md for batch downloads and automation examples."))
                                         .small()

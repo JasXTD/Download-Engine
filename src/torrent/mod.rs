@@ -217,7 +217,7 @@ fn check_relative(path: &Path) -> Result<()> {
         && path.components().all(|part| match part {
             Component::Normal(name) => {
                 let name = name.to_string_lossy();
-                !name.contains([':', '*', '?', '"', '<', '>', '|', '\0', '\r', '\n'])
+                !name.contains(['\\', ':', '*', '?', '"', '<', '>', '|', '\0', '\r', '\n'])
                     && !name.ends_with(['.', ' '])
             }
             _ => false,

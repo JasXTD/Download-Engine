@@ -86,7 +86,7 @@ impl Worker {
         let cli = std::env::current_exe()?
             .parent()
             .context("Missing application directory")?
-            .join("de-cli.exe");
+            .join(crate::paths::executable_name("de-cli"));
         Self::start_at(&cli, paths, script, role, extension, cancel)
     }
     pub(crate) fn start_at(

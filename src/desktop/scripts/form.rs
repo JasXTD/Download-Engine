@@ -122,7 +122,11 @@ pub(super) fn show(
                         });
                     })
                     .response
-                    .on_hover_text(tr("Lua is built in. PowerShell provides full Windows file/program access. Changing language keeps custom code; only an untouched starter example is replaced."));
+                    .on_hover_text(if cfg!(windows) {
+                        tr("Lua is built in. PowerShell provides full Windows file/program access. Changing language keeps custom code; only an untouched starter example is replaced.")
+                    } else {
+                        "Lua is built in. PowerShell requires an installed PowerShell 7 runtime and has access to your files and programs. Changing language keeps custom code; only an untouched starter example is replaced."
+                    });
                 if previous != draft.language
                     && (draft.body == previous.example() || draft.body == FAILED_EXAMPLE)
                 {

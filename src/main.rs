@@ -3,6 +3,8 @@ mod clipboard_links;
 mod desktop;
 mod drop_target;
 mod launch;
+#[cfg(target_os = "macos")]
+mod macos_open;
 mod startup;
 mod tray;
 mod url_drop;
@@ -158,8 +160,11 @@ fn start() -> anyhow::Result<()> {
     let viewport = egui::ViewportBuilder::default()
         .with_inner_size([1280.0, 860.0])
         .with_min_inner_size([860.0, 600.0])
-        .with_drag_and_drop(false)
+        // Windows uses our OLE drop handler; Unix uses winit's native file events.
+        .with_drag_and_drop(!cfg!(windows))
         .with_icon(tray::icon());
+    #[cfg(unix)]
+    let viewport = viewport.with_app_id("com.xetro.downloadengine");
     #[cfg(feature = "screenshot")]
     let viewport = if std::env::var_os("IDM_EX_SCREENSHOT_TO").is_some() {
         let size = std::env::var("IDM_EX_TEST_SIZE")
@@ -181,6 +186,10 @@ fn start() -> anyhow::Result<()> {
         viewport,
         ..Default::default()
     };
+    // Register before winit starts AppKit's event loop, so the initial Finder
+    // document/magnet event is retained as well as events for an existing window.
+    #[cfg(target_os = "macos")]
+    let _macos_open = macos_open::Registration::new(store.clone())?;
     eframe::run_native(
         "Download Engine",
         options,
@@ -190,6 +199,7 @@ fn start() -> anyhow::Result<()> {
             app.configure_appearance(&cc.egui_ctx);
             #[cfg(windows)]
             app.sync_window_frame(&cc.egui_ctx, cc);
+            #[cfg(windows)]
             app.attach_tray(&cc.egui_ctx);
             if hidden {
                 app.start_in_tray(cc);

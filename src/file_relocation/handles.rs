@@ -57,7 +57,9 @@ impl Snapshot {
                     created: 0,
                 },
                 size: m.len(),
-                modified: m.mtime_nsec() as u64,
+                modified: (m.mtime() as u64)
+                    .wrapping_mul(1_000_000_000)
+                    .wrapping_add(m.mtime_nsec() as u64),
                 directory: m.is_dir(),
             })
         }
@@ -67,6 +69,13 @@ impl Snapshot {
 pub(super) fn open_owned(path: &Path, create: bool) -> Result<File> {
     let mut options = std::fs::OpenOptions::new();
     options.read(true).write(create).create_new(create);
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::OpenOptionsExt;
+        options
+            .mode(0o600)
+            .custom_flags(libc::O_NOFOLLOW | libc::O_CLOEXEC | libc::O_NONBLOCK);
+    }
     #[cfg(windows)]
     {
         use std::os::windows::fs::OpenOptionsExt;
@@ -90,6 +99,11 @@ pub(super) fn open_owned(path: &Path, create: bool) -> Result<File> {
 pub(super) fn open_directory(path: &Path, writable: bool) -> Result<File> {
     let mut options = std::fs::OpenOptions::new();
     options.read(true);
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::OpenOptionsExt;
+        options.custom_flags(libc::O_NOFOLLOW | libc::O_CLOEXEC | libc::O_DIRECTORY);
+    }
     #[cfg(windows)]
     {
         use std::os::windows::fs::OpenOptionsExt;
@@ -177,15 +191,14 @@ pub(super) fn rename_owned(file: &File, from: &Path, target: &Path) -> Result<()
     }
     #[cfg(not(windows))]
     {
-        let _ = file;
-        download_file::move_new(from, target)?;
-        Ok(())
+        crate::unix_files::rename_owned(file, from, target)
     }
 }
 
-pub(super) fn delete_owned(file: &File) -> Result<()> {
+pub(super) fn delete_owned(file: &File, path: &Path) -> Result<()> {
     #[cfg(windows)]
     {
+        let _ = path;
         use std::os::windows::io::AsRawHandle;
         use windows_sys::Win32::Storage::FileSystem::*;
         let disposition = FILE_DISPOSITION_INFO { DeleteFile: true };
@@ -204,12 +217,13 @@ pub(super) fn delete_owned(file: &File) -> Result<()> {
     }
     #[cfg(not(windows))]
     {
-        let _ = file;
-        anyhow::bail!("File relocation is supported on Windows only")
+        crate::unix_files::delete_owned(file, path)
     }
 }
 
 pub(super) fn check_copy(file: &File) -> Result<()> {
+    #[cfg(unix)]
+    let _ = file;
     #[cfg(windows)]
     {
         use std::os::windows::fs::MetadataExt;
@@ -229,6 +243,18 @@ pub(super) fn check_copy(file: &File) -> Result<()> {
 }
 
 pub(super) fn copy_metadata(source: &File, target: &File) -> Result<()> {
+    #[cfg(unix)]
+    {
+        let metadata = source.metadata()?;
+        let times = std::fs::FileTimes::new()
+            .set_accessed(metadata.accessed()?)
+            .set_modified(metadata.modified()?);
+        target.set_permissions(metadata.permissions())?;
+        target.set_times(times)?;
+        if metadata.is_file() {
+            target.sync_all()?;
+        }
+    }
     #[cfg(windows)]
     {
         use std::os::windows::io::AsRawHandle;

@@ -120,7 +120,7 @@ impl TorrentMeta {
             piece_hashes.len() as u64 == u64::from(lengths.total_pieces()) * HASH_LEN as u64,
             "This torrent does not have one hash for each piece"
         );
-        let files = validated
+        let files: Vec<TorrentFile> = validated
             .iter_file_details_ext()
             .map(|file| {
                 let attrs = file.details.attrs();
@@ -134,6 +134,26 @@ impl TorrentMeta {
                 }
             })
             .collect();
+        #[cfg(target_os = "macos")]
+        {
+            use objc2_foundation::{NSString, NSStringCompareOptions};
+            let mut names = std::collections::HashSet::new();
+            for file in files.iter().filter(|file| !file.virtual_file) {
+                // APFS/HFS+ can treat composed/decomposed Unicode names as the
+                // same file. The portable Windows-name check alone misses this.
+                let key = NSString::from_str(&file.path.to_string_lossy())
+                    .stringByFoldingWithOptions_locale(
+                        NSStringCompareOptions::CaseInsensitiveSearch,
+                        None,
+                    )
+                    .decomposedStringWithCanonicalMapping()
+                    .to_string();
+                ensure!(
+                    names.insert(key),
+                    librqbit_core::Error::BadTorrentDuplicateFilenames
+                );
+            }
+        }
         Ok(Self {
             info_hash,
             name: validated
@@ -269,6 +289,10 @@ mod tests {
             (vec!["a:b"], vec!["a_b"]),
             (vec!["CON"], vec!["_con"]),
             (vec!["Images", "sample.png"], vec!["images", "SAMPLE.PNG"]),
+            #[cfg(target_os = "macos")]
+            (vec!["café.bin"], vec!["cafe\u{301}.bin"]),
+            #[cfg(target_os = "macos")]
+            (vec!["café", "A.bin"], vec!["cafe\u{301}", "a.bin"]),
         ] {
             let bytes = multi_file_torrent(
                 "collision fixture",

@@ -33,9 +33,7 @@ impl Desktop {
         }
         #[cfg(not(test))]
         {
-            std::process::Command::new(download_engine::paths::file_browser()?)
-                .arg(folder)
-                .spawn()?;
+            download_engine::paths::open_folder(&folder)?;
         }
         Ok(())
     }

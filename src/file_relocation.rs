@@ -247,8 +247,8 @@ fn relocate_inner(
         Ok(())
     });
     if let Err(error) = inserted {
-        if let Some((_, file)) = &staging {
-            delete_owned(file)?;
+        if let Some((path, file)) = &staging {
+            delete_owned(file, path)?;
         }
         return Err(error);
     }
@@ -287,7 +287,8 @@ fn relocate_inner(
         #[cfg(test)]
         tests::after_commit();
         if copied {
-            delete_owned(&original).context("File moved, but the original still needs cleanup")?;
+            delete_owned(&original, &intent.source)
+                .context("File moved, but the original still needs cleanup")?;
         }
         drop(staging.take());
         clear(store, &intent.job)?;
@@ -296,8 +297,8 @@ fn relocate_inner(
     if result.is_err() && !published {
         // The source is still guarded and unchanged. Only our exact staging
         // handle can be removed; never delete a replacement by pathname.
-        if let Some((_, file)) = &staging {
-            delete_owned(file)?;
+        if let Some((path, file)) = &staging {
+            delete_owned(file, path)?;
         }
         drop(staging.take());
         clear(store, &intent.job)?;
@@ -357,7 +358,7 @@ pub(crate) fn recover(store: &Store, id: &str, cancel: &CancellationToken) -> Re
                 Snapshot::read(&original)? == intent.source_snapshot,
                 "Original file changed after the move; both files were preserved"
             );
-            delete_owned(&original)?;
+            delete_owned(&original, &intent.source)?;
         }
     } else {
         ensure!(
@@ -381,7 +382,7 @@ pub(crate) fn recover(store: &Store, id: &str, cancel: &CancellationToken) -> Re
             &Snapshot::read(&temporary)?.key == key,
             "Staging file changed; it was preserved for review"
         );
-        delete_owned(&temporary)?;
+        delete_owned(&temporary, path)?;
     }
     clear(store, id)
 }

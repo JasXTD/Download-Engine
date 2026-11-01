@@ -432,15 +432,30 @@ fn settings_groups_fit_minimum_width_and_scrolling_reaches_every_summary() {
             (C::Connection, vec!["System proxy", "Download connections"]),
             (
                 C::Browser,
-                vec![
-                    "Browser integration",
-                    "Set up browsers",
-                    "Clipboard links",
-                    "AI connection (MCP)",
-                ],
+                if cfg!(windows) {
+                    vec![
+                        "Browser integration",
+                        "Set up browsers",
+                        "Clipboard links",
+                        "AI connection (MCP)",
+                    ]
+                } else {
+                    vec![
+                        "Browser integration",
+                        "Set up browsers",
+                        "AI connection (MCP)",
+                    ]
+                },
             ),
             (C::Antivirus, vec!["Antivirus scan"]),
-            (C::Startup, vec!["Start with Windows", "Start in the tray"]),
+            (
+                C::Startup,
+                if cfg!(windows) {
+                    vec!["Start with Windows", "Start in the tray"]
+                } else {
+                    vec!["Check for updates on launch"]
+                },
+            ),
         ] {
             app.preferences_window.as_mut().unwrap().category = category;
             let output = settled(&mut app, &ctx, SMALL);

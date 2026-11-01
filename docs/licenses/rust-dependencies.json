@@ -157,6 +157,40 @@
       "upstreamSource": "https://crates.io/crates/base64/0.23.1"
     },
     {
+      "name": "bit-set",
+      "version": "0.10.0",
+      "license": "Apache-2.0 OR MIT",
+      "selectedLicense": "Apache-2.0 OR MIT",
+      "authors": [
+        "Alexis Beingessner <a.beingessner@gmail.com>"
+      ],
+      "repository": "https://github.com/contain-rs/bit-set",
+      "checksum": "09ec2f926cc3060f09db9ebc5b52823d85268d24bb917e472c0c4bea35780a7d",
+      "notices": [
+        "rust/bit-set-0.10.0/LICENSE-APACHE",
+        "rust/bit-set-0.10.0/LICENSE-MIT"
+      ],
+      "source": null,
+      "upstreamSource": "https://crates.io/crates/bit-set/0.10.0"
+    },
+    {
+      "name": "bit-vec",
+      "version": "0.9.1",
+      "license": "Apache-2.0 OR MIT",
+      "selectedLicense": "Apache-2.0 OR MIT",
+      "authors": [
+        "Alexis Beingessner <a.beingessner@gmail.com>"
+      ],
+      "repository": "https://github.com/contain-rs/bit-vec",
+      "checksum": "b71798fca2c1fe1086445a7258a4bc81e6e49dcd24c8d0dd9a1e57395b603f51",
+      "notices": [
+        "rust/bit-vec-0.9.1/LICENSE-APACHE",
+        "rust/bit-vec-0.9.1/LICENSE-MIT"
+      ],
+      "source": null,
+      "upstreamSource": "https://crates.io/crates/bit-vec/0.9.1"
+    },
+    {
       "name": "bitflags",
       "version": "2.13.2",
       "license": "MIT OR Apache-2.0",
@@ -370,6 +404,22 @@
       ],
       "source": "sources/clipboard-win-5.4.3.crate",
       "upstreamSource": "https://crates.io/crates/clipboard-win/5.4.3"
+    },
+    {
+      "name": "codespan-reporting",
+      "version": "0.13.1",
+      "license": "Apache-2.0",
+      "selectedLicense": "Apache-2.0",
+      "authors": [
+        "Brendan Zabarauskas <bjzaba@yahoo.com.au>"
+      ],
+      "repository": "https://github.com/brendanzab/codespan",
+      "checksum": "af491d569909a7e4dee0ad7db7f5341fef5c614d5b8ec8cf765732aba3cff681",
+      "notices": [
+        "rust/codespan-reporting-0.13.1/LICENSE"
+      ],
+      "source": null,
+      "upstreamSource": "https://crates.io/crates/codespan-reporting/0.13.1"
     },
     {
       "name": "color",
@@ -719,6 +769,24 @@
       "upstreamSource": "https://crates.io/crates/egui/0.36.2"
     },
     {
+      "name": "egui-wgpu",
+      "version": "0.36.2",
+      "license": "MIT OR Apache-2.0",
+      "selectedLicense": "Apache-2.0",
+      "authors": [
+        "Nils Hasenbanck <nils@hasenbanck.de>",
+        "embotech <opensource@embotech.com>",
+        "Emil Ernerfeldt <emil.ernerfeldt@gmail.com>"
+      ],
+      "repository": "https://github.com/emilk/egui/tree/main/crates/egui-wgpu",
+      "checksum": "5cef1f6d1bba40b09a4d0d62cb822b81030922cfbf65c5373398c3a3caafc5bd",
+      "notices": [
+        "rust/egui-wgpu-0.36.2/LICENSE-Apache-2.0"
+      ],
+      "source": "sources/egui-wgpu-0.36.2.crate",
+      "upstreamSource": "https://crates.io/crates/egui-wgpu/0.36.2"
+    },
+    {
       "name": "egui-winit",
       "version": "0.36.2",
       "license": "MIT OR Apache-2.0",
@@ -820,6 +888,21 @@
       "upstreamSource": "https://crates.io/crates/epaint/0.36.2",
       "modifiedCopy": "vendor/epaint",
       "modification": "bidirectional text layout, so Latin text and numbers keep their order inside right-to-left text"
+    },
+    {
+      "name": "equivalent",
+      "version": "1.0.2",
+      "license": "Apache-2.0 OR MIT",
+      "selectedLicense": "Apache-2.0 OR MIT",
+      "authors": [],
+      "repository": "https://github.com/indexmap-rs/equivalent",
+      "checksum": "877a4ace8713b0bcf2a4e7eec82529c029f1d0619886d18145fea96c3ffe5c0f",
+      "notices": [
+        "rust/equivalent-1.0.2/LICENSE-APACHE",
+        "rust/equivalent-1.0.2/LICENSE-MIT"
+      ],
+      "source": null,
+      "upstreamSource": "https://crates.io/crates/equivalent/1.0.2"
     },
     {
       "name": "erased-serde",
@@ -1175,6 +1258,40 @@
       ],
       "source": null,
       "upstreamSource": "https://crates.io/crates/generic-array/0.14.7"
+    },
+    {
+      "name": "getrandom",
+      "version": "0.2.17",
+      "license": "MIT OR Apache-2.0",
+      "selectedLicense": "MIT OR Apache-2.0",
+      "authors": [
+        "The Rand Project Developers"
+      ],
+      "repository": "https://github.com/rust-random/getrandom",
+      "checksum": "ff2abc00be7fca6ebc474524697ae276ad847ad0a6b3faa4bcb027e9a4614ad0",
+      "notices": [
+        "rust/getrandom-0.2.17/LICENSE-APACHE",
+        "rust/getrandom-0.2.17/LICENSE-MIT"
+      ],
+      "source": null,
+      "upstreamSource": "https://crates.io/crates/getrandom/0.2.17"
+    },
+    {
+      "name": "getrandom",
+      "version": "0.3.4",
+      "license": "MIT OR Apache-2.0",
+      "selectedLicense": "MIT OR Apache-2.0",
+      "authors": [
+        "The Rand Project Developers"
+      ],
+      "repository": "https://github.com/rust-random/getrandom",
+      "checksum": "899def5c37c4fd7b2664648c28120ecec138e4d395b459e5ca34f9cce2dd77fd",
+      "notices": [
+        "rust/getrandom-0.3.4/LICENSE-APACHE",
+        "rust/getrandom-0.3.4/LICENSE-MIT"
+      ],
+      "source": null,
+      "upstreamSource": "https://crates.io/crates/getrandom/0.3.4"
     },
     {
       "name": "getrandom",
@@ -1706,6 +1823,21 @@
       "upstreamSource": "https://crates.io/crates/image/0.25.10"
     },
     {
+      "name": "indexmap",
+      "version": "2.14.2",
+      "license": "Apache-2.0 OR MIT",
+      "selectedLicense": "Apache-2.0 OR MIT",
+      "authors": [],
+      "repository": "https://github.com/indexmap-rs/indexmap",
+      "checksum": "cc4e190f5d26ca7051642629da2c52fc03bde85a03197c99408dcd291734c855",
+      "notices": [
+        "rust/indexmap-2.14.2/LICENSE-APACHE",
+        "rust/indexmap-2.14.2/LICENSE-MIT"
+      ],
+      "source": null,
+      "upstreamSource": "https://crates.io/crates/indexmap/2.14.2"
+    },
+    {
       "name": "ipnet",
       "version": "2.12.2",
       "license": "MIT OR Apache-2.0",
@@ -1837,6 +1969,25 @@
       ],
       "source": null,
       "upstreamSource": "https://crates.io/crates/libloading/0.8.9"
+    },
+    {
+      "name": "libm",
+      "version": "0.2.16",
+      "license": "MIT",
+      "selectedLicense": "MIT",
+      "authors": [
+        "Alex Crichton <alex@alexcrichton.com>",
+        "Amanieu d'Antras <amanieu@gmail.com>",
+        "Jorge Aparicio <japaricious@gmail.com>",
+        "Trevor Gross <tg@trevorgross.com>"
+      ],
+      "repository": "https://github.com/rust-lang/compiler-builtins",
+      "checksum": "b6d2cec3eae94f9f509c767b45932f1ada8350c4bdb85af2fcab4a3c14807981",
+      "notices": [
+        "rust/libm-0.2.16/LICENSE.txt"
+      ],
+      "source": null,
+      "upstreamSource": "https://crates.io/crates/libm/0.2.16"
     },
     {
       "name": "librqbit-bencode",
@@ -2288,6 +2439,40 @@
       "upstreamSource": "https://crates.io/crates/multiversion_no_op/1.0.0"
     },
     {
+      "name": "naga",
+      "version": "30.0.1",
+      "license": "MIT OR Apache-2.0",
+      "selectedLicense": "MIT OR Apache-2.0",
+      "authors": [
+        "gfx-rs developers"
+      ],
+      "repository": "https://github.com/gfx-rs/wgpu",
+      "checksum": "a616d2fb8c89516ac2723a581f69d6c18576046bed761bd6b305e5618e6ae130",
+      "notices": [
+        "rust/naga-30.0.1/LICENSE.APACHE",
+        "rust/naga-30.0.1/LICENSE.MIT"
+      ],
+      "source": null,
+      "upstreamSource": "https://crates.io/crates/naga/30.0.1"
+    },
+    {
+      "name": "naga-types",
+      "version": "30.0.1",
+      "license": "MIT OR Apache-2.0",
+      "selectedLicense": "MIT OR Apache-2.0",
+      "authors": [
+        "gfx-rs developers"
+      ],
+      "repository": "https://github.com/gfx-rs/wgpu",
+      "checksum": "590afbf58a6f4f62873cd5cff4468061844bafa1cdf399cc954537c22d768d49",
+      "notices": [
+        "rust/naga-types-30.0.1/LICENSE.APACHE",
+        "rust/naga-types-30.0.1/LICENSE.MIT"
+      ],
+      "source": null,
+      "upstreamSource": "https://crates.io/crates/naga-types/30.0.1"
+    },
+    {
       "name": "native-tls",
       "version": "0.2.18",
       "license": "MIT OR Apache-2.0",
@@ -2732,6 +2917,25 @@
       "upstreamSource": "https://crates.io/crates/quote/1.0.47"
     },
     {
+      "name": "rand_core",
+      "version": "0.6.4",
+      "license": "MIT OR Apache-2.0",
+      "selectedLicense": "MIT OR Apache-2.0",
+      "authors": [
+        "The Rand Project Developers",
+        "The Rust Project Developers"
+      ],
+      "repository": "https://github.com/rust-random/rand",
+      "checksum": "ec0be4795e2f6a28069bec0b5ff3e2ac9bafc99e6a9a7dc3547996c5c816922c",
+      "notices": [
+        "rust/rand_core-0.6.4/COPYRIGHT",
+        "rust/rand_core-0.6.4/LICENSE-APACHE",
+        "rust/rand_core-0.6.4/LICENSE-MIT"
+      ],
+      "source": null,
+      "upstreamSource": "https://crates.io/crates/rand_core/0.6.4"
+    },
+    {
       "name": "raw-window-handle",
       "version": "0.6.2",
       "license": "MIT OR Apache-2.0 OR Zlib",
@@ -2763,6 +2967,23 @@
       ],
       "source": null,
       "upstreamSource": "https://crates.io/crates/read-fonts/0.41.0"
+    },
+    {
+      "name": "renderdoc-sys",
+      "version": "1.1.0",
+      "license": "MIT OR Apache-2.0",
+      "selectedLicense": "MIT OR Apache-2.0",
+      "authors": [
+        "Eyal Kalderon <ebkalderon@gmail.com>"
+      ],
+      "repository": "https://github.com/ebkalderon/renderdoc-rs",
+      "checksum": "19b30a45b0cd0bcca8037f3d0dc3421eaf95327a17cad11964fb8179b4fc4832",
+      "notices": [
+        "rust/renderdoc-sys-1.1.0/LICENSE-APACHE",
+        "rust/renderdoc-sys-1.1.0/LICENSE-MIT"
+      ],
+      "source": null,
+      "upstreamSource": "https://crates.io/crates/renderdoc-sys/1.1.0"
     },
     {
       "name": "reqwest",
@@ -2811,6 +3032,23 @@
       ],
       "source": null,
       "upstreamSource": "https://crates.io/crates/rustc_version/0.4.1"
+    },
+    {
+      "name": "rustc-hash",
+      "version": "1.1.0",
+      "license": "Apache-2.0/MIT",
+      "selectedLicense": "Apache-2.0/MIT",
+      "authors": [
+        "The Rust Project Developers"
+      ],
+      "repository": "https://github.com/rust-lang-nursery/rustc-hash",
+      "checksum": "08d43f7aa6b08d49f382cde6a7982047c3426db949b1424bc4b7ec9ae12c6ce2",
+      "notices": [
+        "rust/rustc-hash-1.1.0/LICENSE-APACHE",
+        "rust/rustc-hash-1.1.0/LICENSE-MIT"
+      ],
+      "source": null,
+      "upstreamSource": "https://crates.io/crates/rustc-hash/1.1.0"
     },
     {
       "name": "rustc-hash",
@@ -3342,6 +3580,23 @@
       "upstreamSource": "https://crates.io/crates/string_cache/0.9.0"
     },
     {
+      "name": "subtle",
+      "version": "2.6.1",
+      "license": "BSD-3-Clause",
+      "selectedLicense": "BSD-3-Clause",
+      "authors": [
+        "Isis Lovecruft <isis@patternsinthevoid.net>",
+        "Henry de Valence <hdevalence@hdevalence.ca>"
+      ],
+      "repository": "https://github.com/dalek-cryptography/subtle",
+      "checksum": "13c2bddecc57b384dee18652358fb23172facb8a2c51ccc10d74c157bdea3292",
+      "notices": [
+        "rust/subtle-2.6.1/LICENSE"
+      ],
+      "source": null,
+      "upstreamSource": "https://crates.io/crates/subtle/2.6.1"
+    },
+    {
       "name": "syn",
       "version": "2.0.119",
       "license": "MIT OR Apache-2.0",
@@ -3658,6 +3913,24 @@
       "upstreamSource": "https://crates.io/crates/tracing/0.1.44"
     },
     {
+      "name": "tracing-attributes",
+      "version": "0.1.31",
+      "license": "MIT",
+      "selectedLicense": "MIT",
+      "authors": [
+        "Tokio Contributors <team@tokio.rs>",
+        "Eliza Weisman <eliza@buoyant.io>",
+        "David Barsky <dbarsky@amazon.com>"
+      ],
+      "repository": "https://github.com/tokio-rs/tracing",
+      "checksum": "7490cfa5ec963746568740651ac6781f701c9c5ea257c58e057f3ba8cf69e8da",
+      "notices": [
+        "rust/tracing-attributes-0.1.31/LICENSE"
+      ],
+      "source": null,
+      "upstreamSource": "https://crates.io/crates/tracing-attributes/0.1.31"
+    },
+    {
       "name": "tracing-core",
       "version": "0.1.36",
       "license": "MIT",
@@ -3689,6 +3962,23 @@
       ],
       "source": null,
       "upstreamSource": "https://crates.io/crates/try-lock/0.2.5"
+    },
+    {
+      "name": "type-map",
+      "version": "0.5.1",
+      "license": "MIT/Apache-2.0",
+      "selectedLicense": "MIT/Apache-2.0",
+      "authors": [
+        "Jacob Brown <kardeiz@gmail.com>"
+      ],
+      "repository": "https://github.com/kardeiz/type-map",
+      "checksum": "cb30dbbd9036155e74adad6812e9898d03ec374946234fbcebd5dfc7b9187b90",
+      "notices": [
+        "rust/type-map-0.5.1/LICENSE-APACHE",
+        "rust/type-map-0.5.1/LICENSE-MIT"
+      ],
+      "source": null,
+      "upstreamSource": "https://crates.io/crates/type-map/0.5.1"
     },
     {
       "name": "typeid",
@@ -3775,6 +4065,25 @@
       ],
       "source": null,
       "upstreamSource": "https://crates.io/crates/unicode-segmentation/1.13.3"
+    },
+    {
+      "name": "unicode-width",
+      "version": "0.2.3",
+      "license": "MIT OR Apache-2.0",
+      "selectedLicense": "MIT OR Apache-2.0",
+      "authors": [
+        "kwantam <kwantam@gmail.com>",
+        "Manish Goregaokar <manishsmail@gmail.com>"
+      ],
+      "repository": "https://github.com/unicode-rs/unicode-width",
+      "checksum": "ca718471876992059f251e33aafc334346ada08042b7661dd1fe313a9bced557",
+      "notices": [
+        "rust/unicode-width-0.2.3/COPYRIGHT",
+        "rust/unicode-width-0.2.3/LICENSE-APACHE",
+        "rust/unicode-width-0.2.3/LICENSE-MIT"
+      ],
+      "source": null,
+      "upstreamSource": "https://crates.io/crates/unicode-width/0.2.3"
     },
     {
       "name": "url",
@@ -3958,6 +4267,108 @@
       ],
       "source": null,
       "upstreamSource": "https://crates.io/crates/weezl/0.1.12"
+    },
+    {
+      "name": "wgpu",
+      "version": "30.0.1",
+      "license": "MIT OR Apache-2.0",
+      "selectedLicense": "MIT OR Apache-2.0",
+      "authors": [
+        "gfx-rs developers"
+      ],
+      "repository": "https://github.com/gfx-rs/wgpu",
+      "checksum": "527ccdf43dd5b2e8676eed9984ce00e2bbb0a1b85b70c1969dcb6cd2eb55ab9e",
+      "notices": [
+        "rust/wgpu-30.0.1/LICENSE.APACHE",
+        "rust/wgpu-30.0.1/LICENSE.MIT"
+      ],
+      "source": null,
+      "upstreamSource": "https://crates.io/crates/wgpu/30.0.1"
+    },
+    {
+      "name": "wgpu-core",
+      "version": "30.0.1",
+      "license": "MIT OR Apache-2.0",
+      "selectedLicense": "MIT OR Apache-2.0",
+      "authors": [
+        "gfx-rs developers"
+      ],
+      "repository": "https://github.com/gfx-rs/wgpu",
+      "checksum": "14c018fce9b6270aa203c2fdd56f3cce996713534bd757e4ea58c8560b121f14",
+      "notices": [
+        "rust/wgpu-core-30.0.1/LICENSE.APACHE",
+        "rust/wgpu-core-30.0.1/LICENSE.MIT"
+      ],
+      "source": null,
+      "upstreamSource": "https://crates.io/crates/wgpu-core/30.0.1"
+    },
+    {
+      "name": "wgpu-core-deps-windows-linux-android",
+      "version": "30.0.1",
+      "license": "MIT OR Apache-2.0",
+      "selectedLicense": "MIT OR Apache-2.0",
+      "authors": [
+        "gfx-rs developers"
+      ],
+      "repository": "https://github.com/gfx-rs/wgpu",
+      "checksum": "7586165fd5f6d881cb9ce4bb71f40d6caab2c0f1837e3fc1d9788a197fb6004f",
+      "notices": [
+        "rust/wgpu-core-deps-windows-linux-android-30.0.1/LICENSE.APACHE",
+        "rust/wgpu-core-deps-windows-linux-android-30.0.1/LICENSE.MIT"
+      ],
+      "source": null,
+      "upstreamSource": "https://crates.io/crates/wgpu-core-deps-windows-linux-android/30.0.1"
+    },
+    {
+      "name": "wgpu-hal",
+      "version": "30.0.1",
+      "license": "MIT OR Apache-2.0",
+      "selectedLicense": "MIT OR Apache-2.0",
+      "authors": [
+        "gfx-rs developers"
+      ],
+      "repository": "https://github.com/gfx-rs/wgpu",
+      "checksum": "b6b7fb58561a792bc237628ba0792e332de418fefe145f13b5ed8201e6d52f58",
+      "notices": [
+        "rust/wgpu-hal-30.0.1/LICENSE.APACHE",
+        "rust/wgpu-hal-30.0.1/LICENSE.MIT"
+      ],
+      "source": null,
+      "upstreamSource": "https://crates.io/crates/wgpu-hal/30.0.1"
+    },
+    {
+      "name": "wgpu-naga-bridge",
+      "version": "30.0.1",
+      "license": "MIT OR Apache-2.0",
+      "selectedLicense": "MIT OR Apache-2.0",
+      "authors": [
+        "gfx-rs developers"
+      ],
+      "repository": "https://github.com/gfx-rs/wgpu",
+      "checksum": "d2f62e73117bb7a62bfd9c5a5841438a823f6566c6442a808ee269d2d055c081",
+      "notices": [
+        "rust/wgpu-naga-bridge-30.0.1/LICENSE.APACHE",
+        "rust/wgpu-naga-bridge-30.0.1/LICENSE.MIT"
+      ],
+      "source": null,
+      "upstreamSource": "https://crates.io/crates/wgpu-naga-bridge/30.0.1"
+    },
+    {
+      "name": "wgpu-types",
+      "version": "30.0.1",
+      "license": "MIT OR Apache-2.0",
+      "selectedLicense": "MIT OR Apache-2.0",
+      "authors": [
+        "gfx-rs developers"
+      ],
+      "repository": "https://github.com/gfx-rs/wgpu",
+      "checksum": "99dad6f1fbdbbdb4c278a6508b059d44688f5cebddf78d005a46a31340269286",
+      "notices": [
+        "rust/wgpu-types-30.0.1/LICENSE.APACHE",
+        "rust/wgpu-types-30.0.1/LICENSE.MIT"
+      ],
+      "source": null,
+      "upstreamSource": "https://crates.io/crates/wgpu-types/30.0.1"
     },
     {
       "name": "which",
@@ -4429,6 +4840,23 @@
       ],
       "source": null,
       "upstreamSource": "https://crates.io/crates/zerofrom-derive/0.1.8"
+    },
+    {
+      "name": "zeroize_derive",
+      "version": "1.5.0",
+      "license": "Apache-2.0 OR MIT",
+      "selectedLicense": "Apache-2.0 OR MIT",
+      "authors": [
+        "The RustCrypto Project Developers"
+      ],
+      "repository": "https://github.com/RustCrypto/utils",
+      "checksum": "3c50655cbb0fe3fc43170059e702f1ce5e19b84cec58dc87b037a09935c2f328",
+      "notices": [
+        "rust/zeroize_derive-1.5.0/LICENSE-APACHE",
+        "rust/zeroize_derive-1.5.0/LICENSE-MIT"
+      ],
+      "source": null,
+      "upstreamSource": "https://crates.io/crates/zeroize_derive/1.5.0"
     },
     {
       "name": "zeroize",

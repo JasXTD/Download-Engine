@@ -39,6 +39,10 @@ pub(super) struct Extras {
     completion_check: Instant,
     columns: Option<InterfacePreferences>,
     pending_queue: Option<String>,
+    #[cfg(unix)]
+    activation: Option<background_io::Task<Option<bool>>>,
+    #[cfg(unix)]
+    next_activation: Instant,
     #[cfg(windows)]
     drop_target: Option<crate::url_drop::Registration>,
 }
@@ -57,6 +61,10 @@ impl Default for Extras {
             completion_check: Instant::now(),
             columns: None,
             pending_queue: None,
+            #[cfg(unix)]
+            activation: None,
+            #[cfg(unix)]
+            next_activation: Instant::now(),
             #[cfg(windows)]
             drop_target: None,
         }
@@ -390,6 +398,63 @@ impl Desktop {
         self.show_window(ctx);
     }
     pub(super) fn extras_background(&mut self, ctx: &egui::Context) {
+        #[cfg(unix)]
+        {
+            if let Some(result) = self
+                .extras
+                .activation
+                .as_mut()
+                .and_then(background_io::Task::poll)
+            {
+                self.extras.activation = None;
+                match result {
+                    Ok(Some(browser)) => self.tray_action(
+                        if browser {
+                            TrayAction::BrowserSetup
+                        } else {
+                            TrayAction::Open
+                        },
+                        ctx,
+                    ),
+                    Ok(None) => {}
+                    Err(error) => self.notice = Some(Notice::error(error.to_string())),
+                }
+            }
+            if self.extras.activation.is_none() && Instant::now() >= self.extras.next_activation {
+                self.extras.next_activation = Instant::now() + Duration::from_millis(500);
+                let store = self.store.clone();
+                match background_io::Task::spawn(Some(ctx.clone()), move || {
+                    store.take_window_activation()
+                }) {
+                    Ok(task) => self.extras.activation = Some(task),
+                    Err(error) => self.notice = Some(Notice::error(error.to_string())),
+                }
+            }
+            // Unix delivers native file drops through egui. Feed the same bounded
+            // review inbox as Explorer/browser activation; never auto-start a job.
+            let dropped = ctx.input_mut(|input| std::mem::take(&mut input.raw.dropped_files));
+            if !dropped.is_empty() {
+                let result = (|| -> anyhow::Result<()> {
+                    anyhow::ensure!(
+                        dropped.len() <= download_engine::external_open::MAX_PENDING,
+                        "Drop at most eight torrent files at once"
+                    );
+                    let mut targets = Vec::new();
+                    for file in dropped {
+                        let path = file.path();
+                        targets.push(download_engine::external_open::Target::parse(
+                            path.as_os_str(),
+                            &self.store.paths.downloads,
+                        )?);
+                    }
+                    self.store.submit_external_opens(&targets)?;
+                    Ok(())
+                })();
+                if let Err(error) = result {
+                    self.notice = Some(Notice::error(error.to_string()));
+                }
+            }
+        }
         if self.dialog.is_none() {
             if let Some(id) = self.extras.pending_queue.take() {
                 if self.queues.iter().any(|q| q.id == id) {
@@ -643,7 +708,10 @@ impl Desktop {
             if ui.selectable_label(current.is_none(), tr("Off")).clicked() {
                 choice = Some(None);
             }
-            for action in Action::ALL {
+            for action in Action::ALL
+                .into_iter()
+                .filter(|action| cfg!(windows) || !action.is_power())
+            {
                 let reason = power.unavailable(action);
                 let item = ui.add_enabled(
                     reason.is_none(),
@@ -658,6 +726,7 @@ impl Desktop {
             }
             for reason in [Action::Sleep, Action::Hibernate]
                 .into_iter()
+                .filter(|_| cfg!(windows))
                 .filter_map(|action| power.unavailable(action))
             {
                 // Menus justify their contents; keep this explanation left-aligned.
@@ -1177,6 +1246,7 @@ mod tests {
             message(&app)
         );
     }
+    #[cfg(windows)]
     #[test]
     fn unavailable_power_choices_are_explained_disabled_and_never_armed() {
         let (_temp, mut app, ctx) = fixture();
@@ -1244,6 +1314,7 @@ mod tests {
         tick(&mut app, &ctx);
         assert!(played().is_empty() && app.extras.sound.is_empty());
     }
+    #[cfg(windows)]
     #[test]
     fn completion_sound_setting_saves_with_notifications_and_cancel_keeps_it() {
         let toggle_sound = |app: &mut Desktop, ctx: &egui::Context| {

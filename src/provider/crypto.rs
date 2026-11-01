@@ -1,6 +1,8 @@
 //! Bounded host primitive. AES is provided by Windows CNG, not Lua.
 use anyhow::{Context, Result, ensure};
+#[cfg(windows)]
 use std::ptr::{null, null_mut};
+#[cfg(windows)]
 use windows_sys::Win32::Security::Cryptography::*;
 use zeroize::Zeroizing;
 
@@ -23,16 +25,19 @@ pub fn unhex(value: &str) -> Result<Vec<u8>> {
         .collect()
 }
 
+#[cfg(windows)]
 struct Aes {
     algorithm: BCRYPT_ALG_HANDLE,
     key: BCRYPT_KEY_HANDLE,
 }
 
+#[cfg(windows)]
 fn checked(status: i32) -> Result<()> {
     ensure!(status >= 0, "Windows AES failed (0x{:08X})", status as u32);
     Ok(())
 }
 
+#[cfg(windows)]
 impl Aes {
     fn new(secret: &[u8]) -> Result<Self> {
         ensure!(
@@ -103,6 +108,7 @@ impl Aes {
     }
 }
 
+#[cfg(windows)]
 impl Drop for Aes {
     fn drop(&mut self) {
         unsafe {
@@ -154,4 +160,20 @@ pub fn ctr(secret: &[u8], initial: &[u8; 16], input: &[u8], offset: u64) -> Resu
         .zip(&stream[skip..])
         .map(|(a, b)| a ^ b)
         .collect())
+}
+
+#[cfg(unix)]
+struct Aes(crate::unix_crypto::Aes);
+#[cfg(unix)]
+impl Aes {
+    fn new(secret: &[u8]) -> Result<Self> {
+        Ok(Self(crate::unix_crypto::Aes::new(secret, false)?))
+    }
+    fn blocks(&self, input: &[u8]) -> Result<Zeroizing<Vec<u8>>> {
+        ensure!(
+            !input.is_empty() && input.len().is_multiple_of(16),
+            "Invalid AES blocks"
+        );
+        Ok(Zeroizing::new(self.0.crypt(input, None, false)?))
+    }
 }

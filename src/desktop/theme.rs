@@ -218,6 +218,41 @@ pub fn configure(ctx: &egui::Context) {
         ctx.set_fonts(fonts);
     }
 
+    #[cfg(unix)]
+    {
+        let mut fonts = egui::FontDefinitions::default();
+        // Reuse installed OS fonts for language coverage; never redistribute
+        // proprietary fonts or depend on Windows font names on another system.
+        for (index, path) in [
+            "/System/Library/Fonts/PingFang.ttc",
+            "/System/Library/Fonts/Supplemental/Arial Unicode.ttf",
+            "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+            "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
+            "/usr/share/fonts/truetype/noto/NotoSansArabic-Regular.ttf",
+            "/usr/share/fonts/truetype/noto/NotoSansThai-Regular.ttf",
+        ]
+        .iter()
+        .enumerate()
+        {
+            if let Ok(data) = std::fs::read(path) {
+                let name = format!("system-fallback-{index}");
+                fonts
+                    .font_data
+                    .insert(name.clone(), egui::FontData::from_owned(data).into());
+                for family in [egui::FontFamily::Proportional, egui::FontFamily::Monospace] {
+                    fonts.families.entry(family).or_default().push(name.clone());
+                }
+            }
+        }
+        for name in ["bold", "icons"] {
+            fonts.families.insert(
+                egui::FontFamily::Name(name.into()),
+                fonts.families[&egui::FontFamily::Proportional].clone(),
+            );
+        }
+        ctx.set_fonts(fonts);
+    }
+
     for theme in [egui::Theme::Light, egui::Theme::Dark] {
         let p = Palette::new(theme == egui::Theme::Dark);
         ctx.set_style_of(theme, style(theme, p));

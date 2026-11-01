@@ -89,6 +89,9 @@ fn whole_word_width(ui: &egui::Ui, label: &str, size: f32) -> f32 {
 /// Shortens words that cannot fit `width` with … so that a label wraps only between
 /// words. Callers show the full label on hover.
 fn elide_long_words(ui: &egui::Ui, label: &str, size: f32, width: f32) -> String {
+    // Shaping a shortened word again inside the whole label can round its two
+    // edges differently. Reserve one physical pixel so it still fits the row.
+    let width = (width - ui.pixels_per_point().recip()).max(0.0);
     ui.fonts_mut(|fonts| {
         row_words(label)
             .map(|word| {
@@ -499,8 +502,11 @@ impl Desktop {
                                     ui.close();
                                 }
                             }
-                            ui.separator();
-                            self.drop_target_menu_item(ui);
+                            #[cfg(windows)]
+                            {
+                                ui.separator();
+                                self.drop_target_menu_item(ui);
+                            }
                         });
                         ui.add(
                             egui::Separator::default()
@@ -1081,7 +1087,10 @@ mod tests {
             assert!(
                 words
                     .iter()
-                    .any(|whole| !kept.is_empty() && whole.starts_with(kept))
+                    .any(|whole| !kept.is_empty() && whole.starts_with(kept)),
+                "Unexpected shortened word {word:?}; visible {:?}; source {:?}",
+                shown(&galley),
+                galley.job.text
             );
         }
         run(vec![egui::Event::PointerMoved(rect.center())]);

@@ -72,10 +72,10 @@ impl Desktop {
             self.drop_target.language = None;
             return;
         }
-        let look = look(Palette::for_context(ctx), ctx.theme() == egui::Theme::Dark);
-        let language = self.interface.language;
         #[cfg(windows)]
         {
+            let look = look(Palette::for_context(ctx), ctx.theme() == egui::Theme::Dark);
+            let language = self.interface.language;
             if self.drop_target.window.is_none()
                 && !self.drop_target.failed
                 && let Some(native) = &self.drop_target.native
@@ -229,6 +229,7 @@ impl Desktop {
         self.extras.shutdown_deadline = None;
     }
 
+    #[cfg(windows)]
     pub(super) fn drop_target_menu_item(&mut self, ui: &mut egui::Ui) {
         let mut on = self.interface.drop_target;
         if ui
@@ -246,7 +247,9 @@ impl Desktop {
 
 #[cfg(test)]
 mod tests {
-    use super::super::interaction_tests::{click, fixture, frame};
+    use super::super::interaction_tests::fixture;
+    #[cfg(windows)]
+    use super::super::interaction_tests::{click, frame};
     use super::*;
     #[test]
     fn mixed_torrent_drop_preserves_the_current_dialog_and_regular_links() {
@@ -394,6 +397,7 @@ mod tests {
         assert!(app.drop_target.pending.is_none());
     }
 
+    #[cfg(windows)]
     #[test]
     fn view_menu_and_tray_switch_the_drop_target_and_save_it() {
         let (_temp, mut app, ctx) = fixture();

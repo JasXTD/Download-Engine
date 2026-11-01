@@ -2,7 +2,9 @@
 //! evidence that its engine, signatures, or license are ready to scan.
 use super::{Provider, Settings};
 use anyhow::{Context, Result, ensure};
-use std::path::{Path, PathBuf};
+#[cfg(windows)]
+use std::path::Path;
+use std::path::PathBuf;
 
 pub fn check_setup(settings: &Settings) -> Result<PathBuf> {
     settings.validate()?;
@@ -10,6 +12,11 @@ pub fn check_setup(settings: &Settings) -> Result<PathBuf> {
         Provider::Defender => super::defender_path()?,
         provider if provider.external_review() => handler(provider)?,
         _ => PathBuf::from(&settings.executable),
+    };
+    let path = if matches!(settings.provider, Provider::ClamAv | Provider::Custom) {
+        super::process::scanner_path(&path)?
+    } else {
+        path
     };
     let _parents = super::process::guard_parents(&path)?;
     let _file = crate::download_file::read_completed(&path)?;
@@ -54,6 +61,7 @@ pub(super) fn handler(provider: Provider) -> Result<PathBuf> {
     }
 }
 
+#[cfg(windows)]
 fn vendor_path(provider: Provider, path: &Path, roots: &[PathBuf]) -> bool {
     let vendor = match provider {
         Provider::Malwarebytes => "malwarebytes",
@@ -246,7 +254,7 @@ mod tests {
     #[test]
     fn setup_checks_only_read_configuration_and_files() {
         let temp = tempfile::tempdir().unwrap();
-        let path = temp.path().join("clamscan.exe");
+        let path = temp.path().join(crate::paths::executable_name("clamscan"));
         let settings = Settings {
             provider: Provider::ClamAv,
             executable: path.display().to_string(),
@@ -254,7 +262,15 @@ mod tests {
         };
         assert!(check_setup(&settings).is_err());
         std::fs::write(&path, b"Harmless non-executable setup-check fixture").unwrap();
+        #[cfg(unix)]
+        {
+            assert!(check_setup(&settings).is_err());
+            // A real, already-built native program copied as data. Setup checking
+            // must inspect it without running it or touching any user scanner.
+            std::fs::copy(std::env::current_exe().unwrap(), &path).unwrap();
+        }
         assert_eq!(check_setup(&settings).unwrap(), path);
+        #[cfg(windows)]
         assert_eq!(
             std::fs::read(&path).unwrap(),
             b"Harmless non-executable setup-check fixture"
@@ -283,6 +299,7 @@ mod tests {
         }
     }
     #[test]
+    #[cfg(windows)]
     fn provider_discovery_rejects_other_vendors_prefixes_and_traversal() {
         let roots = [
             PathBuf::from(r"C:\Program Files"),

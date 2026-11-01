@@ -214,7 +214,20 @@ impl Desktop {
                     .inner_margin(egui::Margin::symmetric(10, 7)),
             )
             .show(ui, |ui| {
-                let mut remaining = ui.available_width() - 72.0; // More is always available for customization.
+                // The overflow control must fit its translation with the installed
+                // platform font too (e.g. Thai is wider without Windows UI fonts).
+                let more_width = ui
+                    .painter()
+                    .layout_no_wrap(
+                        tr("More").into(),
+                        FontId::proportional(if downloads { LABEL_LARGEST } else { 13.0 }),
+                        p.text,
+                    )
+                    .size()
+                    .x
+                    + if downloads { LABEL_PADDING } else { 20.0 };
+                let more_width = more_width.ceil().max(68.0);
+                let mut remaining = ui.available_width() - more_width - 4.0;
                 let mut hidden = Vec::new();
                 let mut shown = Vec::new();
                 for action in actions {
@@ -248,7 +261,7 @@ impl Desktop {
                     &shown
                         .iter()
                         .map(|(a, w)| (a.label(), *w))
-                        .chain(std::iter::once((tr("More"), 68.0)))
+                        .chain(std::iter::once((tr("More"), more_width)))
                         .collect::<Vec<_>>(),
                 );
                 ui.horizontal(|ui| {
@@ -296,9 +309,9 @@ impl Desktop {
                         }
                     }
                     let more = if downloads {
-                        tool(ui, tr("More"), "\u{e712}", p.text, 68.0, false, look)
+                        tool(ui, tr("More"), "\u{e712}", p.text, more_width, false, look)
                     } else {
-                        ui.add_sized([68.0, 30.0], egui::Button::new(tr("More")))
+                        ui.add_sized([more_width, 30.0], egui::Button::new(tr("More")))
                     };
                     egui::Popup::menu(&more).show(|ui| {
                         for action in hidden {

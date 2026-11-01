@@ -1192,7 +1192,9 @@ impl Window {
             if form_dialog::primary_enabled(ui, enabled, tr("Open")).clicked() {
                 action = Some(Action::OpenFile);
             }
-            if form_dialog::secondary_enabled(ui, enabled, tr("Open with…")).clicked() {
+            if cfg!(windows)
+                && form_dialog::secondary_enabled(ui, enabled, tr("Open with…")).clicked()
+            {
                 action = Some(Action::OpenWith);
             }
             if form_dialog::secondary_enabled(ui, enabled, tr("Open folder")).clicked() {
@@ -1527,7 +1529,7 @@ impl Window {
                 {
                     next_watch = Some(None);
                 }
-                for choice in completion::Action::ALL {
+                    for choice in completion::Action::ALL.into_iter().filter(|choice| cfg!(windows) || !choice.is_power()) {
                     let reason = power.unavailable(choice);
                     let radio = ui.add_enabled(
                         reason.is_none(),
@@ -1542,6 +1544,7 @@ impl Window {
                 }
                 for reason in [completion::Action::Sleep, completion::Action::Hibernate]
                     .into_iter()
+                        .filter(|_| cfg!(windows))
                     .filter_map(|choice| power.unavailable(choice))
                 {
                     ui.add(

@@ -1,7 +1,11 @@
 //! Only app-owned, opaque UUID targets are accessed. Never enumerate credentials.
-use anyhow::{Result, bail, ensure};
+use anyhow::Result;
+#[cfg(windows)]
+use anyhow::{bail, ensure};
 use uuid::Uuid;
-use zeroize::{Zeroize, Zeroizing};
+#[cfg(any(windows, test))]
+use zeroize::Zeroize;
+use zeroize::Zeroizing;
 
 #[cfg(windows)]
 use windows_sys::Win32::Security::Credentials::*;
@@ -115,19 +119,37 @@ pub(crate) fn delete(id: Uuid) -> Result<()> {
 }
 
 #[cfg(not(windows))]
-pub(crate) fn write(_: Uuid, _: &mut [u8]) -> Result<()> {
-    bail!("Saved authentication requires Windows");
+fn entry(id: Uuid) -> Result<keyring::Entry> {
+    Ok(keyring::Entry::new(
+        "com.xetro.downloadengine.credentials",
+        &id.to_string(),
+    )?)
 }
 #[cfg(not(windows))]
-pub(crate) fn read(_: Uuid) -> Result<Option<Zeroizing<Vec<u8>>>> {
-    bail!("Saved authentication requires Windows");
+pub(crate) fn write(id: Uuid, bytes: &mut [u8]) -> Result<()> {
+    entry(id)?.set_secret(bytes).map_err(|error| {
+        anyhow::anyhow!("The system credential store could not save this login: {error}")
+    })
 }
 #[cfg(not(windows))]
-pub(crate) fn delete(_: Uuid) -> Result<()> {
-    bail!("Saved authentication requires Windows");
+pub(crate) fn read(id: Uuid) -> Result<Option<Zeroizing<Vec<u8>>>> {
+    match entry(id)?.get_secret() {
+        Ok(bytes) => Ok(Some(Zeroizing::new(bytes))),
+        Err(keyring::Error::NoEntry) => Ok(None),
+        Err(error) => Err(anyhow::anyhow!(
+            "The system credential store could not unlock this login: {error}"
+        )),
+    }
+}
+#[cfg(not(windows))]
+pub(crate) fn delete(id: Uuid) -> Result<()> {
+    match entry(id)?.delete_credential() {
+        Ok(()) | Err(keyring::Error::NoEntry) => Ok(()),
+        Err(error) => Err(error.into()),
+    }
 }
 
-#[cfg(all(test, windows))]
+#[cfg(test)]
 mod tests {
     use super::*;
     use std::sync::{Arc, Barrier, Mutex};

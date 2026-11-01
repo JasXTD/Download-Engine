@@ -1,18 +1,47 @@
 use super::*;
 use crate::desktop::interaction_tests::{click, fixture, frame, text_rect};
 
+#[cfg(unix)]
+#[test]
+fn native_preferences_offer_updates_without_unavailable_windows_integrations() {
+    let (_temp, mut app, ctx) = fixture();
+    app.open_preferences_window();
+    for category in [Category::Startup, Category::Browser] {
+        app.preferences_window.as_mut().unwrap().category = category;
+        frame(&mut app, &ctx, vec2(1080.0, 800.0), vec![]);
+        let output = frame(&mut app, &ctx, vec2(1080.0, 800.0), vec![]);
+        for unavailable in [
+            "Start with Windows",
+            "Start in the tray",
+            "Clipboard links",
+            "Close to tray",
+            "Notify when a download finishes",
+        ] {
+            assert!(!output.shapes.iter().any(|shape| matches!(&shape.shape, egui::Shape::Text(text) if text.galley.job.text == unavailable)), "Unavailable native control: {unavailable}");
+        }
+        text_rect(
+            &output,
+            if category == Category::Startup {
+                "Check for updates on launch"
+            } else {
+                "Browser integration"
+            },
+        );
+    }
+}
+
 #[test]
 fn launch_update_preference_saves_cancels_and_resets_without_changing_windows_startup() {
     let (_temp, mut app, ctx) = fixture();
     let windows_startup = app.startup.enabled();
     assert!(app.interface.check_updates_on_launch);
     app.open_preferences_window();
-    click(&mut app, &ctx, "Startup & tray");
+    click(&mut app, &ctx, Category::Startup.label());
     click(&mut app, &ctx, "Check for updates on launch");
     click(&mut app, &ctx, "Cancel");
     assert!(app.interface.check_updates_on_launch);
     app.open_preferences_window();
-    click(&mut app, &ctx, "Startup & tray");
+    click(&mut app, &ctx, Category::Startup.label());
     click(&mut app, &ctx, "Check for updates on launch");
     click(&mut app, &ctx, "Save");
     assert!(!app.interface.check_updates_on_launch);
@@ -89,6 +118,7 @@ fn cancel_and_escape_discard_drafts_and_restore_theme_on_the_same_page() {
         click(&mut app, &ctx, "Dark");
         click(&mut app, &ctx, "Compact rows");
         click(&mut app, &ctx, "Browser & AI");
+        #[cfg(windows)]
         click(&mut app, &ctx, "Clipboard links");
         assert_eq!(
             app.preferences_window.as_ref().unwrap().category,

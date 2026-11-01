@@ -36,7 +36,8 @@ impl Category {
             Self::Connection => tr("Connection"),
             Self::Browser => tr("Browser & AI"),
             Self::Antivirus => tr("Antivirus"),
-            Self::Startup => tr("Startup & tray"),
+            Self::Startup if cfg!(windows) => tr("Startup & tray"),
+            Self::Startup => tr("Updates"),
         }
     }
 

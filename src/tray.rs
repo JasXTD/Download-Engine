@@ -1,11 +1,14 @@
 //! Windows tray owns its message loop and native resources on one thread.
 //! The window procedure only queues events: Shell/menu APIs may reenter it.
+#[cfg(windows)]
+use download_engine::i18n::{self, tr};
 use download_engine::{
-    i18n::{self, Language, tr},
+    i18n::Language,
     notifications::{LinkOffer, Notice, ScriptNotice},
     paths::AppPaths,
 };
 use eframe::egui;
+#[cfg(windows)]
 use std::{
     collections::hash_map::DefaultHasher,
     hash::{Hash, Hasher},
@@ -28,6 +31,7 @@ pub enum Action {
     DropTarget,
     Unavailable(String),
 }
+#[cfg(windows)]
 fn instance_name(paths: &AppPaths) -> anyhow::Result<String> {
     let mut hash = DefaultHasher::new();
     // Only a show-window signal crosses processes. Never accept paths, URLs,
@@ -77,8 +81,9 @@ impl Tray {
     }
 }
 #[cfg(not(windows))]
-pub fn show_existing(_: &AppPaths, _: bool) -> anyhow::Result<bool> {
-    Ok(false)
+pub fn show_existing(paths: &AppPaths, browser: bool) -> anyhow::Result<bool> {
+    download_engine::store::Store::open(paths.clone())?.request_window_activation(browser)?;
+    Ok(true)
 }
 
 #[cfg(windows)]

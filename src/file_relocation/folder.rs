@@ -146,12 +146,12 @@ fn cleanup(root: &Path, root_key: &FileKey, entries: &[Entry], target: bool) -> 
             },
             "A folder item changed; cleanup preserved it"
         );
-        owned.push(file);
+        owned.push((path, file));
     }
-    while let Some(file) = owned.pop() {
-        delete_owned(&file)?;
+    while let Some((path, file)) = owned.pop() {
+        delete_owned(&file, &path)?;
     }
-    delete_owned(&directory)
+    delete_owned(&directory, root)
 }
 
 pub(super) fn relocate(
@@ -234,8 +234,8 @@ pub(super) fn relocate(
         params![intent.job, serde_json::to_string(&intent)?],
     );
     if let Err(error) = inserted {
-        if let Some((_, directory)) = &staging {
-            delete_owned(directory)?;
+        if let Some((path, directory)) = &staging {
+            delete_owned(directory, path)?;
         }
         return Err(error.into());
     }

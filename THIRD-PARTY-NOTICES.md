@@ -14,14 +14,18 @@ Asset provenance is documented in `assets/themes/README.md` in the source packag
 
 ## FFmpeg and x264
 
-The separate `tools/ffmpeg/ffmpeg.exe` helper is distributed under GPL version 3.
-It is built from unmodified FFmpeg and x264 sources. Download Engine invokes it as a
+The separate `tools/ffmpeg/ffmpeg.exe` helper (`ffmpeg` in native packages) is
+distributed under GPL version 3. It is built from the pinned FFmpeg and x264 sources
+with the documented downstream safety fixes. Download Engine invokes it as a
 separate command-line program to merge local tracks without re-encoding.
 
 - License: [GNU GPLv3](tools/ffmpeg/LICENSE).
 - Complete corresponding source: the two original upstream source archives in
   [tools/ffmpeg/source](tools/ffmpeg/source/README.md), included in this package.
 - Build instructions: `tools/ffmpeg/source/README.md`, `Dockerfile`, and `build.sh`.
+  Native macOS/Linux builds use the included `scripts/Build-UnixFfmpeg.sh`;
+  their compiler/configuration records and binary hashes are in
+  `tools/ffmpeg/build-record/`.
 - Exact revisions, source checksums and build records:
   [FFmpeg provenance](tools/ffmpeg/PROVENANCE.md).
 - Additional license texts, including x264 and the compiler runtime notices:
@@ -42,7 +46,7 @@ Apache-2.0 licensed; `vendor/epaint/patch.md` describes the changes, and
 the index includes the original crate. Nine crates from
 [rqbit](https://github.com/ikatson/rqbit) are also built from modified copies, in
 `vendor/rqbit`. They provide BitTorrent's file formats and network protocols for
-`de-torrent.exe`, remain Apache-2.0 licensed, and say so in every changed file;
+`de-torrent.exe` (`de-torrent` in native packages), remain Apache-2.0 licensed, and say so in every changed file;
 `vendor/rqbit/patch.md` lists what changed. Where `self_cell` offers Apache-2.0 or
 GPL-2.0, the Apache-2.0 option is used.
 

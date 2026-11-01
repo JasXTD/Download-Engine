@@ -2,7 +2,9 @@
 //! browsers and other apps, also while the main window is minimized or in the tray.
 //! Its window, OLE registration and menu live on one STA thread, like the tray. The
 //! window procedure only queues messages; the thread loop handles them.
+#[cfg(windows)]
 use download_engine::i18n::Language;
+#[cfg(windows)]
 use eframe::egui;
 use std::sync::LazyLock;
 

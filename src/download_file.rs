@@ -36,6 +36,13 @@ fn options() -> OpenOptions {
             .custom_flags(FILE_FLAG_OPEN_REPARSE_POINT)
             .share_mode(FILE_SHARE_READ);
     }
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::OpenOptionsExt;
+        options
+            .mode(0o600)
+            .custom_flags(libc::O_NOFOLLOW | libc::O_CLOEXEC);
+    }
     options
 }
 
@@ -64,8 +71,14 @@ fn check_file(file: &File, allow_hard_links: bool) -> Result<()> {
             "Refusing a partial download linked to another file. Restart this download."
         );
     }
-    #[cfg(not(windows))]
-    let _ = allow_hard_links;
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::MetadataExt;
+        ensure!(
+            allow_hard_links || file.metadata()?.nlink() == 1,
+            "Refusing a partial download linked to another file. Restart this download."
+        );
+    }
     Ok(())
 }
 
@@ -235,6 +248,11 @@ fn prepare_parts_sync(base: &Path, root: &Path) -> Result<Vec<File>> {
     fn open_directory(path: &Path) -> Result<File> {
         let mut options = OpenOptions::new();
         options.read(true);
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::OpenOptionsExt;
+            options.custom_flags(libc::O_NOFOLLOW | libc::O_CLOEXEC | libc::O_DIRECTORY);
+        }
         #[cfg(windows)]
         {
             use std::os::windows::fs::OpenOptionsExt;
@@ -356,15 +374,10 @@ pub(crate) fn delete_completed(path: &Path) -> Result<()> {
     }
     #[cfg(not(windows))]
     {
-        let _ = path;
-        anyhow::bail!("Deleting saved files is only supported on Windows")
+        let file = options().read(true).open(path)?;
+        check_file(&file, true)?;
+        crate::unix_files::delete_owned(&file, path)
     }
-}
-
-#[cfg(not(windows))]
-pub(crate) fn move_new(from: &Path, to: &Path) -> std::io::Result<()> {
-    std::fs::hard_link(from, to)?;
-    std::fs::remove_file(from)
 }
 
 pub(crate) fn validate_path(path: &Path) -> Result<()> {

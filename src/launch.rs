@@ -86,10 +86,11 @@ mod tests {
             vec!["--open", "--antivirus-scan-request"],
             vec!["a.torrent", "--browser-setup"],
             vec!["--unknown"],
-            vec!["--open", "file:///C:/a.torrent"],
         ] {
             assert!(parse(&args).is_err(), "{args:?}");
         }
+        #[cfg(windows)]
+        assert!(parse(&["--open", "file:///C:/a.torrent"]).is_err());
     }
     #[test]
     fn explorer_unicode_paths_multiple_files_and_existing_flags_work() {

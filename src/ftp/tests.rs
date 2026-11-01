@@ -358,5 +358,8 @@ async fn tls_errors_never_send_credentials_or_downgrade() {
         .await
         .err()
         .unwrap();
-    assert!(error.to_string().contains("different server certificate"));
+    assert!(
+        error.to_string().contains("different server certificate"),
+        "{error:#}"
+    );
 }

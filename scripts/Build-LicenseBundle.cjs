@@ -7,9 +7,37 @@ const crypto = require('node:crypto');
 const { execFileSync } = require('node:child_process');
 const root = path.resolve(__dirname, '..');
 const check = process.argv.includes('--check');
+function option(name, fallback) {
+  const index = process.argv.indexOf(name);
+  if (index < 0) return fallback;
+  if (!process.argv[index + 1] || process.argv[index + 1].startsWith('--')) throw new Error(`Missing value for ${name}`);
+  return process.argv[index + 1];
+}
+const target = option('--target', 'x86_64-pc-windows-msvc');
+if (!['x86_64-pc-windows-msvc', 'x86_64-unknown-linux-gnu', 'aarch64-unknown-linux-gnu', 'aarch64-apple-darwin', 'x86_64-apple-darwin'].includes(target)) throw new Error(`Unreviewed target: ${target}`);
+const outputRoot = path.resolve(option('--output-root', root));
+if (target !== 'x86_64-pc-windows-msvc' && outputRoot === root) throw new Error('Use --output-root to keep native notices separate from the tracked Windows bundle.');
 const sha = data => crypto.createHash('sha256').update(data).digest('hex');
 const cargo = process.env.CARGO || 'cargo';
-const metadata = JSON.parse(execFileSync(cargo, ['metadata', '--offline', '--locked', '--format-version', '1', '--filter-platform', 'x86_64-pc-windows-msvc'], { cwd: root, encoding: 'utf8', maxBuffer: 12 * 1024 * 1024, windowsHide: true }));
+const metadataFile = option('--metadata', null);
+const metadata = JSON.parse(metadataFile ? fs.readFileSync(metadataFile, 'utf8') : execFileSync(cargo, ['metadata', '--offline', '--locked', '--format-version', '1', '--filter-platform', target], { cwd: root, encoding: 'utf8', maxBuffer: 12 * 1024 * 1024, windowsHide: true }));
+if (metadataFile) {
+  // Metadata produced by the native container/runner may be verified on another
+  // host. Read notices only from this checkout and its checksum-verified cache.
+  const cargoHome = process.env.CARGO_HOME;
+  if (!cargoHome || !path.isAbsolute(cargoHome)) throw new Error('--metadata requires an absolute CARGO_HOME.');
+  for (const pkg of metadata.packages) {
+    if (pkg.source?.startsWith('registry+')) {
+      const registry = path.posix.basename(path.posix.dirname(path.posix.dirname(pkg.manifest_path.replaceAll('\\', '/'))));
+      if (!/^[A-Za-z0-9._-]+$/.test(registry) || !/^[A-Za-z0-9._+-]+$/.test(`${pkg.name}-${pkg.version}`)) throw new Error('Invalid registry package metadata');
+      pkg.manifest_path = path.join(cargoHome, 'registry/src', registry, `${pkg.name}-${pkg.version}`, 'Cargo.toml');
+    } else if (!pkg.source) {
+      const relative = path.posix.relative(metadata.workspace_root.replaceAll('\\', '/'), pkg.manifest_path.replaceAll('\\', '/'));
+      if (relative.startsWith('..') || path.posix.isAbsolute(relative)) throw new Error('Local dependency outside the checkout');
+      pkg.manifest_path = path.join(root, relative);
+    }
+  }
+}
 const lock = fs.readFileSync(path.join(root, 'Cargo.lock'), 'utf8');
 const checksums = new Map();
 for (const block of lock.split('[[package]]').slice(1)) {
@@ -92,7 +120,7 @@ function readNotices(directory, relative = '') {
 // preserving every original source notice. Apache is selected where offered.
 const standardForMissing = {
   accesskit: 'Apache-2.0', 'clipboard-win': 'BSL-1.0', ecolor: 'Apache-2.0',
-  eframe: 'Apache-2.0', egui: 'Apache-2.0', 'egui-winit': 'Apache-2.0',
+  eframe: 'Apache-2.0', egui: 'Apache-2.0', 'egui-winit': 'Apache-2.0', 'egui-wgpu': 'Apache-2.0',
   egui_glow: 'Apache-2.0', emath: 'Apache-2.0', epaint: 'Apache-2.0',
   gl_generator: 'Apache-2.0', khronos_api: 'Apache-2.0',
   'mlua-sys': 'MIT-mlua', profiling: 'Apache-2.0', selectors: 'MPL-2.0'
@@ -106,17 +134,19 @@ const reviewedExpressions = new Set([
   'Zlib', 'Apache-2.0 OR GPL-2.0-only', 'Apache-2.0 AND MIT',
   '0BSD OR MIT OR Apache-2.0', '(MIT OR Apache-2.0) AND Unicode-3.0',
   '(MIT OR Apache-2.0) AND OFL-1.1 AND Ubuntu-font-1.0', 'Unlicense/MIT',
-  '(Apache-2.0 OR MIT) AND BSD-3-Clause'
+  '(Apache-2.0 OR MIT) AND BSD-3-Clause', 'Apache-2.0/MIT',
+  'Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT', 'BSD-3-Clause'
 ]);
 for (const pkg of packages) {
   if (!pkg.source.startsWith('registry+') || !reviewedExpressions.has(pkg.license)) throw new Error(`Unreviewed dependency source/license: ${pkg.name}`);
   const id = `${pkg.name}-${pkg.version}`, directory = path.dirname(pkg.manifest_path);
   const registryName = path.basename(path.dirname(directory));
   const registryRoot = path.dirname(path.dirname(path.dirname(directory)));
-  const archive = fs.readFileSync(path.join(registryRoot, 'cache', registryName, `${id}.crate`));
+  const cachedArchive = path.join(registryRoot, 'cache', registryName, `${id}.crate`);
+  const archive = fs.readFileSync(pkg.patched && !fs.existsSync(cachedArchive) ? path.join(root, 'docs/licenses/sources', `${id}.crate`) : cachedArchive);
   const checksum = checksums.get(id);
   if (!checksum || sha(archive) !== checksum) throw new Error(`Cargo archive checksum mismatch: ${id}`);
-  const notices = readNotices(directory);
+  const notices = readNotices(pkg.patched && !fs.existsSync(directory) ? path.join(root, pkg.patched.path) : directory);
   let supplemental;
   if (!notices.length) {
     supplemental = standardForMissing[pkg.name];
@@ -151,7 +181,7 @@ for (const pkg of metadata.packages.filter(p => p.copied)) {
     modifiedCopy: `vendor/rqbit/${pkg.name}`, modification: copiedChange, changes: 'vendor/rqbit/patch.md' });
 }
 inventory.sort((a, b) => `${a.name}-${a.version}`.localeCompare(`${b.name}-${b.version}`, 'en'));
-add('docs/licenses/rust-dependencies.json', JSON.stringify({ target: 'x86_64-pc-windows-msvc', scope: 'Locked Windows dependency graph, including build and test dependencies; not every listed crate is linked into the runtime.', packages: inventory }, null, 2) + '\n');
+add('docs/licenses/rust-dependencies.json', JSON.stringify({ target, scope: target === 'x86_64-pc-windows-msvc' ? 'Locked Windows dependency graph, including build and test dependencies; not every listed crate is linked into the runtime.' : 'Locked native dependency graph, including build and test dependencies; not every listed crate is linked into the runtime.', packages: inventory }, null, 2) + '\n');
 const modified = inventory.filter(p => p.modifiedCopy);
 let index = `# Rust dependency licenses\n\nThese are locked Cargo dependencies, unmodified except ${modified.map(p => p.name).join(', ')} (see below). Download Engine's MIT license does not replace their licenses. Alternative licenses remain alternatives; self_cell is used under Apache-2.0. This inventory includes build/test dependencies as well as runtime dependencies.\n\n`;
 index += 'MPL-covered source and published crates that omit workspace license files are included in `sources/`. A `.crate` file is a gzip-compressed tar archive; extract it with `tar -xzf filename.crate`. The included source is the unmodified upstream crate; its SHA-256 is checked against Cargo.lock, or for a modified crate against the published crates.io checksum. Other source links identify the exact published versions.\n\n';
@@ -160,7 +190,7 @@ for (const p of inventory) index += `- **${p.name} ${p.version}** — ${p.select
 add('docs/licenses/RUST-DEPENDENCIES.md', index);
 let changed = 0;
 for (const [relative, data] of output) {
-  const destination = path.join(root, relative);
+  const destination = path.join(outputRoot, relative);
   if (fs.existsSync(destination) && fs.readFileSync(destination).equals(data)) continue;
   changed++;
   if (check) throw new Error(`License bundle missing or stale: ${relative}`);

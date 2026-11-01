@@ -222,7 +222,7 @@ fn processor_has_no_fetch_to_cache_during_source_evaluation() {
     );
 }
 
-#[cfg(windows)]
+#[cfg(any(windows, unix))]
 #[test]
 fn saved_provider_job_contains_neither_resolved_url_nor_source_literals() {
     let temp = tempfile::tempdir().unwrap();
@@ -269,7 +269,7 @@ fn saved_provider_job_contains_neither_resolved_url_nor_source_literals() {
     assert!(value["provider"]["plan"].get("url").is_none());
     assert!(!format!("{:?}", job.provider).contains("PRIVATE_SOURCE_SENTINEL_98234"));
 }
-#[cfg(windows)]
+#[cfg(any(windows, unix))]
 #[test]
 fn production_lua_crypto_matches_nist_and_has_only_documented_capabilities() {
     let mut source = String::from(
@@ -381,7 +381,7 @@ fn worker_roles_reject_cross_phase_calls_and_processor_cannot_cache_network() {
     );
 }
 
-#[cfg(windows)]
+#[cfg(any(windows, unix))]
 #[test]
 fn opaque_keys_are_bound_to_provider_and_never_expose_bytes_to_lua() {
     let temp = tempfile::tempdir().unwrap();
@@ -441,7 +441,7 @@ fn opaque_keys_are_bound_to_provider_and_never_expose_bytes_to_lua() {
     );
 }
 
-#[cfg(windows)]
+#[cfg(any(windows, unix))]
 #[test]
 fn frozen_source_rejects_tampering_and_keeps_checkpoint_identity() {
     let mut script = script();
@@ -481,7 +481,7 @@ fn frozen_source_rejects_tampering_and_keeps_checkpoint_identity() {
     assert_eq!(state.binding().unwrap(), expected);
 }
 
-#[cfg(windows)]
+#[cfg(any(windows, unix))]
 #[test]
 fn legacy_provider_upgrade_preserves_jobs_and_blocks_version_two_writers() {
     let temp = tempfile::tempdir().unwrap();
@@ -553,7 +553,7 @@ fn legacy_provider_upgrade_preserves_jobs_and_blocks_version_two_writers() {
     assert_eq!(raw, before);
 }
 
-#[cfg(windows)]
+#[cfg(any(windows, unix))]
 #[test]
 fn failed_provider_upgrade_rolls_back_rows_and_profile_version() {
     let temp = tempfile::tempdir().unwrap();
@@ -612,7 +612,7 @@ fn failed_provider_upgrade_rolls_back_rows_and_profile_version() {
     );
 }
 
-#[cfg(windows)]
+#[cfg(any(windows, unix))]
 #[test]
 fn an_extension_processor_unlocks_only_keys_saved_for_its_extension() {
     let scope = uuid::Uuid::new_v4();

@@ -22,7 +22,7 @@ impl crate::store::Store {
 
 /// A protected token for an AES key in hex, usable only under `scope`.
 pub(crate) fn seal_key(scope: Uuid, hex: &str) -> Result<String> {
-    #[cfg(windows)]
+    #[cfg(any(windows, unix))]
     {
         let key = Zeroizing::new(super::crypto::unhex(hex)?);
         ensure!(
@@ -34,7 +34,7 @@ pub(crate) fn seal_key(scope: Uuid, hex: &str) -> Result<String> {
         let sealed = crate::protected_data::seal(scope, &mut bytes)?;
         Ok(format!("{PREFIX}{}", STANDARD.encode(&sealed)))
     }
-    #[cfg(not(windows))]
+    #[cfg(not(any(windows, unix)))]
     {
         let _ = (scope, hex);
         anyhow::bail!("Provider keys require Windows protected storage")
@@ -44,7 +44,7 @@ pub(crate) fn seal_key(scope: Uuid, hex: &str) -> Result<String> {
 pub(super) struct Key(Zeroizing<Vec<u8>>);
 impl mlua::UserData for Key {}
 
-#[cfg(windows)]
+#[cfg(any(windows, unix))]
 pub(super) fn unlock(script: Uuid, token: &str) -> Result<Key> {
     ensure!(token.len() <= 4096, "Invalid provider key token");
     let bytes = STANDARD.decode(
@@ -53,7 +53,7 @@ pub(super) fn unlock(script: Uuid, token: &str) -> Result<Key> {
             .context("Invalid provider key token")?,
     )?;
     let key = crate::protected_data::open(script, &bytes).context(
-        "Provider key belongs to a different provider or Windows account, or was modified",
+        "Provider key belongs to a different provider or operating-system account, or was modified",
     )?;
     let raw = key
         .strip_prefix(PURPOSE)
@@ -65,7 +65,7 @@ pub(super) fn unlock(script: Uuid, token: &str) -> Result<Key> {
     Ok(Key(Zeroizing::new(raw.to_vec())))
 }
 
-#[cfg(windows)]
+#[cfg(any(windows, unix))]
 pub(super) fn bytes(value: mlua::Value) -> mlua::Result<Zeroizing<Vec<u8>>> {
     match value {
         mlua::Value::UserData(value) => Ok(value.borrow::<Key>()?.0.clone()),

@@ -2,7 +2,9 @@
 //! disk. Everything here blocks, so callers run it on blocking threads.
 
 use std::collections::HashMap;
-use std::fs::{self, File, OpenOptions};
+#[cfg(not(unix))]
+use std::fs::OpenOptions;
+use std::fs::{self, File};
 use std::io;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -12,6 +14,9 @@ use parking_lot::Mutex;
 use sha1w::{ISha1, Sha1};
 
 use crate::meta::TorrentMeta;
+
+#[cfg(unix)]
+mod unix;
 
 /// A torrent can have many thousands of files, and the system allows only so many open.
 const MAX_OPEN_FILES: usize = 128;
@@ -48,6 +53,8 @@ pub struct FileStamp {
 pub struct Storage {
     meta: Arc<TorrentMeta>,
     root: PathBuf,
+    #[cfg(unix)]
+    native_root: unix::Root,
     open: Mutex<OpenFiles>,
     read_only: bool,
     file_name: Option<String>,
@@ -58,6 +65,8 @@ impl Storage {
     pub fn new(meta: Arc<TorrentMeta>, root: PathBuf) -> Self {
         Self {
             meta,
+            #[cfg(unix)]
+            native_root: unix::Root::new(root.clone()),
             root,
             open: Mutex::default(),
             read_only: false,
@@ -73,6 +82,17 @@ impl Storage {
                 .map(Path::new)
                 .unwrap_or(&self.meta.files[file].path),
         )
+    }
+
+    #[cfg(unix)]
+    fn native_file(&self, index: usize, write: bool) -> io::Result<File> {
+        let relative = self
+            .file_name
+            .as_deref()
+            .map(Path::new)
+            .unwrap_or(&self.meta.files[index].path);
+        self.native_root
+            .open(relative, write, self.meta.files[index].len)
     }
 
     pub fn for_seeding(
@@ -186,7 +206,9 @@ impl Storage {
         if let Some(file) = self.cached(index, false) {
             return Ok(file);
         }
+        #[cfg(not(unix))]
         let mut options = OpenOptions::new();
+        #[cfg(not(unix))]
         options.read(true);
         #[cfg(windows)]
         if self.read_only {
@@ -198,7 +220,10 @@ impl Storage {
                 .share_mode(FILE_SHARE_READ)
                 .custom_flags(FILE_FLAG_OPEN_REPARSE_POINT);
         }
+        #[cfg(not(unix))]
         let file = Arc::new(options.open(self.path_of(index))?);
+        #[cfg(unix)]
+        let file = Arc::new(self.native_file(index, false)?);
         if self.read_only && !file.metadata()?.is_file() {
             return Err(io::ErrorKind::InvalidData.into());
         }
@@ -220,8 +245,13 @@ impl Storage {
         if let Some(file) = self.cached(index, true) {
             return Ok(file);
         }
-        let path = self.path_of(index);
-        let file = Arc::new(open_for_writing(&path, self.meta.files[index].len)?);
+        #[cfg(not(unix))]
+        let file = Arc::new(open_for_writing(
+            &self.path_of(index),
+            self.meta.files[index].len,
+        )?);
+        #[cfg(unix)]
+        let file = Arc::new(self.native_file(index, true)?);
         self.remember(index, file.clone(), true);
         Ok(file)
     }
@@ -304,7 +334,10 @@ impl Storage {
         for (index, file) in self.meta.files.iter().enumerate() {
             let chosen = only.is_none_or(|only| only.contains(&index));
             if chosen && file.len == 0 && !file.virtual_file {
+                #[cfg(not(unix))]
                 open_for_writing(&self.path_of(index), 0)?;
+                #[cfg(unix)]
+                self.native_file(index, true)?;
             }
         }
         Ok(())
@@ -313,7 +346,16 @@ impl Storage {
     /// One stamp for each file, or None for a file that isn't there.
     pub fn stamps(&self) -> Vec<Option<FileStamp>> {
         (0..self.meta.files.len())
-            .map(|index| stamp(&self.path_of(index)))
+            .map(|index| {
+                #[cfg(not(unix))]
+                {
+                    stamp(&self.path_of(index))
+                }
+                #[cfg(unix)]
+                {
+                    file_stamp(&self.native_file(index, false).ok()?.metadata().ok()?)
+                }
+            })
             .collect()
     }
 
@@ -340,8 +382,13 @@ impl Storage {
     }
 }
 
+#[cfg(not(unix))]
 fn stamp(path: &Path) -> Option<FileStamp> {
     let info = fs::metadata(path).ok()?;
+    file_stamp(&info)
+}
+
+fn file_stamp(info: &fs::Metadata) -> Option<FileStamp> {
     let modified = info.modified().ok()?.duration_since(UNIX_EPOCH).ok()?;
     Some(FileStamp {
         len: info.len(),
@@ -356,6 +403,7 @@ fn is_absent(error: &io::Error) -> bool {
     )
 }
 
+#[cfg(not(unix))]
 fn open_for_writing(path: &Path, len: u64) -> io::Result<File> {
     if let Some(parent) = path.parent() {
         fs::create_dir_all(parent)?;

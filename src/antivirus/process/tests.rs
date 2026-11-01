@@ -2,7 +2,10 @@ use super::*;
 
 #[test]
 fn codes_and_incomplete_scans_are_classified_conservatively() {
-    let mut settings = Settings::default();
+    let mut settings = Settings {
+        provider: Provider::Defender,
+        ..Settings::default()
+    };
     let output = |code, text: &str| Output {
         code: Some(code),
         stdout: text.into(),
@@ -57,7 +60,10 @@ fn codes_and_incomplete_scans_are_classified_conservatively() {
 #[test]
 fn file_paths_are_single_literal_arguments_and_builtin_scans_do_not_remediate() {
     let file = Path::new(r"C:\Downloads\a & $(whoami); literal file.txt");
-    let mut settings = Settings::default();
+    let mut settings = Settings {
+        provider: Provider::Defender,
+        ..Settings::default()
+    };
     let args = arguments(&settings, file).unwrap();
     assert_eq!(args[4], file.to_str().unwrap());
     assert!(args.iter().any(|a| a == "-DisableRemediation"));

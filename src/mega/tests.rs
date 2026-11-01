@@ -83,8 +83,8 @@ fn persisted_links_cannot_be_reinterpreted_as_direct_file_transfers() {
     assert!(job.validate_persisted().is_err());
 }
 
-#[cfg(windows)]
-mod windows {
+#[cfg(any(windows, unix))]
+mod encrypted_transfers {
     use super::*;
     use std::sync::{
         Arc, Mutex,

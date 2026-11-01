@@ -56,7 +56,22 @@ pub(super) fn shell() -> Result<PathBuf> {
         Ok(path)
     }
     #[cfg(not(windows))]
-    anyhow::bail!("Script automation requires Windows PowerShell")
+    {
+        for path in [
+            "/opt/microsoft/powershell/7/pwsh",
+            "/usr/bin/pwsh",
+            "/usr/local/bin/pwsh",
+            "/opt/homebrew/bin/pwsh",
+        ] {
+            let path = PathBuf::from(path);
+            if path.is_file() {
+                return Ok(path);
+            }
+        }
+        anyhow::bail!(
+            "PowerShell 7 is not installed. Use built-in Lua or install PowerShell 7 to run this script."
+        )
+    }
 }
 
 fn read_output(
@@ -156,7 +171,7 @@ impl Active {
             let cli = std::env::current_exe()?
                 .parent()
                 .context("Application directory unavailable")?
-                .join("de-cli.exe");
+                .join(crate::paths::executable_name("de-cli"));
             // Extension jobs get their settings and library code over a pipe, so a
             // saved secret never sits in the run folder. A job must not start
             // without its limits, so a failed read stops the run.
@@ -298,7 +313,7 @@ impl Active {
                     code: None,
                 });
             } else if let Some(process) = &mut self.process {
-                match process.child.try_wait() {
+                match process.try_wait() {
                     Ok(Some(status)) => self.stop(Outcome {
                         state: if status.success() {
                             "succeeded"

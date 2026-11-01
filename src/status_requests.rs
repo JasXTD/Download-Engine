@@ -10,7 +10,45 @@ pub(crate) fn initialize(conn: &Connection) -> Result<()> {
         job TEXT PRIMARY KEY REFERENCES jobs(id) ON DELETE CASCADE,
         consumed INTEGER NOT NULL DEFAULT 0 CHECK(consumed IN (0,1)));",
     )?;
+    #[cfg(unix)]
+    conn.execute_batch("CREATE TABLE IF NOT EXISTS window_activation (
+        singleton INTEGER PRIMARY KEY CHECK(singleton=1), browser INTEGER NOT NULL CHECK(browser IN (0,1)));")?;
     Ok(())
+}
+
+#[cfg(unix)]
+impl Store {
+    pub fn request_window_activation(&self, browser: bool) -> Result<()> {
+        self.connect()?.execute(
+            "INSERT INTO window_activation(singleton,browser) VALUES(1,?1)
+            ON CONFLICT(singleton) DO UPDATE SET browser=MAX(browser,excluded.browser)",
+            [browser],
+        )?;
+        Ok(())
+    }
+    pub fn take_window_activation(&self) -> Result<Option<bool>> {
+        use rusqlite::OptionalExtension;
+        let mut conn = self.connect()?;
+        let pending: bool = conn.query_row(
+            "SELECT EXISTS(SELECT 1 FROM window_activation)",
+            [],
+            |row| row.get(0),
+        )?;
+        if !pending {
+            return Ok(None);
+        }
+        let tx = conn.transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)?;
+        let browser = tx
+            .query_row(
+                "SELECT browser FROM window_activation WHERE singleton=1",
+                [],
+                |row| row.get(0),
+            )
+            .optional()?;
+        tx.execute("DELETE FROM window_activation WHERE singleton=1", [])?;
+        tx.commit()?;
+        Ok(browser)
+    }
 }
 impl Store {
     pub fn request_download_status(&self, id: &str) -> Result<()> {
@@ -49,6 +87,23 @@ impl Store {
 mod tests {
     use super::*;
     use crate::{model::Job, paths::AppPaths};
+    #[cfg(unix)]
+    #[test]
+    fn window_activation_coalesces_and_is_consumed_once() {
+        let root = tempfile::tempdir().unwrap();
+        let store = Store::open(AppPaths {
+            data: root.path().join("profile"),
+            downloads: root.path().join("files"),
+        })
+        .unwrap();
+        assert_eq!(store.take_window_activation().unwrap(), None);
+        store.request_window_activation(false).unwrap();
+        store.request_window_activation(true).unwrap();
+        store.request_window_activation(false).unwrap();
+        assert_eq!(store.take_window_activation().unwrap(), Some(true));
+        assert_eq!(store.take_window_activation().unwrap(), None);
+        assert!(store.list().unwrap().is_empty());
+    }
     #[test]
     fn browser_status_request_is_consumed_once_across_process_connections() {
         let root = tempfile::tempdir().unwrap();

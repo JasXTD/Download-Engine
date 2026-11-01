@@ -156,6 +156,23 @@ fn system_language() -> Language {
                 ));
             }
         }
+        #[cfg(unix)]
+        for name in ["LC_ALL", "LC_MESSAGES", "LANG"] {
+            if let Ok(locale) = std::env::var(name)
+                && !locale.is_empty()
+            {
+                let locale = locale.split('.').next().unwrap_or(&locale);
+                return Language::from_locale(locale);
+            }
+        }
+        #[cfg(target_os = "macos")]
+        {
+            let locale = objc2_foundation::NSLocale::currentLocale()
+                .localeIdentifier()
+                .to_string();
+            return Language::from_locale(&locale);
+        }
+        #[cfg(not(target_os = "macos"))]
         Language::English
     })
 }

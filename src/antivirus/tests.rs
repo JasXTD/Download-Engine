@@ -1,6 +1,15 @@
 use super::*;
 use crate::paths::AppPaths;
 
+fn scanner_fixture_path() -> String {
+    if cfg!(windows) {
+        r"C:\Program Files\AV\scanner.exe"
+    } else {
+        "/opt/Antivirus Scanner/scanner"
+    }
+    .into()
+}
+
 pub(super) fn fixture() -> (tempfile::TempDir, Store, Job, Settings) {
     let temp = tempfile::tempdir().unwrap();
     let store = Store::open(AppPaths {
@@ -39,7 +48,7 @@ fn settings_default_off_and_round_trip_without_touching_jobs() {
     let settings = Settings {
         enabled: true,
         provider: Provider::Custom,
-        executable: r"C:\Program Files\AV\scanner.exe".into(),
+        executable: scanner_fixture_path(),
         arguments: vec!["--scan-only".into(), "{file}".into()],
         clean_exit: Some(0),
         detected_exit: Some(10),
@@ -53,7 +62,7 @@ fn settings_default_off_and_round_trip_without_touching_jobs() {
 fn invalid_custom_configuration_cannot_enable_a_scanner() {
     let mut settings = Settings {
         provider: Provider::Custom,
-        executable: r"C:\Program Files\AV\scanner.exe".into(),
+        executable: scanner_fixture_path(),
         clean_exit: Some(0),
         detected_exit: Some(1),
         custom_confirmed: true,
@@ -84,7 +93,18 @@ fn invalid_custom_configuration_cannot_enable_a_scanner() {
         settings.executable = path.into();
         assert!(settings.validate().is_err(), "{path}");
     }
-    settings.executable = r"C:\Program Files\AV\scanner.exe".into();
+    #[cfg(unix)]
+    for path in [
+        "/bin/sh",
+        "/usr/bin/env",
+        "/tmp/scanner.sh",
+        "/usr/bin/python3",
+        "/tmp/../scanner",
+    ] {
+        settings.executable = path.into();
+        assert!(settings.validate().is_err(), "{path}");
+    }
+    settings.executable = scanner_fixture_path();
     settings.detected_exit = Some(0);
     assert!(settings.validate().is_err());
     settings.detected_exit = Some(1);

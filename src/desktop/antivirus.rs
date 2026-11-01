@@ -381,7 +381,7 @@ impl Desktop {
                     ui.label(tr("Scanner"));
                     let previous = draft.settings.provider;
                     egui::ComboBox::from_id_salt("av-provider").selected_text(tr(draft.settings.provider.label())).width(310.0).show_ui(ui, |ui| {
-                        for provider in Provider::ALL {
+                        for provider in Provider::ALL.into_iter().filter(|provider| provider.available()) {
                             ui.selectable_value(&mut draft.settings.provider, provider, tr(provider.label()));
                         }
                     });
@@ -413,8 +413,8 @@ impl Desktop {
                             ui.label(RichText::new(tr("The antivirus app controls protection and quarantine. A request is not a clean result.")).small().color(p.muted));
                         }
                         Provider::ClamAv | Provider::Custom => {
-                            ui.label(if draft.settings.provider == Provider::ClamAv { tr("Full path to clamscan.exe") } else { tr("Full path to the antivirus scanner .exe") });
-                            if ui.add(view::line_edit(&mut draft.settings.executable).desired_width(f32::INFINITY).hint_text(r"C:\Program Files\ClamAV\clamscan.exe")).changed() { draft.settings.custom_confirmed = false; draft.setup = None; }
+                            ui.label(if !cfg!(windows) { "Full path to the native antivirus scanner" } else if draft.settings.provider == Provider::ClamAv { tr("Full path to clamscan.exe") } else { tr("Full path to the antivirus scanner .exe") });
+                            if ui.add(view::line_edit(&mut draft.settings.executable).desired_width(f32::INFINITY).hint_text(if cfg!(windows) { r"C:\Program Files\ClamAV\clamscan.exe" } else { "/usr/bin/clamscan" })).changed() { draft.settings.custom_confirmed = false; draft.setup = None; }
                             if draft.settings.provider == Provider::ClamAv {
                                 ui.label(RichText::new(tr("Install ClamAV and update its signatures with FreshClam first. Encrypted files and scan-limit alerts block opening.")).small().color(p.muted));
                             } else {
@@ -540,8 +540,7 @@ impl Desktop {
             && let Some(path) = &review.job.saved_path
             && let Some(parent) = path.parent()
         {
-            let result = download_engine::paths::file_browser()
-                .and_then(|exe| Ok(std::process::Command::new(exe).arg(parent).spawn()?));
+            let result = download_engine::paths::open_folder(parent);
             if let Err(error) = result {
                 review.error = Some(error.to_string());
             }
@@ -601,7 +600,10 @@ mod tests {
         let (_temp, mut app, ctx) = fixture();
         let original = app.store.antivirus_settings().unwrap();
         app.open_antivirus_settings();
-        for provider in Provider::ALL {
+        for provider in Provider::ALL
+            .into_iter()
+            .filter(|provider| provider.available())
+        {
             let current = app.antivirus.draft.as_ref().unwrap().settings.provider;
             if current != provider {
                 click(&mut app, &ctx, current.label());

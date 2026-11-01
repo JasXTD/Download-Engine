@@ -32,6 +32,23 @@ impl Target {
             !text.is_empty() && text.len() <= MAX_TEXT && !text.chars().any(char::is_control),
             "Invalid torrent path or magnet link"
         );
+        #[cfg(unix)]
+        if text
+            .get(..5)
+            .is_some_and(|prefix| prefix.eq_ignore_ascii_case("file:"))
+        {
+            let url = reqwest::Url::parse(text).context("Invalid local file URL")?;
+            ensure!(
+                url.query().is_none()
+                    && url.fragment().is_none()
+                    && url.host_str().is_none_or(|host| host == "localhost"),
+                "Open a local .torrent file"
+            );
+            let path = url
+                .to_file_path()
+                .map_err(|_| anyhow::anyhow!("Invalid local file URL"))?;
+            return Self::parse(path.as_os_str(), base);
+        }
         if crate::torrent::is_magnet(text) {
             crate::torrent::info_hash(text)?;
             return Ok(Self::Magnet(text.to_owned()));

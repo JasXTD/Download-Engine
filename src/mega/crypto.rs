@@ -4,8 +4,8 @@ use anyhow::{Result, ensure};
 
 pub(super) fn available() -> Result<()> {
     ensure!(
-        cfg!(windows),
-        "MEGA downloads currently require Windows cryptography support"
+        cfg!(any(windows, unix)),
+        "MEGA downloads require an available cryptography backend"
     );
     Ok(())
 }
@@ -189,7 +189,11 @@ mod backend {
         }
     }
 }
-#[cfg(not(windows))]
+#[cfg(unix)]
+mod backend {
+    pub(super) use crate::unix_crypto::Aes;
+}
+#[cfg(not(any(windows, unix)))]
 mod backend {
     use super::*;
     pub(super) struct Aes;

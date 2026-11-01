@@ -16,6 +16,56 @@ pub const HOME_VARIABLE: &str = "DOWNLOAD_ENGINE_HOME";
 /// The same setting's name before 2.0, still honored.
 pub const LEGACY_HOME_VARIABLE: &str = "IDM_EX_HOME";
 
+/// Use the platform's executable suffix for our packaged helper programs.
+pub fn executable_name(name: &str) -> String {
+    format!("{name}{}", std::env::consts::EXE_SUFFIX)
+}
+
+/// macOS bundles keep non-executable assets in Contents/Resources.
+pub fn resource_directory() -> Result<PathBuf> {
+    let exe = std::env::current_exe()?;
+    let directory = exe.parent().context("Missing application folder")?;
+    #[cfg(target_os = "macos")]
+    if directory.file_name().is_some_and(|name| name == "MacOS")
+        && directory
+            .parent()
+            .is_some_and(|parent| parent.file_name().is_some_and(|name| name == "Contents"))
+    {
+        return Ok(directory
+            .parent()
+            .expect("checked bundle directory")
+            .join("Resources"));
+    }
+    Ok(directory.to_owned())
+}
+
+/// Per-user application data root; portable and explicit profiles remain separate.
+pub fn user_data_root() -> Result<PathBuf> {
+    #[cfg(windows)]
+    return Ok(PathBuf::from(
+        std::env::var_os("LOCALAPPDATA").context("LOCALAPPDATA is unavailable")?,
+    ));
+    #[cfg(target_os = "macos")]
+    return Ok(user_home()?.join("Library/Application Support"));
+    #[cfg(not(any(windows, target_os = "macos")))]
+    match absolute_environment_path("XDG_DATA_HOME") {
+        Some(path) => Ok(path),
+        None => Ok(user_home()?.join(".local/share")),
+    }
+}
+
+#[cfg(not(windows))]
+pub(crate) fn user_home() -> Result<PathBuf> {
+    absolute_environment_path("HOME").context("HOME must name an absolute directory")
+}
+
+#[cfg(not(windows))]
+fn absolute_environment_path(name: &str) -> Option<PathBuf> {
+    std::env::var_os(name)
+        .map(PathBuf::from)
+        .filter(|path| path.is_absolute())
+}
+
 /// The profile folder selected through the environment, if any.
 pub fn home_override() -> Option<std::ffi::OsString> {
     std::env::var_os(HOME_VARIABLE).or_else(|| std::env::var_os(LEGACY_HOME_VARIABLE))
@@ -24,10 +74,7 @@ pub fn home_override() -> Option<std::ffi::OsString> {
 impl AppPaths {
     pub fn discover() -> Result<Self> {
         Self::discover_with(home_override().as_deref(), std::env::current_exe, || {
-            let local = PathBuf::from(
-                std::env::var_os("LOCALAPPDATA").context("LOCALAPPDATA is unavailable")?,
-            );
-            Ok((local, user_downloads()?))
+            Ok((user_data_root()?, user_downloads()?))
         })
     }
 
@@ -83,6 +130,15 @@ impl AppPaths {
         }
     }
     pub fn prepare(&self) -> Result<()> {
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::DirBuilderExt;
+            std::fs::DirBuilder::new()
+                .recursive(true)
+                .mode(0o700)
+                .create(&self.data)?;
+        }
+        #[cfg(not(unix))]
         std::fs::create_dir_all(&self.data)?;
         std::fs::create_dir_all(&self.downloads)?;
         std::fs::create_dir_all(self.data.join("parts"))?;
@@ -136,10 +192,91 @@ fn user_downloads() -> Result<PathBuf> {
 
 #[cfg(not(windows))]
 fn user_downloads() -> Result<PathBuf> {
-    Ok(
-        PathBuf::from(std::env::var_os("USERPROFILE").context("USERPROFILE is unavailable")?)
-            .join("Downloads"),
-    )
+    let home = user_home()?;
+    #[cfg(target_os = "linux")]
+    {
+        let config =
+            absolute_environment_path("XDG_CONFIG_HOME").unwrap_or_else(|| home.join(".config"));
+        match std::fs::read_to_string(config.join("user-dirs.dirs")) {
+            Ok(contents) => {
+                if let Some(folder) = xdg_downloads(&contents, &home) {
+                    return Ok(folder);
+                }
+            }
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+            Err(error) => {
+                return Err(error).context("Cannot read the desktop Downloads folder setting");
+            }
+        }
+    }
+    Ok(home.join("Downloads"))
+}
+
+// user-dirs.dirs is data, not a shell script. Expand only its documented HOME
+// prefix and quoted escapes; never evaluate command substitutions or variables.
+#[cfg(any(target_os = "linux", test))]
+fn xdg_downloads(contents: &str, home: &Path) -> Option<PathBuf> {
+    contents.lines().find_map(|line| {
+        let value = line.trim().strip_prefix("XDG_DOWNLOAD_DIR=")?.trim();
+        let quoted = value.strip_prefix('"')?.strip_suffix('"')?;
+        let mut decoded = String::new();
+        let mut chars = quoted.chars();
+        while let Some(ch) = chars.next() {
+            if ch == '\\' {
+                decoded.push(chars.next()?);
+            } else {
+                decoded.push(ch);
+            }
+        }
+        let path = if decoded == "$HOME" {
+            home.to_owned()
+        } else if let Some(relative) = decoded.strip_prefix("$HOME/") {
+            home.join(relative)
+        } else {
+            PathBuf::from(decoded)
+        };
+        path.is_absolute().then_some(path)
+    })
+}
+
+#[cfg(test)]
+mod platform_tests {
+    use super::*;
+    #[test]
+    fn desktop_download_folder_is_parsed_as_data() {
+        let root = tempfile::tempdir().unwrap();
+        let home = root.path();
+        assert_eq!(
+            xdg_downloads("XDG_DOWNLOAD_DIR=\"$HOME/Custom downloads\"", home),
+            Some(home.join("Custom downloads"))
+        );
+        assert_eq!(
+            xdg_downloads("XDG_DOWNLOAD_DIR=\"$HOME/$(not-a-command)\"", home),
+            Some(home.join("$(not-a-command)"))
+        );
+        assert_eq!(
+            xdg_downloads("XDG_DOWNLOAD_DIR=\"$OTHER/downloads\"", home),
+            None
+        );
+        assert_eq!(xdg_downloads("XDG_DOWNLOAD_DIR=relative", home), None);
+        let alternate = home.join("Other Downloads");
+        let quoted = alternate.to_string_lossy().replace('\\', "\\\\");
+        assert_eq!(
+            xdg_downloads(&format!("XDG_DOWNLOAD_DIR=\"{quoted}\""), home),
+            Some(alternate)
+        );
+    }
+    #[test]
+    fn packaged_program_names_use_the_native_suffix() {
+        assert_eq!(
+            executable_name("de-cli"),
+            if cfg!(windows) {
+                "de-cli.exe"
+            } else {
+                "de-cli"
+            }
+        );
+    }
 }
 
 // Resolve the Windows-owned executable without searching the app folder or PATH.
@@ -164,7 +301,36 @@ pub fn file_browser() -> Result<PathBuf> {
 }
 #[cfg(not(windows))]
 pub fn file_browser() -> Result<PathBuf> {
-    anyhow::bail!("Folder browsing is supported on Windows")
+    let path = PathBuf::from(if cfg!(target_os = "macos") {
+        "/usr/bin/open"
+    } else {
+        "/usr/bin/xdg-open"
+    });
+    anyhow::ensure!(
+        path.is_file(),
+        "The desktop file opener is unavailable: {}",
+        path.display()
+    );
+    Ok(path)
+}
+
+/// Start the platform file browser, retaining no unreaped Unix child process.
+pub fn open_folder(path: &Path) -> Result<()> {
+    anyhow::ensure!(
+        path.is_absolute() && path.is_dir(),
+        "The folder no longer exists"
+    );
+    let child = std::process::Command::new(file_browser()?)
+        .arg(path)
+        .spawn()?;
+    #[cfg(unix)]
+    std::thread::spawn(move || {
+        let mut child = child;
+        let _ = child.wait();
+    });
+    #[cfg(windows)]
+    drop(child);
+    Ok(())
 }
 
 // Inno Setup checks this marker while installing/uninstalling an installed copy.
@@ -232,8 +398,18 @@ pub fn open_download(path: &std::path::Path) -> Result<()> {
     Ok(())
 }
 #[cfg(not(windows))]
-pub fn open_download(_path: &std::path::Path) -> Result<()> {
-    anyhow::bail!("Opening downloads is supported on Windows")
+pub fn open_download(path: &std::path::Path) -> Result<()> {
+    anyhow::ensure!(path.is_absolute(), "The saved file path must be absolute");
+    anyhow::ensure!(path.is_file(), "The saved file no longer exists");
+    let mut child = std::process::Command::new(file_browser()?)
+        .arg(path)
+        .spawn()
+        .context("The desktop could not open this file")?;
+    // Reap the opener even when a desktop application outlives this action.
+    std::thread::spawn(move || {
+        let _ = child.wait();
+    });
+    Ok(())
 }
 
 #[cfg(windows)]

@@ -589,6 +589,7 @@ mod tests {
         path
     }
 
+    #[cfg(windows)]
     #[test]
     fn commands_are_quoted_absolute_and_parse_back_to_the_same_program() {
         assert_eq!(
@@ -639,6 +640,7 @@ mod tests {
         }
     }
 
+    #[cfg(windows)]
     #[test]
     fn enabling_and_disabling_change_only_this_copys_entry() {
         let root = tempfile::tempdir().unwrap();

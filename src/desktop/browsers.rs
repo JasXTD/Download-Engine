@@ -154,10 +154,7 @@ impl Desktop {
                                         folder.is_dir(),
                                         tr("Extension folder is missing. Use the packaged application")
                                     );
-                                    std::process::Command::new(download_engine::paths::file_browser()?)
-                                        .arg(folder)
-                                        .spawn()?;
-                                    Ok(())
+                                    download_engine::paths::open_folder(&folder)
                                 });
                                 if let Err(error) = result {
                                     self.browser_notice = Some((true, format!("{error:#}")));

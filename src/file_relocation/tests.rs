@@ -174,6 +174,7 @@ fn rename_and_copy_preserve_bytes_streams_and_neighbouring_download_state() {
         let cache = store.paths.data.join("parts").join(&neighbour.id);
         std::fs::create_dir_all(&cache).unwrap();
         std::fs::write(cache.join("keep.part"), b"existing partial download").unwrap();
+        #[cfg(windows)]
         for name in ["Zone.Identifier", "user-note"] {
             std::fs::write(
                 format!("{}:{name}", job.saved_path.as_ref().unwrap().display()),
@@ -185,6 +186,7 @@ fn rename_and_copy_preserve_bytes_streams_and_neighbouring_download_state() {
         let moved = store.get(&job.id).unwrap().unwrap();
         let path = moved.saved_path.as_ref().unwrap();
         assert_eq!(std::fs::read(path).unwrap(), vec![0x4a; 700_000]);
+        #[cfg(windows)]
         for name in ["Zone.Identifier", "user-note"] {
             assert_eq!(
                 std::fs::read(format!("{}:{name}", path.display())).unwrap(),

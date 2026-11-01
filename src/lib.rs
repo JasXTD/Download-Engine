@@ -71,6 +71,10 @@ pub mod transfer_activity;
 
 pub mod browser_login;
 mod protected_data;
+#[cfg(unix)]
+mod unix_crypto;
+#[cfg(unix)]
+mod unix_files;
 
 mod child_process;
 mod network_scope;

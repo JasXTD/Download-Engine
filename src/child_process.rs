@@ -36,11 +36,17 @@ pub(crate) struct Running {
     pub(crate) child: Child,
     #[cfg(windows)]
     tree: Option<std::os::windows::io::OwnedHandle>,
+    #[cfg(unix)]
+    reaped: bool,
 }
 impl Drop for Running {
     fn drop(&mut self) {
         #[cfg(windows)]
         drop(self.tree.take());
+        #[cfg(unix)]
+        if !self.reaped {
+            self.kill_group();
+        }
         let _ = self.child.kill();
         let _ = self.child.wait();
     }
@@ -186,6 +192,45 @@ fn resume_helper(child: &Child) -> Result<()> {
     Ok(())
 }
 impl Running {
+    #[cfg(unix)]
+    fn kill_group(&self) {
+        // The unreaped child reserves this process ID. It created its own group
+        // before exec, so this cannot target the app's or another helper's group.
+        unsafe {
+            libc::kill(-(self.child.id() as libc::pid_t), libc::SIGKILL);
+        }
+    }
+
+    /// Poll through this method, not Child::try_wait: on Unix the leader must
+    /// remain unreaped until its descendants have been stopped, avoiding ID reuse.
+    pub(crate) fn try_wait(&mut self) -> std::io::Result<Option<std::process::ExitStatus>> {
+        #[cfg(unix)]
+        if !self.reaped {
+            let mut info: libc::siginfo_t = unsafe { std::mem::zeroed() };
+            let result = unsafe {
+                libc::waitid(
+                    libc::P_PID,
+                    self.child.id(),
+                    &mut info,
+                    libc::WEXITED | libc::WNOHANG | libc::WNOWAIT,
+                )
+            };
+            if result != 0 {
+                return Err(std::io::Error::last_os_error());
+            }
+            if info.si_signo == 0 {
+                return Ok(None);
+            }
+            self.kill_group();
+        }
+        let status = self.child.try_wait()?;
+        #[cfg(unix)]
+        {
+            self.reaped |= status.is_some();
+        }
+        Ok(status)
+    }
+
     /// Attach the suspended child to its kill-on-close Job before any child code runs.
     pub(crate) fn spawn(
         command: &mut Command,
@@ -193,6 +238,28 @@ impl Running {
         memory_limit: Option<usize>,
     ) -> Result<Self> {
         ensure!(!cancel.is_cancelled(), "Operation cancelled");
+        #[cfg(unix)]
+        {
+            use std::os::unix::process::CommandExt;
+            command.process_group(0);
+            // Only async-signal-safe system calls in the forked child. Never
+            // increase an inherited limit; an unconfigurable bound fails spawn.
+            unsafe {
+                command.pre_exec(move || {
+                    if let Some(bytes) = memory_limit {
+                        let mut limit: libc::rlimit = std::mem::zeroed();
+                        if libc::getrlimit(libc::RLIMIT_AS, &mut limit) != 0 {
+                            return Err(std::io::Error::last_os_error());
+                        }
+                        limit.rlim_cur = limit.rlim_cur.min(bytes as libc::rlim_t);
+                        if libc::setrlimit(libc::RLIMIT_AS, &limit) != 0 {
+                            return Err(std::io::Error::last_os_error());
+                        }
+                    }
+                    Ok(())
+                });
+            }
+        }
         #[cfg(windows)]
         {
             use std::os::windows::process::CommandExt;
@@ -200,20 +267,81 @@ impl Running {
             command.creation_flags(CREATE_NO_WINDOW | CREATE_SUSPENDED);
         }
         let child = command.spawn().context("Cannot start the helper process")?;
-        let mut running = Self {
+        let running = Self {
             child,
             #[cfg(windows)]
             tree: None,
+            #[cfg(unix)]
+            reaped: false,
         };
+        #[cfg(windows)]
+        let mut running = running;
         #[cfg(windows)]
         {
             running.tree = Some(process_tree(&running.child, memory_limit)?);
             ensure!(!cancel.is_cancelled(), "Operation cancelled");
             resume_helper(&running.child)?;
         }
-        #[cfg(not(windows))]
-        let _ = memory_limit;
         Ok(running)
+    }
+}
+
+#[cfg(all(test, unix))]
+mod unix_tests {
+    use super::*;
+    use std::{
+        io::{BufRead, BufReader},
+        process::Stdio,
+        time::{Duration, Instant},
+    };
+
+    #[test]
+    fn dropping_or_reaping_a_helper_closes_descendant_pipes_without_killing_another_helper() {
+        for exits in [false, true] {
+            let mut neighbour = Running::spawn(
+                Command::new("/bin/sleep").arg("60"),
+                &CancellationToken::new(),
+                None,
+            )
+            .unwrap();
+            let mut command = Command::new("/bin/sh");
+            command
+                .args([
+                    "-c",
+                    if exits {
+                        "sleep 60 & printf 'ready\\n'; exit 0"
+                    } else {
+                        "sleep 60 & printf 'ready\\n'; wait"
+                    },
+                ])
+                .stdout(Stdio::piped());
+            let mut helper = Running::spawn(&mut command, &CancellationToken::new(), None).unwrap();
+            let pipe = helper.child.stdout.take().unwrap();
+            let (tx, rx) = mpsc::channel();
+            let reader = std::thread::spawn(move || {
+                let mut pipe = BufReader::new(pipe);
+                let mut line = String::new();
+                pipe.read_line(&mut line).unwrap();
+                tx.send(line).unwrap();
+                let mut remaining = Vec::new();
+                pipe.read_to_end(&mut remaining).unwrap();
+                tx.send("closed".into()).unwrap();
+            });
+            assert_eq!(rx.recv_timeout(Duration::from_secs(3)).unwrap(), "ready\n");
+            if exits {
+                let deadline = Instant::now() + Duration::from_secs(3);
+                while helper.try_wait().unwrap().is_none() {
+                    assert!(Instant::now() < deadline, "helper did not finish");
+                    std::thread::sleep(Duration::from_millis(10));
+                }
+                // Repeated polling must use the cached status, not a reused ID.
+                assert!(helper.try_wait().unwrap().unwrap().success());
+            }
+            drop(helper);
+            assert_eq!(rx.recv_timeout(Duration::from_secs(3)).unwrap(), "closed");
+            reader.join().unwrap();
+            assert!(neighbour.try_wait().unwrap().is_none());
+        }
     }
 }
 

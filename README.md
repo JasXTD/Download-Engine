@@ -29,6 +29,11 @@
 
 <p align="center"><em>Example desktop layout in dark mode, with sample downloads.</em></p>
 
+macOS and Linux previews use the same interface and engine. See the
+[native-platform guide](docs/cross-platform.md) for build requirements, profiles
+and the integrations that remain Windows-only. Published downloads are still the
+Windows release while native validation is in progress.
+
 ## What is Download Engine?
 
 Download Engine is a free, open-source download manager for Windows. It brings file

@@ -1,6 +1,6 @@
 //! Right-to-left text in the native renderer, measured on rendered galleys.
 //!
-//! These use the Windows fonts loaded by `configure` and the bidirectional layout of
+//! These use the platform fonts loaded by `configure` and the bidirectional layout of
 //! the patched epaint in vendor/epaint.
 use super::*;
 use egui::text::{Galley, LayoutJob, TextFormat};
@@ -92,8 +92,19 @@ fn visual_rows(galley: &Galley) -> Vec<String> {
         .collect()
 }
 
-fn reversed(text: &str) -> String {
-    text.chars().rev().collect()
+/// Compare sentence reading order with independently shaped words. A font may
+/// combine lam/alef into one visible glyph; reversing Unicode characters would
+/// incorrectly report that legitimate ligature as a missing letter.
+fn rtl_words(ctx: &egui::Context, text: &str) -> String {
+    text.split(' ')
+        .rev()
+        .map(|word| {
+            let shaped = layout(ctx, word, f32::INFINITY);
+            assert_one_glyph_per_char(&shaped);
+            visual_rows(&shaped).join("")
+        })
+        .collect::<Vec<_>>()
+        .join(" ")
 }
 
 fn assert_one_glyph_per_char(galley: &Galley) {
@@ -107,6 +118,27 @@ fn assert_one_glyph_per_char(galley: &Galley) {
 }
 
 #[test]
+fn arabic_ligatures_preserve_each_source_character_for_selection() {
+    let ctx = context();
+    for text in ["لا", "لأ", "الإسبات", "قائمة الانتظار الرئيسية"] {
+        let galley = layout(&ctx, text, f32::INFINITY);
+        assert_one_glyph_per_char(&galley);
+        let mut source: Vec<_> = text.chars().collect();
+        let mut glyph_chars: Vec<_> = galley
+            .rows
+            .iter()
+            .flat_map(|row| row.row.glyphs.iter().map(|glyph| glyph.chr))
+            .collect();
+        source.sort_unstable();
+        glyph_chars.sort_unstable();
+        assert_eq!(
+            glyph_chars, source,
+            "Selection must retain ligature continuations: {text}"
+        );
+    }
+}
+
+#[test]
 fn latin_words_and_numbers_keep_reading_order_inside_arabic() {
     let ctx = context();
     // (text, visual row from left to right)
@@ -115,27 +147,34 @@ fn latin_words_and_numbers_keep_reading_order_inside_arabic() {
             "يمكن للمسؤول تشغيله باستخدام powercfg /hibernate on.",
             format!(
                 ".powercfg /hibernate on {} {} {} {}",
-                reversed("باستخدام"),
-                reversed("تشغيله"),
-                reversed("للمسؤول"),
-                reversed("يمكن")
+                rtl_words(&ctx, "باستخدام"),
+                rtl_words(&ctx, "تشغيله"),
+                rtl_words(&ctx, "للمسؤول"),
+                rtl_words(&ctx, "يمكن")
             ),
         ),
         (
             "عند اكتمال جميع التنزيلات في Main queue",
-            format!("Main queue {}", reversed("عند اكتمال جميع التنزيلات في")),
+            format!(
+                "Main queue {}",
+                rtl_words(&ctx, "عند اكتمال جميع التنزيلات في")
+            ),
         ),
         (
             "نسخة من Download Engine تبدأ مع Windows",
             format!(
                 "Windows {} Download Engine {}",
-                reversed("تبدأ مع"),
-                reversed("نسخة من")
+                rtl_words(&ctx, "تبدأ مع"),
+                rtl_words(&ctx, "نسخة من")
             ),
         ),
         (
             "إيقاف التشغيل خلال 60 ثانية",
-            format!("{} 60 {}", reversed("ثانية"), reversed("إيقاف التشغيل خلال")),
+            format!(
+                "{} 60 {}",
+                rtl_words(&ctx, "ثانية"),
+                rtl_words(&ctx, "إيقاف التشغيل خلال")
+            ),
         ),
         // Digits after Arabic letters are Arabic numbers (UAX #9 rule W2), so the
         // percent sign follows them to the left, the usual Arabic presentation. A
@@ -143,28 +182,32 @@ fn latin_words_and_numbers_keep_reading_order_inside_arabic() {
         // "62.4", "%", "من", "8.4", "GB".
         (
             "تم تنزيل 62.4% من 8.4 GB",
-            format!("GB 8.4 {} %62.4 {}", reversed("من"), reversed("تم تنزيل")),
+            format!(
+                "GB 8.4 {} %62.4 {}",
+                rtl_words(&ctx, "من"),
+                rtl_words(&ctx, "تم تنزيل")
+            ),
         ),
         // After Latin text, the percent sign stays with the number.
         (
             "اكتمل Windows 62.4%",
-            format!("Windows 62.4% {}", reversed("اكتمل")),
+            format!("Windows 62.4% {}", rtl_words(&ctx, "اكتمل")),
         ),
         // Arabic-Indic digits are written left to right as well.
         (
             "بعد ٦٠ ثانية",
-            format!("{} ٦٠ {}", reversed("ثانية"), reversed("بعد")),
+            format!("{} ٦٠ {}", rtl_words(&ctx, "ثانية"), rtl_words(&ctx, "بعد")),
         ),
         // Brackets follow the text they enclose (UAX #9 rule N0).
         (
             "قائمة Download Engine (.json)",
-            format!("Download Engine (.json) {}", reversed("قائمة")),
+            format!("Download Engine (.json) {}", rtl_words(&ctx, "قائمة")),
         ),
         // Brackets around Latin text inside Arabic stay in the Arabic run, where the
         // shaper mirrors them; the stored characters are the logical ones.
         (
             "إضافة تنزيل (Ctrl+N)",
-            format!(")Ctrl+N( {}", reversed("إضافة تنزيل")),
+            format!(")Ctrl+N( {}", rtl_words(&ctx, "إضافة تنزيل")),
         ),
     ];
     for (text, expected) in cases {
@@ -180,11 +223,15 @@ fn arabic_text_starting_with_latin_or_a_number_reads_right_to_left() {
     let cases = [
         (
             "SHA-256 المتوقع (اختياري)",
-            format!("{} {} SHA-256", reversed("(اختياري)"), reversed("المتوقع")),
+            format!(
+                "{} {} SHA-256",
+                rtl_words(&ctx, "(اختياري)"),
+                rtl_words(&ctx, "المتوقع")
+            ),
         ),
         (
             "793.2 MB من 8.4 GB",
-            format!("GB 8.4 {} MB 793.2", reversed("من")),
+            format!("GB 8.4 {} MB 793.2", rtl_words(&ctx, "من")),
         ),
     ];
     for (text, expected) in cases {
@@ -199,7 +246,7 @@ fn arabic_only_text_is_one_right_to_left_run() {
     for text in ["تنزيل جديد", "قائمة الانتظار الرئيسية", "تنزيلات مكتملة"]
     {
         let galley = layout(&ctx, text, f32::INFINITY);
-        assert_eq!(visual_rows(&galley), [reversed(text)], "{text:?}");
+        assert_eq!(visual_rows(&galley), [rtl_words(&ctx, text)], "{text:?}");
         assert_one_glyph_per_char(&galley);
     }
 }
@@ -210,6 +257,11 @@ fn word_offsets(galley: &Galley) -> Vec<(String, Vec<f32>)> {
     for row in &galley.rows {
         let mut word: Option<(String, Vec<f32>, f32)> = None;
         for glyph in &row.row.glyphs {
+            // Punctuation is a separate shaping run and can round a pixel
+            // differently after wrapping. Compare the joined letters themselves.
+            if glyph.chr.is_ascii_punctuation() {
+                continue;
+            }
             if glyph.chr == ' ' {
                 words.extend(word.take().map(|(text, offsets, _)| (text, offsets)));
                 continue;
@@ -233,7 +285,7 @@ fn wrapped_arabic_rows_read_top_to_bottom() {
     assert!(rows.len() >= 3, "{rows:?}");
     // The first row holds the start of the sentence, at its right end.
     assert!(
-        rows[0].trim_end().ends_with(&reversed("الإسبات")),
+        rows[0].trim_end().ends_with(&rtl_words(&ctx, "الإسبات")),
         "{rows:?}"
     );
     // The last row ends the sentence, with the command in reading order.
@@ -246,13 +298,17 @@ fn wrapped_arabic_rows_read_top_to_bottom() {
             row.split(' ')
                 .rev()
                 .filter(|word| !word.is_empty() && !word.chars().any(|c| c.is_ascii_alphabetic()))
-                .map(reversed)
+                .map(str::to_owned)
                 .collect::<Vec<_>>()
         })
         .collect();
     assert_eq!(
         arabic.join(" "),
         "الإسبات متوقف أو غير مدعوم على هذا الكمبيوتر. يمكن للمسؤول تشغيله باستخدام"
+            .split(' ')
+            .map(|word| rtl_words(&ctx, word))
+            .collect::<Vec<_>>()
+            .join(" ")
     );
     assert_one_glyph_per_char(&galley);
 
@@ -288,7 +344,7 @@ fn elided_arabic_keeps_the_start_of_the_text() {
     let rows = visual_rows(&galley);
     assert_eq!(rows.len(), 1);
     assert!(rows[0].starts_with('…'), "{rows:?}");
-    assert!(rows[0].ends_with(&reversed("قائمة")), "{rows:?}");
+    assert!(rows[0].ends_with(&rtl_words(&ctx, "قائمة")), "{rows:?}");
 }
 
 #[test]
@@ -305,7 +361,7 @@ fn sections_of_a_right_to_left_paragraph_flow_right_to_left() {
     let galley = galley(&ctx, job);
     assert_eq!(
         visual_rows(&galley),
-        [format!("Main queue {}", reversed("عند اكتمال"))]
+        [format!("Main queue {}", rtl_words(&ctx, "عند اكتمال"))]
     );
 }
 

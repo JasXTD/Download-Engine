@@ -16,7 +16,13 @@ use std::{
 use tokio::io::{AsyncReadExt, AsyncSeekExt, AsyncWriteExt};
 use tokio_util::sync::CancellationToken;
 
+#[cfg(windows)]
 const FFMPEG_SHA256: &str = "f1f9097330cc07678bebe983e1e5854bacce5f36cd851e234cdcf074ea54d577";
+#[cfg(unix)]
+const FFMPEG_SHA256: &str = match option_env!("DOWNLOAD_ENGINE_FFMPEG_SHA256") {
+    Some(hash) => hash,
+    None => "",
+};
 const MERGE_TIMEOUT: Duration = Duration::from_secs(30 * 60);
 
 pub(super) struct Helper {
@@ -29,20 +35,29 @@ impl Helper {
         let cancel = cancel.clone();
         tokio::task::spawn_blocking(move || {
             #[allow(unused_mut)]
-            let mut path = std::env::current_exe()?
-                .parent()
-                .context("Missing application folder")?
-                .join("tools/ffmpeg/ffmpeg.exe");
+            let mut path = crate::paths::resource_directory()?
+                .join("tools/ffmpeg")
+                .join(crate::paths::executable_name("ffmpeg"));
             // Development binaries use the exact same pinned helper as the package.
-            #[cfg(debug_assertions)]
+            #[cfg(all(debug_assertions, windows))]
             if !path.exists() {
                 path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tools/ffmpeg/ffmpeg.exe");
+            }
+            #[cfg(all(debug_assertions, unix))]
+            if !path.exists()
+                && let Some(development) = option_env!("DOWNLOAD_ENGINE_FFMPEG_PATH")
+            {
+                path = PathBuf::from(development);
             }
             Self::at(&path, &cancel)
         })
         .await?
     }
     fn at(path: &Path, cancel: &CancellationToken) -> Result<Self> {
+        ensure!(
+            FFMPEG_SHA256.len() == 64,
+            "This build has no verified media merger. Build and package the native FFmpeg helper first."
+        );
         let folders = download_file::guard_parents(path).context(
             "The bundled media merger is missing. Repair or re-extract Download Engine.",
         )?;
@@ -385,7 +400,7 @@ fn run(
             output.metadata()?.len() <= max_output,
             "The merged MP4 exceeds its size limit"
         );
-        if let Some(status) = running.child.try_wait()? {
+        if let Some(status) = running.try_wait()? {
             break status;
         }
         std::thread::sleep(Duration::from_millis(40));

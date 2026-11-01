@@ -140,8 +140,10 @@ impl Desktop {
                         ui.selectable_value(&mut form.method, Some(AuthKind::Basic), tr("Username / password"));
                         if !download_engine::ftp::is_url(&form.url) {
                             ui.selectable_value(&mut form.method, Some(AuthKind::Bearer), tr("Bearer token"));
-                            ui.selectable_value(&mut form.method, Some(AuthKind::Ntlm), "NTLM");
-                            ui.selectable_value(&mut form.method, Some(AuthKind::Negotiate), "Negotiate");
+                            if cfg!(windows) {
+                                ui.selectable_value(&mut form.method, Some(AuthKind::Ntlm), "NTLM");
+                                ui.selectable_value(&mut form.method, Some(AuthKind::Negotiate), "Negotiate");
+                            }
                         }
                         ui.selectable_value(&mut form.method, None, tr("None"));
                         if form.method != previous {
@@ -170,7 +172,7 @@ impl Desktop {
                         // Do not retain them after the frame or restore a previous login.
                         input.state.clear_undoer();
                         input.state.store(ui.ctx(), input.response.id);
-                        ui.label(RichText::new(tr("Saved in Windows Credential Manager for this download and server. Removed when the download completes or you remove it.")).small().color(p.muted));
+                        ui.label(RichText::new(tr(if cfg!(windows) { "Saved in Windows Credential Manager for this download and server. Removed when the download completes or you remove it." } else { "Saved in your system keyring for this download and server. Removed when the download completes or you remove it." })).small().color(p.muted));
                         let protection = if download_engine::ftp::is_url(&form.url) {
                             tr("FTPS encrypts your login and file data. The server certificate must be valid.")
                         } else {

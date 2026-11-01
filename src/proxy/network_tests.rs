@@ -80,7 +80,7 @@ fn tls() -> tokio_native_tls::TlsAcceptor {
     .into()
 }
 
-#[cfg(windows)]
+#[cfg(any(windows, unix))]
 #[tokio::test]
 async fn https_connect_keeps_proxy_credentials_outside_the_origin_tunnel() {
     let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
@@ -120,7 +120,7 @@ async fn https_connect_keeps_proxy_credentials_outside_the_origin_tunnel() {
     server.await.unwrap();
 }
 
-#[cfg(windows)]
+#[cfg(any(windows, unix))]
 #[tokio::test]
 async fn tls_proxy_encrypts_http_proxy_login_and_validates_certificates() {
     let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
@@ -174,7 +174,7 @@ async fn tls_proxy_encrypts_http_proxy_login_and_validates_certificates() {
     server.await.unwrap();
 }
 
-#[cfg(windows)]
+#[cfg(any(windows, unix))]
 #[tokio::test]
 async fn socks5h_uses_proxy_dns_and_username_password_without_http_auth_leaks() {
     let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
@@ -284,7 +284,7 @@ async fn custom_route_cannot_fall_back_to_direct_and_direct_mode_removes_it() {
     server.await.unwrap();
 }
 
-#[cfg(windows)]
+#[cfg(any(windows, unix))]
 #[tokio::test]
 async fn proxy_407_stops_the_engine_with_a_settings_hint_and_no_secret_in_history() {
     let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();

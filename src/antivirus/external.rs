@@ -152,6 +152,7 @@ mod windows {
     }
 }
 
+#[cfg(any(windows, test))]
 fn scan_action_index(provider: Provider, names: &[String]) -> Result<usize> {
     let expected = match provider {
         Provider::Malwarebytes => "Scan with Malwarebytes",

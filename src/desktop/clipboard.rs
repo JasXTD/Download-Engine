@@ -306,6 +306,7 @@ mod tests {
         assert_eq!(app.store.list().unwrap().len(), jobs, "Nothing is queued");
     }
 
+    #[cfg(windows)]
     #[test]
     fn settings_row_switches_clipboard_links_and_saves_the_choice() {
         let (_temp, mut app, ctx) = fixture();

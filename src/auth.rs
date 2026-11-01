@@ -86,6 +86,7 @@ impl Credentials {
             secret: password,
         }
     }
+    #[cfg(windows)]
     pub(crate) fn enterprise_login(&self) -> Result<(Kind, &str, &str)> {
         ensure!(
             matches!(self.kind, Kind::Ntlm | Kind::Negotiate),

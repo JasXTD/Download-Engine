@@ -1,4 +1,6 @@
-use anyhow::{Context, Result};
+#[cfg(windows)]
+use anyhow::Context;
+use anyhow::Result;
 use download_engine::{
     diagnostics::{self, Component, Details, Event, Level},
     native,

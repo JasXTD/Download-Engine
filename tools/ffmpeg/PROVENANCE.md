@@ -36,8 +36,18 @@ notices with the binary. Keep the complete bundle together when redistributing
 it; an upstream website link alone is not the supplied corresponding source.
 The source ZIP also includes this material, excluding executable binaries.
 
-Only `ffmpeg.exe` is a runtime helper; ffprobe and the HDR10+ regression executable
+Only `ffmpeg.exe` is a Windows runtime helper; ffprobe and the HDR10+ regression executable
 are used for isolated tests and are not shipped in the application. The regression
 source is included in `source/test-hdr-metadata.c`. The app checks the helper's pinned hash and
 holds it against replacement while it runs. `media-manifest.json` records every
 bundle file; packaging verifies those hashes and rejects missing/unlisted files.
+
+## Native macOS/Linux previews
+
+Native packages build the same pinned sources and safety fixes with the included
+`scripts/Build-UnixFfmpeg.sh`. Their runtime helper is named `ffmpeg`. Their native
+compiler, configuration, regression result and binary hashes are recorded in
+`tools/ffmpeg/build-record/`; the Windows binary hashes and toolchain records
+above do not describe a native binary. The native helper hash is compiled into
+the matching app and verified again when packaging and running it. Native builds
+also use ffprobe for tests, but do not ship that test tool in the application.

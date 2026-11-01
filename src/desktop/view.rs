@@ -13,6 +13,10 @@ const PAUSE: &str = "\u{e769}";
 /// Width the download list keeps for its vertical scrollbar.
 const SCROLLBAR_STRIP: f32 = 14.0;
 
+#[cfg(not(windows))]
+#[path = "view/native_icons.rs"]
+mod native_icons;
+
 pub(super) fn icon(ui: &egui::Ui, at: egui::Pos2, glyph: &str, size: f32, color: Color32) {
     // Draw these shapes directly instead of relying on optional Windows glyphs.
     let point = |x: f32, y: f32| at + vec2(x - 10.0, y - 10.0) * (size / 20.0);
@@ -80,10 +84,50 @@ pub(super) fn icon(ui: &egui::Ui, at: egui::Pos2, glyph: &str, size: f32, color:
         }
         _ => {}
     }
+    #[cfg(not(windows))]
+    if native_icons::paint(ui.painter(), at, glyph, size, color) {
+        return;
+    }
     let family = if cfg!(windows) {
         FontFamily::Name("icons".into())
     } else {
         FontFamily::Proportional
+    };
+    #[cfg(not(windows))]
+    let glyph = match glyph {
+        "\u{e710}" => "+",
+        "\u{e896}" => "↓",
+        "\u{e8f1}" | "\u{e8fd}" => "≡",
+        "\u{e823}" | "\u{e787}" => "◷",
+        "\u{e73e}" => "✓",
+        "\u{e768}" => "▶",
+        "\u{e769}" => "Ⅱ",
+        "\u{e71a}" => "□",
+        "\u{e74d}" => "×",
+        "\u{e713}" => "⚙",
+        "\u{e945}" => "ϟ",
+        "\u{e774}" => "◎",
+        "\u{e9d9}" => "≋",
+        "\u{e783}" => "!",
+        "\u{e897}" => "?",
+        "\u{e7c3}" => "▤",
+        "\u{e77f}" => "♙",
+        "\u{e7ba}" => "!",
+        "\u{e895}" | "\u{e898}" | "\u{e8b5}" => "↑",
+        "\u{ede1}" => "↓",
+        "\u{e8d6}" => "♫",
+        "\u{e7ed}" => "↻",
+        "\u{e767}" => "◖",
+        "\u{e7e8}" | "\u{e921}" => "▣",
+        "\u{e82d}" => "↗",
+        other
+            if other
+                .chars()
+                .any(|ch| ('\u{e000}'..='\u{f8ff}').contains(&ch)) =>
+        {
+            "◇"
+        }
+        other => other,
     };
     ui.painter().text(
         at,

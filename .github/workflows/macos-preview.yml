@@ -1,0 +1,68 @@
+name: macOS preview validation
+on:
+  push:
+    branches: [codex/macos-linux-support]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: macos-preview-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  native:
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [macos-15, macos-15-intel]
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 90
+    env:
+      CARGO_INCREMENTAL: '0'
+      CARGO_PROFILE_DEV_DEBUG: '0'
+      MACOSX_DEPLOYMENT_TARGET: '11.0'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Native toolchain
+        run: |
+          # Use the runner's installed compiler and SDK; do not install tools.
+          rustc -vV
+          xcrun --show-sdk-path
+          command -v pkg-config
+          cargo fetch --locked --target "$(rustc -vV | sed -n 's/^host: //p')"
+          cargo fetch --locked --manifest-path torrent/Cargo.toml --target "$(rustc -vV | sed -n 's/^host: //p')"
+      - name: Isolated test keychain
+        run: |
+          keychain="$RUNNER_TEMP/download-engine-tests.keychain-db"
+          security create-keychain -p 'public-ci-fixture' "$keychain"
+          security set-keychain-settings -lut 21600 "$keychain"
+          security unlock-keychain -p 'public-ci-fixture' "$keychain"
+          security list-keychains -d user -s "$keychain"
+          security default-keychain -d user -s "$keychain"
+      - name: Build pinned native FFmpeg
+        run: |
+          bash scripts/Build-UnixFfmpeg.sh "$RUNNER_TEMP/native-ffmpeg"
+          echo "DOWNLOAD_ENGINE_FFMPEG_PATH=$RUNNER_TEMP/native-ffmpeg/ffmpeg" >> "$GITHUB_ENV"
+          echo "DOWNLOAD_ENGINE_NATIVE_FFMPEG=$RUNNER_TEMP/native-ffmpeg" >> "$GITHUB_ENV"
+          echo "DOWNLOAD_ENGINE_FFMPEG_SHA256=$(awk '/  ffmpeg$/ {print $1}' "$RUNNER_TEMP/native-ffmpeg/build-record/binaries.sha256")" >> "$GITHUB_ENV"
+      - name: Native regression tests
+        timeout-minutes: 25
+        run: |
+          cargo test --locked --offline --all-targets -j 2 -- --test-threads=2
+          cargo test --locked --offline --manifest-path torrent/Cargo.toml -j 2 -- --test-threads=2
+      - name: Package preview
+        run: |
+          bash scripts/Test-UnixPackaging.sh
+          bash scripts/Package-Unix.sh "$RUNNER_TEMP/packages"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: macos-preview-${{ matrix.runner }}
+          path: |
+            ${{ runner.temp }}/packages/*.zip
+            ${{ runner.temp }}/packages/*.sha256
+          if-no-files-found: error
+          retention-days: 7
+      - name: Remove test keychain
+        if: always()
+        run: security delete-keychain "$RUNNER_TEMP/download-engine-tests.keychain-db" || true

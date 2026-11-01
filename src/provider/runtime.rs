@@ -43,14 +43,14 @@ impl Runtime {
                 Role::Resolver
             }
             Capabilities::Processor(script_id) => {
-                #[cfg(windows)]
+                #[cfg(any(windows, unix))]
                 xd.set(
                     "key",
                     lua.create_function(move |_, token: String| {
                         super::keys::unlock(script_id, &token).map_err(mlua::Error::external)
                     })?,
                 )?;
-                #[cfg(not(windows))]
+                #[cfg(not(any(windows, unix)))]
                 let _ = script_id;
                 Role::Processor
             }
@@ -71,13 +71,13 @@ impl Runtime {
                 Ok(super::supports(&name)
                     && match name.as_str() {
                         "xd.fetch" => role == Role::Resolver,
-                        "xd.key" => cfg!(windows) && role == Role::Processor,
-                        "xd.aes_ctr" | "xd.aes_blocks" => cfg!(windows),
+                        "xd.key" => cfg!(any(windows, unix)) && role == Role::Processor,
+                        "xd.aes_ctr" | "xd.aes_blocks" => cfg!(any(windows, unix)),
                         _ => true,
                     })
             })?,
         )?;
-        #[cfg(windows)]
+        #[cfg(any(windows, unix))]
         {
             xd.set(
                 "aes_ctr",
@@ -108,7 +108,7 @@ impl Runtime {
         if let Some(extension) = extension {
             extension.install(&lua, &xd)?;
             // Tokens reach only a processor, and unlock only under this extension.
-            #[cfg(windows)]
+            #[cfg(any(windows, unix))]
             if role == Role::Processor {
                 let keys = extension.keys.clone();
                 let scope = extension.key_scope;

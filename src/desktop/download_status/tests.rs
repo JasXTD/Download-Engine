@@ -801,7 +801,11 @@ fn live_status_controls_pause_resume_close_and_hide_without_duplicate_or_lost_pr
     text_rect(&output, "Source");
     text_rect(&output, "Saved to");
     assert!(!rendered(&output, "Download complete · Completed") && !rendered(&output, "100%"));
-    text_rect(&output, "Open with…");
+    if cfg!(windows) {
+        text_rect(&output, "Open with…");
+    } else {
+        assert!(!rendered(&output, "Open with…"));
+    }
     text_rect(&output, "Open folder");
     text_rect(&output, "×");
     assert!(!rendered(&output, "Close"));
@@ -1014,6 +1018,7 @@ fn status_tabs_and_multi_segment_connections_work() {
     );
 }
 
+#[cfg(windows)]
 #[test]
 fn when_done_offers_sleep_and_explains_why_hibernate_is_unavailable() {
     let (_temp, mut app, ctx) = fixture();

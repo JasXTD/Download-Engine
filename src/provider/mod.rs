@@ -1,5 +1,5 @@
 //! Lua providers own source resolution and byte transforms; the core owns all files.
-#[cfg(windows)]
+#[cfg(any(windows, unix))]
 mod crypto;
 mod keys;
 mod persistence;
@@ -32,7 +32,7 @@ const FUNCTIONS: &[crate::script_automation::api::Function] = &[
     crate::script_automation::api::Function {
         name: "xd.key",
         arguments: "protected_token",
-        description: "Processor only: unlock a provider-bound Windows-protected AES key as an opaque handle. Key bytes are never returned to Lua.",
+        description: "Processor only: unlock a provider-bound OS-protected AES key as an opaque handle. Key bytes are never returned to Lua.",
         access: crate::script_automation::api::Access::Reader,
     },
     crate::script_automation::api::Function {

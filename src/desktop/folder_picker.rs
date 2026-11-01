@@ -48,7 +48,7 @@ impl FolderPicker {
                     ),
             );
             if ui
-                .add_enabled(cfg!(windows), egui::Button::new(tr("Browse…")))
+                .add(egui::Button::new(tr("Browse…")))
                 .on_hover_text(tr("Choose a folder"))
                 .clicked()
             {
@@ -91,8 +91,16 @@ impl FolderPicker {
         }
         #[cfg(not(windows))]
         {
-            let _ = (value, default, title);
-            anyhow::bail!(tr("Enter the folder path manually on this platform."))
+            let initial = if !value.trim().is_empty() && Path::new(value).is_dir() {
+                Path::new(value)
+            } else {
+                default
+            };
+            Ok(rfd::FileDialog::new()
+                .set_title(title)
+                .set_directory(initial)
+                .pick_folder()
+                .map(|path| path.to_string_lossy().into_owned()))
         }
     }
     /// Choose where to save a file. Windows asks before an existing file is chosen.
@@ -115,8 +123,21 @@ impl FolderPicker {
         }
         #[cfg(not(windows))]
         {
-            let _ = (title, folder, name, filter, extension);
-            anyhow::bail!(tr("Choosing files is not available on this platform."))
+            let result = unix_dialog(title, folder, filter)
+                .set_file_name(name)
+                .save_file();
+            if let Some(mut path) = result {
+                if path.extension().is_none() && !extension.is_empty() {
+                    path.set_extension(extension);
+                    anyhow::ensure!(
+                        !path.exists(),
+                        "This file already exists. Choose its full filename to confirm replacement."
+                    );
+                }
+                Ok(Some(path))
+            } else {
+                Ok(None)
+            }
         }
     }
     pub fn open_file(
@@ -136,8 +157,7 @@ impl FolderPicker {
         }
         #[cfg(not(windows))]
         {
-            let _ = (title, folder, filter);
-            anyhow::bail!(tr("Choosing files is not available on this platform."))
+            Ok(unix_dialog(title, folder, filter).pick_file())
         }
     }
     #[cfg(windows)]
@@ -147,6 +167,24 @@ impl FolderPicker {
                 "The Download Engine window is unavailable. Try again in a moment."
             ))
         })
+    }
+}
+
+#[cfg(not(windows))]
+fn unix_dialog(title: &str, folder: &Path, filter: (&str, &str)) -> rfd::FileDialog {
+    let dialog = rfd::FileDialog::new()
+        .set_title(title)
+        .set_directory(folder);
+    let extensions: Vec<_> = filter
+        .1
+        .split(';')
+        .filter_map(|pattern| pattern.trim().strip_prefix("*."))
+        .filter(|extension| !extension.contains('*'))
+        .collect();
+    if extensions.is_empty() {
+        dialog
+    } else {
+        dialog.add_filter(filter.0, &extensions)
     }
 }
 

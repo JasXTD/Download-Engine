@@ -4,6 +4,7 @@ use download_engine::torrent::{self, Details, File, PROXY_MESSAGE, Settings, Sta
 use egui::{Align, Layout, RichText, vec2};
 use std::{collections::HashSet, ops::Range, path::Path};
 use tokio_util::sync::CancellationToken;
+mod location;
 
 const ROW_HEIGHT: f32 = 24.0;
 const LIST_HEIGHT: f32 = 168.0;
@@ -224,12 +225,15 @@ enum Fetched {
     Details(Details),
     /// This torrent is already in the list, as this download.
     Existing(String),
+    AwaitingConsent,
     Cancelled,
 }
 
 struct Draft {
     source: Source,
     asked: bool,
+    metadata_allowed: bool,
+    awaiting_consent: bool,
     cancel: CancellationToken,
     fetch: Option<background_io::Task<Fetched>>,
     started: Instant,
@@ -246,6 +250,8 @@ impl Draft {
         Self {
             source,
             asked: false,
+            metadata_allowed: true,
+            awaiting_consent: false,
             cancel: CancellationToken::new(),
             fetch: None,
             started: Instant::now(),
@@ -262,7 +268,10 @@ impl Draft {
         self.fetch.is_some()
     }
     fn is_settled(&self) -> bool {
-        self.details.is_some() || self.existing.is_some() || self.error.is_some()
+        self.details.is_some()
+            || self.existing.is_some()
+            || self.error.is_some()
+            || self.awaiting_consent
     }
 }
 /// Dropping the fetch waits for its thread, so the search has to end first. Otherwise a
@@ -293,6 +302,7 @@ pub(super) struct State {
     leaving: Vec<background_io::Task<Fetched>>,
     saving: Option<background_io::Task<Job>>,
     choice: Option<Choice>,
+    location: Option<location::Draft>,
 }
 
 impl State {
@@ -308,24 +318,70 @@ impl Desktop {
     /// Render reviewed synthetic data only; never start a helper or contact peers.
     #[cfg(feature = "screenshot")]
     pub(super) fn torrent_sample(&mut self, mode: &str) {
-        if mode == "torrent-preferences" {
+        if matches!(mode, "torrent-rename" | "torrent-move") {
+            let mut job = Job::new_torrent(
+                "magnet:?xt=urn:btih:0123456789012345678901234567890123456789",
+                "Sample collection",
+                self.store.paths.downloads.clone(),
+                "screenshot-torrent-location".into(),
+                Stage::Chosen,
+            )
+            .unwrap();
+            job.status = Status::Complete;
+            job.saved_path = Some(job.directory.join("Sample collection"));
+            self.open_torrent_location(&job, mode == "torrent-rename");
+            return;
+        }
+        if matches!(
+            mode,
+            "torrent-sharing-preferences" | "torrent-sharing-network"
+        ) {
+            self.open_preferences_window();
+            let draft = self.preferences_window.as_mut().unwrap();
+            draft.category = preferences_window::Category::Torrents;
+            draft.torrents.enabled = true;
+            draft.torrents.seed_completed = true;
+            draft.torrents.incoming_port = Some(6881);
+            return;
+        }
+        if matches!(mode, "torrent-preferences" | "torrent-windows-preferences") {
             self.open_preferences_window();
             self.preferences_window.as_mut().unwrap().category =
                 preferences_window::Category::Torrents;
             return;
         }
         self.open_add();
-        self.url =
-            "magnet:?xt=urn:btih:c12fe1c06bba254a9dc9f519b335aa7c1367a88a&dn=Sample%20collection"
-                .into();
-        let mut draft = Draft::new(Source::Magnet(self.url.clone()));
+        let sample_magnet =
+            "magnet:?xt=urn:btih:c12fe1c06bba254a9dc9f519b335aa7c1367a88a&dn=Sample%20collection";
+        self.url = if mode == "torrent-external-files" {
+            self.store
+                .paths
+                .data
+                .join("Sample collection.torrent")
+                .display()
+                .to_string()
+        } else {
+            sample_magnet.into()
+        };
+        let mut draft = Draft::new(Source::detect(&self.url).unwrap());
+        if mode == "torrent-external-files" {
+            self.sample_external_torrent(download_engine::external_open::Target::TorrentFile(
+                PathBuf::from(&self.url),
+            ));
+        }
         if mode == "torrent-consent" {
             self.torrents.settings.enabled = false;
             draft.asked = true;
             self.torrents.question = Some(Question::AddWindow);
         } else {
             self.torrents.settings.enabled = true;
-            if mode == "torrent-error" {
+            if mode == "torrent-external-magnet" {
+                draft.metadata_allowed = false;
+                draft.awaiting_consent = true;
+                self.sample_external_torrent(download_engine::external_open::Target::Magnet(
+                    self.url.clone(),
+                ));
+            } else if mode == "torrent-error" {
                 draft.error = Some(
                     "The torrent file is incomplete. Choose another file and try again.".into(),
                 );
@@ -333,7 +389,7 @@ impl Desktop {
                 let details = Details {
                     info_hash: "c12fe1c06bba254a9dc9f519b335aa7c1367a88a".into(),
                     name: "Sample collection".into(),
-                    magnet: self.url.clone(),
+                    magnet: sample_magnet.into(),
                     files: [
                         "Guide.pdf",
                         "Images/Landscape.png",
@@ -505,6 +561,7 @@ impl Desktop {
         let store = self.store.clone();
         let source = draft.source.clone();
         let cancel = draft.cancel.clone();
+        let metadata_allowed = draft.metadata_allowed;
         draft.started = Instant::now();
         let task = background_io::Task::spawn(Some(ctx.clone()), move || {
             let details = match &source {
@@ -512,6 +569,9 @@ impl Desktop {
                     let hash = torrent::info_hash(link)?;
                     if let Some(job) = store.torrent_job(&hash)? {
                         return Ok(Fetched::Existing(job.id));
+                    }
+                    if !metadata_allowed {
+                        return Ok(Fetched::AwaitingConsent);
                     }
                     store.fetch_torrent_details(link, &cancel)?
                 }
@@ -539,7 +599,9 @@ impl Desktop {
             .is_none_or(|draft| draft.source != *source)
         {
             self.forget_torrent_draft();
-            self.torrents.draft = Some(Draft::new(source.clone()));
+            let mut draft = Draft::new(source.clone());
+            draft.metadata_allowed = self.external_open_origin().is_none();
+            self.torrents.draft = Some(draft);
         }
         let enabled = self.torrents.settings.enabled;
         let saving = self.torrents.saving.is_some();
@@ -554,6 +616,7 @@ impl Desktop {
                     draft.details = Some(details);
                 }
                 Ok(Fetched::Existing(id)) => draft.existing = Some(id),
+                Ok(Fetched::AwaitingConsent) => draft.awaiting_consent = true,
                 Ok(Fetched::Cancelled) => {}
                 Err(error) => draft.error = Some(format!("{error:#}")),
             }
@@ -680,8 +743,10 @@ impl Desktop {
         let saving = self.torrents.saving.is_some();
         let focused = ctx.memory(|memory| memory.focused());
         let enabled = self.torrents.settings.enabled;
+        let origin = self.external_open_origin();
         let mut editing = false;
-        let (mut cancel, mut submit, mut turn_on, mut proxy) = (false, false, false, false);
+        let (mut cancel, mut submit, mut turn_on, mut proxy, mut load_files) =
+            (false, false, false, false, false);
         let mut show = None;
         let wide = self
             .torrents
@@ -699,6 +764,10 @@ impl Desktop {
                 !saving,
             );
             ui.add_enabled_ui(!saving, |ui| {
+                if let Some(origin) = origin {
+                    ui.label(RichText::new(tr(origin)).small().color(p.muted));
+                    ui.add_space(4.0);
+                }
                 ui.spacing_mut().interact_size.y = view::CONTROL_HEIGHT;
                 ui.label(
                     RichText::new(match source {
@@ -738,6 +807,9 @@ impl Desktop {
                     } else {
                         Self::warning(ui, p, tr("This torrent can't be added"), error);
                     }
+                } else if draft.awaiting_consent {
+                    ui.label(tr("Load the file list to connect to peers and choose files. Your IP address is visible to peers."));
+                    load_files = ui.button(tr("Load file list")).clicked();
                 } else if let (Some(details), Some(picker)) = (&draft.details, &mut draft.picker) {
                     ui.horizontal(|ui| {
                         ui.add(egui::Label::new(RichText::new(&details.name).strong()).truncate())
@@ -750,6 +822,7 @@ impl Desktop {
                     let renamed = picker.renamed();
                     let height = ctx.content_rect().height()
                         - ADD_WINDOW_HEIGHT
+                        - if origin.is_some() { NOTE_HEIGHT + 8.0 } else { 0.0 }
                         - if warned { WARNING_HEIGHT } else { 0.0 }
                         - if renamed > 0 { NOTE_HEIGHT } else { 0.0 };
                     picker.list(ui, p, height.clamp(MIN_LIST_HEIGHT, LIST_HEIGHT));
@@ -849,7 +922,7 @@ impl Desktop {
             });
             let waiting_on_peers = matches!(source, Source::Magnet(_))
                 && ready.is_none()
-                && draft.is_some_and(|draft| draft.is_waiting());
+                && draft.is_some_and(|draft| draft.is_waiting() || draft.awaiting_consent);
             let action = if self.torrents.saving.is_some() {
                 tr("Adding…")
             } else if !enabled {
@@ -896,6 +969,11 @@ impl Desktop {
             self.url.clear();
         } else if turn_on {
             self.torrents.question = Some(Question::AddWindow);
+        } else if load_files {
+            if let Some(draft) = &mut self.torrents.draft {
+                draft.metadata_allowed = true;
+                draft.awaiting_consent = false;
+            }
         } else if submit {
             self.form_error = None;
             self.submit_torrent(ctx);
@@ -1071,6 +1149,61 @@ mod tests {
         output.shapes.iter().any(|shape| {
             matches!(&shape.shape, egui::Shape::Text(text) if text.galley.job.text.trim() == label)
         })
+    }
+
+    #[test]
+    fn external_magnet_checks_duplicates_without_contacting_peers_before_consent() {
+        for duplicate in [false, true] {
+            let (_temp, mut app, ctx) = fixture();
+            app.torrents.settings.enabled = true;
+            app.torrents.settings.dht = false;
+            app.store
+                .save_torrent_settings(app.torrents.settings)
+                .unwrap();
+            app.store.set_queue_running("main", false).unwrap();
+            let link =
+                "magnet:?xt=urn:btih:1111111111111111111111111111111111111111&dn=Offline%20fixture";
+            let job = duplicate.then(|| {
+                app.store
+                    .add_magnet_for_later(link, None, "main", Uuid::new_v4().to_string())
+                    .unwrap()
+            });
+            app.store
+                .submit_external_opens(&[download_engine::external_open::Target::Magnet(
+                    link.into(),
+                )])
+                .unwrap();
+            let deadline = Instant::now() + Duration::from_secs(5);
+            loop {
+                app.poll_external_opens(&ctx);
+                if app.external_open_origin().is_some() {
+                    app.sync_torrent_draft(&ctx, &Source::Magnet(link.into()));
+                    if app.torrents.draft.as_ref().is_some_and(Draft::is_settled) {
+                        break;
+                    }
+                }
+                assert!(
+                    Instant::now() < deadline,
+                    "external magnet review did not settle"
+                );
+                std::thread::sleep(Duration::from_millis(5));
+            }
+            let draft = app.torrents.draft.as_ref().unwrap();
+            assert!(!draft.metadata_allowed);
+            assert!(draft.fetch.is_none());
+            assert!(draft.error.is_none());
+            assert!(
+                !app.store.torrents.is_running(),
+                "Opening a review must not start the torrent helper"
+            );
+            if let Some(job) = job {
+                assert_eq!(draft.existing.as_deref(), Some(job.id.as_str()));
+                assert_eq!(app.store.list().unwrap().len(), 1);
+            } else {
+                assert!(draft.awaiting_consent);
+                assert!(app.store.list().unwrap().is_empty());
+            }
+        }
     }
 
     fn paste_magnet(app: &mut Desktop, ctx: &egui::Context) -> egui::FullOutput {

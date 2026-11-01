@@ -85,6 +85,34 @@ impl Desktop {
 
     /// Keep only the newest link and announce it through the tray when available.
     pub(super) fn offer_clipboard_link(&mut self, url: String) {
+        if download_engine::torrent::is_magnet(&url) {
+            let Ok(hash) = download_engine::torrent::info_hash(&url) else {
+                return;
+            };
+            let name = reqwest::Url::parse(&url)
+                .ok()
+                .and_then(|link| {
+                    link.query_pairs()
+                        .find_map(|(key, value)| (key == "dn").then(|| value.into_owned()))
+                })
+                .map(|name| download_engine::model::safe_filename(&name))
+                .unwrap_or_else(|| format!("Torrent {}", &hash[..12]));
+            if let Some(tray) = self.tray.as_ref().filter(|tray| tray.available())
+                && let Err(error) = tray.offer_link(LinkOffer {
+                    name: name.clone(),
+                    host: tr("Magnet link").into(),
+                })
+            {
+                self.notice = Some(Notice::error(error.to_string()));
+            }
+            self.clipboard.offer = Some(Offer {
+                url,
+                name,
+                site: "Magnet link".into(),
+                category: Category::Torrents,
+            });
+            return;
+        }
         let Ok(job) = Job::new(
             &url,
             None,
@@ -134,6 +162,18 @@ impl Desktop {
         let Some(offer) = self.clipboard.offer.take() else {
             return;
         };
+        if download_engine::torrent::is_magnet(&offer.url) {
+            match self.store.submit_external_opens(&[
+                download_engine::external_open::Target::Magnet(offer.url.clone()),
+            ]) {
+                Ok(_) => {}
+                Err(error) => {
+                    self.clipboard.offer = Some(offer);
+                    self.notice = Some(Notice::error(error.to_string()));
+                }
+            }
+            return;
+        }
         self.url = offer.url;
         self.name.clear();
         self.expected_sha256.clear();

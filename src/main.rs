@@ -2,6 +2,7 @@
 mod clipboard_links;
 mod desktop;
 mod drop_target;
+mod launch;
 mod startup;
 mod tray;
 mod url_drop;
@@ -18,6 +19,29 @@ fn main() {
     // Request the Explorer scan action in an isolated helper, before any
     // desktop startup, queue access, or interactive startup-error handling.
     let helper_args: Vec<_> = std::env::args_os().collect();
+    if helper_args
+        .get(1)
+        .is_some_and(|arg| arg == "--register-torrents" || arg == "--unregister-torrents")
+    {
+        let result = (|| -> anyhow::Result<()> {
+            anyhow::ensure!(
+                helper_args.len() == 2,
+                "This registration command takes no input arguments"
+            );
+            let action = if helper_args[1] == "--register-torrents" {
+                download_engine::torrent_shell::Action::Register
+            } else {
+                download_engine::torrent_shell::Action::Remove
+            };
+            download_engine::torrent_shell::apply(action)?;
+            Ok(())
+        })();
+        if let Err(error) = result {
+            eprintln!("{error:#}");
+            std::process::exit(1);
+        }
+        return;
+    }
     if helper_args
         .get(1)
         .is_some_and(|a| a == "--antivirus-scan-request" || a == "--malwarebytes-scan-request")
@@ -82,6 +106,8 @@ fn main() {
     }
 }
 fn start() -> anyhow::Result<()> {
+    let args: Vec<_> = std::env::args_os().skip(1).collect();
+    let launch = launch::Launch::parse(&args, &std::env::current_dir()?)?;
     let paths = AppPaths::discover()?;
     if diagnostics::init(&paths, Component::Desktop).is_err() {
         eprintln!(
@@ -100,8 +126,8 @@ fn start() -> anyhow::Result<()> {
         Ok(_) => {}
         Err(error) => diagnostics::error(Event::BrowserSetupFailed, &error),
     }
-    let show_browser_setup = std::env::args().any(|arg| arg == "--browser-setup");
-    let autostart = std::env::args().any(|arg| arg == startup::ARGUMENT);
+    let show_browser_setup = launch.browser_setup;
+    let autostart = launch.autostart;
     paths.prepare()?;
     let lock = OpenOptions::new()
         .create(true)
@@ -111,6 +137,9 @@ fn start() -> anyhow::Result<()> {
     match lock.try_lock() {
         Ok(()) => {}
         Err(std::fs::TryLockError::WouldBlock) => {
+            if !launch.targets.is_empty() {
+                return launch.forward(&Store::open(paths)?);
+            }
             // A sign-in launch must not bring an already running copy to the front.
             if !autostart {
                 tray::show_existing(&paths, show_browser_setup)?;
@@ -120,6 +149,9 @@ fn start() -> anyhow::Result<()> {
         Err(e) => return Err(e.into()),
     }
     let store = Store::open(paths)?;
+    if !launch.targets.is_empty() {
+        store.submit_external_opens(&launch.targets)?;
+    }
     let hidden = startup::launch_hidden(autostart, store.startup_preferences());
     let scheduler = Scheduler::start(store.clone())?;
     diagnostics::record(Level::Info, Event::Ready, Details::default());

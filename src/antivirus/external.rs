@@ -26,8 +26,17 @@ pub(super) fn request(
 
 pub fn helper_request(provider: Provider, file: &Path) -> Result<()> {
     ensure!(provider.external_review(), "Unsupported external scanner");
-    let _parents = super::process::guard_parents(file)?;
-    let _file = crate::download_file::read_completed(file)?;
+    let directory = file.is_dir();
+    let _parents = super::process::guard_parents(&if directory {
+        file.join(".scan-check")
+    } else {
+        file.to_owned()
+    })?;
+    let _file = if directory {
+        None
+    } else {
+        Some(crate::download_file::read_completed(file)?)
+    };
     #[cfg(windows)]
     {
         windows::request(provider, file)

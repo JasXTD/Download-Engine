@@ -38,7 +38,7 @@ const DOCUMENTS: &[&str] = &[
     "doc", "docx", "epub", "mobi", "odp", "ods", "odt", "pdf", "ppt", "pptx", "rtf", "xls", "xlsx",
 ];
 
-/// Return the normalized link when the whole text is one HTTP(S) file link.
+/// Return a file link or magnet for review, never for an automatic download.
 pub fn file_link(text: &str) -> Option<String> {
     let text = text.trim();
     // One link only: a sentence or several lines containing a link is not an offer.
@@ -47,6 +47,10 @@ pub fn file_link(text: &str) -> Option<String> {
         || text.chars().any(|c| c.is_whitespace() || c.is_control())
     {
         return None;
+    }
+    if download_engine::torrent::is_magnet(text) {
+        download_engine::torrent::info_hash(text).ok()?;
+        return Some(text.to_owned());
     }
     let url = download_engine::model::validate_download_url(text).ok()?;
     if !matches!(url.scheme(), "http" | "https") {
@@ -564,6 +568,20 @@ mod native {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn magnets_are_offered_once_and_invalid_or_private_copies_are_ignored() {
+        let link =
+            "magnet:?xt=urn:btih:0123456789012345678901234567890123456789&dn=Harmless%20sample";
+        let mut filter = Filter::default();
+        assert_eq!(
+            filter.offer(Some(link), Source::Other).as_deref(),
+            Some(link)
+        );
+        assert!(filter.offer(Some(link), Source::Other).is_none());
+        assert!(file_link("magnet:?xt=urn:btih:invalid").is_none());
+        assert!(file_link(&format!("{link}\nother text")).is_none());
+        assert!(Filter::default().offer(Some(link), Source::Own).is_none());
+    }
     #[test]
     fn only_single_http_file_links_with_known_extensions_are_offered() {
         for (text, expected) in [

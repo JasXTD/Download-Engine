@@ -132,8 +132,12 @@ torrents are on. While they're off, `de-torrent.exe` doesn't start.
 Everything a torrent brings comes from strangers, including its file names, tracker
 addresses and peers' messages. That's why this code runs in a separate program:
 
-- The helper runs only while a torrent needs it, and it opens no port for incoming
-  connections. Uploading stops when the download finishes.
+- The helper runs only while a torrent needs it. Incoming connections are off by default.
+  Windows limits the helper process to 1 GiB of committed memory. Downloads stop uploading
+  at completion; continued sharing requires an explicit sharing session.
+- Incoming and outgoing connections share a per-torrent limit, including queued sockets,
+  with a separate limit per source IP. Disconnects, failed handshakes and cancellation
+  release capacity. Incoming sockets cannot fill the queue used for download completion.
 - A piece counts only after its SHA-1 hash matches, and a peer that sends bad pieces is
   dropped and banned.
 - File names can't leave the torrent's folder, and the app checks the helper's paths again
@@ -141,7 +145,18 @@ addresses and peers' messages. That's why this code runs in a separate program:
 - Files are written to a temporary folder, marked as coming from the internet, and reach
   the download folder only when complete. They never replace an existing file.
 - Tracker addresses can't lead to this computer or its local network, and trackers can't
-  redirect the helper anywhere else.
+  redirect the helper anywhere else. Stranger-supplied peer addresses and DHT nodes use
+  the same public-address policy, including mapped IPv6, link-local and CGNAT addresses.
+- A magnet's privacy status is unknown until its metadata is hash-checked. Metadata
+  discovery uses only its trackers; private or unknown torrents never query public DHT.
+  A trackerless magnet requires cached metadata or a `.torrent` file.
+- Metainfo decoding limits files, path components and aggregate filename bytes. Tracker
+  lists, response bodies, concurrent requests and polling rates are bounded. Metadata
+  collectors reserve per-torrent and process-wide memory budgets before accepting data,
+  allocate chunks only as they arrive, and reject repeated metadata handshakes.
+- Trackers can supply at most 200 peer results per response. Discovery uses a bounded
+  queue and a shared limit of 5,000 unique addresses across trackers, DHT and peer exchange.
+  Once that limit is reached, tracker announcements continue without adding more peers.
 
 A verified torrent can still contain harmful files, because a hash only proves that the
 file is the one the torrent describes. Treat files from a torrent as you would any other

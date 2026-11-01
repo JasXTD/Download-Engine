@@ -18,6 +18,7 @@ pub enum Phase {
     Merging,
     Verifying,
     Saving,
+    Seeding,
 }
 impl Phase {
     pub fn label(self) -> &'static str {
@@ -32,6 +33,7 @@ impl Phase {
             Self::Merging => "Merging video",
             Self::Verifying => "Verifying file",
             Self::Saving => "Saving file",
+            Self::Seeding => "Seeding",
         }
     }
 }

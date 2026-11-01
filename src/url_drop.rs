@@ -8,7 +8,19 @@ pub fn urls(text: &str) -> Result<String> {
     let mut seen = HashSet::new();
     let mut result = Vec::new();
     for line in text.lines().filter(|s| !s.trim().is_empty()) {
-        let url = download_engine::model::validate_download_url(line)?.to_string();
+        let line = line.trim();
+        let url = if download_engine::torrent::is_magnet(line)
+            || std::path::Path::new(line).is_absolute()
+        {
+            download_engine::external_open::Target::parse(
+                std::ffi::OsStr::new(line),
+                std::path::Path::new(""),
+            )?
+            .text()?
+            .to_owned()
+        } else {
+            download_engine::model::validate_download_url(line)?.to_string()
+        };
         if seen.insert(url.clone()) {
             result.push(url);
         }
@@ -36,9 +48,9 @@ mod native {
                 DataExchange::RegisterClipboardFormatW,
                 Memory::{GlobalLock, GlobalSize, GlobalUnlock},
                 Ole::{
-                    CF_UNICODETEXT, DROPEFFECT, DROPEFFECT_COPY, DROPEFFECT_NONE, IDropTarget,
-                    IDropTarget_Impl, OleInitialize, OleUninitialize, RegisterDragDrop,
-                    ReleaseStgMedium, RevokeDragDrop,
+                    CF_HDROP, CF_UNICODETEXT, DROPEFFECT, DROPEFFECT_COPY, DROPEFFECT_NONE,
+                    IDropTarget, IDropTarget_Impl, OleInitialize, OleUninitialize,
+                    RegisterDragDrop, ReleaseStgMedium, RevokeDragDrop,
                 },
                 SystemServices::MODIFIERKEYS_FLAGS,
             },
@@ -97,8 +109,75 @@ mod native {
         value
     }
     impl Target {
+        fn files(medium: &STGMEDIUM) -> Option<String> {
+            if medium.tymed != TYMED_HGLOBAL.0 as u32 {
+                return None;
+            }
+            let handle = unsafe { medium.u.hGlobal };
+            let size = unsafe { GlobalSize(handle) };
+            if !(24..=1_000_000).contains(&size) {
+                return None;
+            }
+            let data = unsafe { GlobalLock(handle) };
+            if data.is_null() {
+                return None;
+            }
+            let result = (|| {
+                // Bound DROPFILES parsing to its actual allocation, including
+                // forged offsets and missing double-NUL terminators.
+                let bytes = unsafe { std::slice::from_raw_parts(data.cast::<u8>(), size) };
+                let offset = u32::from_le_bytes(bytes[..4].try_into().ok()?) as usize;
+                if offset < 20
+                    || offset > size - 4
+                    || !offset.is_multiple_of(2)
+                    || bytes[16..20] != [1, 0, 0, 0]
+                {
+                    return None;
+                }
+                let units: Vec<u16> = bytes[offset..]
+                    .as_chunks::<2>()
+                    .0
+                    .iter()
+                    .map(|pair| u16::from_le_bytes([pair[0], pair[1]]))
+                    .collect();
+                let mut remaining = units.as_slice();
+                let mut paths = Vec::new();
+                loop {
+                    let length = remaining.iter().position(|unit| *unit == 0)?;
+                    if length == 0 {
+                        return (!paths.is_empty()).then(|| paths.join("\n"));
+                    }
+                    if length > 32768 || paths.len() >= download_engine::external_open::MAX_PENDING
+                    {
+                        return None;
+                    }
+                    let path = String::from_utf16(&remaining[..length]).ok()?;
+                    let target = download_engine::external_open::Target::parse(
+                        std::ffi::OsStr::new(&path),
+                        std::path::Path::new(""),
+                    )
+                    .ok()?;
+                    if !matches!(
+                        target,
+                        download_engine::external_open::Target::TorrentFile(_)
+                    ) {
+                        return None;
+                    }
+                    paths.push(target.text().ok()?.to_owned());
+                    remaining = &remaining[length + 1..];
+                }
+            })();
+            unsafe {
+                let _ = GlobalUnlock(handle);
+            }
+            result
+        }
         fn text(&self, data: Ref<IDataObject>) -> Option<String> {
             let data = data.as_ref()?;
+            if let Ok(medium) = unsafe { data.GetData(&format(CF_HDROP.0)) } {
+                let medium = Medium(medium);
+                return Self::files(&medium.0);
+            }
             // Browser URL format avoids an HTML payload or a dragged link's display label.
             read(data, self.url_format)
                 .or_else(|| read(data, CF_UNICODETEXT.0))
@@ -272,11 +351,12 @@ mod native {
         #[implement(IDataObject)]
         struct Data {
             text: Vec<u16>,
+            format: u16,
         }
         #[allow(non_snake_case)]
         impl IDataObject_Impl for Data_Impl {
             fn GetData(&self, requested: *const FORMATETC) -> windows::core::Result<STGMEDIUM> {
-                if requested.is_null() || unsafe { (*requested).cfFormat != CF_UNICODETEXT.0 } {
+                if requested.is_null() || unsafe { (*requested).cfFormat != self.format } {
                     return Err(DV_E_FORMATETC.into());
                 }
                 let handle = unsafe { GlobalAlloc(GMEM_MOVEABLE, self.text.len() * 2)? };
@@ -337,6 +417,81 @@ mod native {
             }
         }
         #[test]
+        fn ole_file_drop_reviews_only_bounded_torrent_paths() {
+            let (sender, events) = mpsc::sync_channel(8);
+            let target: IDropTarget = Target {
+                sender,
+                ctx: eframe::egui::Context::default(),
+                accepted: Cell::new(false),
+                url_format: 0,
+                hover: None,
+            }
+            .into();
+            let a = std::env::temp_dir()
+                .join("not-created-a.torrent")
+                .display()
+                .to_string();
+            let b = std::env::temp_dir()
+                .join("not-created-b.torrent")
+                .display()
+                .to_string();
+            for (names, valid) in [
+                (vec![a.clone(), b.clone()], true),
+                (vec![a.clone(), "C:\\bad.exe".into()], false),
+                (vec![a.clone(); 9], false),
+            ] {
+                let mut text = vec![0u16; 10];
+                text[0] = 20;
+                text[8] = 1;
+                for name in names {
+                    text.extend(name.encode_utf16());
+                    text.push(0);
+                }
+                text.push(0);
+                let data: IDataObject = Data {
+                    text,
+                    format: CF_HDROP.0,
+                }
+                .into();
+                let mut effect = DROPEFFECT_COPY;
+                unsafe {
+                    target
+                        .DragEnter(&data, MODIFIERKEYS_FLAGS(0), POINTL::default(), &mut effect)
+                        .unwrap();
+                }
+                assert!(events.try_recv().is_err());
+                assert_eq!(effect == DROPEFFECT_COPY, valid);
+                unsafe {
+                    target
+                        .Drop(&data, MODIFIERKEYS_FLAGS(0), POINTL::default(), &mut effect)
+                        .unwrap();
+                }
+                let received = events.try_recv();
+                assert_eq!(received.is_ok(), valid);
+                if valid {
+                    assert_eq!(received.unwrap(), format!("{a}\n{b}"));
+                }
+            }
+            for text in [
+                vec![65535u16; 12],
+                vec![20, 0, 0, 0, 0, 0, 0, 0, 1, 0, 65, 65],
+            ] {
+                let data: IDataObject = Data {
+                    text,
+                    format: CF_HDROP.0,
+                }
+                .into();
+                let mut effect = DROPEFFECT_COPY;
+                unsafe {
+                    target
+                        .Drop(&data, MODIFIERKEYS_FLAGS(0), POINTL::default(), &mut effect)
+                        .unwrap();
+                }
+                assert_eq!(effect, DROPEFFECT_NONE);
+                assert!(events.try_recv().is_err());
+            }
+        }
+        #[test]
         fn ole_unicode_drop_uses_real_com_vtable_and_rejects_unsafe_or_unterminated_data() {
             let (sender, events) = mpsc::sync_channel(1);
             let target: IDropTarget = Target {
@@ -356,7 +511,11 @@ mod native {
                 if terminated {
                     text.push(0);
                 }
-                let data: IDataObject = Data { text }.into();
+                let data: IDataObject = Data {
+                    text,
+                    format: CF_UNICODETEXT.0,
+                }
+                .into();
                 let mut effect = DROPEFFECT_COPY;
                 unsafe {
                     target
@@ -378,6 +537,7 @@ mod native {
                 }
             }
             let data: IDataObject = Data {
+                format: CF_UNICODETEXT.0,
                 text: "https://example.com/a\0".encode_utf16().collect(),
             }
             .into();
@@ -423,6 +583,7 @@ mod native {
             .into();
             let data = |text: &str| -> IDataObject {
                 Data {
+                    format: CF_UNICODETEXT.0,
                     text: text.encode_utf16().chain(Some(0)).collect(),
                 }
                 .into()
@@ -507,6 +668,24 @@ mod native {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn local_torrents_and_magnets_are_validated_without_reading_files() {
+        let path = std::env::temp_dir().join("not-created-by-test.torrent");
+        let link = "magnet:?xt=urn:btih:0123456789012345678901234567890123456789";
+        let input = format!("{}\n{link}", path.display());
+        assert_eq!(urls(&input).unwrap(), input);
+        assert!(urls("magnet:?xt=urn:btih:bad").is_err());
+        assert!(
+            urls(
+                &std::env::temp_dir()
+                    .join("not-a-torrent.exe")
+                    .display()
+                    .to_string()
+            )
+            .is_err()
+        );
+        assert!(urls(&format!("{input}\n--register-torrents")).is_err());
+    }
     #[test]
     fn drops_are_validated_deduplicated_and_never_interpreted_as_commands() {
         assert_eq!(

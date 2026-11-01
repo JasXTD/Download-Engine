@@ -29,6 +29,290 @@ const POLL: Duration = Duration::from_millis(100);
 const PIECE: usize = 16384;
 const MAIN: &str = download_engine::queue::MAIN_QUEUE;
 
+#[track_caller]
+fn wait_sharing(bench: &Bench, id: &str, expected: bool) {
+    let deadline = Instant::now() + PATIENCE;
+    loop {
+        let active = bench.store.activity.get(id)
+            == Some(download_engine::transfer_activity::Phase::Seeding);
+        if active == expected && (expected || bench.store.activity.get(id).is_none()) {
+            return;
+        }
+        let error = bench.store.torrent_sharing_error(id).unwrap();
+        assert!(error.is_none(), "Sharing failed: {error:?}");
+        assert!(
+            Instant::now() < deadline,
+            "Sharing did not become {expected}"
+        );
+        std::thread::sleep(POLL);
+    }
+}
+
+fn wait_sharing_saved(bench: &Bench, id: &str, expected: bool) {
+    let deadline = Instant::now() + PATIENCE;
+    while bench.store.torrent_sharing(id).unwrap() != expected {
+        assert!(
+            Instant::now() < deadline,
+            "Sharing preference was not saved: {:?}",
+            bench.scheduler.errors.try_iter().collect::<Vec<_>>()
+        );
+        std::thread::sleep(POLL);
+    }
+}
+
+#[test]
+fn sharing_auto_start_stop_all_rename_and_history_cleanup_keep_completed_data() {
+    let bench = Bench::with_settings(
+        sample("original.bin", &[("original.bin", 8 * PIECE)], 901),
+        Settings {
+            enabled: true,
+            dht: false,
+            seed_completed: true,
+            ..Default::default()
+        },
+    );
+    let job = bench.add(&bench.details(), vec![0]);
+    let completed = bench.wait_complete(&job.id);
+    wait_sharing(&bench, &job.id, true);
+    assert!(bench.store.torrent_sharing(&job.id).unwrap());
+    bench.scheduler.send(Command::PauseAll).unwrap();
+    wait_sharing(&bench, &job.id, false);
+    bench.wait_for_helper_to_stop();
+    assert!(!bench.store.torrent_sharing(&job.id).unwrap());
+    assert_eq!(
+        bench.store.get(&job.id).unwrap().unwrap().status,
+        Status::Complete
+    );
+    assert_eq!(
+        std::fs::read(completed.saved_path.unwrap()).unwrap(),
+        bench.seeder.sample.data
+    );
+    bench
+        .scheduler
+        .send(Command::StartSharing(job.id.clone()))
+        .unwrap();
+    wait_sharing(&bench, &job.id, true);
+    bench.rename(&job.id, "renamed.bin");
+    let renamed = bench.wait(
+        "rename after stopping the seed",
+        |job| job.name == "renamed.bin",
+        &job.id,
+    );
+    assert!(!bench.store.torrent_sharing(&job.id).unwrap());
+    bench
+        .scheduler
+        .send(Command::StartSharing(job.id.clone()))
+        .unwrap();
+    wait_sharing(&bench, &job.id, true);
+    bench
+        .scheduler
+        .send(Command::ClearHistory {
+            id: job.id.clone(),
+            queue: MAIN.into(),
+        })
+        .unwrap();
+    let deadline = Instant::now() + PATIENCE;
+    while bench.store.get(&job.id).unwrap().is_some() {
+        assert!(Instant::now() < deadline);
+        std::thread::sleep(POLL);
+    }
+    bench.wait_for_helper_to_stop();
+    assert!(bench.state_files().is_empty());
+    assert_eq!(
+        std::fs::read(renamed.saved_path.unwrap()).unwrap(),
+        bench.seeder.sample.data
+    );
+}
+
+#[test]
+fn sharing_selected_folder_moves_then_shares_again_without_skipped_files() {
+    let bench = Bench::with_settings(
+        sample(
+            "pack",
+            &[("a.bin", 4 * PIECE), ("nested/b.bin", 4 * PIECE)],
+            902,
+        ),
+        Settings {
+            enabled: true,
+            dht: false,
+            seed_completed: true,
+            ..Default::default()
+        },
+    );
+    let job = bench.add(&bench.details(), vec![1]);
+    let completed = bench.wait_complete(&job.id);
+    wait_sharing(&bench, &job.id, true);
+    let old = completed.saved_path.unwrap();
+    let destination = bench.folder.join("relocated");
+    std::fs::create_dir(&destination).unwrap();
+    bench
+        .scheduler
+        .send(Command::MoveFileToChosenFolder {
+            id: job.id.clone(),
+            folder: destination.clone(),
+        })
+        .unwrap();
+    let moved = bench.wait(
+        "folder relocation after closing seed files",
+        |job| job.directory == destination,
+        &job.id,
+    );
+    assert!(!old.exists());
+    assert!(!moved.saved_path.as_ref().unwrap().join("a.bin").exists());
+    // Normal shutdown joins the file operation, whose persisted path is visible
+    // before its final cleanup has finished. Reopen also verifies the moved metadata.
+    let bench = bench.reopen();
+    bench.rename(&job.id, "Renamed collection");
+    let moved = bench.wait(
+        "renaming the moved folder",
+        |job| job.name == "Renamed collection",
+        &job.id,
+    );
+    bench
+        .scheduler
+        .send(Command::StartSharing(job.id.clone()))
+        .unwrap();
+    wait_sharing(&bench, &job.id, true);
+    bench
+        .scheduler
+        .send(Command::StopSharing(job.id.clone()))
+        .unwrap();
+    wait_sharing(&bench, &job.id, false);
+    bench.wait_for_helper_to_stop();
+    assert_eq!(
+        std::fs::read(moved.saved_path.unwrap().join("nested/b.bin")).unwrap(),
+        bench.seeder.sample.data[4 * PIECE..]
+    );
+}
+
+#[test]
+fn sharing_recovers_after_normal_restart_but_stop_all_and_helper_failure_stay_stopped() {
+    let bench = Bench::with_settings(
+        single(),
+        Settings {
+            enabled: true,
+            dht: false,
+            seed_completed: true,
+            ..Default::default()
+        },
+    );
+    let job = bench.add(&bench.details(), vec![0]);
+    let completed = bench.wait_complete(&job.id);
+    wait_sharing(&bench, &job.id, true);
+    let bench = bench.reopen();
+    wait_sharing(&bench, &job.id, true);
+    bench.store.torrents.kill_for_tests();
+    let deadline = Instant::now() + PATIENCE;
+    while bench
+        .store
+        .torrent_sharing_error(&job.id)
+        .unwrap()
+        .is_none()
+        || bench.store.activity.get(&job.id).is_some()
+    {
+        assert!(
+            Instant::now() < deadline,
+            "the failed helper must stop sharing"
+        );
+        std::thread::sleep(POLL);
+    }
+    assert!(!bench.store.torrent_sharing(&job.id).unwrap());
+    assert_eq!(
+        std::fs::read(completed.saved_path.unwrap()).unwrap(),
+        bench.seeder.sample.data
+    );
+    bench
+        .scheduler
+        .send(Command::StartSharing(job.id.clone()))
+        .unwrap();
+    wait_sharing_saved(&bench, &job.id, true);
+    wait_sharing(&bench, &job.id, true);
+    bench.scheduler.send(Command::PauseAll).unwrap();
+    wait_sharing(&bench, &job.id, false);
+    let bench = bench.reopen();
+    assert!(!bench.store.torrent_sharing(&job.id).unwrap());
+    assert!(!bench.store.torrents.is_running());
+    assert_eq!(
+        bench.store.get(&job.id).unwrap().unwrap().status,
+        Status::Complete
+    );
+}
+
+#[test]
+fn sharing_stop_all_cancels_even_when_its_database_write_fails() {
+    let bench = Bench::with_settings(
+        single(),
+        Settings {
+            enabled: true,
+            dht: false,
+            seed_completed: true,
+            ..Default::default()
+        },
+    );
+    let job = bench.add(&bench.details(), vec![0]);
+    bench.wait_complete(&job.id);
+    wait_sharing(&bench, &job.id, true);
+    bench.set_speed_limit(Some(512 * 1024));
+    let gate = Arc::new(PayloadGate::default());
+    // Let the normal progress checkpoint publish before holding the response open.
+    gate.hold_after(1024 * 1024);
+    let direct = bench
+        .store
+        .new_download(
+            &http_file_with_gate(&bench, Arc::new(bytes_of(2_000_000, 41)), gate),
+            Some("stop-fixture.bin"),
+            Some(&bench.folder),
+            "stop-write-failure-http".into(),
+        )
+        .unwrap();
+    bench.store.enqueue(&direct).unwrap();
+    bench.wait(
+        "ordinary download to start",
+        |job| job.status == Status::Downloading && job.downloaded > 0,
+        &direct.id,
+    );
+    // Only schema DDL on this disposable profile. App writes still use its registered functions.
+    let db = rusqlite::Connection::open(bench.store.paths.data.join("queue.sqlite3")).unwrap();
+    db.busy_timeout(Duration::from_secs(5)).unwrap();
+    db.execute_batch("CREATE TRIGGER fail_sharing_stop BEFORE INSERT ON torrent_sharing BEGIN SELECT RAISE(ABORT,'fixture sharing write failure'); END;").unwrap();
+    bench.scheduler.send(Command::PauseAll).unwrap();
+    wait_sharing(&bench, &job.id, false);
+    bench.wait_for_helper_to_stop();
+    bench.wait(
+        "Stop all still stops ordinary downloads",
+        |job| job.status == Status::Paused,
+        &direct.id,
+    );
+    assert!(
+        bench.store.torrent_sharing(&job.id).unwrap(),
+        "the injected error prevented persistence"
+    );
+    assert!(
+        bench
+            .scheduler
+            .errors
+            .recv_timeout(Duration::from_secs(5))
+            .unwrap()
+            .contains("fixture sharing write failure")
+    );
+    // Observe several scheduler turns: a persisted enabled flag must not undo Stop all.
+    let until = Instant::now() + Duration::from_secs(1);
+    while Instant::now() < until {
+        assert!(!bench.store.torrents.is_running());
+        std::thread::sleep(POLL);
+    }
+    db.execute_batch("DROP TRIGGER fail_sharing_stop;").unwrap();
+    bench
+        .scheduler
+        .send(Command::StartSharing(job.id.clone()))
+        .unwrap();
+    wait_sharing(&bench, &job.id, true);
+    bench.scheduler.send(Command::PauseAll).unwrap();
+    wait_sharing(&bench, &job.id, false);
+    wait_sharing_saved(&bench, &job.id, false);
+    assert!(!bench.store.torrent_sharing(&job.id).unwrap());
+}
+
 fn text(value: &str) -> Vec<u8> {
     format!("{}:{value}", value.len()).into_bytes()
 }
@@ -106,6 +390,40 @@ struct Seeder {
     sample: Arc<Sample>,
     sent: Arc<AtomicU64>,
     connections: Arc<AtomicUsize>,
+    gate: Arc<PayloadGate>,
+}
+
+/// Keep control tests in the transferring state until the test releases them.
+/// Wall-clock throttles alone can finish while a heavily loaded host is descheduled.
+struct PayloadGate {
+    limit: AtomicU64,
+    changed: tokio::sync::Notify,
+}
+impl Default for PayloadGate {
+    fn default() -> Self {
+        Self {
+            limit: AtomicU64::new(u64::MAX),
+            changed: Default::default(),
+        }
+    }
+}
+impl PayloadGate {
+    fn hold_after(&self, bytes: u64) {
+        self.limit.store(bytes, Ordering::Release);
+    }
+    fn release(&self) {
+        self.limit.store(u64::MAX, Ordering::Release);
+        self.changed.notify_waiters();
+    }
+    async fn wait(&self, sent: u64) {
+        loop {
+            let changed = self.changed.notified();
+            if sent < self.limit.load(Ordering::Acquire) {
+                return;
+            }
+            changed.await;
+        }
+    }
 }
 
 impl Seeder {
@@ -151,6 +469,7 @@ impl Seeder {
                     let start = piece * PIECE + begin;
                     let block = &self.sample.data[start..start + length];
                     let body = [&message[1..9], block].concat();
+                    self.gate.wait(self.sent.load(Ordering::Relaxed)).await;
                     send(&mut peer, 7, &body).await?;
                     self.sent.fetch_add(length as u64, Ordering::Relaxed);
                 }
@@ -188,13 +507,14 @@ async fn send(peer: &mut TcpStream, id: u8, body: &[u8]) -> std::io::Result<()> 
 }
 
 struct Bench {
-    _temp: tempfile::TempDir,
-    store: Store,
     scheduler: Scheduler,
+    store: Store,
     seeder: Seeder,
     address: SocketAddr,
     folder: PathBuf,
     runtime: tokio::runtime::Runtime,
+    // Close both runtimes and their file handles before removing the fixture.
+    _temp: tempfile::TempDir,
 }
 
 impl Bench {
@@ -237,6 +557,7 @@ impl Bench {
             sample: Arc::new(sample),
             sent: Arc::default(),
             connections: Arc::default(),
+            gate: Arc::default(),
         };
         let listener = runtime.block_on(TcpListener::bind("127.0.0.1:0")).unwrap();
         let address = listener.local_addr().unwrap();
@@ -294,6 +615,30 @@ impl Bench {
             .unwrap()
     }
 
+    fn rename(&self, id: &str, name: &str) {
+        let key = uuid::Uuid::new_v4().to_string();
+        self.store
+            .submit_control(
+                &key,
+                &download_engine::control::Action::Rename {
+                    id: id.into(),
+                    name: name.into(),
+                    script_run: None,
+                },
+            )
+            .unwrap();
+        let deadline = Instant::now() + PATIENCE;
+        loop {
+            let receipt = self.store.control_receipt(&key).unwrap();
+            if !matches!(receipt.state.as_str(), "pending" | "running") {
+                assert_eq!(receipt.state, "done", "{receipt:?}");
+                return;
+            }
+            assert!(Instant::now() < deadline, "{receipt:?}");
+            std::thread::sleep(POLL);
+        }
+    }
+
     fn wait(&self, what: &str, done: impl Fn(&Job) -> bool, id: &str) -> Job {
         let deadline = Instant::now() + PATIENCE;
         loop {
@@ -303,9 +648,10 @@ impl Bench {
             }
             assert!(
                 Instant::now() < deadline,
-                "{what}: {:?} {:?}",
+                "{what}: {:?} {:?}; control errors: {:?}",
                 job.status,
-                job.error
+                job.error,
+                self.scheduler.errors.try_iter().collect::<Vec<_>>()
             );
             assert!(job.status != Status::Failed, "{what}: {:?}", job.error);
             std::thread::sleep(POLL);
@@ -325,6 +671,34 @@ impl Bench {
         while self.store.torrents.is_running() {
             assert!(Instant::now() < deadline, "the helper kept running");
             std::thread::sleep(POLL);
+        }
+    }
+
+    fn reopen(self) -> Self {
+        let Self {
+            _temp,
+            store,
+            scheduler,
+            seeder,
+            address,
+            folder,
+            runtime,
+        } = self;
+        let paths = store.paths.clone();
+        drop(scheduler);
+        assert!(!store.torrents.is_running());
+        drop(store);
+        let store = Store::open(paths).unwrap();
+        store.torrents.set_test_peers(vec![address]);
+        let scheduler = Scheduler::start(store.clone()).unwrap();
+        Self {
+            _temp,
+            store,
+            scheduler,
+            seeder,
+            address,
+            folder,
+            runtime,
         }
     }
 
@@ -453,7 +827,12 @@ fn a_torrent_resumed_while_off_fails_without_starting_the_helper() {
         if saved.status == Status::Failed {
             break saved;
         }
-        assert!(Instant::now() < deadline, "{:?}", saved.status);
+        assert!(
+            Instant::now() < deadline,
+            "{:?}; control errors: {:?}",
+            saved.status,
+            bench.scheduler.errors.try_iter().collect::<Vec<_>>()
+        );
         std::thread::sleep(POLL);
     };
     assert_eq!(failed.error.as_deref(), Some(OFF_MESSAGE));
@@ -477,7 +856,11 @@ fn a_lone_file_lands_in_the_download_folder_and_nothing_stays_behind() {
     assert_eq!(finished.downloaded, 300_000);
     assert_eq!(bench.leftovers(), Vec::<String>::new());
     bench.wait_for_helper_to_stop();
-    assert_eq!(bench.state_files(), Vec::<String>::new());
+    assert_eq!(
+        bench.state_files(),
+        vec![format!("{}.info", details.info_hash)],
+        "only metadata remains for later read-only sharing"
+    );
 }
 
 #[test]
@@ -627,6 +1010,15 @@ fn the_file_list_of_a_magnet_link_comes_from_peers_and_can_be_cancelled() {
     bench.wait_for_helper_to_stop();
 
     let unknown = sample("other", &[("other", 40_000)], 9);
+    let error = bench
+        .store
+        .fetch_torrent_details(
+            &magnet(&unknown),
+            &tokio_util::sync::CancellationToken::new(),
+        )
+        .unwrap_err();
+    assert!(error.to_string().contains(".torrent file"));
+    bench.wait_for_helper_to_stop();
     let cancel = tokio_util::sync::CancellationToken::new();
     cancel.cancel();
     assert!(
@@ -969,6 +1361,10 @@ fn a_magnet_link_is_not_a_download_url_for_anything_else() {
 
 /// A direct HTTP file beside the torrent seeder, so Stop all crosses both worker types.
 fn http_file(bench: &Bench, data: Arc<Vec<u8>>) -> String {
+    http_file_with_gate(bench, data, Arc::default())
+}
+
+fn http_file_with_gate(bench: &Bench, data: Arc<Vec<u8>>, gate: Arc<PayloadGate>) -> String {
     let listener = bench
         .runtime
         .block_on(TcpListener::bind("127.0.0.1:0"))
@@ -977,6 +1373,7 @@ fn http_file(bench: &Bench, data: Arc<Vec<u8>>) -> String {
     bench.runtime.spawn(async move {
         while let Ok((mut peer, _)) = listener.accept().await {
             let data = data.clone();
+            let gate = gate.clone();
             tokio::spawn(async move {
                 let mut request = Vec::new();
                 while request.len() < 8192 && !request.ends_with(b"\r\n\r\n") {
@@ -986,7 +1383,8 @@ fn http_file(bench: &Bench, data: Arc<Vec<u8>>) -> String {
                 }
                 let header = format!("HTTP/1.1 200 OK\r\nContent-Length: {}\r\nContent-Type: application/octet-stream\r\nETag: \"fixed\"\r\nConnection: close\r\n\r\n", data.len());
                 if peer.write_all(header.as_bytes()).await.is_err() || request.starts_with(b"HEAD ") { return; }
-                for chunk in data.chunks(16384) {
+                for (index, chunk) in data.chunks(16384).enumerate() {
+                    gate.wait((index * 16384) as u64).await;
                     if peer.write_all(chunk).await.is_err() { return; }
                     tokio::time::sleep(Duration::from_millis(2)).await;
                 }
@@ -1061,6 +1459,7 @@ fn stop_all_holds_torrents_and_http_until_each_is_resumed() {
 #[test]
 fn pause_survives_reopening_the_profile_and_resumes_verified_pieces() {
     let bench = Bench::new(sample("resume.bin", &[("resume.bin", 4_000_000)], 14));
+    bench.seeder.gate.hold_after(1024 * 1024);
     bench.set_speed_limit(Some(512 * 1024));
     let job = bench.add(&bench.details(), vec![0]);
     bench.wait("verified progress", |j| j.downloaded >= 512 * 1024, &job.id);
@@ -1098,6 +1497,7 @@ fn pause_survives_reopening_the_profile_and_resumes_verified_pieces() {
     assert_eq!(restored.status, Status::Paused);
     assert_eq!(restored.downloaded, paused.downloaded);
     bench.set_speed_limit(None);
+    bench.seeder.gate.release();
     let sent_before = bench.seeder.sent.load(Ordering::Relaxed);
     bench
         .scheduler

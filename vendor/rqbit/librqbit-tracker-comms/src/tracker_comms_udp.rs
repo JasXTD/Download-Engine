@@ -1,5 +1,6 @@
 // Modified by Download Engine: removed a test that contacts a public tracker, replaced rand,
-// added public_only. See ../../patch.md.
+// added public_only and bounded peer requests/results. See ../../patch.md.
+use crate::tracker_comms::MAX_TRACKER_PEERS;
 use std::{
     collections::{HashMap, hash_map::Entry},
     ffi::CStr,
@@ -93,7 +94,7 @@ impl Request {
                 w.extend_from_slice(&fields.event.to_be_bytes())?;
                 w.extend_from_slice(&0u32.to_be_bytes())?; // ip address 0
                 w.extend_from_slice(&fields.key.to_be_bytes())?;
-                w.extend_from_slice(&(-1i32).to_be_bytes())?; // num want -1
+                w.extend_from_slice(&(MAX_TRACKER_PEERS as i32).to_be_bytes())?;
                 w.extend_from_slice(&fields.port.to_be_bytes())?;
             }
         }
@@ -186,8 +187,10 @@ impl Response {
                 let (interval, b) = u32::parse_num(buf).context("can't parse interval")?;
                 let (leechers, b) = u32::parse_num(b).context("can't parse leechers")?;
                 let (seeders, mut b) = u32::parse_num(b).context("can't parse seeders")?;
+                let peer_bytes = if is_ipv6 { 18 } else { 6 };
+                anyhow::ensure!(b.len().is_multiple_of(peer_bytes), "truncated tracker peer");
                 let mut addrs = Vec::new();
-                while !b.is_empty() {
+                while !b.is_empty() && addrs.len() < MAX_TRACKER_PEERS {
                     let (addr, b2) = if is_ipv6 {
                         let (ip, b2) = u128::parse_num(b)?;
                         (IpAddr::V6(Ipv6Addr::from(ip)), b2)
@@ -201,7 +204,8 @@ impl Response {
                     b = b2;
                     addrs.push(SocketAddr::new(addr, port));
                 }
-                buf = b;
+                // The remaining complete records are deliberately ignored before allocation.
+                buf = &[];
                 Response::Announce(AnnounceResponse {
                     interval,
                     leechers,
@@ -428,7 +432,51 @@ impl UdpTrackerClient {
 
 #[cfg(test)]
 mod tests {
-    use crate::tracker_comms_udp::Response;
+    use super::*;
+
+    #[test]
+    fn announce_requests_a_bounded_number_of_peers() {
+        let fields = AnnounceFields {
+            info_hash: Id20::new([1; 20]),
+            peer_id: Id20::new([2; 20]),
+            downloaded: 0,
+            left: 1,
+            uploaded: 0,
+            event: EVENT_STARTED,
+            key: 3,
+            port: 6881,
+        };
+        let mut bytes = [0u8; 98];
+        assert_eq!(
+            Request::Announce(123, fields)
+                .serialize(456, &mut bytes)
+                .unwrap(),
+            98
+        );
+        assert_eq!(i32::from_be_bytes(bytes[92..96].try_into().unwrap()), 200);
+    }
+
+    #[test]
+    fn oversized_peer_datagrams_are_capped_before_allocation() {
+        for ipv6 in [false, true] {
+            let mut packet = Vec::new();
+            for number in [ACTION_ANNOUNCE, 123, 30, 0, 1] {
+                packet.extend(number.to_be_bytes());
+            }
+            packet.extend(vec![0x20; if ipv6 { 18 } else { 6 }].repeat(1000));
+            let (tid, response) = Response::parse(&packet, ipv6).unwrap();
+            assert_eq!(tid, 123);
+            let Response::Announce(response) = response else {
+                panic!("valid announce")
+            };
+            assert_eq!(response.addrs.len(), 200);
+            packet.pop();
+            assert!(matches!(
+                Response::parse(&packet, ipv6).unwrap().1,
+                Response::Unknown
+            ));
+        }
+    }
 
     #[test]
     fn test_parse_announce() {

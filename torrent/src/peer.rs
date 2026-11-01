@@ -730,7 +730,7 @@ impl Reader {
     fn fill_requests(&mut self) {
         let core = &self.live.core;
         let mut picker = core.picker.lock();
-        let interesting = picker.is_interesting(&self.peer_has);
+        let interesting = !core.options.seed_only && picker.is_interesting(&self.peer_has);
         if interesting != self.am_interested {
             self.am_interested = interesting;
             self.link.push(if interesting {

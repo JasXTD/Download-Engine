@@ -32,6 +32,9 @@ enum Command {
         peers: Vec<SocketAddr>,
         #[serde(default)]
         choose_later: bool,
+        #[serde(default)]
+        seed_only: bool,
+        file_name: Option<String>,
     },
     Select {
         name: String,
@@ -145,12 +148,16 @@ async fn handle(session: &Arc<Session>, command: Command) -> Result<Value> {
             only,
             peers,
             choose_later,
+            seed_only,
+            file_name,
         } => {
             let add = AddOptions {
                 output,
                 only,
                 peers,
                 choose_later,
+                seed_only,
+                file_name,
             };
             let info_hash = match (torrent, magnet) {
                 (Some(path), None) => {

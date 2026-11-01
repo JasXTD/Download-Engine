@@ -88,8 +88,13 @@ to other people instead of to one server. While a torrent is active:
 - Other people downloading the same torrent can see your IP address and that you are
   downloading it. Trackers and the distributed hash table (DHT) see the same.
 - Your computer sends pieces of the torrent to those people, unless you turn off
-  "Upload while downloading" in Preferences. Uploading stops when the download finishes.
+  "Upload while downloading" in Preferences. Uploading stops at completion by default.
+  If you enable sharing completed torrents, it continues until stopped, disabled or the app exits.
 - A proxy can't hide your address from them, so torrents won't start while a proxy is on.
+
+Incoming connections are separately disabled by default. Enabling them opens your chosen
+TCP port while the helper is needed; the app does not change firewall or router settings.
+Torrent metadata remains in the profile for later sharing until its history entry is removed.
 
 The helper sends the torrent's identifying hash, your progress, and the app's name and
 version. It doesn't send your name, email address or any account details. The project

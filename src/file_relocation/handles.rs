@@ -11,12 +11,14 @@ pub(super) struct Snapshot {
     pub key: FileKey,
     size: u64,
     modified: u64,
+    #[serde(default)]
+    pub directory: bool,
 }
 impl Snapshot {
     pub fn read(file: &File) -> Result<Self> {
         ensure!(
-            file.metadata()?.is_file(),
-            "File operation requires a regular file"
+            file.metadata()?.is_file() || file.metadata()?.is_dir(),
+            "File operation requires a regular file or folder"
         );
         #[cfg(windows)]
         {
@@ -41,6 +43,7 @@ impl Snapshot {
                 },
                 size: (u64::from(info.nFileSizeHigh) << 32) | u64::from(info.nFileSizeLow),
                 modified: time(info.ftLastWriteTime),
+                directory: file.metadata()?.is_dir(),
             })
         }
         #[cfg(unix)]
@@ -55,6 +58,7 @@ impl Snapshot {
                 },
                 size: m.len(),
                 modified: m.mtime_nsec() as u64,
+                directory: m.is_dir(),
             })
         }
     }
@@ -79,6 +83,34 @@ pub(super) fn open_owned(path: &Path, create: bool) -> Result<File> {
         .open(path)
         .with_context(|| format!("Cannot own file {}", path.display()))?;
     Snapshot::read(&file)?;
+    ensure!(file.metadata()?.is_file(), "Expected a regular file");
+    Ok(file)
+}
+
+pub(super) fn open_directory(path: &Path, writable: bool) -> Result<File> {
+    let mut options = std::fs::OpenOptions::new();
+    options.read(true);
+    #[cfg(windows)]
+    {
+        use std::os::windows::fs::OpenOptionsExt;
+        use windows_sys::Win32::{
+            Foundation::{GENERIC_READ, GENERIC_WRITE},
+            Storage::FileSystem::*,
+        };
+        options
+            .access_mode(GENERIC_READ | DELETE | if writable { GENERIC_WRITE } else { 0 })
+            .share_mode(FILE_SHARE_READ)
+            .custom_flags(FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OPEN_REPARSE_POINT);
+    }
+    #[cfg(not(windows))]
+    let _ = writable;
+    let file = options
+        .open(path)
+        .with_context(|| format!("Cannot own folder {}", path.display()))?;
+    ensure!(
+        Snapshot::read(&file)?.directory,
+        "Expected a regular folder"
+    );
     Ok(file)
 }
 
@@ -222,7 +254,8 @@ pub(super) fn copy_metadata(source: &File, target: &File) -> Result<()> {
             | FILE_ATTRIBUTE_SYSTEM
             | FILE_ATTRIBUTE_ARCHIVE
             | FILE_ATTRIBUTE_NORMAL
-            | FILE_ATTRIBUTE_NOT_CONTENT_INDEXED;
+            | FILE_ATTRIBUTE_NOT_CONTENT_INDEXED
+            | FILE_ATTRIBUTE_DIRECTORY;
         if info.FileAttributes == 0 {
             info.FileAttributes = FILE_ATTRIBUTE_NORMAL;
         }
@@ -237,7 +270,9 @@ pub(super) fn copy_metadata(source: &File, target: &File) -> Result<()> {
         {
             return Err(std::io::Error::last_os_error().into());
         }
-        target.sync_all()?;
+        if !target.metadata()?.is_dir() {
+            target.sync_all()?;
+        }
     }
     Ok(())
 }

@@ -7,7 +7,7 @@ mod service;
 pub use external::helper_request as external_helper_request;
 pub use installation::{check_setup, open_antivirus};
 pub use process::{defender_path, malwarebytes_path};
-pub use service::Service;
+pub use service::{FileProgress, Service};
 
 use crate::{
     integrity,
@@ -261,7 +261,17 @@ pub struct Report {
     pub message: String,
     pub sha256: Option<String>,
     pub finished_at: i64,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub files: Vec<FileReport>,
 }
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct FileReport {
+    pub path: PathBuf,
+    pub sha256: String,
+    pub verdict: Verdict,
+    pub message: String,
+}
+mod folder;
 impl Report {
     pub fn matches_file(&self, job: &Job) -> bool {
         self.job_id == job.id
@@ -361,6 +371,7 @@ pub struct OpenPermit {
     settings: Settings,
     _file: File,
     _parents: Vec<File>,
+    _scanned_files: Vec<(PathBuf, File)>,
 }
 impl OpenPermit {
     pub fn job_id(&self) -> &str {
@@ -387,6 +398,13 @@ impl OpenPermit {
                 == same_file::Handle::from_path(path)?,
             "The file changed after scanning; scan again"
         );
+        for (path, file) in &self._scanned_files {
+            ensure!(
+                same_file::Handle::from_file(file.try_clone()?)?
+                    == same_file::Handle::from_path(path)?,
+                "A scanned torrent file changed; scan again"
+            );
+        }
         Ok(path)
     }
     pub fn open(self, store: &Store) -> Result<()> {
@@ -435,6 +453,9 @@ fn external_review_permit(
     cancel: &CancellationToken,
 ) -> Result<OpenPermit> {
     let (_, _, path) = validate_external_review(store, snapshot, report)?;
+    if !report.files.is_empty() {
+        return folder::external_permit(store, snapshot, report, cancel);
+    }
     ensure!(!cancel.is_cancelled(), "File verification cancelled");
     let parents = process::guard_parents(&path)?;
     let (hash, file) = integrity::hash_file(&path, cancel)?;
@@ -460,6 +481,7 @@ fn external_review_permit(
         settings,
         _file: file,
         _parents: parents,
+        _scanned_files: Vec::new(),
     })
 }
 
@@ -483,6 +505,28 @@ pub fn scan(
     cancel: &CancellationToken,
     for_open: bool,
 ) -> Result<Outcome> {
+    scan_progress(store, job, settings, cancel, for_open, |_, _, _| {})
+}
+
+fn scan_progress(
+    store: &Store,
+    job: &Job,
+    settings: &Settings,
+    cancel: &CancellationToken,
+    for_open: bool,
+    on_file: impl FnMut(usize, usize, &Path),
+) -> Result<Outcome> {
+    if job.torrent.is_some() && job.saved_path.as_ref().is_some_and(|path| path.is_dir()) {
+        return folder::scan_progress(
+            store,
+            job,
+            settings,
+            cancel,
+            for_open,
+            process::scan,
+            on_file,
+        );
+    }
     scan_using(store, job, settings, cancel, for_open, process::scan)
 }
 fn scan_using(
@@ -512,6 +556,7 @@ fn scan_using(
         message: String::new(),
         sha256: None,
         finished_at: 0,
+        files: Vec::new(),
     };
     let mut permit = None;
     let result = (|| -> Result<()> {
@@ -551,6 +596,7 @@ fn scan_using(
                 settings: settings.clone(),
                 _file: file,
                 _parents: parents,
+                _scanned_files: Vec::new(),
             });
         }
         Ok(())

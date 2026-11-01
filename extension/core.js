@@ -19,6 +19,13 @@
   }
   function makeRequest(url, requestId, sourcePage) {
     if (typeof requestId !== "string" || !requestId || requestId.length > 128) throw new Error(__xdL.t("Invalid request identifier."));
+    if (typeof url === "string" && /^magnet:/i.test(url.trim())) {
+      if (url.length > 16384 || /[\u0000-\u0020\u007f]/.test(url.trim())) throw new Error("Invalid magnet link.");
+      const magnet = new URL(url.trim());
+      const topic = magnet.searchParams.getAll("xt").find(value => value.startsWith("urn:btih:"));
+      if (!topic || !/^urn:btih:(?:[a-f0-9]{40}|[a-z2-7]{32})$/i.test(topic)) throw new Error("Invalid magnet link.");
+      return { action: "review_torrent", request_id: requestId, url: url.trim() };
+    }
     const normalized = normalizeUrl(url);
     const parsed = new URL(normalized);
     if (["youtube.com", "www.youtube.com", "m.youtube.com", "music.youtube.com", "youtu.be", "www.youtu.be", "youtube-nocookie.com", "www.youtube-nocookie.com"].includes(parsed.hostname)) {
@@ -60,6 +67,7 @@
     if (["add", "add_browser_login"].includes(request.action) && (typeof reply.job_id !== "string" || !reply.job_id)) throw new Error(__xdL.t("The desktop app did not confirm a saved download."));
     if (["preview_hls", "preview_video"].includes(request.action) && reply.preview_id !== request.request_id) throw new Error(__xdL.t("The desktop app did not confirm the video preview. Update Download Engine or retry."));
     if (request.action === "review_browser_video" && reply.preview_id !== request.request_id) throw new Error(__xdL.t("The desktop app did not confirm the video review. Update Download Engine, then use Recover handoffs."));
+    if (request.action === "review_torrent" && reply.preview_id !== request.request_id) throw new Error("The desktop app did not confirm the torrent review. Update Download Engine and retry.");
     if (request.action.startsWith("capture_")) {
       const allowed = request.action === "capture_prepare" ? ["prepared", "committed"]
         : request.action === "capture_commit" ? ["committed"]

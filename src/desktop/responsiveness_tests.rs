@@ -46,6 +46,10 @@ impl Desktop {
     }
 
     pub(super) fn refresh_status_and_wait(&mut self) {
+        // A previous refresh may predate the command/state the test just observed.
+        // Drain it before requesting a fresh snapshot; otherwise the busy guard
+        // skips our request and the next click can hit a still-disabled control.
+        self.wait_for_io();
         self.refresh_download_status();
         self.wait_for_io();
     }

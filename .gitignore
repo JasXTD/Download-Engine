@@ -1,5 +1,6 @@
 # Build output, release packages and local test artifacts
 /target/
+/vendor/rqbit/target/
 /dist/
 /artifacts/
 /coverage/

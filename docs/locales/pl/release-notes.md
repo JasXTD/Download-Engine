@@ -1,3 +1,17 @@
+## 3.9.0 — 2026-11-01
+
+### Obsługa torrentów
+
+Dodano obsługę linków magnet z przeglądarki, przeciąganie plików torrent i propozycje ze schowka. Seedowanie po zakończeniu i połączenia przychodzące są osobnymi opcjami, domyślnie wyłączonymi. Dostępne są skanowanie wielu plików, przenoszenie i zmiana nazw folderów; Zatrzymaj wszystko zatrzymuje też udostępnianie.
+
+[Guide / English](../../user-guide.md#download-torrents)
+
+## 3.8.0 — 2026-11-01
+
+### Otwieranie torrentów z Windows
+
+Otwieraj pliki .torrent z Eksploratora i linki magnet z przeglądarki do sprawdzenia. Opcjonalna rejestracja w Windows zachowuje aplikacje domyślne, a oczekujące pozycje pozostają po ponownym uruchomieniu. Wzmocniono zabezpieczenia torrentów: magnet bez zapisanych metadanych wymaga trackera; w przeciwnym razie użyj pliku .torrent. Dodano testy regresji istniejącej ochrony przed kolizjami nazw plików.
+
 ## 3.7.0 — 2026-11-01
 
 ### Pobieranie torrentów

@@ -72,6 +72,7 @@ fn external_handoff(app: &mut Desktop, verdict: Verdict) -> String {
         &id,
         &Ok(av::Outcome {
             report: Report {
+                files: Vec::new(),
                 job_id: id.clone(),
                 path: job.saved_path.unwrap(),
                 scanner: provider.label().into(),

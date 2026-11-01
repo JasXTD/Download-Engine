@@ -1,3 +1,17 @@
+## 3.9.0 — 2026-11-01
+
+### Aliran kerja torrent
+
+Sokongan pautan magnet pelayar, seret dan lepas fail torrent serta cadangan papan klip. Perkongsian selepas selesai dan sambungan masuk ialah pilihan berasingan yang dimatikan secara lalai. Imbas torrent berbilang fail, pindah atau namakan semula folder; Hentikan semua turut menghentikan perkongsian.
+
+[Guide / English](../../user-guide.md#download-torrents)
+
+## 3.8.0 — 2026-11-01
+
+### Buka torrent dari Windows
+
+Buka fail .torrent dari Explorer atau pautan magnet dari pelayar untuk disemak. Pendaftaran Windows adalah pilihan, mengekalkan aplikasi lalai dan menyimpan semakan tertunda selepas mula semula. Perlindungan keselamatan torrent diperkukuh; magnet tanpa metadata dalam cache memerlukan penjejak, jika tidak gunakan fail .torrent. Ujian regresi ditambah untuk perlindungan konflik nama fail sedia ada.
+
 ## 3.7.0 — 2026-11-01
 
 ### Muat turun torrent

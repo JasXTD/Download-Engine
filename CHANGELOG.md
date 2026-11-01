@@ -2,6 +2,27 @@
 
 Release notes are available offline in Help → Changelog. Newest releases appear first.
 
+## 3.9.0 — 2026-11-01
+
+### Torrent workflow
+
+- Browser extensions can send clicked magnet links to the app for review. Captured torrent files open a review after saving. Dropped torrent files and clipboard magnet offers use the same first-use consent and file-selection flow; repeated pending items are deduplicated.
+- Added separate, disabled-by-default options for sharing completed torrents and accepting incoming connections. Sharing checks saved pieces, opens files read-only and never fetches skipped files. Up to four completed torrents can share without taking download queue slots. Stop, Stop all, exit and file operations close sharing workers; explicitly stopped shares stay stopped after restart.
+- Completed folder torrents support antivirus scans with sequential file progress and individual results. External antivirus apps receive one folder request and retain their manual-review workflow. A threat report continues to block sharing after a move or rename.
+- Added Rename torrent and Move torrent actions to completed-torrent menus. Folder moves preserve extra files, empty directories, metadata and alternate data streams; existing destinations are never overwritten. Journaled copies recover after interruption. Script moves remain restricted to configured download folders.
+- Status windows show seeding, upload speed and Stop sharing. Clearing history or deleting a torrent also removes its retained metadata. Torrent profiles and saved sharing options require version 3.9.0 or newer.
+- Pending controls and completed workers take priority over overdue scheduler maintenance, keeping Pause, Resume and Stop all responsive when database work runs slowly.
+
+## 3.8.0 — 2026-11-01
+
+### Open torrents from Windows
+
+- Open `.torrent` files from Explorer or magnet links from a browser. A new or running Download Engine brings up Add download for consent, file selection, queue and destination; opening an item never starts a download by itself.
+- Preferences → Torrents now includes optional Windows registration and a shortcut to Windows Default Apps. The installer can register this copy when selected. Existing default applications are preserved, and uninstall removes only registrations still owned by that copy.
+- External requests wait while another dialog is open. Repeated pending magnet links share one review, and existing torrents use the existing duplicate-download check. Pending reviews survive restart; unaccepted requests expire after one day.
+- Added regression coverage confirming that both torrent files and magnet metadata reject filename collisions after Windows sanitization and case folding. The existing safeguard was already present; its behavior is unchanged.
+- Strengthened torrent metadata, tracker and peer handling with resource limits and private-network filtering. Unknown-private magnets stay off public DHT; magnets without cached metadata require a tracker, otherwise use a `.torrent` file.
+
 ## 3.7.0 — 2026-11-01
 
 ### Torrent downloads

@@ -1,3 +1,17 @@
+## 3.9.0 — 2026-11-01
+
+### Quy trình torrent
+
+Hỗ trợ liên kết magnet từ trình duyệt, kéo thả tệp torrent và gợi ý từ bảng nhớ tạm. Chia sẻ sau khi hoàn tất và kết nối đến là hai tùy chọn riêng, mặc định tắt. Có thể quét nhiều tệp, di chuyển hoặc đổi tên thư mục; Dừng tất cả cũng dừng chia sẻ.
+
+[Guide / English](../../user-guide.md#download-torrents)
+
+## 3.8.0 — 2026-11-01
+
+### Mở torrent từ Windows
+
+Mở tệp .torrent từ Explorer hoặc liên kết magnet từ trình duyệt để xem xét. Đăng ký với Windows là tùy chọn, giữ nguyên ứng dụng mặc định và giữ các mục chờ sau khi khởi động lại. Tăng cường bảo vệ torrent; magnet chưa có siêu dữ liệu trong bộ nhớ đệm cần tracker, nếu không hãy dùng tệp .torrent. Đã thêm kiểm thử hồi quy cho cơ chế chống xung đột tên tệp hiện có.
+
 ## 3.7.0 — 2026-11-01
 
 ### Tải torrent

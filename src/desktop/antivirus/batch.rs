@@ -434,7 +434,10 @@ impl Desktop {
                                     ResultState::Done(verdict, message) => (tr(verdict.label()), if *verdict == Verdict::NoThreatsFound { p.accent } else if *verdict == Verdict::ScanRequested { p.muted } else { p.warning }, message.as_str()),
                                     ResultState::Skipped(reason) => (tr("Skipped"), p.muted, reason.as_str()),
                                 };
-                                ui.add(egui::Label::new(RichText::new(if detail.is_empty() { label.into() } else { format!("{label} · {detail}") }).small().color(color)).truncate()).on_hover_text(detail);
+                                let text=if let Some(progress)=self.antivirus.service.file_progress(&entry.id) {
+                                    format!("{label} · {} / {} · {}",progress.completed,progress.total,progress.path.display())
+                                } else if detail.is_empty() { label.into() } else { format!("{label} · {detail}") };
+                                ui.add(egui::Label::new(RichText::new(text).small().color(color)).truncate()).on_hover_text(detail);
                             });
                         });
                     });

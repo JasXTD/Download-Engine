@@ -139,9 +139,15 @@ impl Desktop {
             Action::Resume => self
                 .selected_job_refs()
                 .any(|j| matches!(j.status, Status::Paused | Status::Failed)),
-            Action::Pause | Action::Stop => self
+            Action::Pause => self
                 .selected_job_refs()
                 .any(|j| matches!(j.status, Status::Downloading | Status::Queued)),
+            Action::Stop => self.selected_job_refs().any(|j| {
+                matches!(j.status, Status::Downloading | Status::Queued)
+                    || (j.torrent.is_some()
+                        && j.status == Status::Complete
+                        && self.store.activity.get(&j.id).is_some())
+            }),
             Action::Remove => {
                 let mut jobs = self.selected_job_refs().peekable();
                 jobs.peek().is_some() && jobs.all(|j| j.status != Status::Downloading)

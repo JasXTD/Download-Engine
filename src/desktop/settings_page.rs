@@ -432,7 +432,7 @@ impl Desktop {
                         p,
                         tr("Torrent downloads"),
                         if torrents.enabled {
-                            tr("On. A helper runs only while a torrent downloads.")
+                            tr("On. A helper runs only while a torrent needs it.")
                         } else {
                             tr("Off. Nothing connects to other people.")
                         },
@@ -458,6 +458,11 @@ impl Desktop {
                             "\u{e898}",
                             &mut torrents.upload,
                         );
+                        ui.add_enabled_ui(torrents.upload, |ui| {
+                            toggle(ui, p, tr("Seed completed torrents"),
+                                tr("Continue sharing verified files after downloading. Up to four at once."),
+                                "\u{e898}", &mut torrents.seed_completed);
+                        });
                         let limit = row(
                             ui,
                             p,
@@ -495,16 +500,33 @@ impl Desktop {
                         });
                     });
                     section(ui, p, tr("FINDING PEERS"), |ui| {
+                        let mut incoming = torrents.incoming_port.is_some();
+                        toggle(ui, p, tr("Allow incoming connections"),
+                            tr("Let peers connect to this app. Router and firewall rules are not changed."),
+                            "\u{e716}", &mut incoming);
+                        torrents.incoming_port = incoming.then(|| torrents.incoming_port.unwrap_or(6881));
+                        if let Some(port) = &mut torrents.incoming_port {
+                            let port_row = row(ui, p, tr("Incoming TCP port"), "1024–65535", "\u{e716}", "");
+                            ui.new_child(egui::UiBuilder::new()
+                                .max_rect(trailing_slot(port_row.rect, 130.0))
+                                .layout(Layout::right_to_left(Align::Center)))
+                                .add_sized(vec2(130.0, 28.0), egui::DragValue::new(port).range(1024..=65535).speed(1));
+                            #[cfg(feature = "screenshot")]
+                            if std::env::var("IDM_EX_TEST_FEATURE").as_deref() == Ok("torrent-sharing-network") {
+                                ui.scroll_to_rect(port_row.rect, Some(Align::Center));
+                            }
+                        }
                         toggle(
                             ui,
                             p,
                             tr("Find peers without a tracker (DHT)"),
-                            tr("Needed for most magnet links."),
+                            tr("Uses DHT only after metadata confirms a public torrent."),
                             "\u{e716}",
                             &mut torrents.dht,
                         );
                     });
                 });
+                self.torrent_windows_setup(ui, p);
             }
             Category::Connection => {
                 section(ui, p, tr("Connection"), |ui| {

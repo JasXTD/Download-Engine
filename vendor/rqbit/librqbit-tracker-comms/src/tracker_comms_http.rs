@@ -1,4 +1,6 @@
-// Modified by Download Engine: replaced urlencoding and serde_with. See ../../patch.md.
+// Modified by Download Engine: replaced urlencoding/serde_with and bounded peer results.
+// See ../../patch.md.
+use crate::tracker_comms::MAX_TRACKER_PEERS;
 use buffers::ByteBuf;
 use itertools::Either;
 use serde::Deserializer;
@@ -71,10 +73,11 @@ where
     AddrType: CompactSerialize + CompactSerializeFixedLen + Copy + Into<SocketAddr>,
 {
     fn iter(&self) -> impl Iterator<Item = SocketAddr> {
-        match self {
+        let peers = match self {
             Peers::DictPeers(a) => Either::Left(a.iter().copied()),
             Peers::Compact(l) => Either::Right(l.iter().map(Into::into)),
-        }
+        };
+        peers.take(MAX_TRACKER_PEERS)
     }
 }
 
@@ -112,6 +115,11 @@ where
             {
                 let mut addrs = Vec::new();
                 while let Some(peer) = seq.next_element::<DictPeer>()? {
+                    if addrs.len() == MAX_TRACKER_PEERS {
+                        return Err(serde::de::Error::custom(
+                            "tracker peer list exceeds the limit",
+                        ));
+                    }
                     addrs.push(SocketAddr::from((peer.ip, peer.port)))
                 }
                 Ok(Peers::DictPeers(addrs))
@@ -155,7 +163,10 @@ pub struct TrackerResponse<'a> {
 
 impl TrackerResponse<'_> {
     pub fn iter_peers(&self) -> impl Iterator<Item = SocketAddr> {
-        self.peers.iter().chain(self.peers6.iter())
+        self.peers
+            .iter()
+            .chain(self.peers6.iter())
+            .take(MAX_TRACKER_PEERS)
     }
 }
 
@@ -216,6 +227,31 @@ impl TrackerRequest<'_> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn compact_response_has_a_combined_peer_budget() {
+        for (v4, v6) in [(1000, 0), (0, 1000), (100, 1000)] {
+            let mut data = format!("d8:intervali30e5:peers{}:", v4 * 6).into_bytes();
+            data.extend([1, 2, 3, 4, 0x1a, 0xe1].repeat(v4));
+            data.extend(format!("6:peers6{}:", v6 * 18).as_bytes());
+            data.extend([0x20u8; 18].repeat(v6));
+            data.push(b'e');
+            let response = bencode::from_bytes::<TrackerResponse>(&data).unwrap();
+            assert_eq!(response.iter_peers().count(), 200);
+        }
+    }
+
+    #[test]
+    fn dictionary_peer_lists_are_bounded_while_decoding() {
+        for (count, accepted) in [(200, true), (201, false), (1000, false)] {
+            let peers = format!("l{}e", "d2:ip7:1.2.3.44:porti6881ee".repeat(count));
+            assert_eq!(
+                bencode::from_bytes::<Peers<SocketAddrV4>>(peers.as_bytes()).is_ok(),
+                accepted,
+            );
+        }
+    }
+
     #[test]
     fn test_serialize() {
         let info_hash = Id20::new([

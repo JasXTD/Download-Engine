@@ -79,6 +79,23 @@ is gone, because hashing now has one implementation and is always available.
 
 All of these come from data that strangers control, and each has a regression test.
 
+- Torrent resource limits: `librqbit-core/src/torrent_limits.rs` bounds file, path and
+  tracker collections while decoding. Validation bounds raw and decoded filename bytes
+  before constructing saved paths and duplicate sets. Magnets bound tracker count and
+  URL length before adding them. Oversized input is rejected, not silently truncated.
+- Trackers: HTTP bodies are read in chunks with a 1 MiB cap, including absent or dishonest
+  Content-Length. HTTP/UDP polling has a five-second floor. Tracker
+  sets are capped at 32 URLs of 2,048 bytes; semaphore permits bound simultaneous requests
+  to four per torrent/eight process-wide without starving trackers behind sleeping monitors.
+- Tracker peer results: HTTP and UDP request 200 peers and enforce that cap regardless of
+  `numwant` compliance. HTTP compact IPv4/IPv6 results share one iteration limit; oversized
+  dictionary lists are rejected during decoding. UDP validates the record boundaries and
+  allocates only the first 200 addresses, ignoring extra complete records.
+- Public endpoints: `librqbit-core/src/network.rs` shares the existing address policy with
+  the engine and DHT. DHT filters discovered nodes/peers and guards request submission,
+  incoming messages and final UDP sends, including bootstrap and persisted nodes.
+  `allow_local_addresses` is an explicit isolated-LAN opt-in, off by default.
+
 - File names on Windows: `validate` blocked only `..` and slashes, so `C:evil.dll`,
   `file.txt:stream`, `CON` and trailing dots passed, and a drive prefix replaced the
   download folder when joined to it. `src/safe_name.rs` (new) applies the rules of

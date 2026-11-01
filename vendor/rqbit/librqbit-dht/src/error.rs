@@ -1,3 +1,4 @@
+// Modified by Download Engine: reject nonpublic endpoints. See ../../patch.md.
 use std::time::Duration;
 
 use bencode::SerializeError;
@@ -12,6 +13,8 @@ pub struct LookupError {
 
 #[derive(thiserror::Error, Debug)]
 pub enum Error {
+    #[error("DHT endpoint is not public: {0}")]
+    LocalAddress(std::net::SocketAddr),
     #[error("error binding UDP socket: {0:#}")]
     Bind(#[source] Box<librqbit_dualstack_sockets::Error>),
 

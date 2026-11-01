@@ -12,10 +12,10 @@ use librqbit_core::magnet::Magnet;
 use librqbit_dualstack_sockets::{BindOpts, TcpListener};
 use parking_lot::Mutex;
 use serde::Serialize;
-use tokio::sync::Semaphore;
 use tokio_util::sync::CancellationToken;
 use url::Url;
 
+use crate::admission::Admission;
 use crate::debug_log;
 use crate::discovery::{Discovery, DiscoveryOptions};
 use crate::meta::{TorrentMeta, usable_tracker};
@@ -51,6 +51,8 @@ pub struct AddOptions {
     pub only: Option<Vec<usize>>,
     pub peers: Vec<SocketAddr>,
     pub choose_later: bool,
+    pub seed_only: bool,
+    pub file_name: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -124,9 +126,15 @@ impl Session {
             output: add.output,
             only: add.only,
             peers: add.peers,
-            seed: self.options.seed,
+            seed: self.options.seed || add.seed_only,
+            seed_only: add.seed_only,
+            file_name: add.file_name,
             listen_port: self.options.listen_port,
-            state_dir: self.options.state_dir.clone(),
+            state_dir: if add.seed_only {
+                None
+            } else {
+                self.options.state_dir.clone()
+            },
             choose_later: add.choose_later,
             connect_out: true,
             allow_loopback: self.options.allow_loopback_peers,
@@ -193,6 +201,18 @@ impl Session {
             .state_dir
             .as_deref()
             .and_then(|state_dir| resume::load_info(state_dir, info_hash, trackers.clone()));
+        anyhow::ensure!(
+            !options.seed_only || saved.is_some(),
+            "Seeding needs saved metadata. Open the original .torrent file again."
+        );
+        if saved.is_none()
+            && (trackers.is_empty() || !self.options.use_trackers)
+            && options.peers.is_empty()
+        {
+            bail!(
+                "This magnet has no usable tracker or cached metadata. Open its .torrent file to keep a potentially private hash off the public DHT."
+            );
+        }
         let torrent = match saved {
             Some(meta) => Torrent::from_meta(Arc::new(meta), options, self.context.clone())?,
             None => Torrent::from_magnet(info_hash, trackers, options, self.context.clone()),
@@ -303,7 +323,7 @@ impl Session {
     }
 
     async fn listen(self: Arc<Self>, listener: TcpListener) {
-        let pending = Arc::new(Semaphore::new(MAX_PENDING_HANDSHAKES));
+        let pending = Admission::new(MAX_PENDING_HANDSHAKES);
         loop {
             let accepted = tokio::select! {
                 _ = self.cancel.cancelled() => return,
@@ -318,13 +338,17 @@ impl Session {
                 }
             };
             // When strangers are this busy, dropping one costs us nothing.
-            let Ok(permit) = pending.clone().try_acquire_owned() else {
+            let Some(permit) = pending.try_acquire(Some(addr)) else {
                 continue;
             };
             let session = self.clone();
             tokio::spawn(async move {
                 let _permit = permit;
-                if let Err(error) = session.accept(stream, addr).await {
+                let result = tokio::select! {
+                    _ = session.cancel.cancelled() => return,
+                    result = session.accept(stream, addr) => result,
+                };
+                if let Err(error) = result {
                     debug_log!("incoming peer {addr}: {error:#}");
                 }
             });
@@ -340,8 +364,7 @@ impl Session {
             .map(|(_, torrent)| torrent)
             .find(|torrent| torrent.info_hash() == info_hash)
             .context("peer asked for a torrent we don't have")?;
-        torrent.offer(Box::new(stream), addr, hello);
-        Ok(())
+        torrent.offer(Box::new(stream), addr, hello)
     }
 }
 
@@ -479,16 +502,25 @@ mod tests {
         let mut bytes = std::fs::read(&info).unwrap();
         bytes[10] ^= 1;
         std::fs::write(&info, bytes).unwrap();
-        session
+        let error = session
             .add_magnet("one".into(), &magnet_for(&meta), add_options(output.path()))
             .await
-            .unwrap();
-        let torrent = session.torrent("one").unwrap();
-        wait_until(&torrent, "the search for details", |stats| {
-            stats.state == "metadata"
-        })
-        .await;
-        assert!(torrent.meta().is_none());
+            .unwrap_err();
+        assert!(error.to_string().contains(".torrent file"));
+        assert!(session.torrent("one").is_err());
+        session.shutdown().await;
+    }
+
+    #[tokio::test]
+    async fn uncached_trackerless_magnet_requires_a_torrent_file() {
+        let session = Session::new(SessionOptions::default()).await.unwrap();
+        let link = "magnet:?xt=urn:btih:0123456789012345678901234567890123456789";
+        let error = session
+            .add_magnet("one".into(), link, AddOptions::default())
+            .await
+            .unwrap_err();
+        assert!(error.to_string().contains(".torrent file"));
+        assert!(session.all().is_empty());
         session.shutdown().await;
     }
 

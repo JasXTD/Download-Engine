@@ -21,6 +21,7 @@ struct Runtime {
     grabber: crate::grabber_schedule::Controller,
     scripts: crate::script_automation::Controller,
     files: file_operations::Controller,
+    seeding: crate::torrent::seeding::Controller,
     tasks: JoinSet<(String, Result<()>)>,
     worker_ids: HashMap<tokio::task::Id, String>,
     limiter: bandwidth::Limiter,
@@ -43,6 +44,7 @@ pub(super) async fn run(
         grabber: crate::grabber_schedule::Controller::default(),
         scripts: crate::script_automation::Controller::default(),
         files: file_operations::Controller::default(),
+        seeding: crate::torrent::seeding::Controller::default(),
         tasks: JoinSet::new(),
         worker_ids: HashMap::new(),
         limiter,
@@ -52,8 +54,12 @@ pub(super) async fn run(
         state.report(format!("File operation recovery: {error:#}"));
     }
     let mut interval = tokio::time::interval(Duration::from_millis(500));
+    // Maintenance can exceed one interval on a busy disk. Catch-up ticks have
+    // no value and must not compete with pending user controls or finished workers.
+    interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
     loop {
         tokio::select! {
+            biased;
             command = receiver.recv() => {
                 let Some(command) = command else { break };
                 if matches!(command, Command::Stop) { break; }
@@ -77,6 +83,121 @@ pub(super) async fn run(
 }
 
 impl Runtime {
+    async fn sharing_command(&mut self, command: &Command) -> Result<bool> {
+        // A slow or failed sharing-state write must not delay an explicit stop.
+        // Keep the user's pause intent when the worker finishes before apply().
+        match command {
+            Command::Pause(id) => {
+                if let Some(worker) = self.active.get_mut(id) {
+                    worker.user_paused = true;
+                    worker.token.cancel();
+                }
+            }
+            Command::PauseAll => {
+                for worker in self.active.values_mut() {
+                    worker.user_paused = true;
+                    worker.token.cancel();
+                }
+            }
+            _ => {}
+        }
+        match command {
+            Command::StartSharing(id) => {
+                self.store.set_torrent_sharing(id, true)?;
+                self.seeding.allow_start(id);
+                return Ok(true);
+            }
+            Command::StopSharing(id) => {
+                if let Err(error) = self.seeding.stop(&self.store, Some(id), true).await {
+                    self.report(format!("{error:#}"));
+                }
+                return Ok(true);
+            }
+            Command::PauseAll => {
+                if let Err(error) = self.seeding.stop(&self.store, None, true).await {
+                    self.report(format!("{error:#}"));
+                }
+            }
+            Command::TorrentSettings => {
+                let settings = self.store.torrent_settings()?;
+                if self.store.torrents.network_changed(&settings) {
+                    if let Err(error) = self.seeding.stop(&self.store, None, false).await {
+                        self.store.torrents.restart();
+                        return Err(error);
+                    }
+                    let mut ids = Vec::new();
+                    for id in self.active.keys() {
+                        match self.store.get(id) {
+                            Ok(Some(job)) if job.torrent.is_some() => ids.push(id.clone()),
+                            Ok(_) => {}
+                            Err(error) => {
+                                self.store.torrents.restart();
+                                return Err(error);
+                            }
+                        }
+                    }
+                    let immediate = self.store.immediate_downloads()?;
+                    for id in &ids {
+                        apply(&self.store, &mut self.active, Command::Pause(id.clone()))?;
+                    }
+                    while ids.iter().any(|id| self.active.contains_key(id)) {
+                        let Some(result) = self.tasks.join_next_with_id().await else {
+                            break;
+                        };
+                        self.finish(result);
+                    }
+                    self.store.torrents.restart();
+                    if settings.enabled && !self.store.proxy_blocks_torrents()? {
+                        for id in ids {
+                            if self
+                                .store
+                                .get(&id)?
+                                .is_none_or(|job| job.status == Status::Complete)
+                            {
+                                continue;
+                            }
+                            let command = if immediate.contains(&id) {
+                                Command::StartImmediately(id)
+                            } else {
+                                Command::Resume(id)
+                            };
+                            apply(&self.store, &mut self.active, command)?;
+                        }
+                    }
+                }
+                if !settings.enabled || !settings.upload || !settings.seed_completed {
+                    self.seeding.stop(&self.store, None, false).await?;
+                }
+            }
+            Command::Resume(id) | Command::StartImmediately(id) => {
+                if self
+                    .store
+                    .get(id)?
+                    .is_some_and(|job| job.torrent.is_some() && job.status != Status::Complete)
+                {
+                    self.store
+                        .connect()?
+                        .execute("DELETE FROM torrent_sharing WHERE job_id=?1", [id])?;
+                    self.seeding.allow_start(id);
+                }
+            }
+            Command::Pause(id)
+            | Command::Restart(id)
+            | Command::Remove(id)
+            | Command::ClearHistory { id, .. }
+            | Command::DeleteFile { id, .. }
+            | Command::RenameFile { id, .. }
+            | Command::MoveFile { id, .. }
+            | Command::MoveFileToChosenFolder { id, .. }
+            | Command::ChooseTorrentFiles { id, .. } => {
+                if let Err(error) = self.seeding.stop(&self.store, Some(id), true).await {
+                    self.report(format!("{error:#}"));
+                }
+            }
+            _ => {}
+        }
+        Ok(false)
+    }
     async fn control(
         &mut self,
         request: &str,
@@ -186,6 +307,7 @@ impl Runtime {
                 "Finish or cancel this download's link check first"
             );
         }
+        self.sharing_command(&command).await?;
         settle_before_command(
             &self.store,
             &command,
@@ -198,7 +320,9 @@ impl Runtime {
         .await;
         if matches!(
             command,
-            Command::RenameFile { .. } | Command::MoveFile { .. }
+            Command::RenameFile { .. }
+                | Command::MoveFile { .. }
+                | Command::MoveFileToChosenFolder { .. }
         ) {
             anyhow::ensure!(
                 !job.as_ref().is_some_and(|id| self.active.contains_key(id)),
@@ -258,6 +382,14 @@ impl Runtime {
                 return;
             }
             Ok(false) => {}
+        }
+        match self.sharing_command(&command).await {
+            Ok(true) => return,
+            Ok(false) => {}
+            Err(error) => {
+                self.report(format!("{error:#}"));
+                return;
+            }
         }
         settle_before_command(
             &self.store,
@@ -325,6 +457,7 @@ impl Runtime {
                     | Command::DeleteFile { id, .. }
                     | Command::RenameFile { id, .. }
                     | Command::MoveFile { id, .. }
+                    | Command::MoveFileToChosenFolder { id, .. }
                     | Command::MoveJob(id, _)
                     | Command::ReorderJob(id, _) => Some(id),
                     _ => None,
@@ -335,7 +468,9 @@ impl Runtime {
                 }
                 if matches!(
                     command,
-                    Command::RenameFile { .. } | Command::MoveFile { .. }
+                    Command::RenameFile { .. }
+                        | Command::MoveFile { .. }
+                        | Command::MoveFileToChosenFolder { .. }
                 ) {
                     let result = if id.is_some_and(|id| self.active.contains_key(id)) {
                         Err(anyhow::anyhow!("Pause the download before changing it"))
@@ -364,6 +499,15 @@ impl Runtime {
     }
 
     async fn tick(&mut self) {
+        if let Err(error) = self
+            .seeding
+            .tick(&self.store, &self.limiter, |id| {
+                self.active.contains_key(id) || self.files.busy(id)
+            })
+            .await
+        {
+            self.report(format!("{error:#}"));
+        }
         if let Err(error) = self
             .scripts
             .tick(&self.store, chrono::Utc::now().timestamp())
@@ -471,6 +615,9 @@ impl Runtime {
     }
 
     async fn shutdown(&mut self) {
+        if let Err(error) = self.seeding.stop(&self.store, None, false).await {
+            self.report(error);
+        }
         if let Err(error) = self.scripts.shutdown(&self.store) {
             self.report(format!("Script shutdown: {error:#}"));
         }

@@ -4,10 +4,78 @@ use serde::{Deserialize, Serialize};
 use std::io::{Read, Write};
 
 pub const MAX_FRAME: usize = 1024 * 1024;
+
+#[cfg(test)]
+mod torrent_review_tests {
+    use super::*;
+    #[test]
+    fn browser_magnets_are_only_deduplicated_review_offers_never_downloads() {
+        let temp = tempfile::tempdir().unwrap();
+        let store = Store::open(crate::paths::AppPaths {
+            data: temp.path().join("profile"),
+            downloads: temp.path().join("files"),
+        })
+        .unwrap();
+        let magnet = "magnet:?xt=urn:btih:0123456789012345678901234567890123456789";
+        for id in ["one", "two"] {
+            let reply = handle_request(
+                &store,
+                Request::ReviewTorrent {
+                    request_id: id.into(),
+                    url: magnet.into(),
+                },
+            );
+            assert!(reply.ok, "{}", reply.message);
+            assert_eq!(reply.preview_id.as_deref(), Some(id));
+        }
+        let count: i64 = store
+            .connect()
+            .unwrap()
+            .query_row("SELECT count(*) FROM external_open_requests", [], |r| {
+                r.get(0)
+            })
+            .unwrap();
+        assert_eq!(count, 1);
+        assert!(store.list().unwrap().is_empty());
+        assert!(!store.torrent_settings().unwrap().enabled);
+        assert!(!store.torrents.is_running());
+        for value in [
+            "file:///C:/private.torrent",
+            "C:\\private.torrent",
+            "https://example.invalid/a.torrent",
+            "magnet:?xt=urn:btih:bad",
+        ] {
+            assert!(
+                !handle_request(
+                    &store,
+                    Request::ReviewTorrent {
+                        request_id: "bad".into(),
+                        url: value.into()
+                    }
+                )
+                .ok
+            );
+        }
+        assert!(
+            !handle_request(
+                &store,
+                Request::ReviewTorrent {
+                    request_id: String::new(),
+                    url: magnet.into()
+                }
+            )
+            .ok
+        );
+    }
+}
 #[derive(Debug, Deserialize)]
 #[serde(tag = "action", rename_all = "snake_case", deny_unknown_fields)]
 pub enum Request {
     Ping,
+    ReviewTorrent {
+        request_id: String,
+        url: String,
+    },
     BatchOptions,
     RecoveryPending,
     RecoveryStatus {
@@ -75,6 +143,7 @@ impl Request {
         use crate::diagnostics::NativeAction as Action;
         match self {
             Self::Ping => Action::Ping,
+            Self::ReviewTorrent { .. } => Action::Add,
             Self::BatchOptions => Action::BatchOptions,
             Self::RecoveryPending
             | Self::RecoveryStatus { .. }
@@ -174,7 +243,23 @@ fn process(store: &Store, request: Request) -> Result<Reply> {
                 "video_preview_v1".into(),
                 "browser_video_review_v1".into(),
                 "browser_link_recovery_v1".into(),
+                "torrent_review_v1".into(),
             ]);
+            Ok(reply)
+        }
+        Request::ReviewTorrent { request_id, url } => {
+            ensure!(
+                !request_id.is_empty()
+                    && request_id.len() <= 128
+                    && !request_id.chars().any(char::is_control),
+                "Invalid request identifier"
+            );
+            // Browser messages may offer a magnet, never read a local path or
+            // enable torrents. The desktop owns consent and metadata discovery.
+            crate::torrent::info_hash(&url)?;
+            store.submit_external_opens(&[crate::external_open::Target::Magnet(url)])?;
+            let mut reply = Reply::success("Torrent is ready for review in Download Engine");
+            reply.preview_id = Some(request_id);
             Ok(reply)
         }
         Request::BatchOptions => {

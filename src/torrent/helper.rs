@@ -29,6 +29,8 @@ const PROGRAM: &str = if cfg!(windows) {
 const CALL_TIMEOUT: Duration = Duration::from_secs(120);
 const STOP_TIMEOUT: Duration = Duration::from_secs(30);
 const MAX_REPLY: u64 = 256 * 1024 * 1024;
+/// Backstop for all torrents together; parser and protocol limits apply before this.
+const HELPER_MEMORY_LIMIT: usize = 1024 * 1024 * 1024;
 
 type Reply = oneshot::Sender<Result<Value>>;
 
@@ -59,6 +61,10 @@ fn arguments(settings: &Settings, state_dir: &Path) -> Vec<std::ffi::OsString> {
     ];
     if settings.dht {
         list.push("--dht".into());
+    }
+    if let Some(port) = settings.incoming_port {
+        list.push("--port".into());
+        list.push(port.to_string().into());
     }
     if !settings.upload {
         list.push("--no-upload".into());
@@ -131,7 +137,11 @@ impl Helper {
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
             .stderr(Stdio::null());
-        let mut running = Running::spawn(&mut command, &CancellationToken::new(), None)?;
+        let mut running = Running::spawn(
+            &mut command,
+            &CancellationToken::new(),
+            Some(HELPER_MEMORY_LIMIT),
+        )?;
         let input = running.child.stdin.take().context("Missing helper input")?;
         let output = running
             .child
@@ -211,6 +221,7 @@ struct Shared {
     users: usize,
     selections: HashMap<String, Vec<usize>>,
     test_peers: Vec<SocketAddr>,
+    network: Option<(bool, Option<u16>)>,
 }
 
 /// The torrent helper as all of a store's clones see it. Costs nothing until it is used.
@@ -232,6 +243,7 @@ impl Host {
                 ensure!(settings.enabled, super::OFF_MESSAGE);
                 let state_dir = store.paths.data.join("torrents");
                 let helper = Arc::new(Helper::start(&settings, &state_dir)?);
+                shared.network = Some((settings.dht, settings.incoming_port));
                 shared.helper = Some(helper.clone());
                 helper
             }
@@ -246,6 +258,21 @@ impl Host {
     /// Whether the helper is running. It should only be while a torrent needs it.
     pub fn is_running(&self) -> bool {
         self.shared().helper.is_some()
+    }
+
+    pub(crate) fn network_changed(&self, settings: &Settings) -> bool {
+        let shared = self.shared();
+        shared.helper.is_some() && shared.network != Some((settings.dht, settings.incoming_port))
+    }
+
+    /// Scheduler workers are settled before this. An outstanding metadata
+    /// preview receives an error and can be retried with the new network policy.
+    pub(crate) fn restart(&self) {
+        let mut shared = self.shared();
+        if let Some(helper) = shared.helper.take() {
+            helper.kill();
+        }
+        shared.network = None;
     }
 
     /// Passes changed settings to a running helper. One that starts later reads them itself.

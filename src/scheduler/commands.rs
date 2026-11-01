@@ -13,9 +13,11 @@ pub(super) fn job_id(command: &Command) -> Option<&str> {
         | Command::DeleteFile { id, .. }
         | Command::RenameFile { id, .. }
         | Command::MoveFile { id, .. }
+        | Command::MoveFileToChosenFolder { id, .. }
         | Command::ChooseTorrentFiles { id, .. }
         | Command::MoveJob(id, _)
         | Command::ReorderJob(id, _) => Some(id),
+        Command::StartSharing(id) | Command::StopSharing(id) => Some(id),
         Command::Authentication(update) => Some(&update.job),
         _ => None,
     }
@@ -43,6 +45,7 @@ pub(super) fn apply(
             {
                 // History clearing never removes files. The engine owns completed
                 // transfer cleanup; a temporary-looking name may be a saved file.
+                crate::torrent::forget(store, &job)?;
                 store.remove(id)?;
             }
             return Ok(());
@@ -147,7 +150,8 @@ pub(super) fn apply(
         | Command::Remove(id)
         | Command::DeleteFile { id, .. }
         | Command::RenameFile { id, .. }
-        | Command::MoveFile { id, .. } => id,
+        | Command::MoveFile { id, .. }
+        | Command::MoveFileToChosenFolder { id, .. } => id,
         _ => return Ok(()),
     };
     // A user pause overrides any pending queue pause, including while cancellation finishes.
@@ -248,11 +252,14 @@ pub(super) fn apply(
                 crate::download_file::delete_completed(&path)
             }
             .with_context(|| format!("Cannot delete {}", job.name))?;
+            crate::torrent::forget(store, &job)?;
             store
                 .remove(&job.id)
                 .context("File deleted, but its history entry could not be removed")?;
         }
-        command @ (Command::RenameFile { .. } | Command::MoveFile { .. }) => {
+        command @ (Command::RenameFile { .. }
+        | Command::MoveFile { .. }
+        | Command::MoveFileToChosenFolder { .. }) => {
             relocate_command(store, command, &CancellationToken::new())?
         }
         _ => {}
@@ -277,12 +284,6 @@ pub(super) fn relocate_command(
 ) -> Result<()> {
     let id = job_id(&command).context("Missing file operation download")?;
     let job = store.get(id)?.context("Download not found")?;
-    anyhow::ensure!(
-        job.saved_path
-            .as_deref()
-            .is_none_or(std::path::Path::is_file),
-        "A torrent's folder can't be moved or renamed here. Use File Explorer."
-    );
     match command {
         Command::RenameFile { name, .. } => {
             anyhow::ensure!(
@@ -294,9 +295,21 @@ pub(super) fn relocate_command(
             anyhow::ensure!(to != from, "The file already has this name");
             crate::file_relocation::relocate(store, &job, to, name, job.directory.clone(), cancel)
         }
-        Command::MoveFile { folder, .. } => {
+        command @ (Command::MoveFile { .. } | Command::MoveFileToChosenFolder { .. }) => {
             let from = saved_file(&job, "moved")?;
-            let folder = movable_folder(store, &folder)?;
+            let folder = match command {
+                Command::MoveFile { folder, .. } => movable_folder(store, &folder)?,
+                Command::MoveFileToChosenFolder { folder, .. } => {
+                    anyhow::ensure!(
+                        folder.is_absolute() && folder.is_dir(),
+                        "Choose an existing destination folder"
+                    );
+                    crate::download_file::validate_path(&folder)?;
+                    crate::download_file::guard_parents(&folder.join("check"))?;
+                    folder
+                }
+                _ => unreachable!(),
+            };
             let to = folder.join(from.file_name().context("Missing file name")?);
             anyhow::ensure!(to != from, "The file is already in this folder");
             crate::file_relocation::relocate(store, &job, to, job.name.clone(), folder, cancel)

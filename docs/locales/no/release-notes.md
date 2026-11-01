@@ -1,3 +1,17 @@
+## 3.9.0 — 2026-11-01
+
+### Torrentarbeidsflyt
+
+Støtte for magnetlenker fra nettleseren, dra og slipp av torrentfiler og forslag fra utklippstavlen. Deling etter fullføring og innkommende tilkoblinger er separate valg som er av som standard. Flere filer kan skannes og mapper flyttes eller gis nytt navn; Stopp alle stopper også deling.
+
+[Guide / English](../../user-guide.md#download-torrents)
+
+## 3.8.0 — 2026-11-01
+
+### Åpne torrenter fra Windows
+
+Åpne .torrent-filer fra Utforsker og magnetlenker fra nettleseren for gjennomgang. Valgfri Windows-registrering beholder standardapper, og ventende gjennomganger bevares etter omstart. Torrentbeskyttelsen er styrket: magneter uten hurtigbufrede metadata krever en tracker, ellers bruker du en .torrent-fil. Regresjonstester dekker den eksisterende beskyttelsen mot filnavnkonflikter.
+
 ## 3.7.0 — 2026-11-01
 
 ### Torrentnedlastinger

@@ -93,6 +93,61 @@ fn single_tracker_torrent(data: &[u8], tracker: &str) -> Vec<u8> {
 }
 
 #[tokio::test(flavor = "multi_thread")]
+async fn test_opt_in_incoming_read_only_seed_serves_verified_data_and_closes() {
+    assert!(SessionOptions::default().listen_port.is_none());
+    let data = sample_bytes(300_000, 901);
+    let bytes = single_file_torrent("a", &data, PIECE);
+    let folder = TempFolder::new();
+    write_files(&folder, &[("renamed", &data)]);
+    let port = free_port().await;
+    let seed = Session::new(SessionOptions {
+        listen_port: Some(port),
+        ..Default::default()
+    })
+    .await
+    .unwrap();
+    seed.add_torrent_file(
+        "seed".into(),
+        &bytes,
+        AddOptions {
+            output: folder.path(),
+            seed_only: true,
+            file_name: Some("renamed".into()),
+            ..Default::default()
+        },
+    )
+    .await
+    .unwrap();
+    wait_finished(&seed, "seed").await;
+    let target = TempFolder::new();
+    let leech = Session::new(SessionOptions::default()).await.unwrap();
+    leech
+        .add_torrent_file(
+            "leech".into(),
+            &bytes,
+            AddOptions {
+                output: target.path(),
+                peers: vec![SocketAddr::from((LOOPBACK, port))],
+                ..Default::default()
+            },
+        )
+        .await
+        .unwrap();
+    wait_finished(&leech, "leech").await;
+    leech.shutdown().await;
+    assert_eq!(std::fs::read(target.path().join("a")).unwrap(), data);
+    assert_eq!(seed.stats().session.counters.downloaded_bytes, 0);
+    assert!(seed.stats().session.counters.uploaded_bytes > 0);
+    seed.shutdown().await;
+    assert!(
+        tokio::net::TcpStream::connect((LOOPBACK, port))
+            .await
+            .is_err()
+    );
+    assert!(!folder.path().join("a").exists());
+}
+
+#[tokio::test(flavor = "multi_thread")]
 async fn test_two_sessions_transfer_over_tcp() {
     let data = sample_bytes(2_000_000, 40);
     let torrent = single_file_torrent("a", &data, PIECE);

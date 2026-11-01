@@ -23,6 +23,8 @@ use crate::{Dht, DhtConfig, DhtState};
 /// Configuration for DHT persistence (periodic dump of routing table and peer store).
 /// When provided, the DHT state will be serialized to disk periodically.
 pub struct DhtPersistenceConfig {
+    /// Only for a deliberately local DHT, never inferred from saved routing state.
+    pub allow_local_addresses: bool,
     /// How often to dump state. Defaults to 60s.
     pub dump_interval: Option<Duration>,
     /// Path to the JSON file.
@@ -151,6 +153,7 @@ impl PersistentDht {
             let peer_id = routing_table.as_ref().map(|r| r.id());
 
             let dht_config = DhtConfig {
+                allow_local_addresses: persistence_config.allow_local_addresses,
                 peer_id,
                 bootstrap_addrs,
                 routing_table,

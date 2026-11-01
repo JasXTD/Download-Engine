@@ -6,13 +6,14 @@
 
 <p align="center">
   <strong>A free, open-source download manager for Windows.</strong><br>
-  Download files and videos, organize your queues and automate the routine. Built in Rust, with browser integration.
+  Download files, videos and torrents, organize your queues and automate the routine. Built in Rust, with browser integration.
 </p>
 
 <p align="center">
   <a href="https://jasxtd.github.io/Download-Engine/">Website</a> ·
   <a href="#install">Install</a> ·
   <a href="#supported-video-sites-and-formats">Video support</a> ·
+  <a href="#torrent-downloads">Torrents</a> ·
   <a href="#quick-start">Quick start</a> ·
   <a href="docs/user-guide.md">User guide</a> ·
   <a href="PRIVACY.md">Privacy</a> ·
@@ -41,10 +42,10 @@ Looking for a free **IDM alternative**? The familiar layout is inspired by
 **Internet Download Manager (IDM)**. Download Engine is an independent project, is
 not affiliated with IDM, and does not claim complete IDM feature parity.
 
-> **New in v3.7.0:** optional torrent downloads, with magnet links, file selection,
-> pause/resume and recovery in your existing queues. Torrents stay off until you
-> enable them. This release also includes the 3.6.1 dependency and approval fixes.
-> Get the [installer, portable ZIP and browser extensions](https://github.com/JasXTD/Download-Engine/releases/tag/v3.7.0),
+> **In this build, v3.9.0:** torrent opening from Windows and browser extensions,
+> drag-and-drop, clipboard review, optional seeding and incoming connections,
+> multi-file antivirus scans, and folder moves and renames.
+> Find published [installers, portable ZIPs and extensions](https://github.com/JasXTD/Download-Engine/releases),
 > or read the [changelog](CHANGELOG.md).
 
 ![A short tour of Download Engine: the download list, adding a link, the browser extension's Download video button and media list, choosing video quality, queues, schedules, the website grabber, app extensions and custom themes](docs/images/download-engine-demo.gif)
@@ -77,16 +78,27 @@ not affiliated with IDM, and does not claim complete IDM feature parity.
 
 ### Torrent downloads
 
+> **Use torrents at your own risk.** Downloaded files may contain malware, and peers
+> can see your IP address. Enabling uploads or seeding shares file data with other
+> peers. Only download and share content you are authorized to use. Antivirus scans
+> cannot guarantee that a file is safe. Torrent support is optional; seeding after
+> completion and incoming connections are off by default.
+
+- Open torrent files from Explorer, drop them on the app, or review a copied magnet link. Browser extensions can send clicked magnet links and captured torrent files for review. Optional Windows registration is under **Preferences → Torrents**.
+
 - Open **Tasks → Open torrent file…**, or paste a magnet link into **Add download**.
   Enable torrents when prompted, then choose the files or folders to download.
 - Use the usual queue, progress, pause/resume, **Stop** and **Stop all** controls.
   Verified pieces are kept for recovery, and existing files are never overwritten.
 - **Preferences → Torrents** controls uploading, upload limits and DHT peer discovery.
-  Uploading stops at completion. Speed limits and quotas apply; quotas count uploads too.
+  Sharing after completion and incoming connections are separate options, both off by default.
+  Speed limits and quotas apply; quotas count uploads too. **Stop all** also stops sharing.
+- Scan multi-file torrents through **Tools → Antivirus Scan**. Rename or move a completed
+  torrent from its right-click or three-dot menu, with recovery for interrupted copies.
 - Peers can see your IP address. Torrents pause while a proxy is enabled because
-  the app's proxy does not carry torrent traffic. Torrents are not yet accepted
-  through browser capture, CLI, scripts or MCP; peer encryption, uTP and web seeds
-  are unsupported. See the [torrent guide](docs/user-guide.md#download-torrents).
+  the app's proxy does not carry torrent traffic. Adding torrents through CLI, scripts
+  or MCP, peer encryption, uTP, web seeds and automatic router port mapping remain
+  unsupported. See the [torrent guide](docs/user-guide.md#download-torrents).
 
 ### Queues and scheduling
 

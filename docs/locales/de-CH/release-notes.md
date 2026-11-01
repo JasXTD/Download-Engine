@@ -1,3 +1,17 @@
+## 3.9.0 — 2026-11-01
+
+### Torrent-Ablauf
+
+Magnet-Links aus dem Browser, abgelegte Torrent-Dateien und Vorschläge aus der Zwischenablage werden unterstützt. Seeding nach Abschluss und eingehende Verbindungen sind getrennte, standardmässig deaktivierte Optionen. Mehrere Dateien lassen sich prüfen sowie Ordner verschieben und umbenennen; Alle stoppen beendet auch die Freigabe.
+
+[Guide / English](../../user-guide.md#download-torrents)
+
+## 3.8.0 — 2026-11-01
+
+### Torrents aus Windows öffnen
+
+Öffnen Sie .torrent-Dateien aus dem Explorer und Magnet-Links aus dem Browser zur Prüfung. Die optionale Windows-Registrierung behält Standard-Apps bei; ausstehende Prüfungen bleiben nach einem Neustart erhalten. Der Torrent-Schutz wurde verstärkt: Magnete ohne zwischengespeicherte Metadaten benötigen einen Tracker, andernfalls verwenden Sie eine .torrent-Datei. Regressionstests prüfen den bestehenden Schutz vor Dateinamenskonflikten.
+
 ## 3.7.0 — 2026-11-01
 
 ### Torrent-Downloads

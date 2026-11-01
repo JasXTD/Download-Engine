@@ -4,6 +4,7 @@ use std::str::FromStr;
 use anyhow::Context;
 
 use crate::hash_id::{Id20, Id32};
+use crate::torrent_limits::{MAX_MAGNET_BYTES, MAX_TRACKER_URL_BYTES, MAX_TRACKERS};
 
 /// A magnet link can come from any web page, so its `so=` file selection must not be able
 /// to fill the memory. This is far more files than any real torrent has.
@@ -66,6 +67,10 @@ impl Magnet {
 
     /// Parse a magnet link.
     pub fn parse(url: &str) -> anyhow::Result<Magnet> {
+        anyhow::ensure!(
+            url.len() <= MAX_MAGNET_BYTES,
+            "magnet link exceeds the size limit"
+        );
         if url.len() == 40
             && let Ok(id20) = Id20::from_str(url)
         {
@@ -102,7 +107,17 @@ impl Magnet {
                         anyhow::bail!("expected xt to start with btih or btmh");
                     }
                 }
-                "tr" => trackers.push(value.into()),
+                "tr" => {
+                    anyhow::ensure!(
+                        trackers.len() < MAX_TRACKERS,
+                        "magnet has too many trackers"
+                    );
+                    anyhow::ensure!(
+                        value.len() <= MAX_TRACKER_URL_BYTES,
+                        "tracker URL exceeds the size limit"
+                    );
+                    trackers.push(value.into());
+                }
                 "dn" if !value.is_empty() => name = Some(value.into_owned()),
                 "dn" => {}
                 "so" => {
@@ -195,6 +210,33 @@ impl std::fmt::Display for Magnet {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn tracker_count_and_url_length_are_bounded() {
+        use super::*;
+        let prefix = "magnet:?xt=urn:btih:0123456789012345678901234567890123456789";
+        assert!(
+            Magnet::parse(&format!(
+                "{prefix}{}",
+                "&tr=http://tracker.example/".repeat(MAX_TRACKERS)
+            ))
+            .is_ok()
+        );
+        assert!(
+            Magnet::parse(&format!(
+                "{prefix}{}",
+                "&tr=http://tracker.example/".repeat(MAX_TRACKERS + 1)
+            ))
+            .is_err()
+        );
+        assert!(
+            Magnet::parse(&format!(
+                "{prefix}&tr={}",
+                "a".repeat(MAX_TRACKER_URL_BYTES + 1)
+            ))
+            .is_err()
+        );
+        assert!(Magnet::parse(&format!("{prefix}&dn={}", "a".repeat(MAX_MAGNET_BYTES))).is_err());
+    }
     use std::str::FromStr;
 
     use crate::Id20;

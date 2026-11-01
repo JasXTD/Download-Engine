@@ -267,7 +267,8 @@ impl Job {
     }
 
     /// Only the Add download window makes these. A magnet link is not a download URL, so
-    /// scripts, the browser, MCP and the command line can't add one.
+    /// scripts, MCP and the command line can't add one. Browser requests first
+    /// go through the desktop review and consent flow.
     pub fn new_torrent(
         link: &str,
         name: &str,

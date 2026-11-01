@@ -10,8 +10,8 @@ use std::sync::{Arc, OnceLock};
 use std::time::Duration;
 
 use anyhow::{Context as _, Result, anyhow};
-use futures_util::StreamExt;
 use librqbit_core::hash_id::Id20;
+use librqbit_core::network::is_public_endpoint;
 use librqbit_dualstack_sockets::{ConnectOpts, tcp_connect};
 use librqbit_peer_protocol::Request;
 use librqbit_tracker_comms::{TorrentStatsProvider, TrackerCommsStats, TrackerCommsStatsState};
@@ -23,9 +23,10 @@ use tokio::time::{Instant, MissedTickBehavior, timeout};
 use tokio_util::sync::CancellationToken;
 use url::Url;
 
+use crate::admission::{Admission, Permit};
 use crate::bitfield::Bitfield;
 use crate::debug_log;
-use crate::discovery::{Discovery, Search};
+use crate::discovery::{Discovery, PeerCandidates, Search};
 use crate::meta::TorrentMeta;
 use crate::metadata;
 use crate::peer::{
@@ -50,7 +51,7 @@ const UPLOAD_SLOTS: usize = 4;
 const RECHOKE_SECONDS: u32 = 10;
 /// A peer that sent part of this many bad pieces is dropped.
 const MAX_STRIKES: u32 = 3;
-const MAX_KNOWN_PEERS: usize = 5000;
+pub(crate) const MAX_KNOWN_PEERS: usize = 5000;
 const FIRST_RETRY: Duration = Duration::from_secs(2);
 /// Tries in a row that came to nothing before an address is mostly left alone. Trackers keep
 /// handing out dead addresses, and security software reports each attempt to the user.
@@ -117,6 +118,9 @@ pub struct TorrentOptions {
     pub peers: Vec<SocketAddr>,
     /// Whether to keep uploading once the download is done.
     pub seed: bool,
+    /// A completed download may share verified pieces but never fetch or write data.
+    pub seed_only: bool,
+    pub file_name: Option<String>,
     pub listen_port: Option<u16>,
     /// Where to keep resume data. Without it, each start checks the files again.
     pub state_dir: Option<PathBuf>,
@@ -159,11 +163,13 @@ pub(crate) enum Event {
     PieceComplete(u32),
     Fatal(String),
     Ban(SocketAddr),
-    Stream {
-        stream: BoxedStream,
-        addr: Option<SocketAddr>,
-        hello: Option<Hello>,
-    },
+}
+
+struct Incoming {
+    stream: BoxedStream,
+    addr: Option<SocketAddr>,
+    hello: Option<Hello>,
+    permit: Permit,
 }
 
 /// A torrent whose details are known.
@@ -190,7 +196,11 @@ impl TorrentCore {
         context: Context,
         only: Option<Vec<usize>>,
     ) -> Result<Arc<Self>> {
-        let wanted = meta.wanted_pieces(only.as_deref())?;
+        let wanted = meta.wanted_pieces(if options.seed_only {
+            None
+        } else {
+            only.as_deref()
+        })?;
         let have = Bitfield::new(meta.lengths.total_pieces());
         let picker = Picker::new(
             meta.lengths,
@@ -198,7 +208,20 @@ impl TorrentCore {
             wanted,
             u64::from(librqbit_core::random::random_u32()) << 16 | 1,
         );
-        let storage = Arc::new(Storage::new(meta.clone(), options.output.clone()));
+        anyhow::ensure!(
+            options.seed_only || options.file_name.is_none(),
+            "Renamed paths are only supported for read-only seeding"
+        );
+        let storage = Arc::new(if options.seed_only {
+            Storage::for_seeding(
+                meta.clone(),
+                options.output.clone(),
+                options.file_name.clone(),
+                only.as_deref(),
+            )?
+        } else {
+            Storage::new(meta.clone(), options.output.clone())
+        });
         Ok(Arc::new(Self {
             meta,
             storage,
@@ -302,7 +325,9 @@ pub(crate) struct Live {
     pub core: Arc<TorrentCore>,
     pub cancel: CancellationToken,
     pub events: mpsc::UnboundedSender<Event>,
-    found: mpsc::UnboundedSender<SocketAddr>,
+    incoming: mpsc::Sender<Incoming>,
+    admission: Arc<Admission>,
+    found: PeerCandidates,
     links: Mutex<HashMap<u64, Arc<PeerLink>>>,
     next_key: AtomicU64,
     connecting: AtomicUsize,
@@ -340,7 +365,7 @@ impl Live {
 
     pub fn discovered(&self, peers: impl Iterator<Item = SocketAddr>) {
         for peer in peers {
-            let _ = self.found.send(peer);
+            self.found.try_send(peer);
         }
     }
 
@@ -454,7 +479,7 @@ struct PeerBook {
     banned: HashSet<IpAddr>,
 }
 
-fn can_reach(addr: SocketAddr) -> bool {
+pub(crate) fn can_reach(addr: SocketAddr) -> bool {
     let ip = addr.ip().to_canonical();
     let reserved = match ip {
         // 0.x.x.x is not an address, and 240 and above are reserved or broadcast.
@@ -475,20 +500,34 @@ impl PeerBook {
     /// Adds a peer from a tracker, the DHT or another peer. Those are strangers, and they
     /// must not be able to make this computer connect to services on itself.
     fn add_found(&mut self, addr: SocketAddr, allow_loopback: bool) {
-        if allow_loopback || !addr.ip().to_canonical().is_loopback() {
+        if allow_loopback || is_public_endpoint(addr) {
             self.add(addr);
         }
     }
 
     fn next_ready(&mut self, now: Instant) -> Option<SocketAddr> {
+        self.next_ready_for(now, |_| Some(()))
+            .map(|(addr, ())| addr)
+    }
+
+    fn next_ready_for<T>(
+        &mut self,
+        now: Instant,
+        mut reserve: impl FnMut(SocketAddr) -> Option<T>,
+    ) -> Option<(SocketAddr, T)> {
         let banned = &self.banned;
-        let (addr, entry) = self.peers.iter_mut().find(|(addr, entry)| {
-            !entry.connected
+        self.peers.iter_mut().find_map(|(addr, entry)| {
+            if !entry.connected
                 && !banned.contains(&addr.ip())
                 && entry.next_try.is_none_or(|next| next <= now)
-        })?;
-        entry.connected = true;
-        Some(*addr)
+            {
+                let permit = reserve(*addr)?;
+                entry.connected = true;
+                Some((*addr, permit))
+            } else {
+                None
+            }
+        })
     }
 
     /// Waits longer each time a peer is no use, and only briefly after one that was.
@@ -636,6 +675,10 @@ impl Torrent {
 
     /// Chooses which files to download, at any time.
     pub fn select(&self, only: Option<Vec<usize>>) -> Result<()> {
+        anyhow::ensure!(
+            !self.options.seed_only,
+            "Stop read-only sharing before changing its file selection"
+        );
         if let Some(meta) = self.meta.get() {
             meta.wanted_pieces(only.as_deref())?;
         }
@@ -702,8 +745,7 @@ impl Torrent {
             }
             core.checked.store(true, Ordering::Release);
         }
-        self.set_phase(Phase::Live);
-        if let Some(phase) = run_swarm(core, cancel.clone()).await {
+        if let Some(phase) = run_swarm(self, core, cancel.clone()).await {
             self.set_phase(phase);
         }
         Ok(())
@@ -713,23 +755,25 @@ impl Torrent {
         // Ending this stage must also end the searches started for it.
         let cancel = cancel.child_token();
         let _stop_search = cancel.clone().drop_guard();
-        let (found_tx, mut found) = mpsc::unbounded_channel();
+        let mut book = PeerBook::default();
+        for peer in &self.options.peers {
+            book.add(*peer);
+        }
+        let (found_tx, mut found) =
+            PeerCandidates::channel(book.peers.keys().copied(), self.options.allow_loopback);
         if let Some(discovery) = &self.context.discovery {
             discovery.start(Search {
                 info_hash: self.info_hash,
                 trackers: self.trackers.clone(),
-                private: false,
+                private: None,
                 stats: Box::new(()),
                 found: found_tx.clone(),
                 cancel: cancel.clone(),
             });
         }
-        let mut book = PeerBook::default();
-        for peer in &self.options.peers {
-            book.add(*peer);
-        }
         let allow_loopback = self.options.allow_loopback;
-        let mut attempts: JoinSet<(SocketAddr, Result<bytes::Bytes>)> = JoinSet::new();
+        let budget = metadata::Budget::default();
+        let mut attempts: JoinSet<(SocketAddr, Result<metadata::Fetched>)> = JoinSet::new();
         let mut tick = tokio::time::interval(Duration::from_secs(1));
         loop {
             tokio::select! {
@@ -740,7 +784,7 @@ impl Torrent {
                         continue;
                     };
                     let meta = result.and_then(|info| {
-                        TorrentMeta::from_info_bytes(self.info_hash, info, self.trackers.clone())
+                        TorrentMeta::from_info_bytes(self.info_hash, info.bytes.clone(), self.trackers.clone())
                     });
                     match meta {
                         Ok(meta) => return Some(Arc::new(meta)),
@@ -757,10 +801,11 @@ impl Torrent {
                     break;
                 };
                 let (info_hash, our_id) = (self.info_hash, self.context.peer_id);
+                let budget = budget.clone();
                 attempts.spawn(async move {
                     let result = timeout(METADATA_TIMEOUT, async {
                         let stream = connect(addr).await?;
-                        metadata::fetch(stream, info_hash, our_id).await
+                        metadata::fetch(stream, info_hash, our_id, budget).await
                     })
                     .await
                     .unwrap_or_else(|_| Err(anyhow!("timed out")));
@@ -771,30 +816,39 @@ impl Torrent {
     }
 
     /// Hands a connection from the listener to this torrent, if it is running.
-    pub(crate) fn offer(&self, stream: BoxedStream, addr: SocketAddr, hello: Hello) {
-        if let Some(live) = self.core.get().and_then(|core| core.live()) {
-            let _ = live.events.send(Event::Stream {
-                stream,
-                addr: Some(addr),
-                hello: Some(hello),
-            });
-        }
+    pub(crate) fn offer(&self, stream: BoxedStream, addr: SocketAddr, hello: Hello) -> Result<()> {
+        self.queue_stream(stream, Some(addr), Some(hello))
     }
 
     /// Connects this torrent to a peer over an existing stream. Both sides call this.
     pub fn connect_stream(&self, stream: BoxedStream) -> Result<()> {
+        self.queue_stream(stream, None, None)
+    }
+
+    fn queue_stream(
+        &self,
+        stream: BoxedStream,
+        addr: Option<SocketAddr>,
+        hello: Option<Hello>,
+    ) -> Result<()> {
         let live = self
             .core
             .get()
             .and_then(|core| core.live())
             .context("this torrent is not running")?;
-        live.events
-            .send(Event::Stream {
+        anyhow::ensure!(!live.cancel.is_cancelled(), "this torrent is stopping");
+        let permit = live
+            .admission
+            .try_acquire(addr)
+            .context("peer connection limit reached")?;
+        live.incoming
+            .try_send(Incoming {
                 stream,
-                addr: None,
-                hello: None,
+                addr,
+                hello,
+                permit,
             })
-            .map_err(|_| anyhow!("this torrent is stopping"))
+            .map_err(|_| anyhow!("this torrent's connection queue is full or stopping"))
     }
 
     /// How many connections ended in a panic. Anything above zero is a bug.
@@ -881,10 +935,11 @@ async fn serve_peer(
     mut stream: BoxedStream,
     addr: Option<SocketAddr>,
     hello: Option<Hello>,
+    _permit: Permit,
 ) -> bool {
     let info_hash = live.core.meta.info_hash;
     let our_id = live.core.context.peer_id;
-    let shaken: Result<Hello> = async {
+    let handshake = async {
         send_handshake(&mut stream, info_hash, our_id).await?;
         match hello {
             Some(hello) => Ok(hello),
@@ -894,8 +949,11 @@ async fn serve_peer(
                 Ok(hello)
             }
         }
-    }
-    .await;
+    };
+    let shaken: Result<Hello> = tokio::select! {
+        _ = live.cancel.cancelled() => return false,
+        result = handshake => result,
+    };
     match shaken {
         Ok(hello) => run_connection(live, stream, hello, addr).await,
         Err(error) => {
@@ -905,7 +963,7 @@ async fn serve_peer(
     }
 }
 
-async fn connect_and_serve(live: Arc<Live>, addr: SocketAddr) -> bool {
+async fn connect_and_serve(live: Arc<Live>, addr: SocketAddr, permit: Permit) -> bool {
     let cancel = live.cancel.clone();
     let connected = tokio::select! {
         _ = cancel.cancelled() => return false,
@@ -913,7 +971,7 @@ async fn connect_and_serve(live: Arc<Live>, addr: SocketAddr) -> bool {
     };
     live.connecting.fetch_sub(1, Ordering::Relaxed);
     match connected {
-        Ok(stream) => serve_peer(live, stream, Some(addr), None).await,
+        Ok(stream) => serve_peer(live, stream, Some(addr), None, permit).await,
         Err(error) => {
             debug_log!("could not connect to {addr}: {error:#}");
             false
@@ -945,6 +1003,12 @@ async fn check_existing(core: &Arc<TorrentCore>, cancel: &CancellationToken) -> 
     core.storage
         .create_empty_files(only.as_deref())
         .context("Could not create the download files")?;
+    if core.options.seed_only {
+        anyhow::ensure!(
+            core.picker.lock().have().count() > 0,
+            "No complete, verified pieces are available to share"
+        );
+    }
     Ok(true)
 }
 
@@ -984,36 +1048,46 @@ async fn hash_files(core: &Arc<TorrentCore>, cancel: &CancellationToken) -> Resu
 }
 
 /// Runs the swarm until it is stopped. Returns the phase to move to, if a new one is due.
-async fn run_swarm(core: Arc<TorrentCore>, cancel: CancellationToken) -> Option<Phase> {
+async fn run_swarm(
+    torrent: &Torrent,
+    core: Arc<TorrentCore>,
+    cancel: CancellationToken,
+) -> Option<Phase> {
     let (events_tx, mut events) = mpsc::unbounded_channel();
-    let (found_tx, mut found) = mpsc::unbounded_channel();
+    let (incoming_tx, mut incoming) = mpsc::channel(MAX_PEERS);
+    let mut book = PeerBook::default();
+    for peer in &core.options.peers {
+        book.add(*peer);
+    }
+    let (found_tx, mut found) =
+        PeerCandidates::channel(book.peers.keys().copied(), core.options.allow_loopback);
     let live = Arc::new(Live {
         core: core.clone(),
         cancel: cancel.clone(),
         events: events_tx,
+        incoming: incoming_tx,
+        admission: Admission::new(MAX_PEERS),
         found: found_tx.clone(),
         links: Mutex::default(),
         next_key: AtomicU64::new(0),
         connecting: AtomicUsize::new(0),
     });
     *core.live.lock() = Some(live.clone());
+    // Callers may offer a socket as soon as they observe Live.
+    torrent.set_phase(Phase::Live);
 
     let search_cancel = cancel.child_token();
     if let Some(discovery) = &core.context.discovery {
         discovery.start(Search {
             info_hash: core.meta.info_hash,
             trackers: core.meta.trackers.clone(),
-            private: core.meta.private,
+            private: Some(core.meta.private),
             stats: Box::new(CoreStats(core.clone())),
             found: found_tx.clone(),
             cancel: search_cancel.clone(),
         });
     }
 
-    let mut book = PeerBook::default();
-    for peer in &core.options.peers {
-        book.add(*peer);
-    }
     let mut peers: JoinSet<(Option<SocketAddr>, bool)> = JoinSet::new();
     let mut hashing: JoinSet<(u32, io::Result<bool>)> = JoinSet::new();
     let mut waiting: VecDeque<u32> = VecDeque::new();
@@ -1043,14 +1117,6 @@ async fn run_swarm(core: Arc<TorrentCore>, cancel: CancellationToken) -> Option<
                     break;
                 }
                 Event::Ban(addr) => book.ban(addr),
-                Event::Stream { stream, addr, hello } => {
-                    let refused = addr.is_some_and(|addr| book.is_banned(addr));
-                    if peers.len() < MAX_PEERS && !refused {
-                        peers.spawn(tracked(addr, serve_peer(live.clone(), stream, addr, hello)));
-                    } else {
-                        debug_log!("refused a connection, {} peers", peers.len());
-                    }
-                }
             },
             Some(done) = hashing.join_next(), if !hashing.is_empty() => {
                 if let Some(message) = apply_hash(&live, done) {
@@ -1066,13 +1132,18 @@ async fn run_swarm(core: Arc<TorrentCore>, cancel: CancellationToken) -> Option<
             Some(done) = peers.join_next(), if !peers.is_empty() => {
                 peer_ended(&core, &mut book, done);
             }
-            Some(peer) = found.recv() => book.add_found(peer, core.options.allow_loopback),
             _ = tick.tick() => {
                 seconds = seconds.wrapping_add(1);
                 update_rates(&core);
                 if seconds.is_multiple_of(RECHOKE_SECONDS) {
                     let seeding = core.picker.lock().is_finished();
                     live.rechoke(&mut uploaded_seen, seeding, seconds / RECHOKE_SECONDS);
+                }
+            }
+            Some(peer) = found.recv() => book.add_found(peer, core.options.allow_loopback),
+            Some(Incoming { stream, addr, hello, permit }) = incoming.recv() => {
+                if !addr.is_some_and(|addr| book.is_banned(addr)) {
+                    peers.spawn(tracked(addr, serve_peer(live.clone(), stream, addr, hello, permit)));
                 }
             }
         }
@@ -1087,11 +1158,16 @@ async fn run_swarm(core: Arc<TorrentCore>, cancel: CancellationToken) -> Option<
         if core.options.connect_out && !core.picker.lock().is_finished() {
             let now = Instant::now();
             while may_connect(peers.len(), live.connecting.load(Ordering::Relaxed)) {
-                let Some(addr) = book.next_ready(now) else {
+                let Some((addr, permit)) =
+                    book.next_ready_for(now, |addr| live.admission.try_acquire(Some(addr)))
+                else {
                     break;
                 };
                 live.connecting.fetch_add(1, Ordering::Relaxed);
-                peers.spawn(tracked(Some(addr), connect_and_serve(live.clone(), addr)));
+                peers.spawn(tracked(
+                    Some(addr),
+                    connect_and_serve(live.clone(), addr, permit),
+                ));
             }
         }
     }
@@ -1100,6 +1176,9 @@ async fn run_swarm(core: Arc<TorrentCore>, cancel: CancellationToken) -> Option<
     cancel.cancel();
     search_cancel.cancel();
     *core.live.lock() = None;
+    // Close queued sockets promptly, including reservations racing with shutdown.
+    incoming.close();
+    while incoming.recv().await.is_some() {}
     while let Some(done) = peers.join_next().await {
         peer_ended(&core, &mut book, done);
     }
@@ -1182,18 +1261,6 @@ fn update_rates(core: &TorrentCore) {
     rates.last_up = up;
 }
 
-/// Passes on peers from a search until it ends or nobody is listening.
-pub(crate) async fn drain_addresses<S>(mut stream: S, found: mpsc::UnboundedSender<SocketAddr>)
-where
-    S: futures_util::Stream<Item = SocketAddr> + Unpin,
-{
-    while let Some(addr) = stream.next().await {
-        if found.send(addr).is_err() {
-            break;
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1201,6 +1268,170 @@ mod tests {
 
     fn address(text: &str) -> SocketAddr {
         text.parse().unwrap()
+    }
+
+    #[tokio::test]
+    async fn incoming_peer_ids_cannot_bypass_the_source_ip_limit() {
+        let folder = TempFolder::new();
+        let meta = meta_of(&single_file_torrent("a", &[1u8; 100], 16384));
+        let torrent = Torrent::from_meta(meta, options_for(folder.path()), context(1)).unwrap();
+        torrent.start().await;
+        crate::testkit::wait_until(&torrent, "live", crate::testkit::is_live).await;
+        let mut held = Vec::new();
+        for index in 0..8u8 {
+            let (server, mut client) = tokio::io::duplex(4096);
+            let _ = torrent.offer(
+                Box::new(server),
+                SocketAddr::from(([1, 2, 3, 4], 6000 + u16::from(index))),
+                Hello {
+                    peer_id: Id20::new([index + 10; 20]),
+                    supports_extended: false,
+                },
+            );
+            if read_handshake(&mut client).await.is_ok() {
+                held.push(client);
+            }
+        }
+        torrent.pause().await;
+        assert_eq!(
+            held.len(),
+            4,
+            "changing peer IDs or ports must not buy more slots"
+        );
+    }
+
+    #[tokio::test]
+    async fn incoming_sockets_are_bounded_before_the_swarm_can_dequeue_them() {
+        let folder = TempFolder::new();
+        let meta = meta_of(&single_file_torrent("a", &[1u8; 100], 16384));
+        let torrent = Torrent::from_meta(meta, options_for(folder.path()), context(1)).unwrap();
+        torrent.start().await;
+        crate::testkit::wait_until(&torrent, "live", crate::testkit::is_live).await;
+        let mut held = Vec::new();
+        // This current-thread test does not yield until every socket has been offered.
+        for index in 0..100u8 {
+            let (server, client) = tokio::io::duplex(4096);
+            if torrent
+                .offer(
+                    Box::new(server),
+                    SocketAddr::from(([1, 2, 3, index + 1], 6881)),
+                    Hello {
+                        peer_id: Id20::new([index + 10; 20]),
+                        supports_extended: false,
+                    },
+                )
+                .is_ok()
+            {
+                held.push(client);
+            }
+        }
+        let accepted = held.len();
+        torrent.pause().await;
+        assert_eq!(accepted, 50);
+        for mut client in held {
+            assert!(read_handshake(&mut client).await.is_err());
+        }
+        // A fresh run must not inherit reservations or queued sockets from the old run.
+        torrent.start().await;
+        crate::testkit::wait_until(&torrent, "resumed", crate::testkit::is_live).await;
+        let (server, mut client) = tokio::io::duplex(4096);
+        torrent
+            .offer(
+                Box::new(server),
+                address("1.2.3.1:6881"),
+                Hello {
+                    peer_id: Id20::new([10; 20]),
+                    supports_extended: false,
+                },
+            )
+            .unwrap();
+        assert!(read_handshake(&mut client).await.is_ok());
+        torrent.pause().await;
+    }
+
+    #[tokio::test]
+    async fn disconnected_sources_recover_capacity_and_other_sources_are_admitted() {
+        let folder = TempFolder::new();
+        let meta = meta_of(&single_file_torrent("a", &[1u8; 100], 16384));
+        let torrent = Torrent::from_meta(meta, options_for(folder.path()), context(1)).unwrap();
+        torrent.start().await;
+        crate::testkit::wait_until(&torrent, "live", crate::testkit::is_live).await;
+        let mut held = Vec::new();
+        for index in 0..5u8 {
+            let (server, mut client) = tokio::io::duplex(4096);
+            let ip = if index < 4 {
+                [1, 2, 3, 4]
+            } else {
+                [1, 2, 3, 5]
+            };
+            torrent
+                .offer(
+                    Box::new(server),
+                    SocketAddr::from((ip, 6000 + u16::from(index))),
+                    Hello {
+                        peer_id: Id20::new([index + 10; 20]),
+                        supports_extended: false,
+                    },
+                )
+                .unwrap();
+            read_handshake(&mut client).await.unwrap();
+            held.push(client);
+        }
+        drop(held.remove(0));
+        crate::testkit::wait_until(&torrent, "closed peer", |stats| stats.peers == 4).await;
+        let (server, mut client) = tokio::io::duplex(4096);
+        torrent
+            .offer(
+                Box::new(server),
+                address("[::ffff:1.2.3.4]:9999"),
+                Hello {
+                    peer_id: Id20::new([100; 20]),
+                    supports_extended: false,
+                },
+            )
+            .unwrap();
+        read_handshake(&mut client).await.unwrap();
+        torrent.pause().await;
+    }
+
+    #[tokio::test]
+    async fn pause_cancels_a_handshake_blocked_on_its_socket() {
+        let folder = TempFolder::new();
+        let meta = meta_of(&single_file_torrent("a", &[1u8; 100], 16384));
+        let torrent = Torrent::from_meta(meta, options_for(folder.path()), context(1)).unwrap();
+        torrent.start().await;
+        crate::testkit::wait_until(&torrent, "live", crate::testkit::is_live).await;
+        let (server, _client) = tokio::io::duplex(1);
+        torrent.connect_stream(Box::new(server)).unwrap();
+        tokio::task::yield_now().await;
+        timeout(Duration::from_secs(2), torrent.pause())
+            .await
+            .unwrap();
+        assert_eq!(torrent.stats().peers, 0);
+    }
+
+    #[test]
+    fn outgoing_selection_skips_sources_with_no_capacity_without_marking_them_connected() {
+        let admission = Admission::new(MAX_PEERS);
+        let held: Vec<_> = (1..=4)
+            .map(|port| {
+                admission
+                    .try_acquire(Some(([1, 2, 3, 4], port).into()))
+                    .unwrap()
+            })
+            .collect();
+        let mut book = PeerBook::default();
+        let blocked = address("1.2.3.4:6881");
+        let other = address("1.2.3.5:6881");
+        book.add(blocked);
+        book.add(other);
+        let (addr, _permit) = book
+            .next_ready_for(Instant::now(), |addr| admission.try_acquire(Some(addr)))
+            .unwrap();
+        assert_eq!(addr, other);
+        assert!(!book.peers[&blocked].connected);
+        drop(held);
+        assert_eq!(book.next_ready(Instant::now()), Some(blocked));
     }
 
     #[test]
@@ -1233,6 +1464,15 @@ mod tests {
             "127.9.9.9:80",
             "[::1]:80",
             "[::ffff:127.0.0.1]:80",
+            "10.0.0.1:80",
+            "172.16.0.1:80",
+            "192.168.1.1:80",
+            "169.254.169.254:80",
+            "100.64.0.1:80",
+            "198.18.0.1:80",
+            "[fc00::1]:80",
+            "[fe80::1]:80",
+            "[::ffff:192.168.1.1]:80",
         ] {
             book.add_found(address(local), false);
         }
@@ -1349,11 +1589,14 @@ mod tests {
         let meta = meta_of(&single_file_torrent("a", &[1u8; 100], 16384));
         let core = TorrentCore::new(meta, options_for(folder.path()), context(1), None).unwrap();
         let (events, _) = mpsc::unbounded_channel();
-        let (found, _) = mpsc::unbounded_channel();
+        let (found, _) = PeerCandidates::channel(std::iter::empty(), false);
+        let (incoming, _) = mpsc::channel(MAX_PEERS);
         Arc::new(Live {
             core,
             cancel: CancellationToken::new(),
             events,
+            incoming,
+            admission: Admission::new(MAX_PEERS),
             found,
             links: Mutex::default(),
             next_key: AtomicU64::new(0),

@@ -1,3 +1,17 @@
+## 3.9.0 — 2026-11-01
+
+### Gestion des torrents
+
+Prise en charge des liens magnet du navigateur, du glisser-déposer de fichiers torrent et des suggestions du presse-papiers. Le partage après téléchargement et les connexions entrantes sont deux options distinctes, désactivées par défaut. Analyse de plusieurs fichiers, déplacement et renommage des dossiers ; Tout arrêter interrompt aussi le partage.
+
+[Guide / English](../../user-guide.md#download-torrents)
+
+## 3.8.0 — 2026-11-01
+
+### Ouvrir des torrents depuis Windows
+
+Ouvrez les fichiers .torrent depuis l’Explorateur et les liens magnet depuis le navigateur pour les vérifier. L’inscription facultative dans Windows préserve les applications par défaut et les éléments en attente après redémarrage. La sécurité des torrents a été renforcée : un magnet sans métadonnées en cache nécessite un tracker, sinon utilisez un fichier .torrent. Des tests de régression couvrent la protection existante contre les conflits de noms de fichiers.
+
 ## 3.7.0 — 2026-11-01
 
 ### Téléchargements torrent

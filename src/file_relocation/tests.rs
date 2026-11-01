@@ -84,7 +84,7 @@ impl Gate {
     pub(crate) fn copying(id: &str) -> Self {
         Self::new(id, true, 0)
     }
-    fn new(id: &str, force_copy: bool, crash: u8) -> Self {
+    pub(super) fn new(id: &str, force_copy: bool, crash: u8) -> Self {
         let (tx, arrived) = mpsc::channel();
         let hook = Arc::new(Hook {
             force_copy,

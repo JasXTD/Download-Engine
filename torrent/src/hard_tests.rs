@@ -23,6 +23,98 @@ use crate::torrent::{Torrent, TorrentOptions};
 const PIECE: u32 = 32 * 1024;
 const CHUNK: usize = 16 * 1024;
 
+#[tokio::test(flavor = "multi_thread")]
+async fn seed_only_serves_a_renamed_file_without_recreating_the_old_name() {
+    let data = sample_bytes(8 * PIECE as usize, 811);
+    let meta = meta_of(&single_file_torrent("original.bin", &data, PIECE));
+    let seed_folder = TempFolder::new();
+    let leech_folder = TempFolder::new();
+    write_files(&seed_folder, &[("renamed.bin", &data)]);
+    let seed = Torrent::from_meta(
+        meta.clone(),
+        TorrentOptions {
+            seed_only: true,
+            file_name: Some("renamed.bin".into()),
+            ..options_for(seed_folder.path())
+        },
+        context(80),
+    )
+    .unwrap();
+    seed.start().await;
+    wait_until(&seed, "read-only seed verified", is_done).await;
+    let leech = start_torrent(&meta, leech_folder.path(), 81);
+    leech.start().await;
+    wait_until(&leech, "leecher live", is_live).await;
+    join(&seed, &leech);
+    wait_until(&leech, "renamed seed transfer", is_done).await;
+    leech.pause().await;
+    seed.pause().await;
+    assert_eq!(
+        std::fs::read(leech_folder.path().join("original.bin")).unwrap(),
+        data
+    );
+    assert!(!seed_folder.path().join("original.bin").exists());
+    assert_eq!(seed.stats().downloaded_bytes, 0);
+    assert!(seed.stats().uploaded_bytes > 0);
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn seed_only_shares_selected_pieces_but_never_downloads_skipped_files() {
+    let a = sample_bytes(4 * PIECE as usize, 812);
+    let b = sample_bytes(4 * PIECE as usize, 813);
+    let meta = meta_of(&multi_file_torrent(
+        "pack",
+        &[(&["a.bin"], &a, false), (&["b.bin"], &b, false)],
+        PIECE,
+    ));
+    let partial_folder = TempFolder::new();
+    let complete_folder = TempFolder::new();
+    write_files(&partial_folder, &[("a.bin", &a)]);
+    write_files(&complete_folder, &[("a.bin", &a), ("b.bin", &b)]);
+    let partial = Torrent::from_meta(
+        meta.clone(),
+        TorrentOptions {
+            seed_only: true,
+            only: Some(vec![0]),
+            ..options_for(partial_folder.path())
+        },
+        context(82),
+    )
+    .unwrap();
+    partial.start().await;
+    wait_until(&partial, "selected seed verified", is_live).await;
+    let complete = start_torrent(&meta, complete_folder.path(), 83);
+    complete.start().await;
+    wait_until(&complete, "complete seed verified", is_done).await;
+    join(&partial, &complete);
+    // A second leecher proves the selected seed is live and transmitting, while
+    // the complete peer has all of its missing pieces available.
+    let destination = TempFolder::new();
+    let leech = Torrent::from_meta(
+        meta.clone(),
+        TorrentOptions {
+            only: Some(vec![0]),
+            ..options_for(destination.path())
+        },
+        context(84),
+    )
+    .unwrap();
+    leech.start().await;
+    wait_until(&leech, "leecher live", is_live).await;
+    join(&partial, &leech);
+    wait_until(&leech, "selected-file transfer", is_done).await;
+    assert_eq!(partial.stats().downloaded_bytes, 0);
+    assert!(!partial_folder.path().join("b.bin").exists());
+    assert!(
+        !partial.stats().finished,
+        "A partial seed must not announce the entire torrent complete"
+    );
+    assert!(partial.select(Some(vec![1])).is_err());
+    partial.pause().await;
+    complete.pause().await;
+    leech.pause().await;
+}
+
 fn only_this_part(data: &[u8], part: std::ops::Range<usize>) -> Vec<u8> {
     let mut kept = vec![0u8; data.len()];
     kept[part.clone()].copy_from_slice(&data[part]);
@@ -627,11 +719,17 @@ async fn test_a_magnet_link_gets_its_details_from_a_peer() {
     let (one, two) = tokio::io::duplex(1 << 20);
     seed.connect_stream(Box::new(one)).unwrap();
     let our_id = Id20::new([9; 20]);
-    let fetched = metadata::fetch(Box::new(two), meta.info_hash, our_id)
-        .await
-        .unwrap();
-    assert!(fetched == meta.info_bytes);
-    let rebuilt = TorrentMeta::from_info_bytes(meta.info_hash, fetched, Vec::new()).unwrap();
+    let fetched = metadata::fetch(
+        Box::new(two),
+        meta.info_hash,
+        our_id,
+        metadata::Budget::default(),
+    )
+    .await
+    .unwrap();
+    assert!(fetched.bytes == meta.info_bytes);
+    let rebuilt =
+        TorrentMeta::from_info_bytes(meta.info_hash, fetched.bytes.clone(), Vec::new()).unwrap();
     assert_eq!(rebuilt.name, "a.bin");
     assert_eq!(rebuilt.lengths.total_length(), data.len() as u64);
 }

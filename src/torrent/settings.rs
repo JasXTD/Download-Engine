@@ -13,6 +13,8 @@ pub struct Settings {
     pub upload: bool,
     pub upload_limit: Option<u32>,
     pub dht: bool,
+    pub seed_completed: bool,
+    pub incoming_port: Option<u16>,
 }
 impl Default for Settings {
     fn default() -> Self {
@@ -21,6 +23,8 @@ impl Default for Settings {
             upload: true,
             upload_limit: None,
             dht: true,
+            seed_completed: false,
+            incoming_port: None,
         }
     }
 }
@@ -38,6 +42,13 @@ pub(crate) fn initialize(conn: &Connection) -> Result<()> {
         job_id TEXT PRIMARY KEY REFERENCES jobs(id) ON DELETE CASCADE,
         data TEXT NOT NULL);",
     )?;
+    conn.execute_batch("CREATE TABLE IF NOT EXISTS torrent_sharing_settings (
+        id INTEGER PRIMARY KEY CHECK(id=1), seed_completed INTEGER NOT NULL CHECK(seed_completed IN (0,1)),
+        incoming_port INTEGER CHECK(incoming_port BETWEEN 1024 AND 65535));
+        INSERT OR IGNORE INTO torrent_sharing_settings VALUES(1,0,NULL);
+        CREATE TABLE IF NOT EXISTS torrent_sharing (
+        job_id TEXT PRIMARY KEY REFERENCES jobs(id) ON DELETE CASCADE,
+        enabled INTEGER NOT NULL CHECK(enabled IN (0,1)), error TEXT);")?;
     // Development builds could save torrents before the version guard existed. Upgrade
     // those profiles too, without changing profiles that have never saved a torrent.
     let has_torrents: bool = conn.query_row(
@@ -54,8 +65,8 @@ pub(crate) fn initialize(conn: &Connection) -> Result<()> {
 
 pub(super) fn protect_profile(conn: &Connection) -> Result<()> {
     conn.execute(
-        "UPDATE profile_format SET data_version=MAX(data_version,5),
-         min_writer_version=MAX(min_writer_version,5) WHERE id=1",
+        "UPDATE profile_format SET data_version=MAX(data_version,6),
+         min_writer_version=MAX(min_writer_version,6) WHERE id=1",
         [],
     )?;
     Ok(())
@@ -64,7 +75,7 @@ pub(super) fn protect_profile(conn: &Connection) -> Result<()> {
 impl Store {
     pub fn torrent_settings(&self) -> Result<Settings> {
         Ok(self.connect()?.query_row(
-            "SELECT enabled,upload,upload_limit,dht FROM torrent_settings WHERE id=1",
+            "SELECT enabled,upload,upload_limit,dht,seed_completed,incoming_port FROM torrent_settings JOIN torrent_sharing_settings USING(id) WHERE id=1",
             [],
             |row| {
                 Ok(Settings {
@@ -72,6 +83,8 @@ impl Store {
                     upload: row.get(1)?,
                     upload_limit: row.get(2)?,
                     dht: row.get(3)?,
+                    seed_completed: row.get(4)?,
+                    incoming_port: row.get(5)?,
                 })
             },
         )?)
@@ -81,11 +94,25 @@ impl Store {
     /// helper follows them and turning torrents off stops every torrent.
     pub fn save_torrent_settings(&self, value: Settings) -> Result<()> {
         crate::bandwidth::validate(value.upload_limit.map(u64::from))?;
-        let count = self.connect()?.execute(
+        anyhow::ensure!(
+            value.incoming_port.is_none_or(|port| port >= 1024),
+            "Choose an incoming port between 1024 and 65535"
+        );
+        let mut conn = self.connect()?;
+        let tx = conn.transaction()?;
+        let count = tx.execute(
             "UPDATE torrent_settings SET enabled=?1,upload=?2,upload_limit=?3,dht=?4 WHERE id=1",
             params![value.enabled, value.upload, value.upload_limit, value.dht],
         )?;
         anyhow::ensure!(count == 1, "Torrent settings are unavailable");
+        tx.execute(
+            "UPDATE torrent_sharing_settings SET seed_completed=?1,incoming_port=?2 WHERE id=1",
+            params![value.seed_completed, value.incoming_port],
+        )?;
+        if value.seed_completed || value.incoming_port.is_some() {
+            protect_profile(&tx)?;
+        }
+        tx.commit()?;
         Ok(())
     }
 
@@ -160,4 +187,52 @@ fn windows_proxy_is_on() -> bool {
 #[cfg(not(windows))]
 fn windows_proxy_is_on() -> bool {
     false
+}
+
+#[cfg(test)]
+mod sharing_tests {
+    use super::*;
+    #[test]
+    fn sharing_and_incoming_are_separate_off_by_default_and_validate_atomically() {
+        let dir = tempfile::tempdir().unwrap();
+        let store = Store::open(crate::paths::AppPaths {
+            data: dir.path().join("data"),
+            downloads: dir.path().join("downloads"),
+        })
+        .unwrap();
+        let initial = store.torrent_settings().unwrap();
+        assert!(!initial.seed_completed);
+        assert_eq!(initial.incoming_port, None);
+        assert!(
+            store
+                .save_torrent_settings(Settings {
+                    enabled: true,
+                    seed_completed: true,
+                    incoming_port: Some(1023),
+                    ..initial
+                })
+                .is_err()
+        );
+        assert_eq!(store.torrent_settings().unwrap(), initial);
+        let sharing = Settings {
+            enabled: true,
+            seed_completed: true,
+            ..initial
+        };
+        store.save_torrent_settings(sharing).unwrap();
+        assert_eq!(store.torrent_settings().unwrap(), sharing);
+        let incoming = Settings {
+            seed_completed: false,
+            incoming_port: Some(45000),
+            ..sharing
+        };
+        store.save_torrent_settings(incoming).unwrap();
+        assert_eq!(store.torrent_settings().unwrap(), incoming);
+        store.save_torrent_settings(initial).unwrap();
+        assert_eq!(store.torrent_settings().unwrap(), initial);
+        assert!(
+            !store.torrents.is_running(),
+            "saving preferences alone does not start a listener"
+        );
+    }
 }

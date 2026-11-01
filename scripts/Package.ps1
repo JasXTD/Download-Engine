@@ -104,7 +104,7 @@ try {
         foreach ($browserName in @('chrome','edge','brave','firefox')) {
             $extensionRoot = Join-Path $stage "extensions\$browserName"
             New-Item -ItemType Directory -Force -Path $extensionRoot | Out-Null
-            foreach ($file in @('i18n-catalog.js','i18n.js','core.js','capture.js','link-recovery.js','page-links.js','browser-login.js','video-button-manager.js','video-button.js','github-download.js','media.js','permission-flow.js','login.html','login.js','background.js','popup.html','popup.css','popup.js','links.html','links.css','links.js')) {
+            foreach ($file in @('i18n-catalog.js','i18n.js','core.js','capture.js','torrent-links.js','link-recovery.js','page-links.js','browser-login.js','video-button-manager.js','video-button.js','github-download.js','media.js','permission-flow.js','login.html','login.js','background.js','popup.html','popup.css','popup.js','links.html','links.css','links.js')) {
                 Copy-Item -LiteralPath (Join-Path $workspaceRoot "extension\$file") -Destination $extensionRoot
             }
             Copy-Item -LiteralPath (Join-Path $workspaceRoot 'extension\_locales') -Destination $extensionRoot -Recurse

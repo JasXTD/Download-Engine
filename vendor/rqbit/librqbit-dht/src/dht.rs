@@ -1,4 +1,5 @@
-// Modified by Download Engine: replaced backon, leaky-bucket and dashmap. See ../../patch.md.
+// Modified by Download Engine: replaced backon, leaky-bucket and dashmap, and guarded
+// public-network endpoints. See ../../patch.md.
 use std::{
     cmp::Reverse,
     collections::HashMap,
@@ -27,6 +28,7 @@ use futures::{
     FutureExt, Stream, StreamExt, TryFutureExt, future::BoxFuture, stream::FuturesUnordered,
 };
 
+use librqbit_core::network::is_public_endpoint;
 use librqbit_core::{
     backoff::Backoff,
     compact_ip::{CompactSerialize, CompactSerializeFixedLen},
@@ -434,7 +436,10 @@ impl<C: RecursiveRequestCallbacks> RecursiveRequest<C> {
         };
 
         if let Some(peers) = response.values {
-            for peer in peers {
+            for peer in peers
+                .into_iter()
+                .filter(|peer| self.dht.allows_address(peer.0))
+            {
                 self.peer_tx.send(peer.0).ok().ok_or(Error::ReceiverDead)?;
             }
         }
@@ -508,7 +513,7 @@ impl<C: RecursiveRequestCallbacks> RecursiveRequest<C> {
         depth: usize,
         now: Instant,
     ) -> bool {
-        if depth >= self.max_depth {
+        if depth >= self.max_depth || !self.dht.allows_address(addr) {
             return false;
         }
 
@@ -556,6 +561,7 @@ impl<C: RecursiveRequestCallbacks> RecursiveRequest<C> {
 
 pub struct DhtState {
     id: Id20,
+    allow_local_addresses: bool,
     next_transaction_id: AtomicU16,
 
     // Created requests: (transaction_id, addr) => Requests.
@@ -590,6 +596,7 @@ impl DhtState {
         let routing_table_v6 = routing_table_v6.unwrap_or_else(|| RoutingTable::new(id, None));
         Self {
             id,
+            allow_local_addresses: false,
             next_transaction_id: AtomicU16::new(0),
             inflight_by_transaction_id: Default::default(),
             routing_table_v4: RwLock::new(routing_table_v4),
@@ -603,6 +610,9 @@ impl DhtState {
     }
 
     async fn request(&self, request: Request, addr: SocketAddr) -> crate::Result<ResponseOrError> {
+        if !self.allows_address(addr) {
+            return Err(Error::LocalAddress(addr));
+        }
         self.rate_limiter.acquire_one().await;
         let (tid, message) = self.create_request(request, addr);
         let key = (tid, addr);
@@ -636,6 +646,10 @@ impl DhtState {
                 Err(Error::ResponseTimeout(RESPONSE_TIMEOUT))
             }
         }
+    }
+
+    fn allows_address(&self, addr: SocketAddr) -> bool {
+        addr.port() != 0 && (self.allow_local_addresses || is_public_endpoint(addr))
     }
 
     fn create_request(&self, request: Request, addr: SocketAddr) -> (u16, Message<ByteBufOwned>) {
@@ -757,6 +771,9 @@ impl DhtState {
         msg: Message<ByteBufOwned>,
         addr: SocketAddr,
     ) -> crate::Result<()> {
+        if !self.allows_address(addr) {
+            return Err(Error::LocalAddress(addr));
+        }
         match &msg.kind {
             // If it's a response to a request we made, find the request task, notify it with the response,
             // and let it handle it.
@@ -1165,6 +1182,13 @@ impl DhtWorker {
                 addr,
             }) = input_rx.recv().await
             {
+                // Final guard also covers replies, bootstrap, and nodes restored from disk.
+                if !self.dht.allows_address(addr) {
+                    if let Some(tid) = our_tid {
+                        self.on_send_error(tid, addr, Error::LocalAddress(addr));
+                    }
+                    continue;
+                }
                 if our_tid.is_none() {
                     trace!("{}: sending {:?}", addr, &message);
                 }
@@ -1197,6 +1221,9 @@ impl DhtWorker {
                     }
                     Err(e) => return Err(Error::Recv(e)),
                 };
+                if !self.dht.allows_address(addr) {
+                    continue;
+                }
                 match bprotocol::deserialize_message::<ByteBufOwned>(&buf[..size]) {
                     Ok(msg) => match output_tx.send((msg, addr)).await {
                         Ok(_) => {}
@@ -1288,6 +1315,8 @@ impl DhtWorker {
 
 #[derive(Default)]
 pub struct DhtConfig<'a> {
+    /// Explicit opt-in for an isolated LAN/test DHT; disabled for public discovery.
+    pub allow_local_addresses: bool,
     pub peer_id: Option<Id20>,
     pub bootstrap_addrs: Option<Vec<String>>,
     pub routing_table: Option<RoutingTable>,
@@ -1336,7 +1365,7 @@ impl DhtState {
             let token = config.cancellation_token.take().unwrap_or_default();
 
             let (in_tx, in_rx) = unbounded_channel();
-            let state = Arc::new(Self::new_internal(
+            let mut state = Self::new_internal(
                 peer_id,
                 in_tx,
                 config.routing_table,
@@ -1344,7 +1373,9 @@ impl DhtState {
                 listen_addr,
                 config.peer_store.unwrap_or_else(|| PeerStore::new(peer_id)),
                 token,
-            ));
+            );
+            state.allow_local_addresses = config.allow_local_addresses;
+            let state = Arc::new(state);
 
             spawn_with_cancel(
                 debug_span!("dht"),
@@ -1411,6 +1442,78 @@ impl FromSocketAddr for SocketAddrV6 {
 }
 
 #[cfg(test)]
+mod endpoint_policy_tests {
+    use super::*;
+
+    // A real request queue, with no socket or network worker.
+    fn state() -> (DhtState, UnboundedReceiver<WorkerSendRequest>) {
+        let (tx, rx) = unbounded_channel();
+        let id = Id20::new([1; 20]);
+        (
+            DhtState::new_internal(
+                id,
+                tx,
+                None,
+                None,
+                "0.0.0.0:6881".parse().unwrap(),
+                PeerStore::new(id),
+                CancellationToken::new(),
+            ),
+            rx,
+        )
+    }
+
+    #[tokio::test]
+    async fn nonpublic_dht_targets_are_rejected_before_queueing_any_packet() {
+        let (dht, mut output) = state();
+        for addr in [
+            "127.0.0.1:80",
+            "10.0.0.1:80",
+            "172.16.0.1:80",
+            "192.168.1.1:80",
+            "169.254.169.254:80",
+            "100.64.0.1:80",
+            "198.18.0.1:80",
+            "0.0.0.0:80",
+            "224.0.0.1:80",
+            "1.1.1.1:0",
+            "[::1]:80",
+            "[fc00::1]:80",
+            "[fe80::1]:80",
+            "[::ffff:192.168.1.1]:80",
+        ] {
+            assert!(
+                matches!(
+                    dht.request(Request::Ping, addr.parse().unwrap()).await,
+                    Err(Error::LocalAddress(_))
+                ),
+                "{addr}"
+            );
+        }
+        assert!(output.try_recv().is_err());
+        assert!(dht.inflight_by_transaction_id.lock().is_empty());
+        assert!(dht.allows_address("1.1.1.1:6881".parse().unwrap()));
+        assert!(dht.allows_address("[2606:4700::1111]:6881".parse().unwrap()));
+    }
+
+    #[test]
+    fn replies_to_local_sources_require_explicit_lan_mode() {
+        for allow in [false, true] {
+            let (mut dht, mut output) = state();
+            dht.allow_local_addresses = allow;
+            let dht = Arc::new(dht);
+            let ping = bprotocol::deserialize_message::<ByteBufOwned>(
+                b"d1:ad2:id20:abcdefghij0123456789e1:q4:ping1:t2:aa1:y1:qe",
+            )
+            .unwrap();
+            let result = dht.on_received_message(ping, "192.168.1.1:6881".parse().unwrap());
+            assert_eq!(result.is_ok(), allow);
+            assert_eq!(output.try_recv().is_ok(), allow);
+        }
+    }
+}
+
+#[cfg(test)]
 mod tests {
     use std::{
         net::{Ipv4Addr, SocketAddr},
@@ -1428,6 +1531,7 @@ mod tests {
 
     async fn start_dht(bootstrap_addr: SocketAddr) -> Dht {
         DhtState::with_config(DhtConfig {
+            allow_local_addresses: true,
             listen_addr: Some((Ipv4Addr::LOCALHOST, 0).into()),
             bootstrap_addrs: Some(vec![bootstrap_addr.to_string()]),
             ..Default::default()

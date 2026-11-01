@@ -552,6 +552,7 @@ impl Desktop {
             Some(Dialog::Columns) => self.columns_dialog(&ctx, p),
             Some(Dialog::Add) => self.add_dialog(&ctx, p),
             Some(Dialog::TorrentChoice) => self.torrent_choice_dialog(&ctx, p),
+            Some(Dialog::TorrentLocation) => self.torrent_location_dialog(&ctx, p),
             Some(Dialog::Browsers) => self.browser_dialog(&ctx, p),
             Some(Dialog::UpdateLink) => self.link_dialog(&ctx, p),
             Some(Dialog::Authentication) => self.authentication_dialog(&ctx, p),
@@ -1034,12 +1035,18 @@ impl Desktop {
                         .iter()
                         .any(|q| q.id == self.queue_id && q.running)
                         || self.immediate_downloads.contains(&job.id);
-                    let label = torrents::list_status(
+                    let mut label = torrents::list_status(
                         job,
                         queue_running,
                         chrono::Utc::now().timestamp_millis(),
                         torrents_on,
                     );
+                    if job.status == Status::Complete
+                        && job.torrent.is_some()
+                        && let Some(phase) = self.store.activity.get(&job.id)
+                    {
+                        label = tr(phase.label()).to_owned();
+                    }
                     let label = if inline_progress && let Some(fraction) = progress(job) {
                         format!("{label}   {:.1}%", fraction * 100.0)
                     } else {
@@ -1490,6 +1497,35 @@ impl Desktop {
         if ui.button(tr("Open folder")).clicked() {
             self.show_folder(job);
             ui.close();
+        }
+        if job.torrent.is_some() && job.status == Status::Complete {
+            if ui.button(tr("Rename torrent…")).clicked() {
+                self.open_torrent_location(job, true);
+                ui.close();
+            }
+            if ui.button(tr("Move torrent…")).clicked() {
+                self.open_torrent_location(job, false);
+                ui.close();
+            }
+            let sharing = self.store.torrent_sharing(&job.id).unwrap_or(false);
+            if ui
+                .button(tr(if sharing {
+                    "Stop sharing"
+                } else {
+                    "Start sharing"
+                }))
+                .clicked()
+            {
+                self.command(if sharing {
+                    Command::StopSharing(job.id.clone())
+                } else {
+                    Command::StartSharing(job.id.clone())
+                });
+                ui.close();
+            }
+            if let Ok(Some(error)) = self.store.torrent_sharing_error(&job.id) {
+                ui.label(RichText::new(error).small());
+            }
         }
         if job.torrent.is_some()
             && job.status != Status::Complete

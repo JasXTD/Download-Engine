@@ -2,6 +2,17 @@ const { test } = require("node:test");
 const assert = require("node:assert/strict");
 require("../extension/core.js");
 const { normalizeUrl, makeRequest, handoff } = globalThis.IDMCore;
+test("magnet handoff requests review and requires its own acknowledgement", async () => {
+  const url = "magnet:?xt=urn:btih:0123456789012345678901234567890123456789&dn=Sample";
+  const request = makeRequest(url, "torrent-review");
+  assert.deepEqual(request, { action: "review_torrent", request_id: "torrent-review", url });
+  assert.throws(() => makeRequest("magnet:?xt=urn:btih:bad", "review"));
+  assert.throws(() => makeRequest(url + "\ncommand", "review"));
+  for (const preview_id of [undefined, "other"]) {
+    await assert.rejects(handoff(async () => ({ok: true, version: 1, preview_id}), request));
+  }
+  assert.equal((await handoff(async () => ({ok: true, version: 1, preview_id: request.request_id}), request)).ok, true);
+});
 test("validates links and removes fragments", () => {
   assert.equal(normalizeUrl(" https://example.com/a.zip#x "), "https://example.com/a.zip");
   for (const url of ["javascript:alert(1)", "file:///C:/x", "data:abc", "blob:https://x/y", "https://user:password@example.com/x", "x"]) assert.throws(() => normalizeUrl(url));
@@ -96,6 +107,6 @@ test("extension pages permit only local scripts and no web requests or embedded 
     assert(!policy.includes("unsafe-inline") && !policy.includes("unsafe-eval"));
     assert.equal(manifest.externally_connectable, undefined);
     assert.equal(manifest.web_accessible_resources, undefined);
-    assert.equal(manifest.content_scripts, undefined);
+    assert.deepEqual(manifest.content_scripts, [{matches: ["https://*/*", "http://*/*"], js: ["torrent-links.js"], run_at: "document_start"}]);
   }
 });

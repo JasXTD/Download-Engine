@@ -11,6 +11,26 @@ use std::{
 };
 
 #[test]
+fn completed_sharing_window_shows_upload_speed_and_stop_sharing() {
+    let (_temp, mut app, ctx) = fixture();
+    let mut job = app.jobs[1].clone();
+    job.status = Status::Complete;
+    job.torrent = Some(download_engine::torrent::State {
+        info_hash: "0123456789012345678901234567890123456789".into(),
+        stage: download_engine::torrent::Stage::Chosen,
+    });
+    let mut window = Window::new(job.clone());
+    window.phase = Some(Phase::Seeding);
+    window.rate = 32768.0;
+    app.download_status.windows.insert(job.id.clone(), window);
+    let output = draw_window(&mut app, &ctx, &job.id, egui::vec2(480.0, 390.0), vec![]);
+    for label in ["Seeding", "Upload speed", "Stop sharing"] {
+        text_rect(&output, label);
+    }
+    assert!(!output.shapes.iter().any(|shape| matches!(&shape.shape,egui::Shape::Text(text) if text.galley.job.text=="Start immediately")));
+}
+
+#[test]
 fn hiding_status_never_changes_the_download() {
     let (_temp, mut app, _ctx) = fixture();
     let job = app.jobs[0].clone();
@@ -439,6 +459,7 @@ impl Drop for Server {
         self.thread.take().unwrap().join().unwrap();
     }
 }
+#[track_caller]
 fn until(app: &mut Desktop, condition: impl Fn(&Desktop) -> bool) {
     let deadline = Instant::now() + Duration::from_secs(15);
     loop {
@@ -449,14 +470,15 @@ fn until(app: &mut Desktop, condition: impl Fn(&Desktop) -> bool) {
         }
         assert!(
             Instant::now() < deadline,
-            "Timed out: {:?}; jobs: {:?}",
+            "Timed out: {:?}; jobs: {:?}; scheduler errors: {:?}",
             app.notice.as_ref().map(|n| &n.message),
             app.store
                 .list()
                 .unwrap()
                 .iter()
                 .map(|j| (&j.name, j.status, j.downloaded))
-                .collect::<Vec<_>>()
+                .collect::<Vec<_>>(),
+            app.scheduler.errors.try_iter().collect::<Vec<_>>()
         );
         thread::sleep(Duration::from_millis(20));
     }
@@ -833,7 +855,7 @@ fn ui_stop_and_external_commands_share_ownership_without_losing_saved_bytes() {
         job.downloaded > 0 && job.status == Status::Downloading
     });
     let mut previous = 0;
-    for _ in 0..4 {
+    for _ in 0..16 {
         let store = app.store.clone();
         let other_id = id.clone();
         let requests = thread::spawn(move || {
@@ -872,11 +894,10 @@ fn ui_stop_and_external_commands_share_ownership_without_losing_saved_bytes() {
         for request in requests {
             let receipt = app.store.control_receipt(&request).unwrap();
             if receipt.state == "failed" {
+                let error = receipt.error.unwrap();
                 assert!(
-                    receipt
-                        .error
-                        .unwrap()
-                        .contains("Pause the download before changing it")
+                    error.contains("Pause the download before changing it"),
+                    "Unexpected control failure: {error}"
                 );
             } else {
                 assert_eq!(receipt.state, "done");
@@ -893,6 +914,15 @@ fn ui_stop_and_external_commands_share_ownership_without_losing_saved_bytes() {
         assert_eq!(app.store.list().unwrap().len(), 1);
         app.open_status_and_wait(&job);
         status_click(&mut app, &ctx, &id, "Resume");
+        let window = &app.download_status.windows[&id];
+        assert_eq!(
+            window.waiting,
+            Some(Status::Downloading),
+            "Resume click did not dispatch: status={:?}, error={:?}, notice={:?}",
+            window.job.as_ref().map(|job| job.status),
+            window.error,
+            window.notice
+        );
         until(&mut app, |app| {
             app.store.get(&id).unwrap().unwrap().status == Status::Downloading
         });

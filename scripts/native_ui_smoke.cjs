@@ -49,6 +49,7 @@ function capture(name, dark, size, view = 'downloads', empty = false, legacy = f
     CREATE TABLE interface_preferences(id INTEGER PRIMARY KEY CHECK(id=1),data TEXT NOT NULL);`);
   if (['queues','scheduler'].includes(view)) db.exec("INSERT INTO download_queues VALUES('scheduled','Scheduled downloads',2,0,NULL)");
   const preferences = { language: toolbar?.language || 'en', show_details: true, compact_rows: compact, sidebar_labels: true };
+  if (view.startsWith('torrent-')) preferences.check_updates_on_launch = false;
   // Omit appearance for the default-theme capture to exercise real startup defaults.
   if (dark !== null) preferences.appearance = dark ? 'dark' : 'light';
   if (toolbar?.dropTarget) preferences.drop_target = true;
@@ -234,6 +235,9 @@ function capture(name, dark, size, view = 'downloads', empty = false, legacy = f
   assert.equal(check.prepare('SELECT COUNT(*) n FROM download_queues WHERE running<>0').get().n,0);
   const actualPreferences=JSON.parse(check.prepare('SELECT data FROM interface_preferences WHERE id=1').get().data);
   for(const [key,value] of Object.entries(preferences)) assert.deepEqual(actualPreferences[key],value);
+  if(['torrent-sharing-preferences','torrent-sharing-network'].includes(view)) {
+    assert.equal(check.prepare('SELECT enabled FROM torrent_settings WHERE id=1').get().enabled,0);
+  }
   check.close();
   if(view.startsWith('delete-file')) for(const [name,status] of rows) {
     if(status === 'complete') assert.equal(fs.readFileSync(path.join(downloads,name),'utf8'),'Offline native UI fixture.\n');
@@ -243,6 +247,30 @@ function capture(name, dark, size, view = 'downloads', empty = false, legacy = f
   for (const event of ['started','ready','stopped']) assert(diagnostics.some(record => record.event === event), `Missing ${event} log`);
   console.log(JSON.stringify({name,screenshot}));
   return {name,screenshot,size,view,dark,legacy,compact,toolbar,queuedNetworkWork:false};
+}
+if(process.argv.includes('--torrent-workflow')) {
+  const results=[];
+  for(const dark of [true,false]) for(const view of ['torrent-rename','torrent-move','torrent-sharing-preferences']) {
+    results.push(capture(`${view}-${dark?'dark':'light'}`,dark,dark?'860x600':'1280x860',view));
+  }
+  for(const language of ['zh-CN','ar']) for(const view of ['torrent-rename','torrent-sharing-preferences']) {
+    results.push(capture(`${view}-${language}`,true,'860x600',view,false,false,false,{language}));
+  }
+  fs.writeFileSync(path.join(output,'verification.json'),JSON.stringify({results,scope:'Torrent location dialogs and sharing preferences rendered with synthetic data in isolated paused profiles. No peer connections, listener activation or system registration.'},null,2));
+  console.log(`Verification: ${path.join(output,'verification.json')}`);process.exit(0);
+}
+if(process.argv.includes('--torrent-network')) {
+  const results=['en','ar'].map(language=>capture(`torrent-network-${language}`,true,'860x600','torrent-sharing-network',false,false,false,{language}));
+  fs.writeFileSync(path.join(output,'verification.json'),JSON.stringify({results,scope:'Incoming connection settings rendered from an unsaved draft. Persisted torrents remain off; no listener or registration is activated.'},null,2));
+  console.log(`Verification: ${path.join(output,'verification.json')}`);process.exit(0);
+}
+if(process.argv.includes('--external-torrents')) {
+  const results=[];
+  for (const dark of [true,false]) for (const view of ['torrent-windows-preferences','torrent-external-magnet','torrent-external-files']) {
+    results.push(capture(`${view}-${dark?'dark':'light'}`,dark,dark?'860x600':'1280x860',view));
+  }
+  fs.writeFileSync(path.join(output,'verification.json'),JSON.stringify({results,scope:'External torrent review and Windows setup, using real native UI with synthetic data and isolated paused profiles. No handler registration or peer connections.'},null,2));
+  console.log(`Verification: ${path.join(output,'verification.json')}`);process.exit(0);
 }
 if(process.argv.includes('--torrents')) {
   const results = [];

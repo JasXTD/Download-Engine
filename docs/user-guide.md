@@ -134,17 +134,51 @@ Use 1 for servers that reject parallel requests. More connections do not guarant
 
 ### Download torrents
 
-Adding your first torrent upgrades the profile compatibility guard. Builds older than 3.7.0 cannot open that profile afterward; keep a profile backup before trying torrents if you may need to return to an older build. Simply enabling the setting does not upgrade the profile.
+**Open from Windows (3.8.0):** In Preferences → Torrents, choose **Register this copy**, then **Choose defaults in Windows**. Select Download Engine for `.torrent` and `MAGNET`. Registration only offers the app as a handler; Windows keeps your current defaults until you change them. You can also use Explorer's **Open with** for a torrent file. The installer offers the same optional registration, initially unchecked. A portable copy must stay in the folder you registered; register it again after moving it.
+
+Opening a torrent or magnet brings up **Add download**, whether the app was closed or already running. Enable torrents if prompted, review the files, queue and destination, then confirm. Nothing is added until you confirm. If another dialog is open, finish it first; up to eight external requests can wait. Cancel dismisses that review. Reopening an existing torrent shows its existing download instead of adding a duplicate. Unfinished reviews survive restart and expire after one day. If an older running copy cannot accept a request, close it and open the item again.
+
+**Remove registration** takes this copy out of the offered handlers without changing other apps' defaults. It does not remove registration owned by another Download Engine copy. On older Windows versions, the defaults button may open the general Default Apps page; search for Download Engine there.
+
+For an externally opened magnet, choose **Load file list** to allow the metadata lookup to contact peers, or **Add and choose later** to save it for a later selection. Opening the review alone does not contact peers, even if torrents are already enabled. Existing downloads are checked locally first.
+
+Magnet metadata is fetched through the link's trackers first, so a private torrent's hash
+does not reach public DHT before its privacy flag is known. If the link has no usable
+tracker and its metadata is not already cached, open its `.torrent` file instead.
+
+Profiles containing torrents, or saving sharing or incoming-connection options, now require Download Engine 3.9.0 or newer. Keep a profile backup before upgrading if you need to return to an older build. Simply enabling torrents without adding one or enabling those options does not itself upgrade the profile.
 
 Torrents are off until you want one. Paste a magnet link into Add download, or choose Tasks → Open torrent file…, and the app asks first. Turn on torrents says yes and turns on the switch in Preferences → Torrents. Not now changes nothing: no helper starts, and nothing connects to anyone. To turn torrents off again, use the same switch. Running torrents pause, and their progress is kept.
 
 When a magnet link is added, its file list has to come from other people, which can take a while. Add and choose later puts it in your list, and it shows Choose files when the list arrives. Nothing downloads until you choose.
 
-A torrent connects your computer directly to other people, so they can see your IP address and what you are downloading. While it downloads, your computer also sends them pieces, unless you turn off Upload while downloading. Uploading stops when the download finishes. Torrents won't start while a proxy is on, because a proxy can't hide your address from peers. Speed limits and data quotas apply, and a quota counts uploads as well as downloads.
+A torrent connects your computer directly to other people, so they can see your IP address and what you are downloading. While it downloads, your computer also sends them pieces, unless you turn off Upload while downloading. Uploading stops when the download finishes by default. The optional completed-torrent sharing setting allows it to continue. Torrents and sharing won't start while a proxy is on, because a proxy can't hide your address from peers. Speed limits and data quotas apply, and a quota counts uploads as well as downloads.
 
 Files stay in a temporary folder until every piece has been checked, then appear in your download folder without replacing anything. A torrent with one file saves that file. A torrent with more keeps its own folder, holding only the files you chose.
 
 Your security software may report blocked addresses while a torrent runs, because a torrent contacts many strangers. Leave those blocks in place. They only mean fewer peers.
+
+### Browser links, drag-and-drop and clipboard offers
+
+With browser download capture enabled, clicking a magnet link opens the app's review. If the extension cannot reach the app, it falls back to the browser's normal magnet handler. Automatic capture excludes private browsing and subframes. A captured `.torrent` file is first saved, then offered for review. Default capture types include `torrent`; if you customized the type list, add it there. The extension and installed desktop app must both be updated.
+
+Drop local `.torrent` files on the window or floating drop box. Copying a valid magnet link offers a card when clipboard detection is enabled; click it to review the link. These actions preserve an open dialog and queue the review behind it. They never turn torrents on or start payload downloads without your choice.
+
+### Sharing completed torrents and incoming connections
+
+Both options start **off** in **Preferences → Torrents**. Enable completed-torrent sharing, with uploading enabled, to share newly completed torrents. For an older completed torrent, use its menu → **Start sharing**. The app checks the saved pieces first and opens the payload read-only. Partial selections share only whole verified pieces available in the saved files; skipped files are never fetched. A selection with no complete piece cannot be shared.
+
+Sharing uses up to four separate workers and leaves downloads marked Completed. The status window shows **Seeding**, upload speed, peers and uploaded bytes. **Stop sharing**, **Stop** and **Stop all** end sharing while keeping the files. Explicitly stopped shares remain stopped after reopening. Otherwise, sharing resumes when the app reopens and the settings still allow it. A failed helper stops sharing and reports an error; use Start sharing after addressing it. No ratio or time-based seeding stop is configured automatically.
+
+Incoming connections are a separate option. Choose a TCP port from 1024–65535. The helper listens only while it is needed and the option is on. Download Engine does not change Windows Firewall rules or configure your router; accepting connections from the internet depends on your firewall, router and network. Private torrents stay off public DHT/PEX. Private-tracker rules still apply to your account.
+
+Torrent metadata is retained for later sharing and removed when that history entry is cleared or deleted. Removing history stops sharing and keeps the downloaded payload.
+
+### Antivirus and file locations for folder torrents
+
+Use **Tools → Antivirus Scan** for a completed torrent. Headless scanners process selected files one at a time, with file progress and individual results. Stop cancels the current scan and skips the remaining files. External antivirus apps receive one request for the whole folder, including any extra files there, and require you to review their results. Stop batch cannot close an external protected scanner that already received the request. A threat report also blocks sharing after moving or renaming the torrent.
+
+Use a completed torrent's right-click or three-dot menu → **Rename torrent…** or **Move torrent…**. Rename changes the saved file or top-level folder name. Move lets you choose an existing destination folder. Sharing stops before either operation. The app preserves extra files, empty directories and file metadata, refuses existing destinations and reparse points, and keeps a recovery journal for interrupted copies. Choose Start sharing again after a successful move if wanted. Script moves stay inside configured download folders.
 
 ### Remove history or delete a file
 

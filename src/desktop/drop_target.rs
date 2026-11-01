@@ -165,7 +165,35 @@ impl Desktop {
             None => text.to_owned(),
         };
         match crate::url_drop::urls(&combined) {
-            Ok(urls) => self.drop_target.pending = Some(urls),
+            Ok(urls) => {
+                let mut torrents = Vec::new();
+                let mut links = Vec::new();
+                for line in urls.lines() {
+                    if download_engine::torrent::is_magnet(line)
+                        || std::path::Path::new(line).is_absolute()
+                    {
+                        match download_engine::external_open::Target::parse(
+                            std::ffi::OsStr::new(line),
+                            std::path::Path::new(""),
+                        ) {
+                            Ok(target) => torrents.push(target),
+                            Err(error) => {
+                                self.notice = Some(Notice::error(error.to_string()));
+                                return;
+                            }
+                        }
+                    } else {
+                        links.push(line);
+                    }
+                }
+                if !torrents.is_empty()
+                    && let Err(error) = self.store.submit_external_opens(&torrents)
+                {
+                    self.notice = Some(Notice::error(error.to_string()));
+                    return;
+                }
+                self.drop_target.pending = (!links.is_empty()).then(|| links.join("\n"));
+            }
             Err(error) => {
                 self.notice = Some(Notice::error(error.to_string()));
                 return;
@@ -220,6 +248,31 @@ impl Desktop {
 mod tests {
     use super::super::interaction_tests::{click, fixture, frame};
     use super::*;
+    #[test]
+    fn mixed_torrent_drop_preserves_the_current_dialog_and_regular_links() {
+        let (dir, mut app, ctx) = fixture();
+        let before = app.store.list().unwrap().len();
+        app.dialog = Some(Dialog::Batch);
+        app.batch = "https://example.test/existing.bin".into();
+        let path = dir.path().join("sample.torrent");
+        let payload = format!(
+            "{}\nmagnet:?xt=urn:btih:0123456789012345678901234567890123456789\nhttps://example.test/new.bin",
+            path.display()
+        );
+        app.receive_dropped_links(&ctx, &payload);
+        assert_eq!(app.dialog, Some(Dialog::Batch));
+        assert_eq!(app.batch, "https://example.test/existing.bin");
+        assert_eq!(
+            app.drop_target.pending.as_deref(),
+            Some("https://example.test/new.bin")
+        );
+        assert_eq!(app.store.receive_external_opens().unwrap().count, 2);
+        app.receive_dropped_links(&ctx, &payload);
+        assert_eq!(app.store.receive_external_opens().unwrap().count, 2);
+        assert_eq!(app.store.list().unwrap().len(), before);
+        assert!(!app.store.torrent_settings().unwrap().enabled);
+        assert!(!app.store.torrents.is_running());
+    }
 
     fn brings_window_forward(output: &egui::LogicOutput) -> bool {
         let commands = &output.viewport_commands[&egui::ViewportId::ROOT];

@@ -1,3 +1,17 @@
+## 3.9.0 — 2026-11-01
+
+### Torrenthantering
+
+Stöd för magnetlänkar från webbläsaren, släppta torrentfiler och förslag från urklipp. Delning efter slutförande och inkommande anslutningar är separata alternativ som är avstängda som standard. Flera filer kan skannas och mappar flyttas eller byta namn; Stoppa alla stoppar även delningen.
+
+[Guide / English](../../user-guide.md#download-torrents)
+
+## 3.8.0 — 2026-11-01
+
+### Öppna torrenter från Windows
+
+Öppna .torrent-filer från Utforskaren och magnetlänkar från webbläsaren för granskning. Valfri Windows-registrering behåller standardappar, och väntande granskningar finns kvar efter omstart. Torrentskyddet har stärkts: magneter utan cachade metadata kräver en tracker, annars använder du en .torrent-fil. Regressionstester täcker det befintliga skyddet mot filnamnskonflikter.
+
 ## 3.7.0 — 2026-11-01
 
 ### Torrentnedladdningar

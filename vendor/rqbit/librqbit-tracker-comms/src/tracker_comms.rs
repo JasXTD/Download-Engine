@@ -1,12 +1,11 @@
 // Modified by Download Engine: replaced rand, backon and async-stream, and added public-only
-// name lookups. See ../../patch.md.
+// name lookups and bounded tracker resources. See ../../patch.md.
 use std::collections::HashSet;
-use std::net::IpAddr;
 use std::net::SocketAddr;
 use std::net::SocketAddrV4;
 use std::net::SocketAddrV6;
 use std::pin::Pin;
-use std::sync::Arc;
+use std::sync::{Arc, OnceLock};
 use std::task::Context as TaskContext;
 use std::task::Poll;
 use std::time::Duration;
@@ -20,6 +19,7 @@ use futures::future::BoxFuture;
 use futures::future::Either;
 use futures::stream::BoxStream;
 use futures::stream::FuturesUnordered;
+use tokio::sync::{OwnedSemaphorePermit, Semaphore};
 use tracing::Instrument;
 use tracing::debug;
 use tracing::debug_span;
@@ -32,6 +32,58 @@ use crate::tracker_comms_udp;
 use crate::tracker_comms_udp::UdpTrackerClient;
 use librqbit_core::backoff::Backoff;
 use librqbit_core::hash_id::Id20;
+pub use librqbit_core::network::is_local_address;
+use librqbit_core::torrent_limits::{MAX_TRACKER_URL_BYTES, MAX_TRACKERS};
+
+const MAX_TRACKER_RESPONSE: usize = 1024 * 1024;
+/// Ask for this many peers and enforce it even when a tracker ignores numwant.
+pub(crate) const MAX_TRACKER_PEERS: usize = 200;
+const MIN_TRACKER_INTERVAL: Duration = Duration::from_secs(5);
+const MAX_TRACKER_REQUESTS: usize = 4;
+const MAX_GLOBAL_TRACKER_REQUESTS: usize = 8;
+static TRACKER_REQUESTS: OnceLock<Arc<Semaphore>> = OnceLock::new();
+
+/// Both chunked and fixed-length responses are subject to the same byte limit.
+async fn read_tracker_body(response: reqwest::Response) -> anyhow::Result<Vec<u8>> {
+    let length = response.content_length();
+    let chunks = futures::stream::try_unfold(response, |mut response| async move {
+        let chunk = response.chunk().await?;
+        Ok::<_, reqwest::Error>(chunk.map(|chunk| (chunk, response)))
+    });
+    read_tracker_chunks(length, chunks).await
+}
+
+async fn read_tracker_chunks<B, E>(
+    length: Option<u64>,
+    chunks: impl Stream<Item = Result<B, E>>,
+) -> anyhow::Result<Vec<u8>>
+where
+    B: AsRef<[u8]>,
+    E: std::error::Error + Send + Sync + 'static,
+{
+    anyhow::ensure!(
+        length.is_none_or(|len| len <= MAX_TRACKER_RESPONSE as u64),
+        "tracker response exceeds the size limit"
+    );
+    // Reserve the capped buffer once: tiny HTTP chunks must not cause repeated
+    // reallocations, and geometric growth must not exceed the byte budget.
+    let mut bytes = Vec::with_capacity(MAX_TRACKER_RESPONSE);
+    futures::pin_mut!(chunks);
+    while let Some(chunk) = chunks.next().await {
+        let chunk = chunk?;
+        let chunk = chunk.as_ref();
+        anyhow::ensure!(
+            chunk.len() <= MAX_TRACKER_RESPONSE - bytes.len(),
+            "tracker response exceeds the size limit"
+        );
+        bytes.extend_from_slice(chunk);
+    }
+    Ok(bytes)
+}
+
+fn tracker_interval(interval: u64, min_interval: Option<u64>) -> Duration {
+    Duration::from_secs(interval.max(min_interval.unwrap_or(0))).max(MIN_TRACKER_INTERVAL)
+}
 
 /// The peers a torrent's trackers find. Trackers only run while this stream is polled,
 /// dropping it stops them, and it ends once they have all stopped.
@@ -63,6 +115,7 @@ pub struct TrackerComms {
     announce_port: u16,
     reqwest_client: reqwest::Client,
     key: u32,
+    requests: Arc<Semaphore>,
 }
 
 #[derive(Default)]
@@ -129,34 +182,6 @@ enum UdpTrackerResolveResult {
     Two(SocketAddrV4, SocketAddrV6),
 }
 
-/// Whether an address belongs to this computer or the network it is on. A tracker's name
-/// comes from a stranger, and must not lead to a router or a local service.
-pub fn is_local_address(ip: IpAddr) -> bool {
-    match ip.to_canonical() {
-        IpAddr::V4(ip) => {
-            let [first, second, ..] = ip.octets();
-            ip.is_private()
-                || ip.is_loopback()
-                || ip.is_link_local()
-                || ip.is_broadcast()
-                || ip.is_multicast()
-                || first == 0
-                || first >= 240
-                || (first == 100 && (64..=127).contains(&second))
-                || (first == 198 && (second == 18 || second == 19))
-        }
-        IpAddr::V6(ip) => {
-            let first = ip.segments()[0];
-            ip.is_loopback()
-                || ip.is_unspecified()
-                || ip.is_multicast()
-                || first & 0xfe00 == 0xfc00
-                || first & 0xffc0 == 0xfe80
-                || first & 0xffc0 == 0xfec0
-        }
-    }
-}
-
 async fn udp_tracker_to_socket_addrs(
     host: url::Host<&str>,
     port: u16,
@@ -207,6 +232,15 @@ impl TrackerComms {
         reqwest_client: reqwest::Client,
         udp_client: UdpTrackerClient,
     ) -> Option<BoxStream<'static, SocketAddr>> {
+        // Callers validate at ingress too. Refuse an oversized set before spawning anything.
+        if trackers.len() > MAX_TRACKERS
+            || trackers
+                .iter()
+                .any(|t| t.as_str().len() > MAX_TRACKER_URL_BYTES)
+        {
+            debug!("tracker list exceeds the safety limits");
+            return None;
+        }
         let trackers = trackers
             .into_iter()
             .filter_map(|t| match t.scheme() {
@@ -237,6 +271,7 @@ impl TrackerComms {
                 announce_port,
                 reqwest_client,
                 key: librqbit_core::random::random_u32(),
+                requests: Arc::new(Semaphore::new(MAX_TRACKER_REQUESTS)),
             });
             let mut futures = FuturesUnordered::new();
             for tracker in trackers {
@@ -256,6 +291,18 @@ impl TrackerComms {
             }
             .boxed(),
         )
+    }
+
+    async fn request_permits(
+        &self,
+    ) -> anyhow::Result<(OwnedSemaphorePermit, OwnedSemaphorePermit)> {
+        let torrent = self.requests.clone().acquire_owned().await?;
+        let global = TRACKER_REQUESTS
+            .get_or_init(|| Arc::new(Semaphore::new(MAX_GLOBAL_TRACKER_REQUESTS)))
+            .clone()
+            .acquire_owned()
+            .await?;
+        Ok((torrent, global))
     }
 
     fn add_tracker(
@@ -306,7 +353,10 @@ impl TrackerComms {
             };
 
             event = None;
-            let interval = self.force_tracker_interval.unwrap_or(interval);
+            let interval = self
+                .force_tracker_interval
+                .unwrap_or(interval)
+                .max(MIN_TRACKER_INTERVAL);
             debug!("sleeping for {:?} after calling tracker", interval);
             tokio::time::sleep(interval).await;
         }
@@ -329,7 +379,7 @@ impl TrackerComms {
             no_peer_id: false,
             event,
             ip: None,
-            numwant: None,
+            numwant: Some(MAX_TRACKER_PEERS),
             key: Some(self.key),
             trackerid: None,
         };
@@ -342,11 +392,12 @@ impl TrackerComms {
         }
         url.set_query(Some(&queries));
 
+        let permits = self.request_permits().await?;
         let response: reqwest::Response = self.reqwest_client.get(url).send().await?;
         if !response.status().is_success() {
             anyhow::bail!("tracker responded with {:?}", response.status());
         }
-        let bytes = response.bytes().await?;
+        let bytes = read_tracker_body(response).await?;
         if let Ok((error, _)) =
             bencode::from_bytes_with_rest::<tracker_comms_http::TrackerError>(&bytes)
         {
@@ -362,12 +413,12 @@ impl TrackerComms {
             })?
             .0;
 
+        // Do not hold a network permit while waiting for the consumer's peer queue.
+        drop(permits);
         for peer in response.iter_peers() {
             self.tx.send(peer).await?;
         }
-        Ok(Duration::from_secs(
-            response.min_interval.unwrap_or(response.interval),
-        ))
+        Ok(tracker_interval(response.interval, response.min_interval))
     }
 
     async fn task_single_tracker_monitor_udp(
@@ -394,11 +445,13 @@ impl TrackerComms {
             // This should retry forever until the addrs are resolved.
             let mut backoff = Backoff::new(Duration::from_secs(1), Duration::from_secs(60));
             let addrs = loop {
+                let permits = self.request_permits().await?;
                 let resolved =
                     udp_tracker_to_socket_addrs(host.clone(), port, client.public_only())
                         .instrument(trace_span!("resolve", ?host))
                         .await
                         .or_else(|err| prev_addrs.ok_or(err));
+                drop(permits);
                 match resolved {
                     Ok(addrs) => break addrs,
                     Err(err) => {
@@ -472,14 +525,16 @@ impl TrackerComms {
             port: self.announce_port,
         };
 
-        match client.announce(addr, request).await {
+        let permits = self.request_permits().await?;
+        let response = client.announce(addr, request).await;
+        drop(permits);
+        match response {
             Ok(response) => {
                 trace!(len = response.addrs.len(), "received announce response");
-                for addr in response.addrs {
+                for addr in response.addrs.into_iter().take(MAX_TRACKER_PEERS) {
                     self.tx.send(addr).await.context("rx closed")?;
                 }
-                let sleep = response.interval.max(5);
-                let sleep = Duration::from_secs(sleep as u64);
+                let sleep = tracker_interval(response.interval as u64, None);
                 Ok(sleep)
             }
             Err(e) => {
@@ -493,6 +548,98 @@ impl TrackerComms {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[tokio::test]
+    async fn tracker_body_limit_covers_missing_or_dishonest_content_length() {
+        for length in [None, Some(1), Some(MAX_TRACKER_RESPONSE as u64)] {
+            let chunks = futures::stream::iter([
+                Ok::<_, std::io::Error>(vec![0u8; MAX_TRACKER_RESPONSE]),
+                Ok(vec![1u8]),
+            ])
+            .chain(futures::stream::poll_fn(|_| {
+                panic!("must stop at the first excess byte")
+            }));
+            assert!(
+                read_tracker_chunks(length, chunks)
+                    .await
+                    .unwrap_err()
+                    .to_string()
+                    .contains("size limit")
+            );
+        }
+        let unpolled =
+            futures::stream::poll_fn(|_| -> Poll<Option<Result<Vec<u8>, std::io::Error>>> {
+                panic!("oversized Content-Length must fail before reading")
+            });
+        assert!(
+            read_tracker_chunks(Some(MAX_TRACKER_RESPONSE as u64 + 1), unpolled)
+                .await
+                .is_err()
+        );
+        let accepted =
+            futures::stream::iter([Ok::<_, std::io::Error>(vec![7u8; MAX_TRACKER_RESPONSE])]);
+        assert_eq!(
+            read_tracker_chunks(None, accepted).await.unwrap().len(),
+            MAX_TRACKER_RESPONSE
+        );
+        let broken =
+            futures::stream::iter([Err::<Vec<u8>, _>(std::io::Error::other("broken body"))]);
+        assert!(
+            read_tracker_chunks(None, broken)
+                .await
+                .unwrap_err()
+                .to_string()
+                .contains("broken body")
+        );
+        let fragmented = futures::stream::iter((0..10_000).map(|_| Ok::<_, std::io::Error>([9u8])));
+        assert_eq!(
+            read_tracker_chunks(None, fragmented).await.unwrap(),
+            vec![9u8; 10_000]
+        );
+    }
+
+    #[test]
+    fn tracker_cannot_force_a_busy_loop_and_longer_intervals_are_respected() {
+        assert_eq!(tracker_interval(0, None), Duration::from_secs(5));
+        assert_eq!(tracker_interval(0, Some(0)), Duration::from_secs(5));
+        assert_eq!(tracker_interval(60, Some(1)), Duration::from_secs(60));
+        assert_eq!(tracker_interval(60, Some(120)), Duration::from_secs(120));
+        assert_eq!(
+            tracker_interval(u64::MAX, None),
+            Duration::from_secs(u64::MAX)
+        );
+    }
+
+    fn comms() -> TrackerComms {
+        TrackerComms {
+            info_hash: Id20::new([1; 20]),
+            peer_id: Id20::new([2; 20]),
+            stats: Box::new(()),
+            force_tracker_interval: None,
+            tx: tokio::sync::mpsc::channel(1).0,
+            announce_port: 6881,
+            reqwest_client: reqwest::Client::new(),
+            key: 0,
+            requests: Arc::new(Semaphore::new(MAX_TRACKER_REQUESTS)),
+        }
+    }
+
+    #[tokio::test]
+    async fn request_fanout_is_bounded_per_torrent_and_globally_and_cancel_safe() {
+        let (one, two, three) = (comms(), comms(), comms());
+        let mut held = Vec::new();
+        for comms in [&one, &two] {
+            for _ in 0..MAX_TRACKER_REQUESTS {
+                held.push(comms.request_permits().await.unwrap());
+            }
+            assert!(comms.request_permits().now_or_never().is_none());
+        }
+        assert_eq!(held.len(), MAX_GLOBAL_TRACKER_REQUESTS);
+        assert!(three.request_permits().now_or_never().is_none());
+        assert_eq!(three.requests.available_permits(), MAX_TRACKER_REQUESTS);
+        drop(held);
+        assert!(three.request_permits().now_or_never().unwrap().is_ok());
+    }
 
     #[tokio::test]
     async fn test_every_peer_arrives_and_the_stream_ends_with_its_trackers() {

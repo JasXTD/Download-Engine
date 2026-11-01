@@ -31,7 +31,7 @@
   const RULES_KEY = "captureFilters";
   const DEFAULT_TYPES = Object.freeze(("3gp 7z aac ace aif aiff apk arj asf avi bin bz2 cab deb dmg exe flac flv gz img " +
     "iso lzh m4a m4v mkv mov mp3 mp4 mpa mpeg mpg msi msix msu ogg ogv opus pdf pkg qt r0* r1* ra rar rm rmvb rpm " +
-    "sit sitx tar tgz wav webm wma wmv xz z zip zst").split(" "));
+    "sit sitx tar tgz torrent wav webm wma wmv xz z zip zst").split(" "));
   const LIMITS = Object.freeze({ types: 200, sites: 100, input: 32768, minSizeKB: 1024 ** 3 });
   const rulesOf = (types, minSizeKB = 0, sites = []) => Object.freeze({ version: 1, types: Object.freeze(types), minSizeKB, sites: Object.freeze(sites) });
   const DEFAULT_RULES = rulesOf(DEFAULT_TYPES);

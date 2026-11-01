@@ -66,6 +66,17 @@ test("pause, preflight, durable commit, then cancel in that order", async () => 
   assert.equal(h.item.state, "interrupted");
   assert.deepEqual(h.values, {});
 });
+
+test("default capture includes small torrent files and respects custom filters", async () => {
+  for (const custom of [false, true]) {
+    const h = harness();
+    Object.assign(h.item, {url:'https://example.test/sample.torrent', finalUrl:'https://example.test/sample.torrent', filename:'C:\\Downloads\\sample.TORRENT', mime:'application/x-bittorrent', totalBytes:2048});
+    if (custom) h.rules = {...h.rules, types:['zip']};
+    await h.run();
+    assert.equal(h.queued, custom ? 0 : 1);
+    assert.equal(h.calls.includes('pause'), !custom);
+  }
+});
 test("active canResume=false is eligible; private, unsafe, generated and unknown files are not", async () => {
   for (const patch of [
     { paused: true }, { state: "complete" }, { incognito: true }, { danger: "file" },
@@ -288,9 +299,9 @@ const form = (patch = {}) => ({ types: "zip", minSize: "", unit: "MB", sites: ""
 const item = patch => ({ url: "https://example.test/get", finalUrl: "https://cdn.example.test/get",
   referrer: "https://pages.example.test/list", filename: "C:\\Downloads\\file.zip", totalBytes: 9000000, ...patch });
 test("capture rules default to common archives, programs and media; existing capture users keep every type", () => {
-  for (const type of ["zip", "7z", "rar", "exe", "msi", "iso", "mp4", "mkv", "mp3", "pdf", "r0*"]) assert(RULES.DEFAULT_TYPES.includes(type), type);
+  for (const type of ["zip", "7z", "rar", "exe", "msi", "iso", "mp4", "mkv", "mp3", "pdf", "r0*", "torrent"]) assert(RULES.DEFAULT_TYPES.includes(type), type);
   for (const type of ["html", "htm", "jpg", "png", "txt", "csv", "json", "docx"]) assert(!RULES.DEFAULT_TYPES.includes(type), type);
-  assert.equal(RULES.DEFAULT_TYPES.length, 59);
+  assert.equal(RULES.DEFAULT_TYPES.length, 60);
   assert.equal(new Set(RULES.DEFAULT_TYPES).size, RULES.DEFAULT_TYPES.length);
   assert.deepEqual(RULES.normalize(undefined), RULES.DEFAULTS);
   assert.deepEqual(RULES.normalize(undefined, true), { version: 1, types: ["*"], minSizeKB: 0, sites: [] });

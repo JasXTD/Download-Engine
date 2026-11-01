@@ -112,6 +112,13 @@ impl Desktop {
             }
             match result {
                 Ok(mut outcome) => {
+                    if outcome.report.verdict == Verdict::Detected
+                        && self.store.get(&id).ok().flatten().is_some_and(|job| {
+                            job.torrent.is_some() && job.status == Status::Complete
+                        })
+                    {
+                        self.command(Command::StopSharing(id.clone()));
+                    }
                     if self.selected.as_deref() == Some(&id) {
                         self.antivirus.report = Some(outcome.report.clone());
                     }
@@ -264,6 +271,7 @@ impl Desktop {
             let review = self.antivirus.review.as_mut().unwrap();
             review.external_ready = true;
             review.report = Some(Report {
+                files: Vec::new(),
                 job_id: job.id.clone(),
                 path: job.saved_path.clone().unwrap(),
                 scanner: Provider::Kaspersky.label().into(),
@@ -487,13 +495,27 @@ impl Desktop {
                 egui::ScrollArea::vertical().id_salt("scan-result-scroll").max_height((ctx.content_rect().height()-230.0).max(150.0)).show(ui, |ui| {
                     if waiting {
                         ui.horizontal(|ui| { ui.spinner(); ui.label(self.antivirus.service.status(&review.job.id).unwrap_or(tr("Preparing scan…"))); });
+                        if let Some(progress)=self.antivirus.service.file_progress(&review.job.id) {
+                            ui.add(egui::ProgressBar::new(progress.completed as f32/progress.total.max(1) as f32).text(format!("{} / {}",progress.completed,progress.total)));
+                            ui.label(progress.path.display().to_string());
+                        }
                         ui.label(tr("The file will stay closed."));
                     } else if let Some(report) = &review.report {
                         ui.label(RichText::new(tr(report.verdict.label())).strong().color(if report.verdict == Verdict::NoThreatsFound { p.text } else { p.warning }));
                         let at = chrono::DateTime::from_timestamp(report.finished_at, 0).map(|v| v.with_timezone(&chrono::Local).format("%d %b %Y, %H:%M:%S").to_string()).unwrap_or_else(|| tr("Unknown time").into());
                         ui.label(format!("{} · {at}", report.scanner));
                         ui.label(&report.message);
-                        if let Some(hash) = &report.sha256 { ui.collapsing(if report.verdict == Verdict::ScanRequested { tr("File SHA-256 when requested") } else { tr("Scanned file SHA-256") }, |ui| { ui.label(hash); }); }
+                        if !report.files.is_empty() {
+                            ui.collapsing(tr("Selected torrent files"), |ui| {
+                                for file in &report.files {
+                                    ui.horizontal_wrapped(|ui| {
+                                        ui.label(file.path.display().to_string()).on_hover_text(&file.sha256);
+                                        ui.label(tr(if file.message == "Not scanned" { "Not scanned" } else { file.verdict.label() })).on_hover_text(&file.message);
+                                    });
+                                }
+                            });
+                        }
+                        if let Some(hash) = &report.sha256 { ui.collapsing(if !report.files.is_empty() { tr("Selected files fingerprint") } else if report.verdict == Verdict::ScanRequested { tr("File SHA-256 when requested") } else { tr("Scanned file SHA-256") }, |ui| { ui.label(hash); }); }
                     } else { ui.label(tr("This file has not been scanned.")); }
                     if let Some(error) = &review.error { ui.label(RichText::new(error).color(p.warning)); }
                     if !waiting && external {
@@ -639,6 +661,7 @@ mod tests {
         let (temp, mut app, _ctx) = fixture();
         let job = saved_job(&mut app);
         let report = Report {
+            files: Vec::new(),
             job_id: job.id.clone(),
             path: job.saved_path.clone().unwrap(),
             scanner: "Isolated test result".into(),
@@ -740,6 +763,7 @@ mod tests {
         app.review_scan(&job, false);
         let review = app.antivirus.review.as_mut().unwrap();
         review.report = Some(Report {
+            files: Vec::new(),
             job_id: job.id.clone(),
             path: job.saved_path.clone().unwrap(),
             scanner: "Fixture scanner".into(),
@@ -809,6 +833,7 @@ mod tests {
             app.review_scan(&job, false);
             let review = app.antivirus.review.as_mut().unwrap();
             review.report = Some(Report {
+                files: Vec::new(),
                 job_id: job.id.clone(),
                 path: job.saved_path.clone().unwrap(),
                 scanner: external_provider.label().into(),

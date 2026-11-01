@@ -7,6 +7,7 @@ use buffers::ByteBuf;
 use bytes::Bytes;
 use librqbit_core::hash_id::Id20;
 use librqbit_core::lengths::Lengths;
+use librqbit_core::torrent_limits::{MAX_TRACKER_URL_BYTES, MAX_TRACKERS};
 use librqbit_core::torrent_metainfo::{
     TorrentMetaV1Info, ValidatedTorrentMetaV1Info, torrent_from_bytes,
 };
@@ -47,7 +48,17 @@ pub struct TorrentMeta {
 impl TorrentMeta {
     /// Reads a .torrent file. Its contents come from a stranger and are checked here.
     pub fn from_torrent_file(bytes: &[u8]) -> Result<Self> {
+        ensure!(
+            bytes.len() <= 64 * 1024 * 1024,
+            "Torrent file exceeds the size limit"
+        );
         let torrent = torrent_from_bytes(bytes).context("This is not a valid torrent file")?;
+        for tracker in torrent.iter_announce() {
+            ensure!(
+                tracker.as_ref().len() <= MAX_TRACKER_URL_BYTES,
+                "Tracker URL exceeds the size limit"
+            );
+        }
         let trackers = torrent
             .iter_announce()
             .filter_map(|url| std::str::from_utf8(url.as_ref()).ok())
@@ -65,6 +76,17 @@ impl TorrentMeta {
     /// Reads an info dictionary fetched from peers. The hash is what makes it trustworthy,
     /// so nothing else is looked at until the hash matches.
     pub fn from_info_bytes(info_hash: Id20, info_bytes: Bytes, trackers: Vec<Url>) -> Result<Self> {
+        ensure!(
+            info_bytes.len() <= crate::metadata::MAX_METADATA_SIZE as usize,
+            "Torrent metadata exceeds the size limit"
+        );
+        ensure!(
+            trackers.len() <= MAX_TRACKERS
+                && trackers
+                    .iter()
+                    .all(|t| t.as_str().len() <= MAX_TRACKER_URL_BYTES),
+            "Tracker list exceeds the safety limits"
+        );
         let mut hash = Sha1::new();
         hash.update(&info_bytes);
         ensure!(
@@ -83,6 +105,13 @@ impl TorrentMeta {
         trackers: Vec<Url>,
     ) -> Result<Self> {
         let private = info.private;
+        ensure!(
+            trackers.len() <= MAX_TRACKERS
+                && trackers
+                    .iter()
+                    .all(|t| t.as_str().len() <= MAX_TRACKER_URL_BYTES),
+            "Tracker list exceeds the safety limits"
+        );
         let validated: ValidatedTorrentMetaV1Info<ByteBuf> =
             info.validate().context("This torrent is not valid")?;
         let lengths = *validated.lengths();
@@ -229,6 +258,45 @@ mod tests {
         let meta = TorrentMeta::from_torrent_file(&torrent).unwrap();
         assert_eq!(meta.files[0].display, "C:evil.dll");
         assert_eq!(meta.files[0].path, Path::new("C_evil.dll"));
+    }
+
+    #[test]
+    fn test_saved_filename_collisions_are_rejected_for_files_and_magnet_metadata() {
+        for (first, second) in [
+            (vec!["Guide.pdf"], vec!["GUIDE.PDF"]),
+            (vec!["guide.pdf"], vec!["guide.pdf."]),
+            (vec!["guide.pdf"], vec!["guide.pdf "]),
+            (vec!["a:b"], vec!["a_b"]),
+            (vec!["CON"], vec!["_con"]),
+            (vec!["Images", "sample.png"], vec!["images", "SAMPLE.PNG"]),
+        ] {
+            let bytes = multi_file_torrent(
+                "collision fixture",
+                &[(&first, &[1u8; 10], false), (&second, &[2u8; 10], false)],
+                16384,
+            );
+            // Use the actual metadata paths for a local file and for peer-supplied
+            // magnet metadata, including its hash verification. Neither creates storage.
+            let raw = torrent_from_bytes(&bytes).unwrap();
+            let from_file = TorrentMeta::from_torrent_file(&bytes);
+            let from_magnet = TorrentMeta::from_info_bytes(
+                raw.info_hash,
+                Bytes::copy_from_slice(raw.info.raw_bytes.as_ref()),
+                Vec::new(),
+            );
+            for (source, result) in [("file", from_file), ("magnet metadata", from_magnet)] {
+                let error = result
+                    .err()
+                    .expect("Colliding saved names must be rejected");
+                assert!(
+                    matches!(
+                        error.downcast_ref::<librqbit_core::Error>(),
+                        Some(librqbit_core::Error::BadTorrentDuplicateFilenames)
+                    ),
+                    "{source}: {first:?} / {second:?}: {error:#}"
+                );
+            }
+        }
     }
 
     #[test]

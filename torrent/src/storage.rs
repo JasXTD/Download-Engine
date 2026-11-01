@@ -49,6 +49,9 @@ pub struct Storage {
     meta: Arc<TorrentMeta>,
     root: PathBuf,
     open: Mutex<OpenFiles>,
+    read_only: bool,
+    file_name: Option<String>,
+    allowed: Option<Vec<bool>>,
 }
 
 impl Storage {
@@ -57,11 +60,61 @@ impl Storage {
             meta,
             root,
             open: Mutex::default(),
+            read_only: false,
+            file_name: None,
+            allowed: None,
         }
     }
 
     fn path_of(&self, file: usize) -> PathBuf {
-        self.root.join(&self.meta.files[file].path)
+        self.root.join(
+            self.file_name
+                .as_deref()
+                .map(Path::new)
+                .unwrap_or(&self.meta.files[file].path),
+        )
+    }
+
+    pub fn for_seeding(
+        meta: Arc<TorrentMeta>,
+        root: PathBuf,
+        file_name: Option<String>,
+        only: Option<&[usize]>,
+    ) -> anyhow::Result<Self> {
+        if let Some(name) = &file_name {
+            let stem = name
+                .split('.')
+                .next()
+                .unwrap_or_default()
+                .to_ascii_uppercase();
+            let reserved = ["CON", "PRN", "AUX", "NUL", "CONIN$", "CONOUT$"]
+                .contains(&stem.as_str())
+                || ((stem.starts_with("COM") || stem.starts_with("LPT"))
+                    && stem.len() == 4
+                    && matches!(stem.as_bytes()[3], b'1'..=b'9'));
+            anyhow::ensure!(
+                meta.files.iter().filter(|file| !file.virtual_file).count() == 1
+                    && !name.is_empty()
+                    && !reserved
+                    && !name.ends_with(['.', ' '])
+                    && !name
+                        .chars()
+                        .any(|c| c.is_control() || "\\/:*?\"<>|".contains(c))
+                    && Path::new(name).components().count() == 1,
+                "Invalid seed filename"
+            );
+        }
+        let allowed = only.map(|indices| {
+            let indices: std::collections::HashSet<_> = indices.iter().copied().collect();
+            (0..meta.files.len())
+                .map(|index| indices.contains(&index))
+                .collect()
+        });
+        let mut storage = Self::new(meta, root);
+        storage.read_only = true;
+        storage.file_name = file_name;
+        storage.allowed = allowed;
+        Ok(storage)
     }
 
     fn spans(&self, offset: u64, len: usize) -> Vec<Span> {
@@ -127,10 +180,38 @@ impl Storage {
     }
 
     fn for_reading(&self, index: usize) -> io::Result<Arc<File>> {
+        if self.allowed.as_ref().is_some_and(|allowed| !allowed[index]) {
+            return Err(io::ErrorKind::NotFound.into());
+        }
         if let Some(file) = self.cached(index, false) {
             return Ok(file);
         }
-        let file = Arc::new(File::open(self.path_of(index))?);
+        let mut options = OpenOptions::new();
+        options.read(true);
+        #[cfg(windows)]
+        if self.read_only {
+            use std::os::windows::fs::OpenOptionsExt;
+            use windows_sys::Win32::Storage::FileSystem::{
+                FILE_FLAG_OPEN_REPARSE_POINT, FILE_SHARE_READ,
+            };
+            options
+                .share_mode(FILE_SHARE_READ)
+                .custom_flags(FILE_FLAG_OPEN_REPARSE_POINT);
+        }
+        let file = Arc::new(options.open(self.path_of(index))?);
+        if self.read_only && !file.metadata()?.is_file() {
+            return Err(io::ErrorKind::InvalidData.into());
+        }
+        #[cfg(windows)]
+        if self.read_only {
+            use std::os::windows::fs::MetadataExt;
+            if file.metadata()?.file_attributes()
+                & windows_sys::Win32::Storage::FileSystem::FILE_ATTRIBUTE_REPARSE_POINT
+                != 0
+            {
+                return Err(io::ErrorKind::PermissionDenied.into());
+            }
+        }
         self.remember(index, file.clone(), false);
         Ok(file)
     }
@@ -147,6 +228,12 @@ impl Storage {
 
     /// Writes bytes at a position in the torrent. Padding is dropped.
     pub fn write(&self, offset: u64, data: &[u8]) -> io::Result<()> {
+        if self.read_only {
+            return Err(io::Error::new(
+                io::ErrorKind::PermissionDenied,
+                "Seeding cannot modify completed files",
+            ));
+        }
         let mut rest = data;
         for span in self.spans(offset, data.len()) {
             let (part, tail) = rest.split_at(span.len);
@@ -211,6 +298,9 @@ impl Storage {
     /// Creates the empty files among those chosen. No piece covers them, so nothing else
     /// would ever make them appear.
     pub fn create_empty_files(&self, only: Option<&[usize]>) -> io::Result<()> {
+        if self.read_only {
+            return Ok(());
+        }
         for (index, file) in self.meta.files.iter().enumerate() {
             let chosen = only.is_none_or(|only| only.contains(&index));
             if chosen && file.len == 0 && !file.virtual_file {

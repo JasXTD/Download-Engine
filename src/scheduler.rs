@@ -57,8 +57,16 @@ pub enum Command {
         id: String,
         folder: std::path::PathBuf,
     },
+    /// Desktop-only: an existing folder explicitly chosen and confirmed by the user.
+    /// Script and remote-control moves use MoveFile and remain inside configured folders.
+    MoveFileToChosenFolder {
+        id: String,
+        folder: std::path::PathBuf,
+    },
     /// Follow the saved torrent settings. Turning torrents off stops every torrent.
     TorrentSettings,
+    StartSharing(String),
+    StopSharing(String),
     ChooseTorrentFiles {
         id: String,
         chosen: Vec<usize>,
@@ -224,6 +232,9 @@ fn finish_worker(
         if let Err(error) = settled {
             let _ = errors.send(format!("Cannot settle download worker: {error:#}"));
         }
+        if let Err(error) = crate::torrent::seeding::after_download(store, &id) {
+            let _ = errors.send(format!("Torrent sharing: {error:#}"));
+        }
         publish_finished(store, &id, finished);
     }
 }
@@ -253,6 +264,7 @@ async fn settle_before_command(
         | Command::DeleteFile { id, .. }
         | Command::RenameFile { id, .. }
         | Command::MoveFile { id, .. }
+        | Command::MoveFileToChosenFolder { id, .. }
         | Command::MoveJob(id, _)
         | Command::ReorderJob(id, _) => id,
         Command::Authentication(update) => &update.job,

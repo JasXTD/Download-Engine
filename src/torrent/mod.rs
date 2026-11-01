@@ -3,6 +3,7 @@
 //! and it only runs while a torrent needs it. `torrent/README.md` describes its side.
 mod helper;
 mod publish;
+pub(crate) mod seeding;
 mod settings;
 
 pub use helper::Host;
@@ -154,9 +155,10 @@ pub struct Files {
 }
 impl Files {
     fn chosen_files(&self) -> impl Iterator<Item = &File> {
+        let chosen: std::collections::HashSet<_> = self.chosen.iter().copied().collect();
         self.list
             .iter()
-            .filter(|file| self.chosen.contains(&file.index))
+            .filter(move |file| chosen.contains(&file.index))
     }
     pub fn chosen_size(&self) -> u64 {
         self.chosen_files().map(|file| file.len).sum()
@@ -177,6 +179,35 @@ impl Files {
         );
         Ok(())
     }
+}
+
+/// The exact selected files of a published torrent. Consumers must still guard
+/// these paths while operating on them; this never enumerates unrelated files.
+pub fn completed_files(store: &Store, job: &Job) -> Result<Vec<(PathBuf, u64)>> {
+    ensure!(
+        job.status == crate::model::Status::Complete && job.torrent.is_some(),
+        "Only completed torrents have saved files"
+    );
+    let root = job
+        .saved_path
+        .as_ref()
+        .context("The saved torrent location is unavailable")?;
+    let files = store.torrent_files(&job.id)?;
+    files.validate()?;
+    let lone = files.list.len() == 1 && files.list[0].saved_as.components().count() == 1;
+    Ok(files
+        .chosen_files()
+        .map(|file| {
+            (
+                if lone {
+                    root.clone()
+                } else {
+                    root.join(&file.saved_as)
+                },
+                file.len,
+            )
+        })
+        .collect())
 }
 
 /// The helper reads names from strangers. Its answers are checked here too, because these
@@ -275,6 +306,9 @@ impl Store {
         link: &str,
         cancel: &CancellationToken,
     ) -> Result<Option<Details>> {
+        if cancel.is_cancelled() {
+            return Ok(None);
+        }
         info_hash(link)?;
         check_allowed(self)?;
         let lease = self.torrents.lease(self)?;
@@ -498,7 +532,7 @@ pub(crate) async fn transfer(
     }
     check_allowed(store)?;
     if let Some(file) = publish::recover(store, job).await? {
-        forget(store, job)?;
+        forget_progress(store, job)?;
         return Ok(Some(file));
     }
     let staging = publish::staging(job);
@@ -535,7 +569,7 @@ pub(crate) async fn transfer(
         Outcome::Finished => {
             removed?;
             let finished = publish::finish(store, job).await?;
-            forget(store, job)?;
+            forget_progress(store, job)?;
             Ok(Some(finished))
         }
     }
@@ -543,19 +577,31 @@ pub(crate) async fn transfer(
 
 /// Removes what the engine remembers about a torrent.
 pub(crate) fn forget(store: &Store, job: &Job) -> Result<()> {
+    forget_progress(store, job)?;
     let Some(state) = &job.torrent else {
         return Ok(());
     };
     let folder = store.paths.data.join("torrents");
-    for name in [
-        format!("{}.resume.json", state.info_hash),
-        format!("{}.info", state.info_hash),
-    ] {
-        match std::fs::remove_file(folder.join(name)) {
-            Err(error) if error.kind() != std::io::ErrorKind::NotFound => {
-                return Err(error).context("Cannot remove the torrent's saved details");
-            }
-            _ => {}
+    match std::fs::remove_file(folder.join(format!("{}.info", state.info_hash))) {
+        Err(error) if error.kind() != std::io::ErrorKind::NotFound => {
+            return Err(error).context("Cannot remove the torrent's saved details");
+        }
+        _ => {}
+    }
+    Ok(())
+}
+
+fn forget_progress(store: &Store, job: &Job) -> Result<()> {
+    if let Some(state) = &job.torrent {
+        let path = store
+            .paths
+            .data
+            .join("torrents")
+            .join(format!("{}.resume.json", state.info_hash));
+        if let Err(error) = std::fs::remove_file(path)
+            && error.kind() != std::io::ErrorKind::NotFound
+        {
+            return Err(error.into());
         }
     }
     Ok(())
@@ -718,6 +764,57 @@ pub fn waiting_for_choice(job: &Job) -> bool {
 }
 
 #[cfg(test)]
+pub(crate) fn completed_folder_fixture() -> (tempfile::TempDir, Store, Job) {
+    let temp = tempfile::tempdir().unwrap();
+    let store = Store::open(crate::paths::AppPaths {
+        data: temp.path().join("data"),
+        downloads: temp.path().join("downloads"),
+    })
+    .unwrap();
+    store
+        .save_torrent_settings(Settings {
+            enabled: true,
+            dht: false,
+            ..Default::default()
+        })
+        .unwrap();
+    let hash = "0123456789012345678901234567890123456789";
+    let details = Details {
+        info_hash: hash.into(),
+        magnet: format!("magnet:?xt=urn:btih:{hash}"),
+        name: "Harmless pack".into(),
+        files: ["a.bin", "skipped.bin", "nested/c.bin"]
+            .iter()
+            .enumerate()
+            .map(|(index, name)| File {
+                index,
+                path: (*name).into(),
+                saved_as: (*name).into(),
+                len: 8,
+            })
+            .collect(),
+    };
+    let mut job = store
+        .add_torrent(
+            &details,
+            vec![0, 2],
+            None,
+            crate::queue::MAIN_QUEUE,
+            uuid::Uuid::new_v4().to_string(),
+        )
+        .unwrap();
+    let root = job.directory.join(&job.name);
+    std::fs::create_dir_all(root.join("nested")).unwrap();
+    std::fs::write(root.join("a.bin"), b"harmless").unwrap();
+    std::fs::write(root.join("nested/c.bin"), b"sample!!").unwrap();
+    job.saved_path = Some(root);
+    job.status = crate::model::Status::Complete;
+    job.downloaded = 16;
+    store.save(&job).unwrap();
+    (temp, store, job)
+}
+
+#[cfg(test)]
 mod tests {
     use super::*;
 
@@ -777,7 +874,7 @@ mod tests {
                 |r| Ok((r.get(0)?, r.get(1)?)),
             )
             .unwrap();
-        assert_eq!(versions, (5, 5));
+        assert_eq!(versions, (6, 6));
         let reopened = Store::open(store.paths.clone()).unwrap();
         assert_eq!(reopened.get(&job.id).unwrap().unwrap().torrent, job.torrent);
         assert!(!reopened.torrents.is_running());
@@ -834,7 +931,7 @@ mod tests {
                 r.get(0)
             })
             .unwrap();
-        assert_eq!(version, 5);
+        assert_eq!(version, 6);
         assert_eq!(reopened.list().unwrap().len(), 1);
     }
 

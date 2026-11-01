@@ -1,7 +1,7 @@
 {
   "manifest_version": 2,
   "name": "__MSG_extensionName__",
-  "version": "3.7.0",
+  "version": "3.9.0",
   "description": "__MSG_extensionDescription__",
   "icons": {
     "16": "icons/icon-16.png",
@@ -50,8 +50,13 @@
       "id": "download-engine@xetro",
       "strict_min_version": "142.0",
       "data_collection_permissions": {
-        "required": ["browsingActivity", "websiteContent"],
-        "optional": ["authenticationInfo"]
+        "required": [
+          "browsingActivity",
+          "websiteContent"
+        ],
+        "optional": [
+          "authenticationInfo"
+        ]
       }
     }
   },
@@ -59,5 +64,17 @@
     "cookies"
   ],
   "content_security_policy": "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; object-src 'none'; connect-src 'none'; base-uri 'none'; form-action 'none'",
-  "default_locale": "en"
+  "default_locale": "en",
+  "content_scripts": [
+    {
+      "matches": [
+        "https://*/*",
+        "http://*/*"
+      ],
+      "js": [
+        "torrent-links.js"
+      ],
+      "run_at": "document_start"
+    }
+  ]
 }

@@ -238,8 +238,7 @@ function refreshLanguageMenus() {
     await globalThis.IDMI18n?.ready;
     await api.contextMenus.removeAll();
     api.contextMenus.create({
-      id: "idm-ex-download", title: __xdL.t("Download with Download Engine"), contexts: ["link"],
-      targetUrlPatterns: ["http://*/*", "https://*/*"]
+      id: "idm-ex-download", title: __xdL.t("Download with Download Engine"), contexts: ["link"]
     });
     api.contextMenus.create({ id: "idm-ex-browser-login", title: __xdL.t("Download using browser login…"), contexts: ["link"], targetUrlPatterns: ["https://*/*", "http://127.0.0.1/*", "http://[::1]/*"] });
     api.contextMenus.create({ id: "idm-ex-videos", title: __xdL.t("Find videos with Download Engine"), contexts: ["page", "video"], documentUrlPatterns: ["http://*/*", "https://*/*"] });
@@ -298,6 +297,16 @@ async function configureCaptureNow(value, permissionRevision) {
 }
 api.runtime.onMessage.addListener((message, sender, respond) => {
   if (sender.id !== api.runtime.id) return false;
+  if (message?.action === "on_page_torrent" && /^https?:\/\//.test(sender.url || "") && Number.isInteger(sender.tab?.id)) {
+    trackOperation("review", async () => {
+      if (sender.tab.incognito || sender.frameId !== 0) throw Error("Automatic torrent capture is unavailable in this context.");
+      if (!(await api.storage.local.get("autoCapture")).autoCapture) throw Error("Automatic capture is off.");
+      const request = IDMCore.makeRequest(message.url, crypto.randomUUID());
+      if (request.action !== "review_torrent") throw Error("Only magnet links can be offered here.");
+      return native(request);
+    }).then(respond, error => respond({ ok: false, message: error.message }));
+    return true;
+  }
   if (message?.action === "github_download_state") {
     githubDownloads.status(sender).then(respond, error => respond({ ok: false, message: error.message }));
     return true;

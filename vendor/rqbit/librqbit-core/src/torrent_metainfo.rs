@@ -1,5 +1,5 @@
 // Modified by Download Engine: makes file names safe on Windows, removed the aws-lc
-// backend and moved a test file. See ../../patch.md.
+// backend, bounded decoded complexity and moved a test file. See ../../patch.md.
 use bencode::WithRawBytes;
 use buffers::{ByteBuf, ByteBufOwned};
 use bytes::Bytes;
@@ -10,6 +10,7 @@ use serde_derive::{Deserialize, Serialize};
 use std::{borrow::Cow, collections::HashSet, iter::once, path::PathBuf};
 use tracing::debug;
 
+use crate::torrent_limits::*;
 use crate::{Error, hash_id::Id20, lengths::Lengths, safe_name::safe_path_component};
 
 pub type TorrentMetaV1Borrowed<'a> = TorrentMetaV1<ByteBuf<'a>>;
@@ -50,6 +51,7 @@ pub struct TorrentMetaV1<BufType> {
     pub announce: Option<BufType>,
     #[serde(
         rename = "announce-list",
+        deserialize_with = "crate::torrent_limits::trackers",
         default = "Vec::new",
         skip_serializing_if = "Vec::is_empty"
     )]
@@ -102,13 +104,18 @@ pub struct TorrentMetaV1Info<BufType> {
         rename = "symlink path",
         skip_serializing_if = "Option::is_none"
     )]
+    #[serde(deserialize_with = "crate::torrent_limits::optional_path")]
     pub symlink_path: Option<Vec<BufType>>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
     pub md5sum: Option<BufType>,
 
     // Multi-file mode
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(
+        default = "none",
+        skip_serializing_if = "Option::is_none",
+        deserialize_with = "crate::torrent_limits::files"
+    )]
     pub files: Option<Vec<TorrentMetaV1File<BufType>>>,
 
     #[serde(skip_serializing_if = "is_false", default)]
@@ -314,6 +321,46 @@ impl<BufType: AsRef<[u8]>> ValidatedTorrentMetaV1Info<BufType> {
 
 impl<BufType: AsRef<[u8]>> TorrentMetaV1Info<BufType> {
     pub fn validate(self) -> crate::Result<ValidatedTorrentMetaV1Info<BufType>> {
+        // Also protect callers constructing these structs without deserialization.
+        // Check raw lengths before encoding detection or building any display/path strings.
+        if self
+            .files
+            .as_ref()
+            .is_some_and(|files| files.len() > MAX_FILES)
+        {
+            return Err(Error::BadTorrentComplexity);
+        }
+        let mut total = 0usize;
+        let mut check_path = |parts: &[BufType]| -> crate::Result<()> {
+            if parts.len() > MAX_PATH_COMPONENTS {
+                return Err(Error::BadTorrentComplexity);
+            }
+            let mut path_bytes = 0;
+            for bit in parts {
+                let len = bit.as_ref().len();
+                if len > MAX_COMPONENT_BYTES {
+                    return Err(Error::BadTorrentComplexity);
+                }
+                path_bytes += len + 1;
+            }
+            total += path_bytes;
+            if path_bytes > MAX_PATH_BYTES || total > MAX_TOTAL_PATH_BYTES {
+                return Err(Error::BadTorrentComplexity);
+            }
+            Ok(())
+        };
+        if let Some(name) = &self.name {
+            check_path(std::slice::from_ref(name))?;
+        }
+        if let Some(path) = &self.symlink_path {
+            check_path(path)?;
+        }
+        for file in self.files.iter().flatten() {
+            check_path(&file.path)?;
+            if let Some(path) = &file.symlink_path {
+                check_path(path)?;
+            }
+        }
         let lengths = Lengths::from_torrent(&self)?;
         let encoding = self.detect_encoding();
         let validated = ValidatedTorrentMetaV1Info {
@@ -328,10 +375,16 @@ impl<BufType: AsRef<[u8]>> TorrentMetaV1Info<BufType> {
         // - there's no path traversal
         // - all non-padding filenames are unique
         let mut seen_files = 0;
+        let mut decoded_total = 0usize;
         for file in validated.info.iter_file_details_raw(encoding)? {
             seen_files += 1;
             let mut seen_a_bit = false;
+            let mut decoded_path = 0usize;
             for bit in file.filename.iter_components_bytes() {
+                decoded_path += encoding.decode(bit).0.len() + 1;
+                if decoded_path > MAX_PATH_BYTES {
+                    return Err(Error::BadTorrentComplexity);
+                }
                 seen_a_bit = true;
                 if bit == b".." {
                     return Err(Error::BadTorrentPathTraversal);
@@ -343,6 +396,10 @@ impl<BufType: AsRef<[u8]>> TorrentMetaV1Info<BufType> {
             }
             if !seen_a_bit {
                 return Err(Error::BadTorrentFileNoName);
+            }
+            decoded_total += decoded_path;
+            if decoded_total > MAX_TOTAL_PATH_BYTES {
+                return Err(Error::BadTorrentComplexity);
             }
         }
         if seen_files == 0 {
@@ -453,6 +510,7 @@ const fn none<T>() -> Option<T> {
 #[derive(Deserialize, Serialize, Debug, Clone, PartialEq, Eq)]
 pub struct TorrentMetaV1File<BufType> {
     pub length: u64,
+    #[serde(deserialize_with = "crate::torrent_limits::path")]
     pub path: Vec<BufType>,
 
     #[serde(default = "none", skip_serializing_if = "Option::is_none")]
@@ -464,6 +522,7 @@ pub struct TorrentMetaV1File<BufType> {
         rename = "symlink path",
         skip_serializing_if = "Option::is_none"
     )]
+    #[serde(deserialize_with = "crate::torrent_limits::optional_path")]
     pub symlink_path: Option<Vec<BufType>>,
 }
 

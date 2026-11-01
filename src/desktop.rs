@@ -12,6 +12,7 @@ mod diagnostics;
 mod download_status;
 mod drop_target;
 mod extensions;
+mod external_open;
 #[cfg(any(test, feature = "screenshot"))]
 mod fixture_database;
 mod folder_picker;
@@ -155,6 +156,7 @@ enum Dialog {
     ExtensionReview,
     ExtensionRemove,
     TorrentChoice,
+    TorrentLocation,
 }
 
 enum LinkState {
@@ -361,6 +363,7 @@ pub struct Desktop {
     add_queue: Option<String>,
     add_login: add_login::Draft,
     torrents: torrents::State,
+    external_open: external_open::State,
     add_request: Option<background_io::Task<add_download::Added>>,
     settings_summary: settings_page::Summary,
     preferences_window: Option<preferences_window::State>,
@@ -488,6 +491,7 @@ impl Desktop {
             add_queue: None,
             add_login: add_login::Draft::default(),
             torrents: torrents::State::new(torrent_settings),
+            external_open: external_open::State::default(),
             add_request: None,
             settings_summary: settings_page::Summary::default(),
             preferences_window: None,
@@ -857,6 +861,7 @@ impl Desktop {
         self.mcp.poll(&self.store, ctx);
         self.poll_diagnostic_export();
         self.poll_list_transfer();
+        self.poll_external_opens(ctx);
         self.poll_browser_video_requests(ctx);
         self.poll_hls_requests(ctx);
         self.clipboard_background();
@@ -905,6 +910,7 @@ impl Desktop {
                 Ok(Some(job)) => {
                     if event.status == Status::Complete {
                         self.scan_finished_download(&job);
+                        self.offer_browser_torrent_file(&job);
                     }
                     if let Some(failed) = event.outcome(&job) {
                         self.extras.sound.record(failed);
@@ -1298,6 +1304,7 @@ impl Desktop {
             file.sync_all().expect("Cannot save test screenshot");
             ctx.send_viewport_cmd_to(egui::ViewportId::ROOT, egui::ViewportCommand::Close);
         } else if !self.screenshot_requested
+            && self.external_open_capture_ready()
             && !self.theme_assets.busy()
             && (self.view != View::Logs || self.logs.loaded())
             && (self.dialog != Some(Dialog::Mcp) || self.mcp.capture_ready())

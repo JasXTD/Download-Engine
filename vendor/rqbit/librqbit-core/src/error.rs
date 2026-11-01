@@ -1,6 +1,8 @@
 // Modified by Download Engine: added errors for invalid torrent lengths. See ../../patch.md.
 #[derive(thiserror::Error, Debug)]
 pub enum Error {
+    #[error("torrent exceeds the file count or filename complexity limits")]
+    BadTorrentComplexity,
     #[error("expected multi-file torrent to have at least one file")]
     BadTorrentMultiFileEmpty,
     #[error("torrent has a file with no name")]

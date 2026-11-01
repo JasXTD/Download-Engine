@@ -1,5 +1,15 @@
 use super::*;
-use std::{collections::VecDeque, sync::mpsc};
+use std::{
+    collections::VecDeque,
+    sync::{Arc, Mutex, mpsc},
+};
+
+#[derive(Clone, Debug)]
+pub struct FileProgress {
+    pub completed: usize,
+    pub total: usize,
+    pub path: PathBuf,
+}
 
 struct Request {
     job: Job,
@@ -9,6 +19,7 @@ struct Request {
     batch: Option<uuid::Uuid>,
 }
 struct Task {
+    progress: Arc<Mutex<Option<FileProgress>>>,
     id: String,
     path: Option<PathBuf>,
     sha256: Option<String>,
@@ -31,6 +42,15 @@ pub struct Service {
     active: Option<Task>,
 }
 impl Service {
+    pub fn file_progress(&self, id: &str) -> Option<FileProgress> {
+        self.active
+            .as_ref()
+            .filter(|task| task.id == id)?
+            .progress
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+            .clone()
+    }
     pub fn busy(&self) -> bool {
         self.active.is_some() || !self.queue.is_empty()
     }
@@ -202,6 +222,8 @@ impl Service {
                     .is_some_and(|settings| settings.provider.external_review());
             let cancel = CancellationToken::new();
             let worker_cancel = cancel.clone();
+            let progress = Arc::new(Mutex::new(None));
+            let worker_progress = progress.clone();
             let (tx, rx) = mpsc::channel();
             let store = store.clone();
             match std::thread::Builder::new()
@@ -210,18 +232,29 @@ impl Service {
                     let result = if let Some(report) = request.external_report {
                         external_review_outcome(&store, &request.job, report, &worker_cancel)
                     } else {
-                        scan(
+                        scan_progress(
                             &store,
                             &request.job,
                             request.settings.as_ref().expect("scanner settings"),
                             &worker_cancel,
                             request.for_open,
+                            |completed, total, path| {
+                                *worker_progress
+                                    .lock()
+                                    .unwrap_or_else(std::sync::PoisonError::into_inner) =
+                                    Some(FileProgress {
+                                        completed,
+                                        total,
+                                        path: path.to_owned(),
+                                    });
+                            },
                         )
                     };
                     let _ = tx.send(result);
                 }) {
                 Ok(_) => {
                     self.active = Some(Task {
+                        progress,
                         id,
                         path,
                         sha256,
@@ -262,6 +295,7 @@ mod tests {
         let mut service = Service {
             queue: VecDeque::new(),
             active: Some(Task {
+                progress: Arc::default(),
                 id: old.id.clone(),
                 path: old.saved_path.clone(),
                 sha256: old.integrity.actual.clone(),
@@ -309,6 +343,7 @@ mod tests {
         let mut service = Service {
             queue: VecDeque::new(),
             active: Some(Task {
+                progress: Arc::default(),
                 id: job.id.clone(),
                 path: job.saved_path.clone(),
                 sha256: job.integrity.actual.clone(),

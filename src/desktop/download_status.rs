@@ -245,13 +245,22 @@ impl Window {
                     .map_or(0.0, |job| {
                         job.downloaded.saturating_sub(previous.downloaded) as f64 / seconds
                     });
+                if self.phase == Some(Phase::Seeding) {
+                    self.rate = self
+                        .live_torrent
+                        .as_ref()
+                        .map_or(0.0, |live| live.upload_speed as f64);
+                }
                 self.sampled = Instant::now();
-                if job.as_ref().is_none_or(|job| {
-                    self.waiting == Some(job.status)
-                        || (self.waiting == Some(Status::Downloading)
-                            && job.status == Status::Queued)
-                        || matches!(job.status, Status::Complete | Status::Failed)
-                }) {
+                let stopping_share = self.waiting == Some(Status::Complete) && self.phase.is_some();
+                if !stopping_share
+                    && job.as_ref().is_none_or(|job| {
+                        self.waiting == Some(job.status)
+                            || (self.waiting == Some(Status::Downloading)
+                                && job.status == Status::Queued)
+                            || matches!(job.status, Status::Complete | Status::Failed)
+                    })
+                {
                     self.waiting = None;
                 }
                 let finished_now = was_active
@@ -389,6 +398,7 @@ impl Window {
 enum Action {
     Hide,
     Pause,
+    StopSharing,
     Start,
     OpenFile,
     OpenWith,
@@ -481,7 +491,9 @@ impl Desktop {
     pub(super) fn stop_selected_downloads(&mut self) {
         self.download_status.revision = self.download_status.revision.wrapping_add(1);
         for job in self.selected_jobs() {
-            if !matches!(job.status, Status::Downloading | Status::Queued) {
+            if !matches!(job.status, Status::Downloading | Status::Queued)
+                && !self.store.torrent_sharing(&job.id).unwrap_or(false)
+            {
                 continue;
             }
             match self.scheduler.send(Command::Pause(job.id.clone())) {
@@ -831,6 +843,7 @@ impl Desktop {
         };
         let command = match action {
             Some(Action::Pause) => Some((Command::Pause(id.into()), Status::Paused)),
+            Some(Action::StopSharing) => Some((Command::StopSharing(id.into()), Status::Complete)),
             Some(Action::Start) => {
                 Some((Command::StartImmediately(id.into()), Status::Downloading))
             }
@@ -1036,6 +1049,7 @@ impl Window {
             form_dialog::controls(ui, |ui| {
                 let enabled = self.error.is_none() && self.waiting.is_none();
                 let (label, next) = match job.status {
+                    Status::Complete => (tr("Stop sharing"), Action::StopSharing),
                     Status::Downloading => (tr("Pause"), Action::Pause),
                     Status::Queued => (tr("Start immediately"), Action::Start),
                     _ => (resume_action(job), Action::Start),
@@ -1200,7 +1214,9 @@ impl Window {
             tr("Pausing…").into()
         } else if self.waiting == Some(Status::Downloading) {
             tr("Starting…").into()
-        } else if job.status == Status::Downloading {
+        } else if job.status == Status::Downloading
+            || (job.torrent.is_some() && self.phase.is_some())
+        {
             self.phase
                 .map(|phase| {
                     if phase == Phase::Downloading {
@@ -1259,7 +1275,14 @@ impl Window {
                 ui.columns(3, |columns| {
                     for (column, (label, value)) in columns.iter_mut().zip([
                         (tr("Downloaded"), bytes(job.downloaded)),
-                        (tr("Speed"), rate),
+                        (
+                            tr(if self.phase == Some(Phase::Seeding) {
+                                "Upload speed"
+                            } else {
+                                "Speed"
+                            }),
+                            rate,
+                        ),
                         (tr("Time left"), eta(job, self.rate)),
                     ]) {
                         column.label(RichText::new(label).size(11.0).color(p.muted));
@@ -1338,6 +1361,7 @@ impl Window {
             ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
                 ui.spacing_mut().item_spacing.x = 6.0;
                 let (label, next) = match job.status {
+                    Status::Complete => (tr("Stop sharing"), Action::StopSharing),
                     Status::Downloading => (tr("Pause"), Action::Pause),
                     Status::Queued => (tr("Start immediately"), Action::Start),
                     _ => (resume_action(job), Action::Start),

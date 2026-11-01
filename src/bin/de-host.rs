@@ -68,6 +68,7 @@ fn run() -> Result<()> {
                 | native::Request::AddBrowserLogin { .. }
                 | native::Request::PreviewVideo { .. }
                 | native::Request::ReviewBrowserVideo { .. }
+                | native::Request::ReviewTorrent { .. }
                 | native::Request::PreviewHls { .. })
         );
         let status_window = matches!(

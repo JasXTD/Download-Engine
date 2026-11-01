@@ -1,3 +1,17 @@
+## 3.9.0 — 2026-11-01
+
+### Lavurar cun torrents
+
+Sustegn per colliaziuns magnet dal navigatur, datotecas torrent tratgas en l’app e propostas da l’archiv provisoric. Cundivider suenter la fin e connexiuns entradas èn opziuns separadas, deactivadas sco standard. Ins po examinar pliras datotecas, spustar e renumnar ordinaturs; Fermar tut ferma era la cundivisiun.
+
+[Guide / English](../../user-guide.md#download-torrents)
+
+## 3.8.0 — 2026-11-01
+
+### Avrir torrents da Windows
+
+Avri datotecas .torrent da l’Explorer e colliaziuns magnet dal navigatur per las controllar. La registraziun facultativa en Windows mantegna las apps da standard; las controllas pendentas restan suenter ina nova aviertura. La protecziun da torrents è vegnida rinforzada: magnets senza metadatas en il cache dovran in tracker, uschiglio duvrai ina datoteca .torrent. Tests da regressiun controllan la protecziun existenta cunter conflicts da nums da datotecas.
+
 ## 3.7.0 — 2026-11-01
 
 ### Telechargiar torrents

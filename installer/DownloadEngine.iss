@@ -51,7 +51,7 @@ SetupMutex=Local\IDM_EX.Setup
 CloseApplications=no
 RestartApplications=no
 AllowNoIcons=yes
-ChangesAssociations=no
+ChangesAssociations=yes
 ShowLanguageDialog=yes
 UsePreviousLanguage=yes
 #ifdef SignRelease
@@ -211,6 +211,9 @@ rm.CleanupFailed=Nettegiada dal navigatur betg reussida. Serra la Configuraziun 
 
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; Flags: unchecked
+#ifndef TestBuild
+Name: "torrenthandlers"; Description: "Offer Download Engine for torrent files and magnet links (choose defaults in Windows)"; Flags: unchecked
+#endif
 
 [Files]
 Source: "{#SourceRoot}\installer\languages\it.json"; DestDir: "{app}"; DestName: "installer-language.json"; Languages: it; Flags: ignoreversion
@@ -267,6 +270,7 @@ Source: "{#SourceRoot}\tools\ffmpeg\media-manifest.json"; DestDir: "{app}\tools\
 Source: "{#SourceRoot}\scripts\Register-Browsers.ps1"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#SourceRoot}\extension\core.js"; DestDir: "{app}\extensions\chrome"; Flags: ignoreversion
 Source: "{#SourceRoot}\extension\capture.js"; DestDir: "{app}\extensions\chrome"; Flags: ignoreversion
+Source: "{#SourceRoot}\extension\torrent-links.js"; DestDir: "{app}\extensions\chrome"; Flags: ignoreversion
 Source: "{#SourceRoot}\extension\github-download.js"; DestDir: "{app}\extensions\chrome"; Flags: ignoreversion
 Source: "{#SourceRoot}\extension\link-recovery.js"; DestDir: "{app}\extensions\chrome"; Flags: ignoreversion
 Source: "{#SourceRoot}\extension\media.js"; DestDir: "{app}\extensions\chrome"; Flags: ignoreversion
@@ -287,6 +291,7 @@ Source: "{#SourceRoot}\extension\links.js"; DestDir: "{app}\extensions\chrome"; 
 Source: "{#SourceRoot}\extension\manifest.chromium.json"; DestDir: "{app}\extensions\chrome"; DestName: "manifest.json"; Flags: ignoreversion
 Source: "{#SourceRoot}\extension\core.js"; DestDir: "{app}\extensions\edge"; Flags: ignoreversion
 Source: "{#SourceRoot}\extension\capture.js"; DestDir: "{app}\extensions\edge"; Flags: ignoreversion
+Source: "{#SourceRoot}\extension\torrent-links.js"; DestDir: "{app}\extensions\edge"; Flags: ignoreversion
 Source: "{#SourceRoot}\extension\github-download.js"; DestDir: "{app}\extensions\edge"; Flags: ignoreversion
 Source: "{#SourceRoot}\extension\link-recovery.js"; DestDir: "{app}\extensions\edge"; Flags: ignoreversion
 Source: "{#SourceRoot}\extension\media.js"; DestDir: "{app}\extensions\edge"; Flags: ignoreversion
@@ -307,6 +312,7 @@ Source: "{#SourceRoot}\extension\links.js"; DestDir: "{app}\extensions\edge"; Fl
 Source: "{#SourceRoot}\extension\manifest.chromium.json"; DestDir: "{app}\extensions\edge"; DestName: "manifest.json"; Flags: ignoreversion
 Source: "{#SourceRoot}\extension\core.js"; DestDir: "{app}\extensions\brave"; Flags: ignoreversion
 Source: "{#SourceRoot}\extension\capture.js"; DestDir: "{app}\extensions\brave"; Flags: ignoreversion
+Source: "{#SourceRoot}\extension\torrent-links.js"; DestDir: "{app}\extensions\brave"; Flags: ignoreversion
 Source: "{#SourceRoot}\extension\github-download.js"; DestDir: "{app}\extensions\brave"; Flags: ignoreversion
 Source: "{#SourceRoot}\extension\link-recovery.js"; DestDir: "{app}\extensions\brave"; Flags: ignoreversion
 Source: "{#SourceRoot}\extension\media.js"; DestDir: "{app}\extensions\brave"; Flags: ignoreversion
@@ -327,6 +333,7 @@ Source: "{#SourceRoot}\extension\links.js"; DestDir: "{app}\extensions\brave"; F
 Source: "{#SourceRoot}\extension\manifest.chromium.json"; DestDir: "{app}\extensions\brave"; DestName: "manifest.json"; Flags: ignoreversion
 Source: "{#SourceRoot}\extension\core.js"; DestDir: "{app}\extensions\firefox"; Flags: ignoreversion
 Source: "{#SourceRoot}\extension\capture.js"; DestDir: "{app}\extensions\firefox"; Flags: ignoreversion
+Source: "{#SourceRoot}\extension\torrent-links.js"; DestDir: "{app}\extensions\firefox"; Flags: ignoreversion
 Source: "{#SourceRoot}\extension\github-download.js"; DestDir: "{app}\extensions\firefox"; Flags: ignoreversion
 Source: "{#SourceRoot}\extension\link-recovery.js"; DestDir: "{app}\extensions\firefox"; Flags: ignoreversion
 Source: "{#SourceRoot}\extension\media.js"; DestDir: "{app}\extensions\firefox"; Flags: ignoreversion
@@ -397,7 +404,15 @@ Type: files; Name: "{autodesktop}\IDM EX.lnk"
 #endif
 
 [Run]
+#ifndef TestBuild
+Filename: "{app}\de.exe"; Parameters: "--register-torrents"; Tasks: torrenthandlers; Flags: runhidden waituntilterminated
+#endif
 Filename: "{app}\de.exe"; Parameters: "--browser-setup"; Description: "{cm:ConnectBrowser}"; Flags: postinstall nowait skipifsilent
+
+[UninstallRun]
+#ifndef TestBuild
+Filename: "{app}\de.exe"; Parameters: "--unregister-torrents"; RunOnceId: "TorrentHandlers"; Flags: runhidden waituntilterminated skipifdoesntexist
+#endif
 
 [UninstallDelete]
 ; Exact app-owned manifests only. Never recursively remove user data or downloads.

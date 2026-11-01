@@ -1,5 +1,6 @@
 //! Download Engine's torrent engine, built on the protocol crates in `vendor/rqbit`.
 
+mod admission;
 pub mod bitfield;
 pub mod cli;
 pub mod discovery;

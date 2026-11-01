@@ -14,6 +14,7 @@ use std::{
 };
 use tokio_util::sync::CancellationToken;
 
+mod folder;
 mod handles;
 use handles::{FileKey, Snapshot, delete_owned, open_owned, rename_owned};
 
@@ -30,13 +31,18 @@ struct Intent {
     name: String,
     directory: PathBuf,
     committed: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    tree: Option<Vec<folder::Entry>>,
 }
 
 pub(crate) fn initialize(conn: &rusqlite::Connection) -> Result<()> {
     conn.execute_batch(
         "CREATE TABLE IF NOT EXISTS file_relocations (
         job_id TEXT PRIMARY KEY REFERENCES jobs(id) ON DELETE RESTRICT,
-        data TEXT NOT NULL);",
+        data TEXT NOT NULL);
+        CREATE TABLE IF NOT EXISTS file_relocation_items (
+          job_id TEXT NOT NULL REFERENCES file_relocations(job_id) ON DELETE CASCADE,
+          ordinal INTEGER NOT NULL, data TEXT NOT NULL, PRIMARY KEY(job_id,ordinal));",
     )?;
     Ok(())
 }
@@ -160,6 +166,9 @@ pub(crate) fn relocate(
     directory: PathBuf,
     cancel: &CancellationToken,
 ) -> Result<()> {
+    if job.torrent.is_some() && job.saved_path.as_ref().is_some_and(|path| path.is_dir()) {
+        return folder::relocate(store, job, target, name, directory, cancel, false);
+    }
     relocate_inner(store, job, target, name, directory, cancel, false)
 }
 
@@ -228,6 +237,7 @@ fn relocate_inner(
         name,
         directory,
         committed: false,
+        tree: None,
     };
     let inserted = store.connect().and_then(|conn| {
         conn.execute(
@@ -315,6 +325,9 @@ pub(crate) fn recover(store: &Store, id: &str, cancel: &CancellationToken) -> Re
         "File operation identifier does not match its row"
     );
     crate::model::validate_job_id(id)?;
+    if intent.tree.is_some() {
+        return folder::recover(store, intent, cancel);
+    }
     let _source_parents = download_file::guard_parents(&intent.source)?;
     let _target_parents = download_file::guard_parents(&intent.target)?;
     let mut target = if intent.target.try_exists()? {

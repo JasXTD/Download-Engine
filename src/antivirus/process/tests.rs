@@ -231,9 +231,9 @@ fn external_handoff_requires_exact_acknowledgment_and_never_reports_clean() {
         truncated: false,
         stopped: None,
     };
-    let token = "IDM_EX_AV_REQUESTED_V1:malwarebytes\n";
+    let acknowledgment = "IDM_EX_AV_REQUESTED_V1:malwarebytes\n";
     assert_eq!(
-        external_request_outcome(Provider::Malwarebytes, output(0, token))
+        external_request_outcome(Provider::Malwarebytes, output(0, acknowledgment))
             .unwrap()
             .0,
         Verdict::ScanRequested
@@ -241,15 +241,15 @@ fn external_handoff_requires_exact_acknowledgment_and_never_reports_clean() {
     for (code, text) in [
         (0, ""),
         (0, "Scanned files: 1"),
-        (1, token),
-        (-1073741819, token),
+        (1, acknowledgment),
+        (-1073741819, acknowledgment),
     ] {
         assert!(external_request_outcome(Provider::Malwarebytes, output(code, text)).is_err());
     }
-    let mut data = output(0, token);
+    let mut data = output(0, acknowledgment);
     data.truncated = true;
     assert!(external_request_outcome(Provider::Malwarebytes, data).is_err());
-    let mut data = output(0, token);
+    let mut data = output(0, acknowledgment);
     data.stopped = Some(Verdict::TimedOut);
     assert_eq!(
         external_request_outcome(Provider::Malwarebytes, data)
@@ -261,7 +261,10 @@ fn external_handoff_requires_exact_acknowledgment_and_never_reports_clean() {
         provider: Provider::Malwarebytes,
         ..Default::default()
     };
-    assert_eq!(classify(&settings, output(0, token)).0, Verdict::Failed);
+    assert_eq!(
+        classify(&settings, output(0, acknowledgment)).0,
+        Verdict::Failed
+    );
 }
 
 #[cfg(windows)]

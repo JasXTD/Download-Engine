@@ -11,6 +11,21 @@ function event() {
 }
 async function flush() { for (let i = 0; i < 12; i++) await new Promise(setImmediate); }
 for(const variant of ['chromium','firefox']) {
+  test(variant+': magnet offers require the trusted extension frame, capture enabled and a validated magnet',async()=>{
+    const {state,api}=background(variant); await flush(); state.values.autoCapture=true;
+    const calls=[]; api.runtime.sendNativeMessage=async(_host,request)=>{calls.push(request);return {version:1,ok:true,preview_id:request.request_id,message:'Ready for review'};};
+    const sender={id:api.runtime.id,url:'https://example.test/page',frameId:0,tab:{id:7}};
+    const url='magnet:?xt=urn:btih:0123456789012345678901234567890123456789';
+    const ask=(value=url,overrides={})=>new Promise(resolve=>{
+      const handled=api.runtime.onMessage.emit({action:'on_page_torrent',url:value},{...sender,...overrides},resolve)[0];
+      if(!handled)resolve(undefined);
+    });
+    assert.equal((await ask()).ok,true); assert.equal(calls.length,1); assert.equal(calls[0].action,'review_torrent');
+    for(const overrides of [{tab:{id:7,incognito:true}},{frameId:1}]) assert.equal((await ask(url,overrides)).ok,false);
+    assert.equal(await ask(url,{id:'foreign'}),undefined);
+    for(const invalid of ['file:///C:/secret.torrent','https://example.test/file.torrent','magnet:?xt=urn:btih:invalid']) assert.equal((await ask(invalid)).ok,false);
+    state.values.autoCapture=false; assert.equal((await ask()).ok,false); assert.equal(calls.length,1);
+  });
   test(variant+': content status honors default-on access and saved off without a native call',async()=>{
     const {state,api}=background(variant);await flush();
     const sender={id:api.runtime.id,url:'https://example.test/page',frameId:0,tab:{id:7}};

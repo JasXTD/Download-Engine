@@ -31,6 +31,7 @@ impl Store {
         migrations::initialize(&mut conn, &paths.data)?;
         crate::extensions::initialize(&conn)?;
         crate::torrent::initialize(&conn)?;
+        crate::external_open::initialize(&conn)?;
         crate::provider::upgrade(&mut conn)?;
         crate::preferences::apply_install_language(&conn)?;
         let store = Self {

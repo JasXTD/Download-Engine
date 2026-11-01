@@ -17,6 +17,7 @@ The formats and network protocols come from the crates copied into `../vendor/rq
 | `src/picker.rs` | Chooses what to ask each peer for. Pure logic with no network or disk. |
 | `src/storage.rs` | Reads and writes across file boundaries. |
 | `src/peer.rs` | One connection to one peer. |
+| `src/admission.rs` | Connection reservations and per-source-IP limits. |
 | `src/torrent.rs` | One torrent's life: details, checking, swarm, pausing. |
 | `src/metadata.rs` | Fetches a magnet link's details from a peer. |
 | `src/discovery.rs` | Finds peers through trackers and the DHT. |
@@ -30,6 +31,11 @@ The formats and network protocols come from the crates copied into `../vendor/rq
   each number before using it, and give each queue a limit.
 - A tracker address must not lead to this computer or its network, and a tracker can't
   redirect us anywhere.
+- Discovered peers and DHT nodes follow that same public-address policy. The legacy
+  `allow_loopback_peers` option explicitly enables LAN traffic for isolated tests; the
+  desktop helper never enables it. Explicit test/lab peer addresses remain supported.
+- An unknown magnet's hash stays off DHT. Only hash-verified public metadata enables
+  DHT discovery; trackerless magnets need cached metadata or a `.torrent` file.
 - A piece counts only after its SHA-1 matches.
 - File names on disk come only from `TorrentFile::path`. `display` is for showing.
 - Reading from a peer must never wait on writing to it, or two peers can block each other.
@@ -37,6 +43,30 @@ The formats and network protocols come from the crates copied into `../vendor/rq
   does this, so that a lost peer can't leave chunks stuck as requested.
 - Tests must never reach a network. Torrents only connect out when `connect_out` is set,
   which test helpers leave off, and on Windows `connect` panics in a test build.
+
+## Resource limits
+
+- At most 32 trackers, each URL at most 2,048 bytes. At most four tracker requests per
+  torrent and eight across the process, with permits released on cancellation. Sleeping
+  trackers do not hold permits. HTTP bodies stop at 1 MiB even without Content-Length;
+  announce intervals have a five-second minimum. HTTP and UDP request at most 200 peers
+  and cap each response at 200 results even if the tracker ignores that request.
+- At most 50 queued, connecting or active connections per torrent, and four per source IP
+  across incoming and outgoing connections. IPv4-mapped IPv6 addresses share the IPv4
+  limit. Reservations last until a connection closes, fails or is cancelled. The listener
+  separately limits unfinished handshakes to 32 total and four per source IP.
+- Discovery queues at most 128 addresses. Trackers, DHT and peer exchange share a budget
+  of 5,000 unique addresses, including explicit peers and queued results; duplicate or
+  rejected addresses do not spend it. Tracker announcements continue after the book fills.
+- Metainfo accepts at most 10,000 files, 64 components per path, 1,024 raw bytes per
+  component, 4,096 bytes per path, and 4 MiB of aggregate raw or decoded filename bytes.
+  Collection limits apply during deserialization, before growing untrusted lists.
+- A peer may supply up to 32 MiB of metadata. Reservations cover lazy chunks and the
+  final contiguous result: 64 MiB per torrent and 128 MiB across the process. Reservations
+  remain held through hash/structure validation and release on error or cancellation.
+  A repeated metadata handshake ends that peer's attempt.
+- The desktop starts the Windows helper with a 1 GiB process-memory limit as a backstop.
+  Reaching it can stop the helper; the app reports that failure and retains staged data.
 
 ## Commands
 
@@ -46,7 +76,7 @@ Each line on stdin is a JSON object with a `cmd`, and gets one reply line: `{"ok
 | Command | Fields | Result |
 | --- | --- | --- |
 | `files` | `torrent` (path) or `name` | The file list and info hash. |
-| `add` | `name`, `output`, then `torrent` (path) or `magnet`, and optional `only`, `peers`, `choose_later` | The info hash. |
+| `add` | `name`, `output`, then `torrent` (path) or `magnet`, and optional `only`, `peers`, `choose_later`, `seed_only`, `file_name` | The info hash. |
 | `select` | `name`, `only` | Changes the chosen files at any time. |
 | `import` | `torrent` (path) | Saves the torrent's details, so its magnet link needs nothing else. Returns the same as `files`, with a `magnet`. |
 | `remove` | `name` | Stops a torrent and lets go of its files, which stay on disk. |
@@ -63,6 +93,14 @@ A torrent's `state` is one of `metadata`, `ready`, `initializing`, `live`, `fini
 Options: `--port`, `--upload-limit`, `--download-limit`, `--state-dir`, `--no-seed`,
 `--no-upload`, `--trackers`, `--dht`. Trackers, the DHT and incoming connections are off unless asked for.
 Set `DE_TORRENT_DEBUG=1` to write diagnostics to stderr.
+
+The desktop passes `--port` only after an explicit incoming-connection opt-in.
+An `add` request with `seed_only: true` requires known metadata and existing selected
+files. It rehashes them, uses read-only handles, never creates or downloads skipped
+files, and advertises only verified pieces. `file_name` maps a renamed single-file
+torrent to its current safe file name. These sharing sessions do not overwrite
+download resume state. Partial seeds report the full torrent's remaining bytes to
+trackers, rather than claiming that an incomplete selection is a complete seed.
 
 ## Testing
 

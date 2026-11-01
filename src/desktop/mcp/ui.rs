@@ -311,18 +311,16 @@ impl State {
                 let response = ui
                     .add_enabled(
                         !busy && url.is_some(),
-                        egui::Button::new(
-                            RichText::new(if cfg!(windows) { COPY } else { "⧉" })
-                                .family(if cfg!(windows) {
-                                    egui::FontFamily::Name("icons".into())
-                                } else {
-                                    egui::FontFamily::Proportional
-                                })
-                                .size(16.0),
-                        )
-                        .min_size(vec2(CONTROL_HEIGHT, CONTROL_HEIGHT)),
+                        egui::Button::new("").min_size(vec2(CONTROL_HEIGHT, CONTROL_HEIGHT)),
                     )
                     .on_hover_text(tr("Copy URL"));
+                view::icon(
+                    ui,
+                    response.rect.center(),
+                    COPY,
+                    16.0,
+                    if response.enabled() { p.text } else { p.muted },
+                );
                 response.widget_info(|| {
                     egui::WidgetInfo::labeled(
                         egui::WidgetType::Button,
@@ -429,7 +427,11 @@ impl Desktop {
                 action = self.mcp.advanced_settings(ui, p).or(action);
                 ui.add_space(8.0);
                 ui.horizontal_wrapped(|ui| {
-                    ui.label(RichText::new(tr("Runs while the app is open, including in the tray.")).small().color(p.muted));
+                    ui.label(RichText::new(if cfg!(windows) {
+                        tr("Runs while the app is open, including in the tray.")
+                    } else {
+                        tr("Runs while the app is open.")
+                    }).small().color(p.muted));
                 });
                 ui.label(RichText::new(tr("Stopping MCP disconnects AI clients. Downloads already started keep running.")).small().color(p.muted));
                 #[cfg(feature = "screenshot")]

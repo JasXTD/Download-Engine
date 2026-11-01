@@ -512,8 +512,10 @@ impl Desktop {
         ui.label(
             RichText::new(if history {
                 tr("Latest 500 runs. Completed actions are immediate and cannot be cancelled.")
-            } else {
+            } else if cfg!(windows) {
                 tr("Rules run while the app is open, including in the tray. The first matching routing rule wins.")
+            } else {
+                tr("Rules run while the app is open. The first matching routing rule wins.")
             })
             .small()
             .color(p.muted),

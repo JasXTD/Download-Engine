@@ -599,6 +599,29 @@ impl Desktop {
         }
         #[cfg(feature = "screenshot")]
         if std::env::var_os("IDM_EX_SCREENSHOT_TO").is_some() {
+            // Set the capture theme before a Preferences draft copies it.
+            if let Ok(appearance) = std::env::var("IDM_EX_TEST_APPEARANCE") {
+                app.interface.appearance = if appearance == "light" {
+                    Appearance::Light
+                } else {
+                    Appearance::Dark
+                };
+            }
+            if let Ok(preset) = std::env::var("IDM_EX_TEST_CUSTOM_THEME") {
+                use download_engine::preferences::{CustomTheme, ThemePreset};
+                let preset = match preset.as_str() {
+                    "reactor" => ThemePreset::ReactorNight,
+                    "aurora" => ThemePreset::Aurora,
+                    "moonveil" => ThemePreset::Moonveil,
+                    _ => ThemePreset::NeonCourier,
+                };
+                app.interface.appearance = Appearance::Custom;
+                app.interface.custom_theme = CustomTheme {
+                    preset,
+                    accent: preset.accent(),
+                    ..Default::default()
+                };
+            }
             app.view = match std::env::var("IDM_EX_TEST_VIEW").as_deref() {
                 Ok("queues") => View::Queues,
                 Ok("scheduler") => View::Scheduler,
@@ -693,31 +716,6 @@ impl Desktop {
             }
             if std::env::var("IDM_EX_TEST_VIEW").as_deref() == Ok("logs-empty") {
                 app.logs.search = tr("no matching event").into();
-            }
-            if let Ok(appearance) = std::env::var("IDM_EX_TEST_APPEARANCE") {
-                app.interface.appearance = if appearance == "light" {
-                    Appearance::Light
-                } else {
-                    Appearance::Dark
-                };
-            }
-            if let Ok(preset) = std::env::var("IDM_EX_TEST_CUSTOM_THEME") {
-                use download_engine::preferences::{CustomTheme, ThemePreset};
-                let preset = match preset.as_str() {
-                    "reactor" => ThemePreset::ReactorNight,
-                    "aurora" => ThemePreset::Aurora,
-                    "moonveil" => ThemePreset::Moonveil,
-                    _ => ThemePreset::NeonCourier,
-                };
-                app.interface.appearance = Appearance::Custom;
-                app.interface.custom_theme = CustomTheme {
-                    preset,
-                    accent: preset.accent(),
-                    ..Default::default()
-                };
-                if let Some(state) = &mut app.preferences_window {
-                    state.interface = app.interface;
-                }
             }
         }
         #[cfg(feature = "screenshot")]

@@ -777,6 +777,8 @@
     "scripts/Register-Browsers.ps1",
     "scripts/Release-Files.ps1",
     "scripts/Release-Version.ps1",
+    "scripts/Run-NativeCi.cjs",
+    "scripts/Run-NativeCi.test.cjs",
     "scripts/Signing.ps1",
     "scripts/Test-LinuxDesktop.sh",
     "scripts/Test-Release-Version.ps1",

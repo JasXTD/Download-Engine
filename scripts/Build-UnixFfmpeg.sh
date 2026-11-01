@@ -15,6 +15,15 @@ cleanup() {
         # Emit only a fixed stage name and exit code, never command output,
         # environment values or runner paths. CI exposes this as an annotation.
         printf '::error title=Native FFmpeg build::Stage %s exited with code %d.\n' "$stage" "$result" >&2
+        # The CI wrapper redacts this output before forwarding or saving it.
+        if [[ ${DOWNLOAD_ENGINE_CI_CAPTURE:-} == 1 ]]; then
+            case "$stage" in
+                x264-configure) diagnostic="$build/x264-0480cb05fa188d37ae87e8f4fd8f1aea3711f7ee/config.log" ;;
+                ffmpeg-configure) diagnostic="$build/FFmpeg-946fcce07b6dcd0331c8cc609192aeff5e1924f8/ffbuild/config.log" ;;
+                *) diagnostic= ;;
+            esac
+            if [[ -n "$diagnostic" && -f "$diagnostic" ]]; then tail -n 80 "$diagnostic" >&2; fi
+        fi
     fi
     rm -rf -- "$build"
     exit "$result"

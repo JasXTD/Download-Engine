@@ -23,7 +23,6 @@ trap cleanup EXIT
 export LC_ALL=C TZ=UTC SOURCE_DATE_EPOCH=1789687190
 if ! command -v sha256sum >/dev/null; then
     sha256sum() { shasum -a 256 "$@"; }
-    export -f sha256sum
 fi
 if [[ $(uname -s) == Darwin ]] && ! command sed --version >/dev/null 2>&1; then
     # The canonical patch uses GNU sed's c command. Apple's sed needs both the
@@ -41,7 +40,6 @@ if [[ $(uname -s) == Darwin ]] && ! command sed --version >/dev/null 2>&1; then
             /usr/bin/sed "$@"
         fi
     }
-    export -f sed
 fi
 cd "$repo/tools/ffmpeg/source"
 stage=source-checksums
@@ -50,6 +48,16 @@ stage=source-extraction
 tar -xzf ffmpeg-946fcce07b6dcd0331c8cc609192aeff5e1924f8.tar.gz -C "$build"
 tar -xzf x264-0480cb05fa188d37ae87e8f4fd8f1aea3711f7ee.tar.gz -C "$build"
 mkdir -p "$output/licenses" "$output/build-record" "$build/prefix"
+# Patch before compiling x264 so a source verification failure is immediate.
+cd "$build/FFmpeg-946fcce07b6dcd0331c8cc609192aeff5e1924f8"
+stage=security-patch
+tr -d '\015' < "$repo/tools/ffmpeg/source/apply-security-fixes.sh" > "$build/apply-security-fixes.sh"
+(
+    # Keep the compatibility functions in this Bash process; do not depend on
+    # exported-function imports across different installed Bash versions.
+    trap - EXIT
+    . "$build/apply-security-fixes.sh"
+)
 cd "$build/x264-0480cb05fa188d37ae87e8f4fd8f1aea3711f7ee"
 stage=x264-configure
 ./configure --prefix="$build/prefix" --enable-static --enable-pic --disable-cli --disable-opencl --disable-asm
@@ -60,9 +68,6 @@ make install
 cp COPYING "$output/licenses/x264-COPYING"
 cp config.mak "$output/build-record/x264-config.mak"
 cd "$build/FFmpeg-946fcce07b6dcd0331c8cc609192aeff5e1924f8"
-stage=security-patch
-tr -d '\015' < "$repo/tools/ffmpeg/source/apply-security-fixes.sh" > "$build/apply-security-fixes.sh"
-bash "$build/apply-security-fixes.sh"
 export PKG_CONFIG_PATH="$build/prefix/lib/pkgconfig"
 stage=ffmpeg-configure
 ./configure --prefix="$build/prefix" --pkg-config-flags=--static \

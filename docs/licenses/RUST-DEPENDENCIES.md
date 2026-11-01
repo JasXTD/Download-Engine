@@ -66,7 +66,6 @@ Download Engine builds a modified copy of epaint 0.36.2 (bidirectional text layo
 - **foldhash 0.2.0** — Zlib. [LICENSE](rust/foldhash-0.2.0/LICENSE).
 - **font-types 0.12.6** — MIT OR Apache-2.0. [LICENSE-APACHE](rust/font-types-0.12.6/LICENSE-APACHE), [LICENSE-MIT](rust/font-types-0.12.6/LICENSE-MIT).
 - **form_urlencoded 1.2.2** — MIT OR Apache-2.0. [LICENSE-APACHE](rust/form_urlencoded-1.2.2/LICENSE-APACHE), [LICENSE-MIT](rust/form_urlencoded-1.2.2/LICENSE-MIT).
-- **fs2 0.4.3** — MIT/Apache-2.0. [LICENSE-APACHE](rust/fs2-0.4.3/LICENSE-APACHE), [LICENSE-MIT](rust/fs2-0.4.3/LICENSE-MIT).
 - **futures-channel 0.3.34** — MIT OR Apache-2.0. [LICENSE-APACHE](rust/futures-channel-0.3.34/LICENSE-APACHE), [LICENSE-MIT](rust/futures-channel-0.3.34/LICENSE-MIT).
 - **futures-core 0.3.34** — MIT OR Apache-2.0. [LICENSE-APACHE](rust/futures-core-0.3.34/LICENSE-APACHE), [LICENSE-MIT](rust/futures-core-0.3.34/LICENSE-MIT).
 - **futures-io 0.3.34** — MIT OR Apache-2.0. [LICENSE-APACHE](rust/futures-io-0.3.34/LICENSE-APACHE), [LICENSE-MIT](rust/futures-io-0.3.34/LICENSE-MIT).
@@ -229,7 +228,6 @@ Download Engine builds a modified copy of epaint 0.36.2 (bidirectional text layo
 - **web-time 1.1.0** — MIT OR Apache-2.0. [LICENSE-APACHE](rust/web-time-1.1.0/LICENSE-APACHE), [LICENSE-MIT](rust/web-time-1.1.0/LICENSE-MIT).
 - **weezl 0.1.12** — MIT OR Apache-2.0. [LICENSE-APACHE](rust/weezl-0.1.12/LICENSE-APACHE), [LICENSE-MIT](rust/weezl-0.1.12/LICENSE-MIT).
 - **which 8.0.6** — MIT. [LICENSE.txt](rust/which-8.0.6/LICENSE.txt).
-- **winapi 0.3.9** — MIT/Apache-2.0. [LICENSE-APACHE](rust/winapi-0.3.9/LICENSE-APACHE), [LICENSE-MIT](rust/winapi-0.3.9/LICENSE-MIT).
 - **winapi-util 0.1.11** — Unlicense OR MIT. [COPYING](rust/winapi-util-0.1.11/COPYING), [LICENSE-MIT](rust/winapi-util-0.1.11/LICENSE-MIT).
 - **windows_x86_64_msvc 0.52.6** — MIT OR Apache-2.0. [license-apache-2.0](rust/windows_x86_64_msvc-0.52.6/license-apache-2.0), [license-mit](rust/windows_x86_64_msvc-0.52.6/license-mit).
 - **windows_x86_64_msvc 0.53.1** — MIT OR Apache-2.0. [license-apache-2.0](rust/windows_x86_64_msvc-0.53.1/license-apache-2.0), [license-mit](rust/windows_x86_64_msvc-0.53.1/license-mit).

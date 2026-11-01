@@ -1,3 +1,9 @@
+## 3.6.1 — 2026-10-31
+
+### Main dependenzas ed approvaziun d'extensiuns
+
+Ils bloccadis da datotecas integrads en Rust remplazzan fs2 ed elimineschan la veglia dependenza winapi. Il cumportament dals bloccadis e da la spetga resta il medem. Actualisaziuns d'extensiuns che agiuntan incumbensas, era cun remplazzar lur ID, dovran ussa in'approvaziun, er sche l'extensiun è deactivada.
+
 ## 3.6.0 — 2026-10-31
 
 ### Extensiuns

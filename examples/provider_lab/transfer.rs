@@ -1,6 +1,5 @@
 use super::{Grants, MAX_FILE, Plan, crypto::MAX_CHUNK, runtime::Runtime, sha256};
 use anyhow::{Context, Result, ensure};
-use fs2::FileExt;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::{
@@ -149,7 +148,7 @@ pub fn run(
         "Use a private lab directory"
     );
     let lock = open(&root.join("worker.lock"), true, true, false)?;
-    lock.try_lock_exclusive()
+    lock.try_lock()
         .context("Another worker owns this lab run")?;
     let checkpoint_path = root.join("checkpoint.json");
     let previous: Option<Checkpoint> = if checkpoint_path.try_exists()? {

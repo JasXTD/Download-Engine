@@ -178,7 +178,7 @@ fn diagnostics_process_fixture() {
             .write(true)
             .open(paths.data.join("logs/desktop.lock"))
             .unwrap();
-        fs2::FileExt::lock_exclusive(&lock).unwrap();
+        lock.lock().unwrap();
         let (done, receiver) = std::sync::mpsc::channel();
         let producer = std::thread::spawn(move || {
             for request in 0..2000 {

@@ -369,23 +369,21 @@ fn lock_mode(root: &Path, component: Component, mode: LockMode) -> io::Result<Fi
     if matches!(mode, LockMode::Wait) {
         // Only the background writer waits. OS-queued locks avoid starvation
         // between browser processes; UI and transfer threads only enqueue.
-        fs2::FileExt::lock_exclusive(&file)?;
+        file.lock()?;
         return Ok(file);
     }
     let deadline = std::time::Instant::now() + std::time::Duration::from_millis(250);
     loop {
-        match fs2::FileExt::try_lock_exclusive(&file) {
+        match file.try_lock() {
             Ok(()) => break,
-            Err(error)
-                if matches!(mode, LockMode::Bounded)
-                    && error.raw_os_error() == fs2::lock_contended_error().raw_os_error()
-                    && std::time::Instant::now() < deadline =>
+            Err(std::fs::TryLockError::WouldBlock)
+                if matches!(mode, LockMode::Bounded) && std::time::Instant::now() < deadline =>
             {
                 // Bounded contention backoff; a stuck external lock must not
                 // freeze a download, a native reply, or application shutdown.
                 std::thread::sleep(std::time::Duration::from_millis(2));
             }
-            Err(error) => return Err(error),
+            Err(error) => return Err(error.into()),
         }
     }
     Ok(file)

@@ -124,7 +124,8 @@ async fn scheduler_shares_global_budget_across_queues_and_all_range_workers() {
             *fixture.data
         );
     }
-    assert!(scheduler.errors.try_recv().is_err());
+    let errors: Vec<_> = scheduler.errors.try_iter().collect();
+    assert!(errors.is_empty(), "Unexpected scheduler errors: {errors:?}");
 }
 #[tokio::test]
 async fn active_updates_pause_restart_and_removal_keep_limits_and_queue_state_correct() {

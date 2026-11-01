@@ -1,3 +1,9 @@
+## 3.6.1 — 2026-10-31
+
+### Réduction des dépendances et approbation des extensions
+
+Les verrous de fichiers intégrés à Rust remplacent fs2 et suppriment l'ancienne dépendance winapi, sans changer le comportement des verrous et de l'attente. Les mises à jour ajoutant des tâches, y compris en remplaçant un identifiant de tâche, exigent désormais une approbation même si l'extension est désactivée.
+
 ## 3.6.0 — 2026-10-31
 
 ### Extensions

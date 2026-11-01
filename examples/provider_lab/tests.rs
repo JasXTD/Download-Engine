@@ -38,6 +38,37 @@ fn error(result: Result<Report>, expected: &str) {
 }
 
 #[test]
+fn worker_lock_rejects_contenders_and_recovers_after_release() {
+    let fixture = Fixture::new(16_000).unwrap();
+    let input = fs::read(fixture.input()).unwrap();
+    let root = fixture.root();
+    let lock_path = root.join("worker.lock");
+    fs::write(&lock_path, b"").unwrap();
+    // A read-only holder permits the worker's restrictive Windows share mode
+    // to open the file, so this test reaches the OS lock contention check.
+    let lock = fs::File::open(lock_path).unwrap();
+    lock.lock().unwrap();
+    error(
+        execute(&fixture, SAMPLE, &options()),
+        "Another worker owns this lab run",
+    );
+    for file in ["checkpoint.json", "output.partial", "output.bin"] {
+        assert!(!root.join(file).exists());
+    }
+    assert_eq!(fs::read(fixture.input()).unwrap(), input);
+    drop(lock);
+    assert_eq!(
+        execute(&fixture, SAMPLE, &options()).unwrap().state,
+        State::Complete
+    );
+    assert_eq!(
+        fs::read(root.join("output.bin")).unwrap(),
+        fixture.plaintext
+    );
+    assert_eq!(fs::read(fixture.input()).unwrap(), input);
+}
+
+#[test]
 fn aes_matches_nist_vectors_and_unaligned_ranges() {
     // Independent known-answer tests, NIST SP 800-38A F.5.1 and F.5.5.
     // https://nvlpubs.nist.gov/nistpubs/Legacy/SP/nistspecialpublication800-38a.pdf

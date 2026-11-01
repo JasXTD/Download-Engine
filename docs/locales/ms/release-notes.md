@@ -1,3 +1,9 @@
+## 3.6.1 — 2026-10-31
+
+### Pengurangan kebergantungan dan kelulusan sambungan
+
+Penguncian fail terbina dalam Rust menggantikan fs2 dan membuang kebergantungan winapi lama, sambil mengekalkan tingkah laku kunci dan masa menunggu. Kemas kini sambungan yang menambah tugas, termasuk menggantikan ID tugas, kini memerlukan kelulusan walaupun sambungan dimatikan.
+
 ## 3.6.0 — 2026-10-31
 
 ### Sambungan

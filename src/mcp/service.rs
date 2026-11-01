@@ -212,7 +212,7 @@ mod tests {
             .write(true)
             .open(context.store.paths.data.join("mcp-token.lock"))
             .unwrap();
-        fs2::FileExt::lock_exclusive(&lock).unwrap();
+        lock.lock().unwrap();
         let reserved = TcpListener::bind((std::net::Ipv4Addr::LOCALHOST, 0)).unwrap();
         let port = reserved.local_addr().unwrap().port();
         drop(reserved);

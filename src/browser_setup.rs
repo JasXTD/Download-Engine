@@ -193,7 +193,7 @@ impl BrowserSetup {
             .truncate(false)
             .write(true)
             .open(self.lock_directory.join("browser-registration.lock"))?;
-        fs2::FileExt::try_lock_exclusive(&file)
+        file.try_lock()
             .context("Browser setup is already running. Try again when it finishes")?;
         Ok(file)
     }

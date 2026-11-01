@@ -941,7 +941,7 @@ fn real_native_host_adds_once_while_desktop_lock_is_held() {
         .write(true)
         .open(paths.data.join("desktop.lock"))
         .unwrap();
-    fs2::FileExt::lock_exclusive(&lock).unwrap();
+    lock.lock().unwrap();
     let mut child = std::process::Command::new(env!("CARGO_BIN_EXE_de-host"))
         .env("IDM_EX_HOME", temp.path())
         .stdin(std::process::Stdio::piped())
@@ -1234,7 +1234,7 @@ async fn real_native_capture_commit_requires_a_ready_desktop() {
         .write(true)
         .open(store.paths.data.join("desktop.lock"))
         .unwrap();
-    fs2::FileExt::lock_exclusive(&lock).unwrap();
+    lock.lock().unwrap();
     let replies = host_exchange(
         isolated_host,
         temp.path().to_path_buf(),

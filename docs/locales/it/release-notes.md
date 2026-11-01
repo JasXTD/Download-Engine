@@ -1,3 +1,9 @@
+## 3.6.1 — 2026-10-31
+
+### Riduzione delle dipendenze e approvazione delle estensioni
+
+I blocchi dei file integrati in Rust sostituiscono fs2 ed eliminano la vecchia dipendenza winapi, mantenendo il comportamento di blocco e attesa. Gli aggiornamenti che aggiungono attività, anche sostituendone l'ID, richiedono ora l'approvazione anche quando l'estensione è disattivata.
+
 ## 3.6.0 — 2026-10-31
 
 ### Estensioni

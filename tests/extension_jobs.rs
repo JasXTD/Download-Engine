@@ -279,6 +279,69 @@ fn the_cli_packs_installs_lists_and_removes_an_extension() {
 }
 
 #[test]
+fn the_cli_requires_approval_before_adding_an_automatic_job() {
+    let temp = tempfile::tempdir().unwrap();
+    let home = temp.path().join("home");
+    let file = temp.path().join("update.de-extension.json");
+    let path = file.to_str().unwrap();
+    std::fs::write(&file, package()).unwrap();
+    assert!(
+        cli(&home, &["extensions", "install", path])
+            .1
+            .status
+            .success()
+    );
+    assert!(cli(&home, &["extensions", "enable", ID]).1.status.success());
+    let (before, output) = cli(&home, &["extensions", "show", ID]);
+    assert!(output.status.success());
+
+    let mut next: Value = serde_json::from_slice(&package()).unwrap();
+    next["version"] = json!("1.3.0");
+    next["jobs"].as_array_mut().unwrap().push(json!({
+        "id":"startup", "name":"Startup report", "entry":"report.lua",
+        "timeout_seconds":30, "trigger":{"kind":"startup"}
+    }));
+    std::fs::write(&file, serde_json::to_vec(&next).unwrap()).unwrap();
+    let (review, output) = cli(&home, &["extensions", "review", path]);
+    assert!(output.status.success());
+    assert_eq!(
+        review["result"]["update"]["added_jobs"],
+        json!(["Startup report"])
+    );
+    assert_eq!(review["result"]["update"]["new_kinds"], json!([]));
+    let (_, output) = cli(&home, &["extensions", "install", path]);
+    assert!(
+        !output.status.success(),
+        "CLI accepted an unapproved automatic job"
+    );
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(stderr.contains("needs your approval"), "{stderr}");
+    let (after, output) = cli(&home, &["extensions", "show", ID]);
+    assert!(output.status.success());
+    assert_eq!(
+        after, before,
+        "rejected updates must leave the installed jobs intact"
+    );
+
+    let (reply, output) = cli(&home, &["extensions", "install", path, "--approve"]);
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert_eq!(reply["result"]["package"]["version"], "1.3.0");
+    assert_eq!(reply["result"]["enabled"], true);
+    let (after, output) = cli(&home, &["extensions", "show", ID]);
+    assert!(output.status.success());
+    let jobs = after["result"]["jobs"].as_array().unwrap();
+    assert_eq!(jobs.len(), 3);
+    assert_eq!(
+        jobs.iter().find(|job| job["id"] == "startup").unwrap()["enabled"],
+        true
+    );
+}
+
+#[test]
 fn scripts_cannot_manage_extensions_through_the_cli() {
     let f = Fixture::new();
     let output = quiet(&mut Command::new(env!("CARGO_BIN_EXE_de-cli")))

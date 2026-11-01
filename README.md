@@ -278,10 +278,9 @@ for API helpers, permissions, events, timeouts, cancellation and examples.
 
 ## Data and security
 
-Installed profiles normally live in `%LOCALAPPDATA%\Download Engine`; profiles
-created before the rename may keep `%LOCALAPPDATA%\IDM_EX`. Portable copies use
-their own `data` folder. `DOWNLOAD_ENGINE_HOME` selects a separate profile, and the
-legacy `IDM_EX_HOME` variable remains supported.
+Installed profiles normally live in `%LOCALAPPDATA%\Download Engine`. Portable
+copies use their own `data` folder. `DOWNLOAD_ENGINE_HOME` selects a separate
+profile.
 
 The queue database is **not encrypted** and can contain signed URLs and local file
 paths. Supported credentials and browser-login snapshots use Windows credential

@@ -1,3 +1,9 @@
+## 3.6.1 — 2026-10-31
+
+### Tinh gọn phụ thuộc và phê duyệt tiện ích
+
+Thay fs2 bằng khóa tệp tích hợp của Rust và loại bỏ phụ thuộc winapi cũ, đồng thời giữ nguyên cách khóa và thời gian chờ. Bản cập nhật tiện ích thêm tác vụ, kể cả thay ID tác vụ, nay cần được phê duyệt ngay cả khi tiện ích đang tắt.
+
 ## 3.6.0 — 2026-10-31
 
 ### Tiện ích mở rộng

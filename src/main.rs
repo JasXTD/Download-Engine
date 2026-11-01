@@ -108,9 +108,9 @@ fn start() -> anyhow::Result<()> {
         .truncate(false)
         .write(true)
         .open(paths.data.join("desktop.lock"))?;
-    match fs2::FileExt::try_lock_exclusive(&lock) {
+    match lock.try_lock() {
         Ok(()) => {}
-        Err(e) if e.raw_os_error() == fs2::lock_contended_error().raw_os_error() => {
+        Err(std::fs::TryLockError::WouldBlock) => {
             // A sign-in launch must not bring an already running copy to the front.
             if !autostart {
                 tray::show_existing(&paths, show_browser_setup)?;

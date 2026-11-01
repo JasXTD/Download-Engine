@@ -83,6 +83,8 @@ impl Changes {
     pub fn needs_approval(&self) -> bool {
         self.new_publisher.is_some()
             || !self.added_hosts.is_empty()
+            // A new job ID can add automatic triggers within an existing kind.
+            || !self.added_jobs.is_empty()
             || !self.new_file_access.is_empty()
             || !self.new_kinds.is_empty()
             || !self.changed_jobs.is_empty()

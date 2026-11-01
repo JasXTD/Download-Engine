@@ -253,7 +253,7 @@ fn real_native_host_frames_review_receipts_without_starting_downloads_or_logging
         .write(true)
         .open(store.paths.data.join("desktop.lock"))
         .unwrap();
-    fs2::FileExt::lock_exclusive(&lock).unwrap();
+    lock.lock().unwrap();
     let id = id();
     let bytes = serde_json::to_vec(
         &json!({"action":"review_browser_video","request_id":id,"review":review()}),

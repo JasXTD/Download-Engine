@@ -1,3 +1,9 @@
+## 3.6.1 — 2026-10-31
+
+### Färre beroenden och godkännande av tillägg
+
+Rusts inbyggda fillås ersätter fs2 och tar bort det äldre winapi-beroendet, med samma lås- och väntbeteende. Tilläggsuppdateringar som lägger till jobb, även genom att ersätta ett jobb-ID, kräver nu godkännande även när tillägget är avstängt.
+
 ## 3.6.0 — 2026-10-31
 
 ### Tillägg

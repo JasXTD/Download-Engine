@@ -11,7 +11,7 @@ Your own scripts stay on the **Scripts** tab and work as they always have. Write
 Open **Extensions** in the top toolbar, then choose **Install from file…** and pick a `.de-extension.json` file.
 
 - **Install.** The review shows the publisher, what the extension can do and its jobs. Nothing runs yet. It installs turned off, so tick **Enabled** when you are ready. File access is only a request, and stays off unless you tick it.
-- **Update.** Open a newer file with the same ID. The review shows what changed. You must approve new access, a new publisher, and any job that now runs at other times, on other pages or from another file. **Not now** leaves the installed version exactly as it was. Settings, keys, stored values and run history are kept, except a saved value the new version can't use, which the review names. Downloads already running keep the code they started with. Going back to an older version means removing the extension first.
+- **Update.** Open a newer file with the same ID. The review shows what changed. You must approve new access, a new publisher, every added job, and any job that now runs at other times, on other pages or from another file. This includes replacing a job's ID, even when its name and kind stay the same. **Not now** leaves the installed version exactly as it was. Settings, keys, stored values and run history are kept, except a saved value the new version can't use, which the review names. Downloads already running keep the code they started with. Going back to an older version means removing the extension first.
 - **Turn off.** Untick **Enabled**. Its running jobs stop and its running downloads pause. Nothing it owns starts until you turn it back on, so a waiting download fails with a message saying so.
 - **Remove.** Its settings, keys and stored values are deleted. Run history stays, and files you downloaded are kept. Removing is refused while unfinished downloads still use it.
 
@@ -30,7 +30,7 @@ Get-Content .\key.txt | .\de-cli.exe extensions set-secret example.videohost con
 .\de-cli.exe extensions remove example.videohost
 ```
 
-`extensions install` takes `--allow-files` to grant requested file access, `--queue NAME` to choose the queue for Queue completed jobs, and `--approve` to accept an update that needs approval. `extensions review` shows what an update changes without saving anything. Scripts cannot run these commands.
+`extensions install` takes `--allow-files` to grant requested file access, `--queue NAME` to choose the queue for Queue completed jobs, and `--approve` to accept an update that needs approval. An update that adds a job requires `--approve` even if the extension already has that kind of job or is currently turned off. `extensions review` shows what an update changes without saving anything. Scripts cannot run these commands.
 
 ## What each job can do
 

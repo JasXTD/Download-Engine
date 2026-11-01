@@ -1,3 +1,9 @@
+## 3.6.1 — 2026-10-31
+
+### Weniger Abhängigkeiten und Freigabe von Erweiterungen
+
+Rusts integrierte Dateisperren ersetzen fs2; die alte winapi-Abhängigkeit entfällt. Sperr- und Warteverhalten bleiben erhalten. Erweiterungsupdates mit zusätzlichen Aufgaben, auch durch den Austausch einer Aufgaben-ID, benötigen jetzt selbst bei deaktivierter Erweiterung eine Freigabe.
+
 ## 3.6.0 — 2026-10-31
 
 ### Erweiterungen

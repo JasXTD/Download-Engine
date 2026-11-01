@@ -99,7 +99,9 @@ try {
     if(startupCheck) {
       const kept=startupKeys.map(key=>startupValue(key)!==null);
       assert.deepEqual(kept,[index===1,index===1],'Uninstall must remove only its own startup entry');
-      if(index===1) assert.equal(spawnSync('reg.exe',['delete',startupKey,'/f'],{windowsHide:true,timeout:10000}).status,0);
+      // Remove our temporary keys after checking their values, including a
+      // single-language run that never reaches the other-copy fixture.
+      assert.equal(spawnSync('reg.exe',['delete',startupKey,'/f'],{windowsHide:true,timeout:10000}).status,0);
     }
     assert.deepEqual(realStartup(),startupBefore,'The real Run key must remain unchanged');
     checks.push({language:lang,installed:true,upgradePreservedPreferences:true,uninstallPreservedData:true,extensionCatalogs:supportedLanguages.length*4,ffmpegFilesVerified:mediaManifest.files.length,

@@ -22,12 +22,9 @@ pub(super) fn token(paths: &AppPaths) -> Result<Zeroizing<String>> {
     // starting/stopping an app-owned server cannot hang on an abandoned lock.
     let deadline = std::time::Instant::now() + std::time::Duration::from_secs(2);
     loop {
-        match fs2::FileExt::try_lock_exclusive(&lock) {
+        match lock.try_lock() {
             Ok(()) => break,
-            Err(error)
-                if error.raw_os_error() == fs2::lock_contended_error().raw_os_error()
-                    && std::time::Instant::now() < deadline =>
-            {
+            Err(std::fs::TryLockError::WouldBlock) if std::time::Instant::now() < deadline => {
                 std::thread::sleep(std::time::Duration::from_millis(20));
             }
             Err(error) => return Err(error).context("MCP token is busy or unavailable; try again"),
@@ -70,6 +67,65 @@ pub(super) fn token(paths: &AppPaths) -> Result<Zeroizing<String>> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    #[cfg(windows)]
+    fn token_lock_times_out_and_recovers_after_release() {
+        let root = tempfile::tempdir().unwrap();
+        let paths = AppPaths {
+            data: root.path().join("data"),
+            downloads: root.path().join("downloads"),
+        };
+        std::fs::create_dir_all(&paths.data).unwrap();
+        let lock = OpenOptions::new()
+            .create(true)
+            .truncate(false)
+            .write(true)
+            .open(paths.data.join("mcp-token.lock"))
+            .unwrap();
+        lock.lock().unwrap();
+        let started = std::time::Instant::now();
+        let error = token(&paths).unwrap_err();
+        assert!(
+            error
+                .to_string()
+                .contains("MCP token is busy or unavailable")
+        );
+        let elapsed = started.elapsed();
+        assert!(elapsed >= std::time::Duration::from_secs(2));
+        assert!(elapsed < std::time::Duration::from_secs(4));
+        assert!(!paths.data.join("mcp-token.dpapi").exists());
+        lock.unlock().unwrap();
+        let first = token(&paths).unwrap();
+        assert_eq!(*first, *token(&paths).unwrap());
+    }
+
+    #[test]
+    #[cfg(windows)]
+    fn concurrent_token_openers_share_one_protected_secret() {
+        let root = tempfile::tempdir().unwrap();
+        let paths = AppPaths {
+            data: root.path().join("data"),
+            downloads: root.path().join("downloads"),
+        };
+        let barrier = std::sync::Arc::new(std::sync::Barrier::new(4));
+        let workers: Vec<_> = (0..4)
+            .map(|_| {
+                let paths = paths.clone();
+                let barrier = barrier.clone();
+                std::thread::spawn(move || {
+                    barrier.wait();
+                    token(&paths).unwrap()
+                })
+            })
+            .collect();
+        let secrets: Vec<_> = workers
+            .into_iter()
+            .map(|worker| worker.join().unwrap())
+            .collect();
+        assert!(secrets.iter().all(|secret| **secret == *secrets[0]));
+        assert_eq!(*token(&paths).unwrap(), *secrets[0]);
+    }
+
     #[test]
     #[cfg(windows)]
     fn token_is_stable_encrypted_and_corruption_is_not_silently_replaced() {

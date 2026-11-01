@@ -2,6 +2,13 @@
 
 Release notes are available offline in Help → Changelog. Newest releases appear first.
 
+## 3.6.1 — 2026-10-31
+
+### Dependency cleanup and extension approvals
+
+- Replaced `fs2` with Rust's built-in file locking, removing `fs2` and its legacy `winapi` dependency from Windows builds. Desktop startup, browser setup, profile migrations, diagnostics and MCP keep their existing exclusive locks and bounded contention waits.
+- Extension updates now require approval for every added job, including a replacement job ID with the same name or kind. This also applies when the extension is turned off.
+
 ## 3.6.0 — 2026-10-31
 
 ### Extensions

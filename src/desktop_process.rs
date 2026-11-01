@@ -113,10 +113,10 @@ pub fn ensure_running(paths: &AppPaths) -> Result<()> {
         .truncate(false)
         .write(true)
         .open(paths.data.join("desktop.lock"))?;
-    match fs2::FileExt::try_lock_exclusive(&file) {
-        Err(e) if e.raw_os_error() == fs2::lock_contended_error().raw_os_error() => return Ok(()),
+    match file.try_lock() {
+        Err(std::fs::TryLockError::WouldBlock) => return Ok(()),
         Err(e) => return Err(e.into()),
-        Ok(()) => fs2::FileExt::unlock(&file)?,
+        Ok(()) => file.unlock()?,
     }
     let executable = std::env::current_exe()?
         .parent()
@@ -125,12 +125,12 @@ pub fn ensure_running(paths: &AppPaths) -> Result<()> {
     let mut child = launch(&executable).context("Desktop application could not start")?;
     let deadline = std::time::Instant::now() + std::time::Duration::from_secs(5);
     loop {
-        match fs2::FileExt::try_lock_exclusive(&file) {
-            Err(e) if e.raw_os_error() == fs2::lock_contended_error().raw_os_error() => {
+        match file.try_lock() {
+            Err(std::fs::TryLockError::WouldBlock) => {
                 return Ok(());
             }
             Err(e) => return Err(e.into()),
-            Ok(()) => fs2::FileExt::unlock(&file)?,
+            Ok(()) => file.unlock()?,
         }
         if let Some(status) = child.try_wait()? {
             anyhow::bail!("Desktop application exited before it was ready ({status})");

@@ -1,3 +1,9 @@
+## 3.6.1 — 2026-10-31
+
+### Færre avhengigheter og godkjenning av utvidelser
+
+Rusts innebygde fillåser erstatter fs2 og fjerner den eldre winapi-avhengigheten, med samme låse- og venteoppførsel. Utvidelsesoppdateringer som legger til jobber, også ved å erstatte en jobb-ID, krever nå godkjenning selv når utvidelsen er slått av.
+
 ## 3.6.0 — 2026-10-31
 
 ### Utvidelser

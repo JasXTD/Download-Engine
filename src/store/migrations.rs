@@ -77,7 +77,7 @@ pub(super) fn initialize(conn: &mut Connection, directory: &std::path::Path) -> 
         .create(true)
         .truncate(false)
         .open(directory.join("profile-migration.lock"))?;
-    fs2::FileExt::lock_exclusive(&migration_lock)?;
+    migration_lock.lock()?;
     if version(conn)? == SCHEMA_VERSION {
         return Ok(());
     }

@@ -1,3 +1,9 @@
+## 3.6.1 — 2026-10-31
+
+### Porządkowanie zależności i zatwierdzanie rozszerzeń
+
+Wbudowane blokady plików Rust zastępują fs2 i usuwają starą zależność winapi, zachowując dotychczasowe blokowanie i oczekiwanie. Aktualizacje rozszerzeń dodające zadania, również przez zmianę identyfikatora zadania, wymagają teraz zgody nawet wtedy, gdy rozszerzenie jest wyłączone.
+
 ## 3.6.0 — 2026-10-31
 
 ### Rozszerzenia

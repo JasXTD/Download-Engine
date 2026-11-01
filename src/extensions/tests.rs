@@ -642,6 +642,121 @@ fn an_update_that_only_changes_code_needs_no_approval_but_new_powers_do() {
 }
 
 #[test]
+fn updates_require_approval_for_added_jobs_in_existing_kinds() {
+    let triggers = [
+        json!({"kind":"manual"}),
+        json!({"kind":"startup"}),
+        json!({"kind":"interval","minutes":5}),
+        json!({"kind":"download_completed","queue":null}),
+        json!({"kind":"download_failed","queue":null}),
+        json!({"kind":"queue_completed","queue":""}),
+        json!({"kind":"site_reader","pages":["videohost.example/extra/*"]}),
+        json!({"kind":"provider"}),
+    ];
+    for enabled in [false, true] {
+        for trigger in &triggers {
+            let (_temp, store) = fixture();
+            let id = "example.videohost";
+            let before = store
+                .install_extension(&bytes(&example()), &Grants::default())
+                .unwrap();
+            store.set_extension_enabled(id, enabled).unwrap();
+            let before_job = store.extension_job(id, "tidy").unwrap();
+            let mut next = example();
+            next["version"] = json!("1.3.0");
+            next["jobs"]
+                .as_array_mut()
+                .unwrap()
+                .push(job(trigger.clone()));
+            let changes = store
+                .review_extension(&bytes(&next))
+                .unwrap()
+                .update
+                .unwrap();
+            assert_eq!(changes.added_jobs, ["Extra"]);
+            assert!(changes.new_kinds.is_empty());
+            assert!(changes.changed_jobs.is_empty());
+            let mut grants = Grants {
+                queues: BTreeMap::from([("extra".to_owned(), "main".to_owned())]),
+                ..Default::default()
+            };
+            let error = store
+                .install_extension(&bytes(&next), &grants)
+                .expect_err("adding a job must require approval even in an existing kind")
+                .to_string();
+            assert!(error.contains("needs your approval"), "{trigger}: {error}");
+            assert!(changes.needs_approval());
+            assert_eq!(store.extension(id).unwrap().package, before.package);
+            assert_eq!(store.extension_job(id, "tidy").unwrap(), before_job);
+            assert!(store.extension_job(id, "extra").is_err());
+
+            grants.approved = true;
+            let updated = store.install_extension(&bytes(&next), &grants).unwrap();
+            assert_eq!(updated.package.version, "1.3.0");
+            assert_eq!(updated.enabled, enabled);
+            assert_eq!(store.extension_job(id, "extra").unwrap().enabled, enabled);
+        }
+    }
+}
+
+#[test]
+fn replacing_a_job_id_cannot_bypass_update_approval_or_erase_state() {
+    let (_temp, store) = fixture();
+    let id = "example.videohost";
+    let mut original = example();
+    original["jobs"][2]["change_files"] = json!(false);
+    store
+        .install_extension(&bytes(&original), &Grants::default())
+        .unwrap();
+    store.set_extension_enabled(id, true).unwrap();
+    let before = store.extension_job(id, "tidy").unwrap();
+    store
+        .set_script_value(&before.id, "seen", &json!(3))
+        .unwrap();
+
+    let mut next = original.clone();
+    next["version"] = json!("1.3.0");
+    next["jobs"][2]["id"] = json!("replacement");
+    next["jobs"][2]["trigger"] = json!({"kind":"startup"});
+    let changes = store
+        .review_extension(&bytes(&next))
+        .unwrap()
+        .update
+        .unwrap();
+    assert_eq!(changes.added_jobs, ["Tidy finished files"]);
+    assert_eq!(changes.removed_jobs, ["Tidy finished files"]);
+    assert!(changes.new_kinds.is_empty());
+    assert!(changes.changed_jobs.is_empty());
+    let error = store
+        .install_extension(&bytes(&next), &Grants::default())
+        .expect_err("a replacement ID must not hide a new automatic trigger")
+        .to_string();
+    assert!(error.contains("needs your approval"), "{error}");
+    assert_eq!(
+        store.extension(id).unwrap().package,
+        decode(&original).unwrap()
+    );
+    assert_eq!(store.extension_job(id, "tidy").unwrap(), before);
+    assert_eq!(
+        store.script_value(&before.id, "seen").unwrap(),
+        Some(json!(3))
+    );
+    assert!(store.extension_job(id, "replacement").is_err());
+
+    store
+        .install_extension(
+            &bytes(&next),
+            &Grants {
+                approved: true,
+                ..Default::default()
+            },
+        )
+        .unwrap();
+    assert!(store.extension_job(id, "replacement").unwrap().enabled);
+    assert!(store.extension_job(id, "tidy").is_err());
+}
+
+#[test]
 fn an_update_cannot_change_how_a_job_runs_or_who_publishes_it_unseen() {
     let (_temp, store) = fixture();
     store

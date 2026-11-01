@@ -1,3 +1,13 @@
+## 3.7.0 — 2026-11-01
+
+### Muat turun torrent
+
+Muat turun torrent dan pautan magnet dengan pilihan fail, jeda, sambung semula dan pemulihan kemajuan yang disahkan. Torrent dimatikan secara lalai; aktifkan dan kawal muat naik dalam Keutamaan. Proksi menjeda torrent, dan muat naik berhenti apabila selesai. Termasuk pembaikan 3.6.1 dan pembantu torrent dalam pakej pemasangan.
+
+### Penyepaduan keluaran
+
+Panduan, README, laman web dan semakan pemasang telah dikemas kini. Selepas torrent pertama ditambah, profil memerlukan versi 3.7.0 atau lebih baharu supaya versi lama tidak mengubah tugas torrent. Mengaktifkan ciri sahaja tidak menaik taraf profil.
+
 ## 3.6.1 — 2026-10-31
 
 ### Pengurangan kebergantungan dan kelulusan sambungan

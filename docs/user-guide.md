@@ -13,7 +13,7 @@ Drag the top edge of the download details panel to adjust its height. The app re
 
 ### Preferences
 
-Open Preferences from the toolbar, Tools → Preferences or the tray menu. The popup has six categories and leaves your current page in place. Appearance includes the theme, language and table layout; Downloads has status-window, folder and transfer-limit choices; Connection has proxy and per-site connection settings; Browser & AI has browser setup, clipboard capture and MCP; Antivirus selects a scanner; Startup & tray controls Windows startup and notifications.
+Open Preferences from the toolbar, Tools → Preferences or the tray menu. The popup has seven categories and leaves your current page in place. Appearance includes the theme, language and table layout; Downloads has status-window, folder and transfer-limit choices; Connection has proxy and per-site connection settings; Browser & AI has browser setup, clipboard capture and MCP; Antivirus selects a scanner; Torrents controls torrent downloads, uploads and DHT; Startup & tray controls Windows startup and notifications.
 
 Use Save to apply pending changes, or Cancel, × or Escape to discard them. Themes preview while you edit. Changing the language takes effect after Save. Reset restores defaults for the current category only and also waits for Save. Table-column edits return to the parent draft. Detailed folder, connection, speed, quota, browser, MCP and antivirus editors have their own explicit saves; closing them returns to Preferences without losing your draft. Cancelling Preferences does not undo a change already saved in one of those editors. A notice in Preferences confirms when an advanced dialog has saved its changes.
 
@@ -131,6 +131,20 @@ Recovery waits up to 30 minutes. It does not import fresh cookies or login detai
 Open Preferences → Connection → Download connections. The default is 4 connections per HTTP/HTTPS file. Choose 1, 2, 4, 8, 16 or 32, then optionally add website overrides such as downloads.example.com. Enter a hostname only. Enable Include subdomains when the rule should also cover its child domains; the most specific matching rule wins. If both the original and redirected file hosts have rules, the lower limit applies. If only one has a rule, that rule applies; otherwise the default applies.
 
 Use 1 for servers that reject parallel requests. More connections do not guarantee higher speed. Small files and servers without range support use one connection. The limit applies to each file, not to all downloads from the same server together; queue concurrency controls how many files run at once. Pause and resume an active file to apply changed settings. Existing partial files remain resumable with a lower limit. FTP and video streams retain their own connection behavior.
+
+### Download torrents
+
+Adding your first torrent upgrades the profile compatibility guard. Builds older than 3.7.0 cannot open that profile afterward; keep a profile backup before trying torrents if you may need to return to an older build. Simply enabling the setting does not upgrade the profile.
+
+Torrents are off until you want one. Paste a magnet link into Add download, or choose Tasks → Open torrent file…, and the app asks first. Turn on torrents says yes and turns on the switch in Preferences → Torrents. Not now changes nothing: no helper starts, and nothing connects to anyone. To turn torrents off again, use the same switch. Running torrents pause, and their progress is kept.
+
+When a magnet link is added, its file list has to come from other people, which can take a while. Add and choose later puts it in your list, and it shows Choose files when the list arrives. Nothing downloads until you choose.
+
+A torrent connects your computer directly to other people, so they can see your IP address and what you are downloading. While it downloads, your computer also sends them pieces, unless you turn off Upload while downloading. Uploading stops when the download finishes. Torrents won't start while a proxy is on, because a proxy can't hide your address from peers. Speed limits and data quotas apply, and a quota counts uploads as well as downloads.
+
+Files stay in a temporary folder until every piece has been checked, then appear in your download folder without replacing anything. A torrent with one file saves that file. A torrent with more keeps its own folder, holding only the files you chose.
+
+Your security software may report blocked addresses while a torrent runs, because a torrent contacts many strangers. Leave those blocks in place. They only mean fewer peers.
 
 ### Remove history or delete a file
 

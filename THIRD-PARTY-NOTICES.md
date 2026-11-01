@@ -39,7 +39,11 @@ checksums. The index includes build/test dependencies as well as runtime crates.
 The dependencies are unmodified except epaint 0.36.2, which Download Engine builds from
 a modified copy in `vendor/epaint` that adds bidirectional text layout. It remains
 Apache-2.0 licensed; `vendor/epaint/patch.md` describes the changes, and
-the index includes the original crate. Where `self_cell` offers Apache-2.0 or
+the index includes the original crate. Nine crates from
+[rqbit](https://github.com/ikatson/rqbit) are also built from modified copies, in
+`vendor/rqbit`. They provide BitTorrent's file formats and network protocols for
+`de-torrent.exe`, remain Apache-2.0 licensed, and say so in every changed file;
+`vendor/rqbit/patch.md` lists what changed. Where `self_cell` offers Apache-2.0 or
 GPL-2.0, the Apache-2.0 option is used.
 
 The MPL-2.0 sources for cssparser, cssparser-macros, dtoa-short and selectors are

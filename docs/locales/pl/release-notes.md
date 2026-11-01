@@ -1,3 +1,13 @@
+## 3.7.0 — 2026-11-01
+
+### Pobieranie torrentów
+
+Obsługa plików torrent i odnośników magnet z wyborem plików, wstrzymywaniem, wznawianiem i odzyskiwaniem zweryfikowanych danych. Domyślnie wyłączona; włącz ją i ustaw wysyłanie w Preferencjach. Proxy wstrzymuje torrenty, a wysyłanie kończy się po pobraniu. Pakiety zawierają poprawki 3.6.1 oraz program pomocniczy torrentów.
+
+### Integracja wydania
+
+Zaktualizowano poradnik, README, witrynę i kontrole instalatora. Po dodaniu pierwszego torrenta profil wymaga wersji 3.7.0 lub nowszej, aby starsze wersje nie zmieniały zadań torrent. Samo włączenie funkcji nie aktualizuje profilu.
+
 ## 3.6.1 — 2026-10-31
 
 ### Porządkowanie zależności i zatwierdzanie rozszerzeń

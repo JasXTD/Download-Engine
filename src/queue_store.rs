@@ -518,8 +518,10 @@ fn prepare_sync_checks(conn: &Connection, queue: &str) -> Result<()> {
         let mut job = crate::store::decode_job(&id, &data)?;
         // Finite HLS jobs keep their reviewed snapshot; a fresh rendition must
         // go through preview instead of a file synchronization request. FTP
-        // jobs do not participate in HTTP synchronization checks.
-        if job.hls.is_some() || job.ftp.is_some() || job.provider.is_some() {
+        // jobs do not participate in HTTP synchronization checks, and a torrent
+        // has no server to compare with.
+        if job.hls.is_some() || job.ftp.is_some() || job.provider.is_some() || job.torrent.is_some()
+        {
             continue;
         }
         if job.status == Status::Complete {

@@ -1,0 +1,21 @@
+// Modified by Download Engine: removed axum web server support and multicast. See ../../patch.md.
+#[cfg(test)]
+mod tests;
+
+mod bind_device;
+mod connect;
+mod error;
+mod traits;
+pub use error::{Error, Result};
+
+use crate::socket::MaybeDualstackSocket;
+
+pub mod addr;
+pub mod socket;
+
+pub type TcpListener = MaybeDualstackSocket<tokio::net::TcpListener>;
+pub type UdpSocket = MaybeDualstackSocket<tokio::net::UdpSocket>;
+pub use bind_device::BindDevice;
+pub use connect::{ConnectOpts, tcp_connect};
+pub use socket::BindOpts;
+pub use traits::PollSendToVectored;

@@ -57,7 +57,7 @@ try {
     }
     Assert-ReleaseBinaryVersions -Root $workspaceRoot -Version $version
     if ($signing) {
-        foreach ($file in @('de.exe','de-host.exe','de-cli.exe')) {
+        foreach ($file in @('de.exe','de-host.exe','de-cli.exe','de-torrent.exe')) {
             Invoke-AuthenticodeSign -Path (Join-Path $workspaceRoot "target\release\$file") -Configuration $signing
         }
     }

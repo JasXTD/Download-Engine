@@ -424,6 +424,88 @@ impl Desktop {
                     }
                 });
             }
+            Category::Torrents => {
+                let torrents = &mut state.torrents;
+                section(ui, p, tr("TORRENTS"), |ui| {
+                    toggle(
+                        ui,
+                        p,
+                        tr("Torrent downloads"),
+                        if torrents.enabled {
+                            tr("On. A helper runs only while a torrent downloads.")
+                        } else {
+                            tr("Off. Nothing connects to other people.")
+                        },
+                        "\u{e716}",
+                        &mut torrents.enabled,
+                    );
+                });
+                if !torrents.enabled {
+                    ui.label(
+                        RichText::new(tr("Turn on torrents to change these."))
+                            .small()
+                            .color(p.muted),
+                    );
+                    ui.add_space(8.0);
+                }
+                ui.add_enabled_ui(torrents.enabled, |ui| {
+                    section(ui, p, tr("UPLOADING"), |ui| {
+                        toggle(
+                            ui,
+                            p,
+                            tr("Upload while downloading"),
+                            tr("Helps other people. Some may send you less if this is off."),
+                            "\u{e898}",
+                            &mut torrents.upload,
+                        );
+                        let limit = row(
+                            ui,
+                            p,
+                            tr("Upload speed limit"),
+                            tr("Applies to all torrents."),
+                            "\u{e9d9}",
+                            "",
+                        );
+                        ui.new_child(
+                            egui::UiBuilder::new()
+                                .max_rect(trailing_slot(limit.rect, 130.0))
+                                .layout(Layout::right_to_left(Align::Center)),
+                        )
+                        .horizontal(|ui| {
+                            let label = |rate: Option<u32>| {
+                                rate.map_or_else(
+                                    || tr("No limit").to_owned(),
+                                    |rate| speed_limit_label(u64::from(rate)),
+                                )
+                            };
+                            egui::ComboBox::from_id_salt("torrent-upload-limit")
+                                .width(130.0)
+                                .selected_text(label(torrents.upload_limit))
+                                .show_ui(ui, |ui| {
+                                    for rate in [None, Some(64), Some(256), Some(1024), Some(5120)]
+                                    {
+                                        let rate = rate.map(|kib: u32| kib * 1024);
+                                        ui.selectable_value(
+                                            &mut torrents.upload_limit,
+                                            rate,
+                                            label(rate),
+                                        );
+                                    }
+                                });
+                        });
+                    });
+                    section(ui, p, tr("FINDING PEERS"), |ui| {
+                        toggle(
+                            ui,
+                            p,
+                            tr("Find peers without a tracker (DHT)"),
+                            tr("Needed for most magnet links."),
+                            "\u{e716}",
+                            &mut torrents.dht,
+                        );
+                    });
+                });
+            }
             Category::Connection => {
                 section(ui, p, tr("Connection"), |ui| {
                     let proxy = &self.settings_summary.proxy;

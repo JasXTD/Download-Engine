@@ -1,3 +1,13 @@
+## 3.7.0 — 2026-11-01
+
+### Tải torrent
+
+Hỗ trợ tệp torrent và liên kết magnet, chọn tệp, tạm dừng, tiếp tục và khôi phục phần đã xác minh. Mặc định tắt; bật và quản lý tải lên trong Tùy chọn. Torrent tạm dừng khi bật proxy và ngừng tải lên khi hoàn tất. Bao gồm các bản sửa lỗi 3.6.1 và trình trợ giúp torrent trong gói cài đặt.
+
+### Tích hợp bản phát hành
+
+Đã cập nhật hướng dẫn, README, trang web và kiểm tra trình cài đặt. Sau khi thêm torrent đầu tiên, hồ sơ yêu cầu phiên bản 3.7.0 trở lên để ngăn phiên bản cũ sửa tác vụ torrent. Chỉ bật tính năng không nâng cấp hồ sơ.
+
 ## 3.6.1 — 2026-10-31
 
 ### Tinh gọn phụ thuộc và phê duyệt tiện ích

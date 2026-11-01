@@ -1,3 +1,13 @@
+## 3.7.0 — 2026-11-01
+
+### Torrentnedlastinger
+
+Torrentfiler og magnetlenker med filvalg, pause, fortsettelse og gjenoppretting av bekreftede data. Av som standard; aktiver og styr opplasting i innstillingene. En aktiv proxy setter torrenter på pause, og opplasting stopper når nedlastingen er ferdig. Inkluderer rettelsene fra 3.6.1 og torrenthjelperen.
+
+### Versjonsintegrering
+
+Veiledningen, README, nettstedet og installasjonskontrollene er oppdatert. Etter at den første torrenten er lagt til, krever profilen versjon 3.7.0 eller nyere slik at eldre versjoner ikke endrer torrentjobber. Bare å aktivere funksjonen oppgraderer ikke profilen.
+
 ## 3.6.1 — 2026-10-31
 
 ### Færre avhengigheter og godkjenning av utvidelser

@@ -13,6 +13,7 @@ pub(super) fn job_id(command: &Command) -> Option<&str> {
         | Command::DeleteFile { id, .. }
         | Command::RenameFile { id, .. }
         | Command::MoveFile { id, .. }
+        | Command::ChooseTorrentFiles { id, .. }
         | Command::MoveJob(id, _)
         | Command::ReorderJob(id, _) => Some(id),
         Command::Authentication(update) => Some(&update.job),
@@ -89,6 +90,37 @@ pub(super) fn apply(
                 "Pause the download before reordering it"
             );
             return store.reorder_job(id, *earlier);
+        }
+        Command::TorrentSettings => {
+            let settings = store.torrent_settings()?;
+            store.torrents.configure(&settings);
+            if !settings.enabled || store.proxy_blocks_torrents()? {
+                for job in store.list()? {
+                    if job.torrent.is_some()
+                        && matches!(job.status, Status::Queued | Status::Downloading)
+                    {
+                        apply(store, active, Command::Pause(job.id))?;
+                    }
+                }
+            }
+            return Ok(());
+        }
+        Command::ChooseTorrentFiles { id, chosen } => {
+            let files = store.choose_torrent_files(id, chosen.clone())?;
+            if active.contains_key(id) {
+                store.torrents.select(id, files.chosen);
+                return Ok(());
+            }
+            let mut job = store.get(id)?.context("Download not found")?;
+            let state = job.torrent.as_mut().context("This is not a torrent")?;
+            state.stage = crate::torrent::Stage::Chosen;
+            job.total = Some(files.chosen_size());
+            if job.status == Status::Paused {
+                job.status = Status::Queued;
+                job.error = None;
+                return store.save_for_start(&job);
+            }
+            return store.save(&job);
         }
         _ => {}
     }
@@ -170,6 +202,7 @@ pub(super) fn apply(
                 "Completed downloads cannot be restarted; add the URL again"
             );
             crate::download_file::discard_partial_files(&store.paths, &job)?;
+            crate::torrent::discard(store, &job)?;
             job.retry = retry::State::default();
             job.quota_waiting = false;
             job.plan = None;
@@ -196,6 +229,7 @@ pub(super) fn apply(
         }
         Command::Remove(_) => {
             crate::download_file::discard_partial_files(&store.paths, &job)?;
+            crate::torrent::discard(store, &job)?;
             store.remove(&job.id)?;
         }
         Command::DeleteFile { path, .. } => {
@@ -208,8 +242,12 @@ pub(super) fn apply(
                 "The saved file location changed. Open Delete file again to review it."
             );
             crate::download_file::discard_partial_files(&store.paths, &job)?;
-            crate::download_file::delete_completed(&path)
-                .with_context(|| format!("Cannot delete {}", job.name))?;
+            if job.torrent.is_some() {
+                crate::torrent::delete_saved(store, &job, &path)
+            } else {
+                crate::download_file::delete_completed(&path)
+            }
+            .with_context(|| format!("Cannot delete {}", job.name))?;
             store
                 .remove(&job.id)
                 .context("File deleted, but its history entry could not be removed")?;
@@ -239,6 +277,12 @@ pub(super) fn relocate_command(
 ) -> Result<()> {
     let id = job_id(&command).context("Missing file operation download")?;
     let job = store.get(id)?.context("Download not found")?;
+    anyhow::ensure!(
+        job.saved_path
+            .as_deref()
+            .is_none_or(std::path::Path::is_file),
+        "A torrent's folder can't be moved or renamed here. Use File Explorer."
+    );
     match command {
         Command::RenameFile { name, .. } => {
             anyhow::ensure!(

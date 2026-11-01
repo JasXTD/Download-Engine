@@ -49,6 +49,9 @@ pub(super) fn primary(label: &str, p: Palette) -> egui::Button<'_> {
 }
 
 pub(super) fn status_label(job: &Job, queue_running: bool, now: i64) -> String {
+    if download_engine::torrent::waiting_for_choice(job) {
+        return tr("Choose files").into();
+    }
     if job.status == Status::Queued && !queue_running && job.retry.next_at.is_none() {
         return tr("Queue paused").into();
     }
@@ -120,7 +123,7 @@ pub(super) fn supports_authentication(job: &Job) -> bool {
 }
 
 pub(super) fn resume_action(job: &Job) -> &'static str {
-    if job.plan.is_some() || job.hls.is_some() || job.ftp.is_some() {
+    if job.plan.is_some() || job.hls.is_some() || job.ftp.is_some() || job.torrent.is_some() {
         tr("Resume")
     } else {
         tr("Start again")
@@ -134,7 +137,7 @@ pub(super) fn resume_description(job: &Job) -> &'static str {
         tr("Resumes from the last complete video segment")
     } else if job.ftp.is_some() {
         tr("Verifies saved bytes before continuing; a publisher SHA-256 can allow faster resume")
-    } else if job.plan.is_some() {
+    } else if job.plan.is_some() || job.torrent.is_some() {
         tr("Supported")
     } else if job.downloaded > 0 {
         tr("Starts from the beginning")

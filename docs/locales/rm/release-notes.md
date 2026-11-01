@@ -1,3 +1,13 @@
+## 3.7.0 — 2026-11-01
+
+### Telechargiar torrents
+
+Datotecas torrent e colliaziuns magnet cun selecziun da datotecas, pausa, cuntinuaziun e recuperaziun da datas verifitgadas. Deactivà sco standard; activar e controllar il transferiment en las preferenzas. In proxy activ metta ils torrents en pausa; il transferiment sa ferma suenter la fin. Cuntegna las correcturas da 3.6.1 ed il program auxiliar per torrents.
+
+### Integraziun da la versiun
+
+Actualisà il mussavia, README, la pagina web e las controllas dal program d’installaziun. Suenter avair agiunt l’emprim torrent dovra il profil la versiun 3.7.0 u pli nova, per impedir che versiuns pli veglias modifitgeschian las incumbensas torrent. Activar mo la funcziun n’actualisescha betg il profil.
+
 ## 3.6.1 — 2026-10-31
 
 ### Main dependenzas ed approvaziun d'extensiuns

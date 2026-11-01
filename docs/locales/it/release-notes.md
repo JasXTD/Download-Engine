@@ -1,3 +1,13 @@
+## 3.7.0 — 2026-11-01
+
+### Download torrent
+
+File torrent e collegamenti magnet con selezione dei file, pausa, ripresa e recupero dei dati verificati. Disattivati per impostazione predefinita; attivazione e controllo degli invii nelle preferenze. Un proxy attivo sospende i torrent e gli invii terminano al completamento. Include le correzioni 3.6.1 e il programma ausiliario torrent.
+
+### Integrazione della versione
+
+Aggiornati la guida, il README, il sito e i controlli del programma di installazione. Dopo aver aggiunto il primo torrent, il profilo richiede la versione 3.7.0 o successiva per impedire alle versioni precedenti di modificare le attività torrent. La sola attivazione della funzione non aggiorna il profilo.
+
 ## 3.6.1 — 2026-10-31
 
 ### Riduzione delle dipendenze e approvazione delle estensioni

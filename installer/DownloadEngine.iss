@@ -223,6 +223,7 @@ Source: "{#SourceRoot}\installer\languages\de-CH.json"; DestDir: "{app}"; DestNa
 Source: "{#SourceRoot}\target\release\de.exe"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#SourceRoot}\target\release\de-host.exe"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#SourceRoot}\target\release\de-cli.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#SourceRoot}\target\release\de-torrent.exe"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#SourceRoot}\installer\installed.json"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#SourceRoot}\installer\languages\en.json"; DestDir: "{app}"; DestName: "installer-language.json"; Languages: en; Flags: ignoreversion
 Source: "{#SourceRoot}\installer\languages\zh-CN.json"; DestDir: "{app}"; DestName: "installer-language.json"; Languages: zh_CN; Flags: ignoreversion

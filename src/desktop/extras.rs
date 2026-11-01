@@ -93,6 +93,7 @@ impl Desktop {
             };
         }
         match mode {
+            mode if mode.starts_with("torrent-") => self.torrent_sample(mode),
             mode if mode.starts_with("status-") => self.status_sample(mode),
             "proxy" | "proxy-enterprise" => self.proxy_sample(mode == "proxy-enterprise"),
             "connections" => self.open_connections(),
@@ -214,6 +215,7 @@ impl Desktop {
                     .into(),
             ),
             "add" => self.open_add(),
+            mode if mode.starts_with("torrent-") => self.torrent_preview(mode),
             "clipboard-offer" => self.clipboard_sample(),
             "list-export" | "list-import" | "list-import-details" => {
                 self.list_transfer_sample(mode)

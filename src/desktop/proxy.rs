@@ -125,6 +125,8 @@ impl Desktop {
                     self.proxy = None;
                     self.note_advanced_preferences_saved();
                     self.dialog = None;
+                    // A proxy can't cover torrents, so one that just came on stops them.
+                    self.apply_torrent_settings();
                 }
                 Err(error) => form.error = Some(error.to_string()),
             }

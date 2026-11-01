@@ -5,8 +5,8 @@
 <h1 align="center">Download Engine</h1>
 
 <p align="center">
-  <strong>Download files and videos. Organize your queues. Automate the routine.</strong><br>
-  A native Windows download manager built in Rust, with browser integration and local automation.
+  <strong>A free, open-source download manager for Windows.</strong><br>
+  Download files and videos, organize your queues and automate the routine. Built in Rust, with browser integration.
 </p>
 
 <p align="center">
@@ -24,29 +24,32 @@
   <strong>Windows x64</strong> · Installer or portable · Chrome, Edge, Brave &amp; Firefox · MIT licensed
 </p>
 
-> **Official website:** [jasxtd.github.io/Download-Engine](https://jasxtd.github.io/Download-Engine/) — screenshots, supported sites, and download links.
-
 ![Download Engine in dark mode, showing download controls, queues and file progress](docs/images/downloads-dark.png)
 
 <p align="center"><em>Example desktop layout in dark mode, with sample downloads.</em></p>
 
 ## What is Download Engine?
 
-Download Engine brings file transfers, supported video downloads, schedules, and
-browser handoffs into one desktop app. Add a link, review where it will be saved,
+Download Engine is a free, open-source download manager for Windows. It brings file
+transfers, supported video downloads, schedules, and browser handoffs into one
+desktop app. Add a link, review where it will be saved,
 and manage progress from a download list with queues and individual status windows.
 Use it interactively, run a portable copy, or connect your own scripts, extensions
 and AI client.
 
-The familiar layout is inspired by **Internet Download Manager (IDM)**. Download
-Engine is an independent project, is not affiliated with IDM, and does not claim
-complete IDM feature parity.
+Looking for a free **IDM alternative**? The familiar layout is inspired by
+**Internet Download Manager (IDM)**. Download Engine is an independent project, is
+not affiliated with IDM, and does not claim complete IDM feature parity.
 
-> **New in v3.6.0:** extensions, which package site support and automation into one
-> file you review before installing, and one **Extensions** page for your extensions,
-> scripts, rules and run history.
-> Get the [installer, portable ZIP and browser extensions](https://github.com/JasXTD/Download-Engine/releases/tag/v3.6.0),
-> or read the [changelog](CHANGELOG.md) for everything since v3.5.2.
+> **New in v3.7.0:** optional torrent downloads, with magnet links, file selection,
+> pause/resume and recovery in your existing queues. Torrents stay off until you
+> enable them. This release also includes the 3.6.1 dependency and approval fixes.
+> Get the [installer, portable ZIP and browser extensions](https://github.com/JasXTD/Download-Engine/releases/tag/v3.7.0),
+> or read the [changelog](CHANGELOG.md).
+
+![A short tour of Download Engine: the download list, adding a link, the browser extension's Download video button and media list, choosing video quality, queues, schedules, the website grabber, app extensions and custom themes](docs/images/download-engine-demo.gif)
+
+<p align="center"><em>A short tour of the real app and browser extension, with sample data.</em></p>
 
 ## Features
 
@@ -71,6 +74,19 @@ complete IDM feature parity.
   their folders.
 - Set global and per-file speed limits, hourly/daily data quotas, and per-site
   connection settings. Use proxies or supported site authentication when needed.
+
+### Torrent downloads
+
+- Open **Tasks → Open torrent file…**, or paste a magnet link into **Add download**.
+  Enable torrents when prompted, then choose the files or folders to download.
+- Use the usual queue, progress, pause/resume, **Stop** and **Stop all** controls.
+  Verified pieces are kept for recovery, and existing files are never overwritten.
+- **Preferences → Torrents** controls uploading, upload limits and DHT peer discovery.
+  Uploading stops at completion. Speed limits and quotas apply; quotas count uploads too.
+- Peers can see your IP address. Torrents pause while a proxy is enabled because
+  the app's proxy does not carry torrent traffic. Torrents are not yet accepted
+  through browser capture, CLI, scripts or MCP; peer encryption, uTP and web seeds
+  are unsupported. See the [torrent guide](docs/user-guide.md#download-torrents).
 
 ### Queues and scheduling
 
@@ -118,10 +134,6 @@ complete IDM feature parity.
   starts turned off, and each job keeps its own limits. Extensions install from a
   local file and publishers are not verified, so use only ones you trust. See the
   [extension guide](docs/extensions.md).
-
-![Download Engine with the Moonveil custom theme: artwork behind the toolbar, sidebar and download list](docs/images/readme-custom-theme.jpg)
-
-<p align="center"><em>The Moonveil custom theme, with sample downloads.</em></p>
 
 ## Supported video sites and formats
 
@@ -206,10 +218,12 @@ behavior. Change the interface language under **Appearance → Language**, or pi
 
 ## Browser integration
 
-> **Browser-store approval is pending.** For now, the extension must be loaded
-> manually. Chrome, Edge, and Brave require **Developer mode** and **Load unpacked**.
-> Firefox uses **Load Temporary Add-on** instead and requires reloading the add-on
-> after every browser restart. Official store links will be added after approval.
+> **Firefox:** install the approved [Download Engine Extension](https://addons.mozilla.org/en-US/firefox/addon/download-engine-extension/)
+> from Firefox Add-ons. It stays installed after a restart, and Firefox keeps it updated.
+>
+> **Chrome, Edge, and Brave:** store approval is pending. For now, these browsers
+> require **Developer mode** and **Load unpacked**. Official store links will be
+> added after approval.
 
 Open **Tools → Browser setup**, select your browser, and follow its connection
 steps. The desktop communicates with the extension through a registered native
@@ -218,12 +232,11 @@ messaging host. Select **Check connection** in the extension popup to verify set
 | Browser | Setup and requirements |
 | --- | --- |
 | **Chrome, Edge, Brave** | Enable **Developer mode** on the browser's extensions page, choose **Load unpacked**, and select the folder shown by **Open extension folder** in Download Engine. Then follow the [Chromium connection steps](docs/reference.md#chrome-edge-and-brave). The Chromium manifest requires version 128 or newer of the underlying browser engine. Brave has its own desktop connection registration. |
-| **Firefox** | Choose **Load Temporary Add-on** on the debugging page shown by Browser setup, then select `manifest.json` from **Open extension folder**. Follow the [Firefox connection steps](docs/reference.md#firefox). The extension requires **Firefox 142 or newer**; Firefox/ESR 140 and Firefox 141 are unsupported. |
+| **Firefox** | Install the add-on from [Firefox Add-ons](https://addons.mozilla.org/en-US/firefox/addon/download-engine-extension/). Then open **Tools → Browser setup**, select **Firefox** and choose **Connect browser**; you can skip the page's first step. Follow the [Firefox connection steps](docs/reference.md#firefox). The extension requires **Firefox 142 or newer**; Firefox/ESR 140 and Firefox 141 are unsupported. |
 
-Keep Developer mode enabled while using the unpacked Chromium extension. Firefox's
-temporary add-on is removed when Firefox restarts; permanent installation requires
-Mozilla signing. The supplied extension ZIPs do not install themselves as approved
-store extensions.
+Keep Developer mode enabled while using the unpacked Chromium extension. The extension
+ZIPs on the releases page are for manual loading. The Firefox ZIP is unsigned, so
+Firefox removes it when it restarts; use Firefox Add-ons for everyday use.
 
 **Capture file downloads** and **Detect media while browsing** default to on once
 installation permissions are accepted. Existing off choices and capture filters
@@ -319,7 +332,9 @@ tools, and the Windows SDK (including `rc.exe`):
 cargo build --release --locked --bins
 ```
 
-This builds `de.exe`, `de-cli.exe`, and `de-host.exe` under `target/release`.
+This builds `de.exe`, `de-cli.exe`, `de-host.exe`, and `de-torrent.exe` under
+`target/release`. Keep the torrent helper beside the other executables; the app
+starts it only when a torrent needs it.
 Node.js is needed for JavaScript tests and packaging tools; Inno Setup is needed
 for the installer. Neither is required to run the packaged app.
 

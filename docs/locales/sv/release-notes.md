@@ -1,3 +1,13 @@
+## 3.7.0 — 2026-11-01
+
+### Torrentnedladdningar
+
+Torrentfiler och magnetlänkar med filval, paus, återupptagning och återställning av verifierade data. Avstängt som standard; aktivera och styr uppladdning i inställningarna. En aktiv proxy pausar torrenter och uppladdningen slutar när nedladdningen är klar. Innehåller rättningarna från 3.6.1 och torrenthjälpprogrammet.
+
+### Versionsintegration
+
+Guiden, README, webbplatsen och installationskontrollerna har uppdaterats. När den första torrenten lagts till kräver profilen version 3.7.0 eller senare så att äldre versioner inte kan ändra torrentjobb. Att enbart aktivera funktionen uppgraderar inte profilen.
+
 ## 3.6.1 — 2026-10-31
 
 ### Färre beroenden och godkännande av tillägg

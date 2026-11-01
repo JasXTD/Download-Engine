@@ -182,6 +182,10 @@ impl<'a> Checkbox<'a> {
     pub(super) fn new(checked: &'a mut bool, label: impl egui::IntoAtoms<'a>) -> Self {
         Self(egui::Checkbox::new(checked, label))
     }
+    /// Shows a dash, for a folder with only some of its files ticked.
+    pub(super) fn indeterminate(self, indeterminate: bool) -> Self {
+        Self(self.0.indeterminate(indeterminate))
+    }
 }
 
 impl egui::Widget for Checkbox<'_> {
@@ -547,6 +551,7 @@ impl Desktop {
             Some(Dialog::Checksum) => self.checksum_dialog(&ctx, p),
             Some(Dialog::Columns) => self.columns_dialog(&ctx, p),
             Some(Dialog::Add) => self.add_dialog(&ctx, p),
+            Some(Dialog::TorrentChoice) => self.torrent_choice_dialog(&ctx, p),
             Some(Dialog::Browsers) => self.browser_dialog(&ctx, p),
             Some(Dialog::UpdateLink) => self.link_dialog(&ctx, p),
             Some(Dialog::Authentication) => self.authentication_dialog(&ctx, p),
@@ -559,6 +564,8 @@ impl Desktop {
             Some(dialog) => self.queue_dialog(&ctx, p, dialog),
             None => {}
         }
+        self.torrent_question_dialog(&ctx, p);
+        self.poll_torrent_leftovers();
         self.download_status_windows(&ctx);
     }
 }
@@ -1021,13 +1028,18 @@ impl Desktop {
                     });
                 }
                 Column::Status => {
+                    let torrents_on = self.torrents.settings.enabled;
                     let queue_running = self
                         .queues
                         .iter()
                         .any(|q| q.id == self.queue_id && q.running)
                         || self.immediate_downloads.contains(&job.id);
-                    let label =
-                        status_label(job, queue_running, chrono::Utc::now().timestamp_millis());
+                    let label = torrents::list_status(
+                        job,
+                        queue_running,
+                        chrono::Utc::now().timestamp_millis(),
+                        torrents_on,
+                    );
                     let label = if inline_progress && let Some(fraction) = progress(job) {
                         format!("{label}   {:.1}%", fraction * 100.0)
                     } else {
@@ -1295,6 +1307,16 @@ impl Desktop {
         }
     }
     pub(super) fn open_file(&mut self, job: &Job) {
+        // A torrent with several files is a folder, so there is one thing to open: that.
+        if job.torrent.is_some()
+            && job
+                .saved_path
+                .as_deref()
+                .is_some_and(std::path::Path::is_dir)
+        {
+            self.show_folder(job);
+            return;
+        }
         match self.store.antivirus_settings() {
             Ok(settings) if settings.enabled => {
                 self.review_scan(job, true);
@@ -1469,6 +1491,30 @@ impl Desktop {
             self.show_folder(job);
             ui.close();
         }
+        if job.torrent.is_some()
+            && job.status != Status::Complete
+            && job
+                .torrent
+                .as_ref()
+                .is_some_and(|state| state.stage != download_engine::torrent::Stage::Details)
+            && ui.button(tr("Choose files")).clicked()
+        {
+            self.open_torrent_choice(job);
+            ui.close();
+        }
+        if job.status == Status::Complete
+            && job.torrent.is_none()
+            && job.saved_path.as_deref().is_some_and(|path| {
+                path.extension()
+                    .is_some_and(|extension| extension.eq_ignore_ascii_case("torrent"))
+            })
+            && ui.button(tr("Open as torrent")).clicked()
+        {
+            if let Some(path) = job.saved_path.clone() {
+                self.open_torrent_path(&path);
+            }
+            ui.close();
+        }
         if matches!(job.status, Status::Queued | Status::Paused | Status::Failed)
             && ui.button(tr("Start immediately"))
                 .on_hover_text(tr("Start this file ahead of the queue, even if paused or scheduled. Other files stay unchanged; the app's active-download limit and data quotas still apply."))
@@ -1501,7 +1547,10 @@ impl Desktop {
             self.stop_selected_downloads();
             ui.close();
         }
-        if job.status == Status::Complete && ui.button(tr("Redownload")).clicked() {
+        if job.status == Status::Complete
+            && job.torrent.is_none()
+            && ui.button(tr("Redownload")).clicked()
+        {
             self.duplicate_download(ui.ctx(), job);
             ui.close();
         }
@@ -1545,12 +1594,13 @@ impl Desktop {
         if job.ftp.is_none()
             && job.hls.is_none()
             && job.provider.is_none()
+            && job.torrent.is_none()
             && ui.button(tr("Preview ZIP contents")).clicked()
         {
             self.open_zip_job(job);
             ui.close();
         }
-        if ui.button(tr("Duplicate")).clicked() {
+        if job.torrent.is_none() && ui.button(tr("Duplicate")).clicked() {
             self.duplicate_download(ui.ctx(), job);
             ui.close();
         }
@@ -1562,6 +1612,7 @@ impl Desktop {
         if matches!(job.status, Status::Paused | Status::Failed) {
             if job.ftp.is_none()
                 && job.provider.is_none()
+                && job.torrent.is_none()
                 && ui
                     .button(if job.hls.is_some() {
                         tr("Preview video again")
@@ -1573,11 +1624,17 @@ impl Desktop {
                 self.open_link(job);
                 ui.close();
             }
-            if supports_authentication(job) && ui.button(tr("Authentication")).clicked() {
+            if job.torrent.is_none()
+                && supports_authentication(job)
+                && ui.button(tr("Authentication")).clicked()
+            {
                 self.open_authentication(job);
                 ui.close();
             }
-            if (job.plan.is_some() || job.hls.is_some() || job.ftp.is_some())
+            if (job.plan.is_some()
+                || job.hls.is_some()
+                || job.ftp.is_some()
+                || job.torrent.is_some())
                 && ui
                     .button(tr("Restart"))
                     .on_hover_text(if job.hls.is_some() {

@@ -1,11 +1,11 @@
 [package]
 name = "download-engine"
-version = "3.6.1"
+version = "3.7.0"
 license = "MIT"
 edition = "2024"
 default-run = "de"
 
-# Short program names: de.exe (desktop), de-cli.exe and de-host.exe (src/bin).
+# Short program names: de.exe (desktop), de-cli.exe, de-host.exe and de-torrent.exe (src/bin).
 [[bin]]
 name = "de"
 path = "src/main.rs"
@@ -41,6 +41,7 @@ scraper = { version = "0.27", default-features = false }
 cssparser = "0.37"
 quick-xml = "0.41"
 mlua = { version = "=0.12.2", features = ["lua54", "vendored", "serde", "error-send"] }
+de-torrent = { path = "torrent" }
 
 [target.'cfg(windows)'.dependencies]
 windows = { version = "0.62", default-features = false, features = ["Win32_Graphics_Gdi", "Win32_System_Com_StructuredStorage", "Win32_System_Ole", "Win32_System_Com", "Win32_System_DataExchange", "Win32_System_Memory", "Win32_System_Variant", "Win32_UI_Shell", "Win32_UI_Shell_Common", "Win32_System_SystemServices", "Win32_Foundation"] }
@@ -54,6 +55,7 @@ serde_json = "1"
 
 [dev-dependencies]
 tempfile = "3"
+sha1 = "0.10"
 tokio = { version = "1.53.3", features = ["test-util"] }
 
 [profile.release]
@@ -63,4 +65,14 @@ lto = "thin"
 # epaint 0.36.2 with bidirectional text layout; see vendor/epaint/patch.md.
 [patch.crates-io]
 epaint = { path = "vendor/epaint" }
+# The BitTorrent crates copied from rqbit; see vendor/rqbit/patch.md.
+librqbit-bencode = { path = "vendor/rqbit/librqbit-bencode" }
+librqbit-buffers = { path = "vendor/rqbit/librqbit-buffers" }
+librqbit-clone-to-owned = { path = "vendor/rqbit/librqbit-clone-to-owned" }
+librqbit-core = { path = "vendor/rqbit/librqbit-core" }
+librqbit-dht = { path = "vendor/rqbit/librqbit-dht" }
+librqbit-dualstack-sockets = { path = "vendor/rqbit/librqbit-dualstack-sockets" }
+librqbit-peer-protocol = { path = "vendor/rqbit/librqbit-peer-protocol" }
+librqbit-sha1-wrapper = { path = "vendor/rqbit/librqbit-sha1-wrapper" }
+librqbit-tracker-comms = { path = "vendor/rqbit/librqbit-tracker-comms" }
 

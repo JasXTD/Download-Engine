@@ -1,3 +1,13 @@
+## 3.7.0 — 2026-11-01
+
+### Torrent-Downloads
+
+Torrent-Dateien und Magnet-Links mit Dateiauswahl, Pause, Fortsetzen und Wiederherstellung geprüfter Daten. Standardmässig ausgeschaltet; Aktivierung und Upload-Steuerung unter Einstellungen. Ein aktiver Proxy pausiert Torrents, nach Abschluss endet der Upload. Enthält die Korrekturen aus 3.6.1 und das Torrent-Hilfsprogramm.
+
+### Release-Integration
+
+Anleitung, README, Website und Installationsprüfungen wurden aktualisiert. Nach dem ersten hinzugefügten Torrent benötigt das Profil Version 3.7.0 oder neuer, damit ältere Versionen keine Torrent-Aufträge verändern. Das blosse Aktivieren der Funktion aktualisiert das Profil nicht.
+
 ## 3.6.1 — 2026-10-31
 
 ### Weniger Abhängigkeiten und Freigabe von Erweiterungen

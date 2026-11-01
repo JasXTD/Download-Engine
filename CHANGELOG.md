@@ -2,6 +2,20 @@
 
 Release notes are available offline in Help → Changelog. Newest releases appear first.
 
+## 3.7.0 — 2026-11-01
+
+### Torrent downloads
+
+- Open a `.torrent` file from Tasks or paste a magnet link into Add download. Torrents start turned off; the first-use prompt and Preferences → Torrents let you enable them. Review the file list, select individual files or folders, or save a magnet link and choose its files later.
+- Torrents use the regular download queue, progress display, pause/resume, Stop and Stop all controls. Verified pieces are retained for recovery. Completed downloads publish only the selected files without overwriting existing files.
+- Set upload limits or disable uploading while downloading. Uploading stops when a download finishes. Global/per-download speed limits and data quotas apply; quotas include uploads. Turning torrents off or enabling a proxy pauses active torrents because peer traffic cannot use the app's proxy.
+- Bundled `de-torrent.exe` runs only when needed. The engine uses maintained copies of rqbit's protocol crates, with source, license notices and modification notes included. Browser capture, CLI, scripts and MCP do not add torrents in this release; peer encryption, uTP, web seeds and router port mapping are not supported.
+
+### Release integration
+
+- Includes the 3.6.1 standard-library file locks and extension approval fixes. Updated the guide, README and website for torrents, and added the torrent helper to installer verification.
+- Saving the first torrent now upgrades the profile compatibility guard atomically. Older builds are blocked from rewriting torrent jobs; opening profiles from the development torrent branch applies the same protection. Enabling torrents without adding one does not upgrade the profile.
+
 ## 3.6.1 — 2026-10-31
 
 ### Dependency cleanup and extension approvals

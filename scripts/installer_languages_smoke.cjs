@@ -60,7 +60,7 @@ try {
     const setup=(selected,label)=>run(installer,['/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART','/SP-','/NOICONS','/TASKS=','/NOCLOSEAPPLICATIONS',`/LANG=${selected.replace('-','_')}`,`/DIR=${program}`,`/LOG=${path.join(output,label+'.log')}`]);
     const result=setup(lang,lang+'-install');assert.equal(result.status,0,result.stderr);installed={program,env};
     assert.equal(JSON.parse(fs.readFileSync(path.join(program,'installer-language.json'),'utf8')),lang);
-    for(const bin of ['de.exe','de-host.exe','de-cli.exe']) assert.equal(digest(path.join(program,bin)),digest(path.join(root,'target/release',bin)));
+    for(const bin of ['de.exe','de-host.exe','de-cli.exe','de-torrent.exe']) assert.equal(digest(path.join(program,bin)),digest(path.join(root,'target/release',bin)));
     for(const browser of ['chrome','edge','brave','firefox']) {
       for(const locale of supportedLanguages.map(language=>language.replace('-','_')))assert(fs.existsSync(path.join(program,'extensions',browser,'_locales',locale,'messages.json')));
       // Check the installed bytes, including files imported indirectly by the background/popup scripts.

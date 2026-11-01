@@ -54,7 +54,7 @@ function Get-ReleaseVersion {
 
 function Assert-ReleaseBinaryVersions {
     param([Parameter(Mandatory)][string]$Root, [Parameter(Mandatory)][string]$Version)
-    foreach ($file in @('de.exe','de-host.exe','de-cli.exe')) {
+    foreach ($file in @('de.exe','de-host.exe','de-cli.exe','de-torrent.exe')) {
         $binary = Get-Item -LiteralPath (Join-Path $Root "target/release/$file") -ErrorAction Stop
         if ($binary.VersionInfo.FileVersion -cne $Version -or $binary.VersionInfo.ProductVersion -cne $Version) {
             throw "Rebuild ${file}: its Windows version metadata does not match release $Version."

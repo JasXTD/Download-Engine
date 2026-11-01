@@ -47,6 +47,16 @@ the packaged manifests, and the packaged `CHANGELOG.md`. Ensure the packaged
 executables match the release build. The versioned ZIP is the canonical portable
 artifact and is always assembled from a fresh whitelist.
 
+Since 3.7.0, all four executables (`de.exe`, `de-cli.exe`, `de-host.exe`, and
+`de-torrent.exe`) must ship together and have the same Windows version metadata.
+Run `cargo test --offline --locked --test torrents` for isolated scheduler/helper
+coverage, and `cargo test --manifest-path torrent/Cargo.toml --offline --locked
+--features lab --target-dir artifacts/torrent-test-build` for the engine tests.
+The Linux-only socket, tracker and DHT tests run in a network-disabled container.
+Use generated files and isolated peers; these checks do not require public swarms.
+For native dialog captures, build with `--features screenshot` and run
+`node scripts/native_ui_smoke.cjs --torrents`.
+
 Public artifacts are written to `dist/releases/<version>`. Every public packaging
 entry point rejects unexpected files, subdirectories and links in that version's
 folder; checksum generation additionally requires all six payloads. The completed

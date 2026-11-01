@@ -188,7 +188,7 @@ function capture(name, dark, size, view = 'downloads', empty = false, legacy = f
   const ppm = path.join(home,'native-ui.ppm'), env={...process.env};
   for(const key of Object.keys(env)) if(key.startsWith('IDM_EX_TEST_') || key.includes('SCREENSHOT_TO')) delete env[key];
   Object.assign(env,{DOWNLOAD_ENGINE_HOME:home,IDM_EX_HOME:home,IDM_EX_SCREENSHOT_TO:ppm,IDM_EX_TEST_SIZE:size,IDM_EX_TEST_VIEW:view});
-  if(view.startsWith('status-') || view.startsWith('scan-batch') || view === 'scan-single') env.IDM_EX_TEST_FEATURE = view;
+  if(view.startsWith('torrent-') || view.startsWith('status-') || view.startsWith('scan-batch') || view === 'scan-single') env.IDM_EX_TEST_FEATURE = view;
   if(toolbar?.label) Object.assign(env,{IDM_EX_TEST_TOOLBAR:toolbar.label,IDM_EX_TEST_TOOLBAR_STATE:toolbar.state});
   if(toolbar?.menu) env.IDM_EX_TEST_MENU=toolbar.menu;
   if(toolbar?.mcpBottom) env.IDM_EX_TEST_MCP_BOTTOM='1';
@@ -243,6 +243,16 @@ function capture(name, dark, size, view = 'downloads', empty = false, legacy = f
   for (const event of ['started','ready','stopped']) assert(diagnostics.some(record => record.event === event), `Missing ${event} log`);
   console.log(JSON.stringify({name,screenshot}));
   return {name,screenshot,size,view,dark,legacy,compact,toolbar,queuedNetworkWork:false};
+}
+if(process.argv.includes('--torrents')) {
+  const results = [];
+  for(const dark of [true,false]) for(const view of ['torrent-consent','torrent-files','torrent-error','torrent-preferences']) {
+    results.push(capture(`${view}-${dark?'dark':'light'}`,dark,'860x600',view));
+  }
+  results.push(capture('torrent-files-wide',true,'1280x860','torrent-files'));
+  results.push(capture('torrent-files-german',true,'860x600','torrent-files',false,false,false,{language:'de'}));
+  fs.writeFileSync(path.join(output,'verification.json'),JSON.stringify({results,scope:'Torrent consent, file selection, error and preferences with synthetic data; paused isolated profiles, no peer connections.'},null,2));
+  console.log(`Verification: ${path.join(output,'verification.json')}`);process.exit(0);
 }
 if(process.argv.includes('--clear-history')) {
   const results = [

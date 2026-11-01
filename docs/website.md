@@ -13,8 +13,13 @@ It is a static GitHub Pages site published from `main`, folder `/docs`.
 - `docs/slideshow.js`: local screenshot rotation and playback controls.
 - `docs/images/`: app logo, reviewed screenshots with example data, theme-art
   thumbnails and the 1200 × 630 `social-preview.jpg`.
+- `docs/idm-alternative.html`: a search landing page for people looking for a free
+  IDM alternative. It uses no JavaScript, and its download buttons open the homepage's
+  download section, so a new release needs no change here. Keep its claims aligned
+  with the README: it must state that there is no complete IDM feature parity and
+  no affiliation with IDM.
 - `docs/.nojekyll`: publish the HTML and assets directly, without Jekyll processing.
-- `docs/sitemap.xml`: the canonical public homepage.
+- `docs/sitemap.xml`: the canonical public pages.
 
 No package installation, application build, external font, analytics script or
 browser storage is needed. Native HTML handles navigation and the FAQ. The small
@@ -62,6 +67,12 @@ The theme screenshots replace the capture machine's local download path in the
 details panel with `D:\Downloads\Programs`; redact any personal path the same way
 before adding a new screenshot.
 
+The 3.7.0 release copy describes torrents as optional and off by default. Retain
+the file-selection, upload, proxy and desktop-only limits in the FAQ; do not imply
+that browser capture, scripts or MCP can add torrents. Release links and structured
+data use the same version as the installer and portable packages. Publish the
+matching release assets before deploying these new download links.
+
 The hosting section documents MEGA public files, public WeTransfer transfers and
 exposed-link discovery, including GitHub raw-file handling. These features have
 shipped since **v3.2.0**. Keep the availability notice, FAQ, download-section note and README
@@ -76,11 +87,12 @@ GitHub Pages deploys the `/docs` contents automatically. Check the repository's
 Actions page or Settings → Pages for the deployment result, then verify the
 published page and affected assets.
 
-Featured packages are explicitly pinned to **3.5.2**. Publish the v3.5.2 GitHub
+Featured packages are explicitly pinned to **3.6.0**. Publish the v3.6.0 GitHub
 release with all seven assets before or together with pushing this site, or the
 download buttons return 404. When a new release is
-published, update the version labels, seven asset URLs, release-notes URL and
-SoftwareApplication version/download URL together. Verify each asset exists in
+published, update the version labels, six asset URLs, release-notes URL and
+SoftwareApplication version/download URL together. The Firefox ZIP stays a release
+asset, but the site links to the signed Firefox Add-ons listing instead of it. Verify each asset exists in
 that release. The separate **Latest GitHub release** link always opens GitHub's
 current latest release. The website never downloads or runs an installer
 automatically.

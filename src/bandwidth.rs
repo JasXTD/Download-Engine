@@ -259,6 +259,13 @@ impl Limiter {
         self.changed.notify_waiters();
         Ok(())
     }
+    /// The speed this download is held to, if any.
+    pub(crate) fn rate_for(&self, job: &str) -> Option<u64> {
+        let state = self.state.lock().unwrap();
+        let global = state.global.as_ref().map(|bucket| bucket.rate);
+        let download = state.downloads.get(job).map(|bucket| bucket.rate);
+        global.into_iter().chain(download).min()
+    }
     pub(crate) fn forget(&self, job: &str) {
         self.state.lock().unwrap().downloads.remove(job);
         self.changed.notify_waiters();

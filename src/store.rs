@@ -17,6 +17,7 @@ mod summaries;
 pub struct Store {
     pub paths: AppPaths,
     pub activity: crate::transfer_activity::Activity,
+    pub torrents: crate::torrent::Host,
     db: PathBuf,
     // Keep WAL alive and reuse a connection for frequent progress/quota writes.
     // No transaction is held between operations; other readers remain independent.
@@ -29,12 +30,14 @@ impl Store {
         let mut conn = connect_database(&db)?;
         migrations::initialize(&mut conn, &paths.data)?;
         crate::extensions::initialize(&conn)?;
+        crate::torrent::initialize(&conn)?;
         crate::provider::upgrade(&mut conn)?;
         crate::preferences::apply_install_language(&conn)?;
         let store = Self {
             db,
             paths,
             activity: Default::default(),
+            torrents: Default::default(),
             lifetime_connection: Arc::new(Mutex::new(conn)),
         };
         Ok(store)

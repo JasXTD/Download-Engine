@@ -1,0 +1,40 @@
+// Modified by Download Engine: removed multicast errors. See ../../patch.md.
+#[derive(thiserror::Error, Debug)]
+pub enum Error {
+    #[error("error taking ownership of a socket from a file descriptor: {0}")]
+    SocketFromFd(std::io::Error),
+    #[error("error creating socket: {0}")]
+    SocketNew(std::io::Error),
+    #[error("error binding: {0}")]
+    Bind(std::io::Error),
+    #[error("error setting only_v6={value}: {source}")]
+    OnlyV6 { value: bool, source: std::io::Error },
+    #[error("error setting SO_REUSEADDR: {0}")]
+    ReuseAddress(std::io::Error),
+    #[error("error getting local_addr(): {0}")]
+    LocalAddr(std::io::Error),
+    #[error("as_socket() returned None")]
+    AsSocket,
+    #[error("error setting nonblocking=true: {0}")]
+    SetNonblocking(std::io::Error),
+    #[error("mismatch between local_addr and requested bind_addr")]
+    LocalBindAddrMismatch,
+    #[error("error listening")]
+    Listen(std::io::Error),
+    #[error("error calling tokio from_std")]
+    TokioFromStd(std::io::Error),
+    #[error("error setting SO_REUSEPORT")]
+    ReusePort(std::io::Error),
+    #[error("binding to device is not supported on your OS")]
+    BindDeviceNotSupported,
+    #[error("invalid bind device")]
+    BindDeviceInvalid,
+    #[error("invalid bind device: {0:#}")]
+    BindDeviceInvalidError(std::io::Error),
+    #[error("error setting bind device: {0:#}")]
+    BindDeviceSetDeviceError(std::io::Error),
+    #[error("error connecting: {0:#}")]
+    Connect(std::io::Error),
+}
+
+pub type Result<T> = core::result::Result<T, Error>;

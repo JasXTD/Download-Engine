@@ -40,7 +40,7 @@ try {
     Assert-ReleaseBinaryVersions -Root $workspaceRoot -Version $version
     New-Item -ItemType Directory -Path $outputDirectory -Force | Out-Null
     if ($signing) {
-        foreach ($file in @('de.exe','de-host.exe','de-cli.exe')) {
+        foreach ($file in @('de.exe','de-host.exe','de-cli.exe','de-torrent.exe')) {
             Invoke-AuthenticodeSign -Path (Join-Path $workspaceRoot "target\release\$file") -Configuration $signing
         }
     }
@@ -49,7 +49,7 @@ try {
     $localName = if ($signing) { 'DownloadEngine' } else { 'IDM-EX-UnsignedDev' }
     $localDestination = Join-Path $workspaceRoot "dist\$localName"
     if ($UpdateLocalPortable) {
-        $running = @(Get-Process -Name 'de','de-host','de-cli','idm-ex','idm-ex-host','idm-ex-cli' -ErrorAction SilentlyContinue | Where-Object { $_.Path -and (Split-Path $_.Path -Parent) -eq $localDestination })
+        $running = @(Get-Process -Name 'de','de-host','de-cli','de-torrent','idm-ex','idm-ex-host','idm-ex-cli' -ErrorAction SilentlyContinue | Where-Object { $_.Path -and (Split-Path $_.Path -Parent) -eq $localDestination })
         if ($running.Count) { throw 'Close the local portable Download Engine application before updating its stateful test profile.' }
     }
     # Build archives from a fresh whitelist, never from a user's runtime folder.
@@ -58,7 +58,7 @@ try {
     $stage = Join-Path $stageRoot ('package-' + [Guid]::NewGuid().ToString('N'))
     New-Item -ItemType Directory -Path $stage | Out-Null
     try {
-        foreach ($file in @('de.exe','de-host.exe','de-cli.exe')) {
+        foreach ($file in @('de.exe','de-host.exe','de-cli.exe','de-torrent.exe')) {
             Copy-Item -LiteralPath (Join-Path $workspaceRoot "target\release\$file") -Destination (Join-Path $stage $file)
         }
         Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'Register-Browsers.ps1') -Destination $stage
@@ -119,7 +119,7 @@ try {
                 Compress-Archive -Path (Join-Path $extensionRoot '*') -DestinationPath (Join-Path $outputDirectory "download-engine-$browserName-$extensionVersion.zip") -Force
             }
         }
-        $payload = @('de.exe','de-host.exe','de-cli.exe','portable.json','Register-Browsers.ps1','README.md','SECURITY.md','PRIVACY.md','CHANGELOG.md','LICENSE','THIRD-PARTY-NOTICES.md','extensions','docs','tools','examples') |
+        $payload = @('de.exe','de-host.exe','de-cli.exe','de-torrent.exe','portable.json','Register-Browsers.ps1','README.md','SECURITY.md','PRIVACY.md','CHANGELOG.md','LICENSE','THIRD-PARTY-NOTICES.md','extensions','docs','tools','examples') |
             ForEach-Object { Join-Path $stage $_ }
         $portableArchive = Join-Path $outputDirectory "DownloadEngine-$artifactVersion-windows-x64.zip"
         Compress-Archive -LiteralPath $payload -DestinationPath $portableArchive -Force

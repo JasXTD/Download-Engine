@@ -10,6 +10,7 @@ pub(super) enum Category {
     #[default]
     Appearance,
     Downloads,
+    Torrents,
     Connection,
     Browser,
     Antivirus,
@@ -17,9 +18,10 @@ pub(super) enum Category {
 }
 
 impl Category {
-    pub(super) const ALL: [Self; 6] = [
+    pub(super) const ALL: [Self; 7] = [
         Self::Appearance,
         Self::Downloads,
+        Self::Torrents,
         Self::Connection,
         Self::Browser,
         Self::Antivirus,
@@ -30,6 +32,7 @@ impl Category {
         match self {
             Self::Appearance => tr("Appearance"),
             Self::Downloads => tr("Downloads"),
+            Self::Torrents => tr("Torrents"),
             Self::Connection => tr("Connection"),
             Self::Browser => tr("Browser & AI"),
             Self::Antivirus => tr("Antivirus"),
@@ -41,6 +44,7 @@ impl Category {
         match self {
             Self::Appearance => "\u{e790}",
             Self::Downloads => "\u{e896}",
+            Self::Torrents => "\u{e716}",
             Self::Connection => "\u{e71b}",
             Self::Browser => "\u{e774}",
             Self::Antivirus => "\u{e83d}",
@@ -60,6 +64,8 @@ pub(super) struct State {
     pub(super) start_hidden: bool,
     original_startup: bool,
     original_start_hidden: bool,
+    pub(super) torrents: download_engine::torrent::Settings,
+    original_torrents: download_engine::torrent::Settings,
     pub(super) error: Option<String>,
     pub(super) advanced_saved: bool,
 }
@@ -77,6 +83,8 @@ impl State {
             original_startup: app.startup.enabled(),
             start_hidden: app.startup.start_hidden(),
             original_start_hidden: app.startup.start_hidden(),
+            torrents: app.torrents.settings,
+            original_torrents: app.torrents.settings,
             error: None,
             advanced_saved: false,
         }
@@ -87,6 +95,7 @@ impl State {
             || self.behavior != self.original_behavior
             || self.startup != self.original_startup
             || self.start_hidden != self.original_start_hidden
+            || self.torrents != self.original_torrents
     }
 
     fn reset_category(&mut self) {
@@ -106,6 +115,7 @@ impl State {
             Category::Downloads => {
                 self.interface.auto_download_status = defaults.auto_download_status
             }
+            Category::Torrents => self.torrents = Default::default(),
             Category::Browser => self.interface.clipboard_links = defaults.clipboard_links,
             Category::Startup => {
                 self.behavior = Preferences::default();
@@ -218,6 +228,16 @@ impl Desktop {
             state.error = Some(tf!("Cannot save preferences: {error}", error = error));
             self.preferences_window = Some(state);
             return;
+        }
+        if state.torrents != state.original_torrents {
+            if let Err(error) = self.store.save_torrent_settings(state.torrents) {
+                state.error = Some(tf!("Cannot save preferences: {error}", error = error));
+                self.preferences_window = Some(state);
+                return;
+            }
+            self.torrents.settings = state.torrents;
+            state.original_torrents = state.torrents;
+            self.apply_torrent_settings();
         }
         let language_changed = interface.language != self.interface.language;
         if (behavior.notify_complete != self.preferences.notify_complete

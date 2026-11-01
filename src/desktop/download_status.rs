@@ -55,6 +55,7 @@ struct Snapshot {
     phase: Option<Phase>,
     segments: Vec<SegmentSnapshot>,
     media: Vec<download_engine::transfer_activity::MediaSnapshot>,
+    torrent: Option<download_engine::transfer_activity::TorrentSnapshot>,
     disk_segments: Vec<u64>,
 }
 
@@ -94,6 +95,7 @@ impl Snapshot {
             phase: store.activity.get(id),
             segments,
             media: store.activity.media_parts(id),
+            torrent: store.activity.torrent(id),
             disk_segments,
         })
     }
@@ -134,6 +136,7 @@ struct Window {
     live_segments: Vec<SegmentSnapshot>,
     live_media: Option<download_engine::transfer_activity::MediaSnapshot>,
     live_media_parts: Vec<download_engine::transfer_activity::MediaSnapshot>,
+    live_torrent: Option<download_engine::transfer_activity::TorrentSnapshot>,
     disk_segments: Vec<u64>,
     error: Option<String>,
     notice: Option<String>,
@@ -163,6 +166,7 @@ impl Window {
             live_segments: Vec::new(),
             live_media: None,
             live_media_parts: Vec::new(),
+            live_torrent: None,
             disk_segments: Vec::new(),
             error: None,
             notice: None,
@@ -197,9 +201,11 @@ impl Window {
                 phase,
                 segments,
                 media,
+                torrent,
                 disk_segments,
             }) => {
                 self.phase = phase;
+                self.live_torrent = torrent;
                 self.live_segments = segments;
                 self.live_media_parts = media;
                 self.live_media = self.live_media_parts.first().copied();
@@ -1240,8 +1246,13 @@ impl Window {
                     )
                     .on_hover_text(&status_text);
                 }
-                let rate = if job.status == Status::Downloading && self.rate > 0.0 {
-                    tf!("{}/sec", bytes(self.rate as u64))
+                // Finished pieces arrive in jumps, so the engine's own figure reads better.
+                let speed = self
+                    .live_torrent
+                    .as_ref()
+                    .map_or(self.rate, |torrent| torrent.download_speed as f64);
+                let rate = if job.status == Status::Downloading && speed > 0.0 {
+                    tf!("{}/sec", bytes(speed as u64))
                 } else {
                     "—".into()
                 };
@@ -1261,6 +1272,15 @@ impl Window {
                     }
                 });
                 ui.add_space(6.0);
+                if let Some(torrent) = &self.live_torrent {
+                    ui.horizontal_wrapped(|ui| {
+                        ui.label(RichText::new(tr("Peers")).small().color(p.muted));
+                        ui.label(tf!("{count} connected", count = torrent.peers));
+                        ui.add_space(12.0);
+                        ui.label(RichText::new(tr("Uploaded")).small().color(p.muted));
+                        ui.label(bytes(torrent.uploaded));
+                    });
+                }
                 ui.horizontal_wrapped(|ui| {
                     ui.label(RichText::new(tr("Size")).small().color(p.muted));
                     ui.label(

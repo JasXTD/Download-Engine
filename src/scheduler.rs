@@ -57,6 +57,12 @@ pub enum Command {
         id: String,
         folder: std::path::PathBuf,
     },
+    /// Follow the saved torrent settings. Turning torrents off stops every torrent.
+    TorrentSettings,
+    ChooseTorrentFiles {
+        id: String,
+        chosen: Vec<usize>,
+    },
     PauseAll,
     StartQueue(String),
     PauseQueue(String),

@@ -123,6 +123,34 @@ Read the [security reference](docs/reference.md#security) and
 [antivirus guide](docs/user-guide.md#antivirus-scanning) for implementation details
 and scanner behavior.
 
+## Torrents
+
+Torrents are off by default, and only a person using the desktop window can turn them on.
+Scripts, the browser extension, MCP and the command line can't add a torrent, even when
+torrents are on. While they're off, `de-torrent.exe` doesn't start.
+
+Everything a torrent brings comes from strangers, including its file names, tracker
+addresses and peers' messages. That's why this code runs in a separate program:
+
+- The helper runs only while a torrent needs it, and it opens no port for incoming
+  connections. Uploading stops when the download finishes.
+- A piece counts only after its SHA-1 hash matches, and a peer that sends bad pieces is
+  dropped and banned.
+- File names can't leave the torrent's folder, and the app checks the helper's paths again
+  before using them.
+- Files are written to a temporary folder, marked as coming from the internet, and reach
+  the download folder only when complete. They never replace an existing file.
+- Tracker addresses can't lead to this computer or its local network, and trackers can't
+  redirect the helper anywhere else.
+
+A verified torrent can still contain harmful files, because a hash only proves that the
+file is the one the torrent describes. Treat files from a torrent as you would any other
+download from an unknown source.
+
+Torrents contact many addresses, so security software may report blocked connections
+while one runs. Keep those blocks in place. Anything your security software stops only
+means fewer peers.
+
 ## Browser permissions and native messaging
 
 The extension passes supported download requests to the local native messaging

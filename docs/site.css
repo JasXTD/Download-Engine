@@ -75,7 +75,9 @@ a:focus-visible, summary:focus-visible, button:focus-visible { outline: 3px soli
 .release-badge:hover .badge-arrow { transform: translateX(3px); }
 .hero h1 { font-size: clamp(44px, 4.5vw, 68px); line-height: 1.03; font-weight: 700; letter-spacing: -.05em; }
 .hero h1 > span { color: var(--accent); }
+.hero h1 > .hero-kicker { display: block; margin-bottom: 16px; font-size: 16px; line-height: 1.5; font-weight: 600; letter-spacing: 0; }
 .hero-description { font-size: 17px; line-height: 1.8; margin-top: 25px; max-width: 520px; }
+.hero-description a { color: var(--accent); text-decoration: underline; text-underline-offset: 3px; }
 .hero-video-sites { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 5px 8px; margin-top: 16px; color: var(--blue); font-size: 12px; line-height: 1.8; }
 .hero-video-sites > span { color: #7e98b5; }
 .hero-video-sites:hover { color: var(--accent); }
@@ -398,6 +400,12 @@ figcaption { padding: 12px 16px; color: #b3c0cf; font-size: 11px; line-height: 1
 .site-footer nav { display: flex; gap: 20px; flex-wrap: wrap; font-size: 12px; color: #a9bdd0; }
 .site-footer nav a:hover { color: var(--accent); }
 
+/* Standalone pages */
+.page-hero { padding-block: 76px 20px; }
+.page-hero h1 { max-width: 900px; font-size: clamp(36px, 4.2vw, 56px); line-height: 1.08; font-weight: 700; letter-spacing: -.04em; }
+.page-hero .section-intro { max-width: 720px; }
+.page-note { margin-block: 40px; font-size: 13px; line-height: 1.8; }
+
 /* Motion. site.js adds .motion only when JavaScript runs and reduced motion is off. */
 .reveal-group > .reveal:nth-child(2) { --reveal-delay: .08s; }
 .reveal-group > .reveal:nth-child(3) { --reveal-delay: .16s; }
@@ -416,6 +424,7 @@ figcaption { padding: 12px 16px; color: #b3c0cf; font-size: 11px; line-height: 1
   .site-header { position: sticky; top: 0; background: #0b111ad6; -webkit-backdrop-filter: blur(14px) saturate(1.2); backdrop-filter: blur(14px) saturate(1.2); }
   .site-header.is-scrolled { background: #0b111aeb; border-color: #314256; box-shadow: 0 10px 30px #0006; }
 }
+@media (min-width: 1151px) { .feature-grid.three { grid-template-columns: repeat(3, 1fr); } }
 @media (min-width: 1600px) { .hero { padding-block: 104px 90px; } }
 @media (max-width: 1150px) {
   .shell { width: calc(100% - 56px); }

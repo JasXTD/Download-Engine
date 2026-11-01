@@ -24,7 +24,7 @@ function Save-Inventory {
     $manifest | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $fixture 'scripts/release-source-inventory.json') -Encoding utf8
 }
 try {
-    foreach ($name in @('assets','docs','examples','extension','installer','locales','scripts','src','tests','tools/ffmpeg','vendor')) {
+    foreach ($name in @('assets','docs','examples','extension','installer','locales','scripts','src','tests','tools/ffmpeg','torrent','vendor')) {
         # Each root needs a real file so it also exists in the staged source tree.
         Put-FixtureFile "$name/README.md" 'Isolated public source fixture.'
     }

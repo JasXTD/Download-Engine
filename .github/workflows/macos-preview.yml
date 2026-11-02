@@ -3,10 +3,15 @@ on:
   push:
     branches: [codex/macos-linux-support]
   workflow_dispatch:
+    inputs:
+      ui_only:
+        description: 'Run only rendering checks when diagnosing the capture harness'
+        type: boolean
+        default: false
 permissions:
   contents: read
 concurrency:
-  group: macos-preview-${{ github.ref }}
+  group: macos-preview-${{ github.ref }}-${{ github.event.inputs.ui_only || 'false' }}
   cancel-in-progress: true
 jobs:
   native:
@@ -44,12 +49,14 @@ jobs:
           security list-keychains -d user -s "$keychain"
           security default-keychain -d user -s "$keychain"
       - name: Build pinned native FFmpeg
+        if: github.event.inputs.ui_only != 'true'
         run: |
           node scripts/Run-NativeCi.cjs ffmpeg "$RUNNER_TEMP/native-diagnostics" bash scripts/Build-UnixFfmpeg.sh "$RUNNER_TEMP/native-ffmpeg"
           echo "DOWNLOAD_ENGINE_FFMPEG_PATH=$RUNNER_TEMP/native-ffmpeg/ffmpeg" >> "$GITHUB_ENV"
           echo "DOWNLOAD_ENGINE_NATIVE_FFMPEG=$RUNNER_TEMP/native-ffmpeg" >> "$GITHUB_ENV"
           echo "DOWNLOAD_ENGINE_FFMPEG_SHA256=$(awk '/  ffmpeg$/ {print $1}' "$RUNNER_TEMP/native-ffmpeg/build-record/binaries.sha256")" >> "$GITHUB_ENV"
       - name: Native regression tests
+        if: github.event.inputs.ui_only != 'true'
         timeout-minutes: 45
         env:
           DOWNLOAD_ENGINE_CI_IDLE_TIMEOUT_MS: '300000'
@@ -57,6 +64,7 @@ jobs:
           node scripts/Run-NativeCi.cjs root-tests "$RUNNER_TEMP/native-diagnostics" node scripts/Run-MacTests.cjs
           node scripts/Run-NativeCi.cjs torrent-tests "$RUNNER_TEMP/native-diagnostics" cargo test --locked --offline --manifest-path torrent/Cargo.toml -j 2 -- --test-threads=2
       - name: Package preview
+        if: github.event.inputs.ui_only != 'true'
         run: |
           node scripts/Run-NativeCi.cjs packaging-tests "$RUNNER_TEMP/native-diagnostics" bash scripts/Test-UnixPackaging.sh
           node scripts/Run-NativeCi.cjs package "$RUNNER_TEMP/native-diagnostics" bash scripts/Package-Unix.sh "$RUNNER_TEMP/packages"
@@ -78,6 +86,7 @@ jobs:
           if-no-files-found: ignore
           retention-days: 1
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: success() && github.event.inputs.ui_only != 'true'
         with:
           name: macos-preview-${{ matrix.runner }}
           path: |

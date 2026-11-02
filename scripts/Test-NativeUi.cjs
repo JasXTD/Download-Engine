@@ -10,6 +10,7 @@ const { spawnSync } = require('node:child_process');
 const [binaryArg] = process.argv.slice(2);
 assert(binaryArg, 'Usage: Test-NativeUi.cjs BINARY');
 const binary = path.resolve(binaryArg);
+const failures = [];
 for (const [view, appearance, width, height] of [
   ['preferences', 'dark', 1080, 800],
   ['preferences', 'light', 860, 600],
@@ -35,15 +36,21 @@ for (const [view, appearance, width, height] of [
     assert.equal(data.length - header[0].length, actualWidth * actualHeight * 3);
     // Retina displays legitimately produce more pixels than logical UI points.
     const scale = actualWidth / width;
-    assert(scale >= 0.75 && scale <= 4 && Math.abs(actualHeight / height - scale) < 0.02, 'Unexpected capture dimensions');
+    assert(scale >= 0.75 && scale <= 4 && Math.abs(actualHeight / height - scale) < 0.02,
+      `Unexpected capture dimensions for ${view}, ${appearance}: requested ${width}x${height} points, captured ${actualWidth}x${actualHeight} pixels`);
     const colors = new Set();
     for (let at = header[0].length; at < data.length && colors.size < 32; at += 3) {
       colors.add(data[at] * 65536 + data[at + 1] * 256 + data[at + 2]);
     }
     assert(colors.size >= 16, 'Blank or incomplete UI capture');
     console.log(`Rendered ${view}, ${appearance}, ${actualWidth}x${actualHeight}; app exited normally.`);
+  } catch (error) {
+    // Inspect every representative size, but still fail the check if any fails.
+    console.error(error.message);
+    failures.push(error);
   } finally {
     assert(path.dirname(profile) === os.tmpdir());
     fs.rmSync(profile, { recursive: true, force: true });
   }
 }
+if (failures.length) throw new AggregateError(failures, `${failures.length} native UI capture check(s) failed`);

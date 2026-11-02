@@ -31,6 +31,7 @@ jobs:
           xcrun --show-sdk-path
           command -v pkg-config
           node --test scripts/Run-NativeCi.test.cjs
+          node --test scripts/Run-MacTests.test.cjs
           cargo fetch --locked --target "$(rustc -vV | sed -n 's/^host: //p')"
           cargo fetch --locked --manifest-path torrent/Cargo.toml --target "$(rustc -vV | sed -n 's/^host: //p')"
       - name: Isolated test keychain
@@ -52,7 +53,7 @@ jobs:
         env:
           DOWNLOAD_ENGINE_CI_IDLE_TIMEOUT_MS: '300000'
         run: |
-          node scripts/Run-NativeCi.cjs root-tests "$RUNNER_TEMP/native-diagnostics" cargo test --locked --offline --all-targets -j 2 -- --test-threads=2
+          node scripts/Run-NativeCi.cjs root-tests "$RUNNER_TEMP/native-diagnostics" node scripts/Run-MacTests.cjs
           node scripts/Run-NativeCi.cjs torrent-tests "$RUNNER_TEMP/native-diagnostics" cargo test --locked --offline --manifest-path torrent/Cargo.toml -j 2 -- --test-threads=2
       - name: Package preview
         run: |

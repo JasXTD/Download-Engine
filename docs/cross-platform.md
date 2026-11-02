@@ -91,6 +91,13 @@ macOS TLS tests use the installed `openssl` command to create temporary 30-day
 localhost identities. Their keys are removed after loading; tests never change
 the system trust store or disable certificate/hostname verification.
 
+The macOS CI job uses a disposable Keychain. Its synthetic storage key explicitly
+trusts only the test executables Cargo built in that checkout, because each is a
+separate application to Keychain. The fixture key is removed after the suite and
+the entire test keychain is removed on job cleanup. This does not change the
+application's normal Keychain policy; interactive permission prompts still need
+verification on a real Mac desktop.
+
 ```sh
 bash scripts/Build-UnixFfmpeg.sh "$PWD/artifacts/native-ffmpeg"
 export DOWNLOAD_ENGINE_FFMPEG_SHA256="$(awk '/  ffmpeg$/ {print $1}' artifacts/native-ffmpeg/build-record/binaries.sha256)"

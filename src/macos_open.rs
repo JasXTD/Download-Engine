@@ -100,7 +100,9 @@ impl Registration {
     pub(crate) fn new(store: Store) -> Result<Self> {
         let main = MainThreadMarker::new().context("macOS open events require the main thread")?;
         let allocated = Handler::alloc(main).set_ivars(State { store });
-        let handler: Retained<Handler> = unsafe { msg_send![allocated, init] };
+        // Ivars are initialized above; initialize the NSObject superclass so
+        // objc2 can finish ownership of this partially initialized subclass.
+        let handler: Retained<Handler> = unsafe { msg_send![super(allocated), init] };
         let manager = NSAppleEventManager::sharedAppleEventManager();
         // The selectors above have the documented event/reply Objective-C ABI.
         // Keep the handler alive until registration is removed in Drop.

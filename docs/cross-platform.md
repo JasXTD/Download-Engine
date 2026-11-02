@@ -117,6 +117,10 @@ all four application executables. Packaging downloads and installs nothing.
 Native packages exclude FFmpeg's raw `config.log`, which contains the build
 environment. Only the explicitly listed configuration, version, hash and test
 records are copied.
+Mac dependency notices also include the pinned objc2 workspace license files
+omitted from the published crates, with their provenance and original source
+archives. Packaging verifies the recorded revisions and notice hashes offline;
+Rust implementation files such as `copying.rs` are not treated as license texts.
 
 Helper memory protection follows platform facilities: Windows Job limits, Linux
 address-space limits, and a macOS watchdog sampling each owned helper's physical

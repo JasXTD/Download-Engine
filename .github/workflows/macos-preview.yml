@@ -32,6 +32,7 @@ jobs:
           command -v pkg-config
           node --test scripts/Run-NativeCi.test.cjs
           node --test scripts/Run-MacTests.test.cjs
+          node --test scripts/LicenseNotices.test.cjs
           cargo fetch --locked --target "$(rustc -vV | sed -n 's/^host: //p')"
           cargo fetch --locked --manifest-path torrent/Cargo.toml --target "$(rustc -vV | sed -n 's/^host: //p')"
       - name: Isolated test keychain

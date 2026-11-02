@@ -116,12 +116,19 @@ fn localized_pages_and_shared_dialogs_fit_both_window_sizes() {
 }
 
 pub(super) fn fixture() -> (tempfile::TempDir, Desktop, egui::Context) {
+    fixture_with_store_setup(|_| {})
+}
+
+fn fixture_with_store_setup(
+    setup: impl FnOnce(&Store),
+) -> (tempfile::TempDir, Desktop, egui::Context) {
     let temp = tempfile::tempdir().unwrap();
     let store = Store::open(AppPaths {
         data: temp.path().join("data"),
         downloads: temp.path().join("downloads"),
     })
     .unwrap();
+    setup(&store);
     let scheduler = Scheduler::start(store.clone()).unwrap();
     let lock = File::create(temp.path().join("ui.lock")).unwrap();
     let mut app = Desktop::new(store, scheduler, lock);
@@ -1297,27 +1304,33 @@ fn link_dialog_validates_drafts_and_cancel_ignores_late_results() {
 #[test]
 fn right_click_and_three_dot_menus_start_only_the_existing_selected_file() {
     for context_menu in [true, false] {
-        let (_temp, mut app, ctx) = fixture();
         let now = chrono::Utc::now().timestamp();
         // Hold transfers with an explicit schedule and a full quota: the test
         // exercises real UI/scheduler dispatch without making network requests.
-        app.store
-            .schedule_queue(MAIN_QUEUE, now + 3600, now)
-            .unwrap();
-        app.store
-            .set_quota_limits_at(
-                quota::Limits {
-                    hourly: Some(1024 * 1024),
-                    daily: None,
-                },
-                now,
-            )
-            .unwrap();
-        app.store.record_quota_bytes_at(1024 * 1024, now).unwrap();
+        // Configure this before Scheduler::start captures its initial quota
+        // snapshot. Otherwise the quota banner can appear during the menu click
+        // and move the row between the synthetic press/release frames.
+        let (_temp, mut app, ctx) = fixture_with_store_setup(|store| {
+            store.schedule_queue(MAIN_QUEUE, now + 3600, now).unwrap();
+            store
+                .set_quota_limits_at(
+                    quota::Limits {
+                        hourly: Some(1024 * 1024),
+                        daily: None,
+                    },
+                    now,
+                )
+                .unwrap();
+            store.record_quota_bytes_at(1024 * 1024, now).unwrap();
+        });
+        assert!(app.scheduler.quota_snapshot().unwrap().blocked());
         let mut job = app.jobs[0].clone();
+        job.url = "http://127.0.0.1:1/first.zip".into();
         job.status = Status::Queued;
         app.store.enqueue(&job).unwrap();
         app.refresh_and_wait();
+        assert_eq!(app.jobs.len(), 1);
+        assert_eq!(app.jobs[0].status, Status::Queued);
         app.set_selection(Some(job.id.clone()));
         // The details panel repeats the filename; target the actual table button.
         app.interface.show_details = false;
@@ -1349,6 +1362,8 @@ fn right_click_and_three_dot_menus_start_only_the_existing_selected_file() {
             egui::Popup::is_any_open(&ctx),
             "Menu did not open; context menu: {context_menu}"
         );
+        // A normal background snapshot must preserve the open menu and target.
+        app.refresh_and_wait();
         click(&mut app, &ctx, "Start immediately");
         let deadline = Instant::now() + Duration::from_secs(3);
         while app.store.immediate_downloads().unwrap().is_empty() {

@@ -1,4 +1,5 @@
-//! User-scoped Windows DPAPI; no machine-wide flag and no plaintext fallback.
+//! User-scoped secrets: Windows DPAPI or a native keychain-protected envelope.
+//! No machine-wide protection and no plaintext fallback.
 use anyhow::{Result, ensure};
 use uuid::Uuid;
 use zeroize::Zeroizing;

@@ -89,7 +89,7 @@ impl<'de> Deserialize<'de> for FrozenScript {
                 );
                 let ciphertext = STANDARD.decode(&sealed.sealed)?;
                 let bytes = crate::protected_data::open(sealed.id, &ciphertext)
-                    .context("Cannot unlock provider source with this Windows account")?;
+                    .context("Cannot unlock provider source with this system account")?;
                 let script: Script = serde_json::from_slice(&bytes)?;
                 script.validate()?;
                 ensure!(

@@ -5,6 +5,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const crypto = require('node:crypto');
 const { execFileSync } = require('node:child_process');
+const { readNotices, reviewedSupplement } = require('./LicenseNotices.cjs');
 const root = path.resolve(__dirname, '..');
 const check = process.argv.includes('--check');
 function option(name, fallback) {
@@ -102,19 +103,6 @@ for (const name of Object.keys(copiedCrates)) {
 const packages = metadata.packages.filter(p => p.source).sort((a, b) => `${a.name}-${a.version}`.localeCompare(`${b.name}-${b.version}`, 'en'));
 const output = new Map();
 function add(relative, data) { output.set(relative.replaceAll('\\', '/'), Buffer.isBuffer(data) ? data : Buffer.from(data)); }
-function readNotices(directory, relative = '') {
-  const result = [];
-  for (const entry of fs.readdirSync(directory, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name, 'en'))) {
-    if (entry.isSymbolicLink()) throw new Error(`Unexpected symlink in Cargo source: ${entry.name}`);
-    const rel = path.join(relative, entry.name), full = path.join(directory, entry.name);
-    if (entry.isDirectory()) {
-      if (!['.git', 'target', 'tests', 'examples', 'benches'].includes(entry.name)) result.push(...readNotices(full, rel));
-    } else if (/(^|[-_.])(licen[cs]e|copying|copyright|notice|authors?)([-_.]|$)/i.test(entry.name) || (/^fonts[\\/]/.test(rel) && /\.txt$/i.test(entry.name))) {
-      result.push([rel, fs.readFileSync(full)]);
-    }
-  }
-  return result;
-}
 // These upstream crates omit their workspace-level license files from the
 // published crate. Include the declared standard license and the entire crate,
 // preserving every original source notice. Apache is selected where offered.
@@ -128,7 +116,7 @@ const standardForMissing = {
 const inventory = [];
 const reviewedExpressions = new Set([
   'MIT OR Apache-2.0', 'MIT', 'Unicode-3.0', 'Apache-2.0 OR MIT',
-  'MIT/Apache-2.0', 'Apache-2.0', 'MIT OR Apache-2.0 OR Zlib', 'MPL-2.0',
+  'MIT/Apache-2.0', 'MIT / Apache-2.0', 'Apache-2.0', 'MIT OR Apache-2.0 OR Zlib', 'MPL-2.0',
   'ISC', 'Unlicense OR MIT', 'MIT OR Zlib OR Apache-2.0', 'Zlib OR Apache-2.0 OR MIT',
   'BSL-1.0', 'BSD-3-Clause OR Apache-2.0', 'BSD-2-Clause OR Apache-2.0 OR MIT',
   'Zlib', 'Apache-2.0 OR GPL-2.0-only', 'Apache-2.0 AND MIT',
@@ -149,10 +137,16 @@ for (const pkg of packages) {
   const notices = readNotices(pkg.patched && !fs.existsSync(directory) ? path.join(root, pkg.patched.path) : directory);
   let supplemental;
   if (!notices.length) {
-    supplemental = standardForMissing[pkg.name];
-    if (!supplemental) throw new Error(`No license text found for ${id}; review before releasing.`);
-    if (supplemental !== 'MIT-mlua' && !pkg.license.includes(supplemental)) throw new Error(`Supplemental license no longer matches ${id}`);
-    notices.push([`LICENSE-${supplemental}`, fs.readFileSync(path.join(root, 'docs/licenses/common', supplemental))]);
+    const reviewed = reviewedSupplement(pkg, directory);
+    if (reviewed) {
+      supplemental = reviewed.selectedLicense;
+      notices.push(...reviewed.notices);
+    } else {
+      supplemental = standardForMissing[pkg.name];
+      if (!supplemental) throw new Error(`No license text found for ${id}; review before releasing.`);
+      if (supplemental !== 'MIT-mlua' && !pkg.license.includes(supplemental)) throw new Error(`Supplemental license no longer matches ${id}`);
+      notices.push([`LICENSE-${supplemental}`, fs.readFileSync(path.join(root, 'docs/licenses/common', supplemental))]);
+    }
   }
   for (const [name, data] of notices) add(`docs/licenses/rust/${id}/${name}`, data);
   // MPL source obligations and omitted upstream notices are self-contained;

@@ -672,7 +672,7 @@ impl Store {
                                 let bytes =
                                     crate::protected_data::open(installed.key_scope, sealed)
                                         .context(
-                                            "Cannot unlock this setting with this Windows account",
+                                            "Cannot unlock this setting with this system account",
                                         )?;
                                 Ok::<_, anyhow::Error>(String::from_utf8(bytes.to_vec())?)
                             })

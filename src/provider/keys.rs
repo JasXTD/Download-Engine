@@ -1,4 +1,4 @@
-//! Immutable DPAPI tokens are bound to one provider. Only processors can unlock them.
+//! Immutable OS-protected tokens are bound to one provider. Only processors can unlock them.
 use anyhow::{Context, Result, ensure};
 use base64::{Engine as _, engine::general_purpose::STANDARD};
 use uuid::Uuid;

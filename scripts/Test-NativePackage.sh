@@ -20,7 +20,20 @@ if [[ "$(uname -s)" == Darwin ]]; then
   [[ "$(read_plist :UTImportedTypeDeclarations:0:UTTypeTagSpecification:public.mime-type)" == application/x-bittorrent ]]
   [[ "$(read_plist :CFBundleDocumentTypes:0:LSItemContentTypes:0)" == org.bittorrent.torrent ]]
   [[ "$(read_plist :CFBundleURLTypes:0:CFBundleURLSchemes:0)" == magnet ]]
+  for program in de-cli de-host de-torrent; do
+    /usr/bin/codesign --verify --strict "$programs/$program"
+  done
+  /usr/bin/codesign --verify --deep --strict "$package/Download Engine.app"
 fi
+expected_ffmpeg=$(awk '/  ffmpeg$/ {print $1}' "$resources/tools/ffmpeg/build-record/binaries.sha256")
+if command -v sha256sum >/dev/null; then
+  actual_ffmpeg=$(sha256sum "$resources/tools/ffmpeg/ffmpeg" | cut -d ' ' -f 1)
+else
+  actual_ffmpeg=$(shasum -a 256 "$resources/tools/ffmpeg/ffmpeg" | cut -d ' ' -f 1)
+fi
+[[ "$expected_ffmpeg" =~ ^[a-f0-9]{64}$ && "$actual_ffmpeg" == "$expected_ffmpeg" ]] || {
+  echo 'Packaged FFmpeg differs from the checksum compiled into the app' >&2; exit 1;
+}
 export DOWNLOAD_ENGINE_HOME="$fixture/profile"
 "$programs/de-cli" --version
 "$programs/de-cli" list --no-start > "$fixture/list.json"

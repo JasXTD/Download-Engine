@@ -180,7 +180,12 @@ PLIST
   /usr/bin/iconutil -c icns "$iconset" -o "$resources/DownloadEngine.icns"
   # Ad-hoc signing validates the bundle locally; it is not notarization or an
   # Apple Developer signature. Do not disable Gatekeeper or clear quarantine.
-  for program in "$programs/"*; do /usr/bin/codesign --force --sign - "$program"; done
+  # Sign nested tools before the containing bundle. Signing its main executable
+  # first also signs the bundle and fails when an Intel helper is still unsigned.
+  # The bundle signing operation below signs de itself.
+  for program in de-cli de-host de-torrent; do
+    /usr/bin/codesign --force --sign - "$programs/$program"
+  done
   /usr/bin/codesign --verify "$resources/tools/ffmpeg/ffmpeg"
   /usr/bin/codesign --force --sign - "$app"
   /usr/bin/codesign --verify --deep --strict "$app"

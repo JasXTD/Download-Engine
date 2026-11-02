@@ -55,6 +55,11 @@ jobs:
         run: |
           node scripts/Run-NativeCi.cjs packaging-tests "$RUNNER_TEMP/native-diagnostics" bash scripts/Test-UnixPackaging.sh
           node scripts/Run-NativeCi.cjs package "$RUNNER_TEMP/native-diagnostics" bash scripts/Package-Unix.sh "$RUNNER_TEMP/packages"
+      - name: Native UI rendering checks
+        timeout-minutes: 10
+        run: |
+          node scripts/Run-NativeCi.cjs ui-build "$RUNNER_TEMP/native-diagnostics" cargo build --locked --offline --bin de --features screenshot -j 2
+          node scripts/Run-NativeCi.cjs ui-tests "$RUNNER_TEMP/native-diagnostics" node scripts/Test-NativeUi.cjs target/debug/de
       - name: Redacted failure diagnostics
         if: failure()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2

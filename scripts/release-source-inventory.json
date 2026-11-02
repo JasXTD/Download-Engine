@@ -781,6 +781,7 @@
     "scripts/Run-NativeCi.test.cjs",
     "scripts/Signing.ps1",
     "scripts/Test-LinuxDesktop.sh",
+    "scripts/Test-NativeUi.cjs",
     "scripts/Test-Release-Version.ps1",
     "scripts/Test-ReleaseLicensing.ps1",
     "scripts/Test-ReleasePackaging.ps1",

@@ -5,9 +5,9 @@ on:
   workflow_dispatch:
     inputs:
       validation:
-        description: 'Use full for app changes; package/ui only for harness follow-ups after unchanged app tests pass'
+        description: 'Use full for app changes; ui isolates rendering-harness diagnosis'
         type: choice
-        options: [full, package, ui]
+        options: [full, ui]
         default: full
 permissions:
   contents: read
@@ -21,7 +21,7 @@ jobs:
       matrix:
         runner: [macos-15, macos-15-intel]
     runs-on: ${{ matrix.runner }}
-    timeout-minutes: 90
+    timeout-minutes: 120
     env:
       CARGO_INCREMENTAL: '0'
       CARGO_PROFILE_DEV_DEBUG: '0'
@@ -57,8 +57,10 @@ jobs:
           echo "DOWNLOAD_ENGINE_NATIVE_FFMPEG=$RUNNER_TEMP/native-ffmpeg" >> "$GITHUB_ENV"
           echo "DOWNLOAD_ENGINE_FFMPEG_SHA256=$(awk '/  ffmpeg$/ {print $1}' "$RUNNER_TEMP/native-ffmpeg/build-record/binaries.sha256")" >> "$GITHUB_ENV"
       - name: Native regression tests
-        if: github.event.inputs.validation != 'ui' && github.event.inputs.validation != 'package'
-        timeout-minutes: 45
+        if: github.event.inputs.validation != 'ui'
+        # Intel needed 37 minutes through desktop tests alone. Leave room for
+        # integration/torrent suites; the five-minute inactivity guard remains.
+        timeout-minutes: 60
         env:
           DOWNLOAD_ENGINE_CI_IDLE_TIMEOUT_MS: '300000'
         run: |

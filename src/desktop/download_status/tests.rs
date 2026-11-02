@@ -739,10 +739,14 @@ fn live_status_controls_pause_resume_close_and_hide_without_duplicate_or_lost_pr
     app.wait_for_io();
     let id = app.selected.clone().unwrap();
     until(&mut app, |app| {
+        // Transfer progress and the UI's asynchronous snapshot arrive separately.
+        // Wait for the visible result too, rather than assuming the database
+        // update means its status window has already consumed that snapshot.
         app.store
             .get(&id)
             .unwrap()
             .is_some_and(|j| j.downloaded > 0 && j.status == Status::Downloading)
+            && app.download_status.windows.contains_key(&id)
     });
     assert!(app.download_status.windows.contains_key(&id));
     assert_eq!(app.store.activity.get(&id), Some(Phase::Downloading));

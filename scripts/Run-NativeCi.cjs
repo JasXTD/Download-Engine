@@ -47,10 +47,18 @@ const tail = [];
 const issues = [];
 let linesSeen = 0;
 let signalReceived;
+let idleTimer;
+let stopTimer;
+const idleLimit = Number(process.env.DOWNLOAD_ENGINE_CI_IDLE_TIMEOUT_MS || '0');
+if (!Number.isSafeInteger(idleLimit) || idleLimit < 0 || idleLimit > 1800000) {
+  console.error('Invalid native CI inactivity limit');
+  process.exit(2);
+}
 const stopToken = `native-ci-${randomUUID()}`;
 if (process.env.GITHUB_ACTIONS === 'true') console.log(`::stop-commands::${stopToken}`);
 
 function accept(line, stream) {
+  armIdleLimit();
   const text = redact(line).slice(0, 1600);
   const item = { line: ++linesSeen, stream, text };
   tail.push(item);
@@ -99,28 +107,67 @@ function capture(stream, name) {
   stream.on('end', () => consume(decoder.end(), true));
 }
 
+const ownsGroup = idleLimit > 0 && process.platform !== 'win32';
 const child = spawn(command, args, {
   shell: false,
+  detached: ownsGroup,
   stdio: ['ignore', 'pipe', 'pipe'],
   env: { ...process.env, DOWNLOAD_ENGINE_CI_CAPTURE: '1' },
 });
+function armIdleLimit() {
+  clearTimeout(idleTimer);
+  if (idleLimit && !signalReceived) idleTimer = setTimeout(() => {
+    signalReceived = 'SIGTERM';
+    accept(`No command output for ${idleLimit} ms; stopping this stalled stage.`, 'watchdog');
+    stopCommand('SIGTERM');
+  }, idleLimit);
+}
+armIdleLimit();
 capture(child.stdout, 'stdout');
 capture(child.stderr, 'stderr');
 child.on('error', error => accept(error.message, 'spawn'));
-for (const signal of ['SIGINT', 'SIGTERM']) process.on(signal, () => {
+function saveFailure(exitCode, signal) {
+  const selected = [...new Map([...issues, ...tail].map(item => [item.line, item])).values()].sort((a, b) => a.line - b.line);
+  // Bound the saved payload independently of the subprocess output volume.
+  while (Buffer.byteLength(JSON.stringify(selected)) > 60000) selected.shift();
+  const report = { stage, platform: process.platform, arch: process.arch, exitCode, signal, linesSeen, output: selected };
+  fs.mkdirSync(directory, { recursive: true, mode: 0o700 });
+  fs.writeFileSync(path.join(directory, `${stage}.json`), JSON.stringify(report, null, 2) + '\n', { mode: 0o600 });
+}
+function signalCommand(signal) {
+  // Never signal a reaped/reused PID. On native CI, the timed command starts
+  // its own group so stopping Cargo also stops the test executable it owns.
+  if (child.exitCode !== null || child.signalCode !== null) return;
+  if (ownsGroup && child.pid) {
+    try { process.kill(-child.pid, signal); }
+    catch (error) { if (error.code !== 'ESRCH') throw error; }
+  } else child.kill(signal);
+}
+function stopCommand(signal) {
+  if (stopTimer) return;
   signalReceived = signal;
-  child.kill(signal);
-});
+  clearTimeout(idleTimer);
+  // A timed-out descendant can keep its output pipe open. Preserve the last
+  // redacted lines now, before runner cleanup kills this wrapper too.
+  saveFailure(1, signal);
+  signalCommand(signal);
+  stopTimer = setTimeout(() => {
+    signalCommand('SIGKILL');
+    // A descendant may retain inherited pipes after its parent exits. The job
+    // runner owns final process cleanup; do not lose the report waiting on EOF.
+    child.stdout.destroy();
+    child.stderr.destroy();
+  }, 5000);
+  stopTimer.unref();
+}
+for (const signal of ['SIGINT', 'SIGTERM']) process.on(signal, () => stopCommand(signal));
 child.on('close', (code, signal) => {
+  clearTimeout(idleTimer);
+  clearTimeout(stopTimer);
   const exitCode = code === 0 && !signalReceived ? 0 : Number.isInteger(code) && code > 0 ? code : 1;
   if (process.env.GITHUB_ACTIONS === 'true') console.log(`::${stopToken}::`);
   if (exitCode !== 0) {
-    const selected = [...new Map([...issues, ...tail].map(item => [item.line, item])).values()].sort((a, b) => a.line - b.line);
-    // Bound the saved payload independently of the subprocess output volume.
-    while (Buffer.byteLength(JSON.stringify(selected)) > 60000) selected.shift();
-    const report = { stage, platform: process.platform, arch: process.arch, exitCode, signal: signal || signalReceived || null, linesSeen, output: selected };
-    fs.mkdirSync(directory, { recursive: true, mode: 0o700 });
-    fs.writeFileSync(path.join(directory, `${stage}.json`), JSON.stringify(report, null, 2) + '\n', { mode: 0o600 });
+    saveFailure(exitCode, signal || signalReceived || null);
     if (process.env.GITHUB_ACTIONS === 'true') console.log(`::error title=Native CI::${stage} failed (exit ${exitCode}). See the redacted diagnostic artifact.`);
   }
   process.exitCode = exitCode;

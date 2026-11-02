@@ -67,3 +67,44 @@ test('a missing command produces a failed report', t => {
   assert.equal(result.status, 1);
   assert.equal(JSON.parse(fs.readFileSync(path.join(dir, 'spawn-error.json'), 'utf8')).exitCode, 1);
 });
+
+test('interruption saves a report before the child close event', t => {
+  const dir = fixture(t);
+  const report = path.join(dir, 'interrupted.json');
+  const code = `
+    process.argv = [process.execPath, ${JSON.stringify(wrapper)}, 'interrupted', ${JSON.stringify(dir)}, process.execPath, '-e', 'setInterval(() => {}, 1000)'];
+    require(${JSON.stringify(wrapper)});
+    process.emit('SIGTERM');
+    const report = JSON.parse(require('node:fs').readFileSync(${JSON.stringify(report)}, 'utf8'));
+    require('node:assert/strict').equal(report.signal, 'SIGTERM');
+    require('node:assert/strict').equal(report.exitCode, 1);
+  `;
+  const result = spawnSync(process.execPath, ['-e', code], { encoding: 'utf8', timeout: 10000 });
+  assert.ifError(result.error);
+  assert.equal(result.status, 1);
+  assert.equal(result.stderr, '');
+  assert.equal(JSON.parse(fs.readFileSync(report, 'utf8')).signal, 'SIGTERM');
+});
+
+test('a silent stalled command fails with a bounded diagnostic', t => {
+  const dir = fixture(t);
+  const result = spawnSync(process.execPath, [wrapper, 'stalled', dir, process.execPath, '-e', 'setInterval(() => {}, 1000)'], {
+    encoding: 'utf8', timeout: 10000, env: { ...process.env, DOWNLOAD_ENGINE_CI_IDLE_TIMEOUT_MS: '1000' },
+  });
+  assert.ifError(result.error);
+  assert.equal(result.status, 1);
+  const report = JSON.parse(fs.readFileSync(path.join(dir, 'stalled.json'), 'utf8'));
+  assert.equal(report.signal, 'SIGTERM');
+  assert.ok(report.output.some(item => item.stream === 'watchdog' && item.text.includes('No command output')));
+});
+
+test('ongoing command output refreshes the inactivity limit', t => {
+  const dir = fixture(t);
+  const code = 'let n=0; const timer=setInterval(() => {console.log(++n); if(n===5) clearInterval(timer);}, 500);';
+  const result = spawnSync(process.execPath, [wrapper, 'active', dir, process.execPath, '-e', code], {
+    encoding: 'utf8', timeout: 10000, env: { ...process.env, DOWNLOAD_ENGINE_CI_IDLE_TIMEOUT_MS: '1500' },
+  });
+  assert.ifError(result.error);
+  assert.equal(result.status, 0);
+  assert.deepEqual(fs.readdirSync(dir), []);
+});

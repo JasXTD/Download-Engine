@@ -148,6 +148,14 @@ if [[ "$platform" == macos-* ]]; then
 <key>LSMinimumSystemVersion</key><string>11.0</string>
 <key>NSHighResolutionCapable</key><true/>
 <key>LSApplicationCategoryType</key><string>public.app-category.utilities</string>
+<key>UTImportedTypeDeclarations</key><array><dict>
+<key>UTTypeIdentifier</key><string>org.bittorrent.torrent</string>
+<key>UTTypeDescription</key><string>BitTorrent metadata</string>
+<key>UTTypeConformsTo</key><array><string>public.data</string></array>
+<key>UTTypeTagSpecification</key><dict>
+<key>public.filename-extension</key><array><string>torrent</string></array>
+<key>public.mime-type</key><string>application/x-bittorrent</string>
+</dict></dict></array>
 <key>CFBundleDocumentTypes</key><array><dict>
 <key>CFBundleTypeName</key><string>BitTorrent file</string>
 <key>CFBundleTypeRole</key><string>Viewer</string>

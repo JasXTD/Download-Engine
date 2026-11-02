@@ -11,6 +11,16 @@ case "$(uname -s)" in
 esac
 fixture=$(mktemp -d "${TMPDIR:-/tmp}/de-package-smoke.XXXXXXXX")
 trap 'rm -rf -- "$fixture"' EXIT
+if [[ "$(uname -s)" == Darwin ]]; then
+  plist="$package/Download Engine.app/Contents/Info.plist"
+  read_plist() { /usr/libexec/PlistBuddy -c "Print $1" "$plist"; }
+  [[ "$(read_plist :UTImportedTypeDeclarations:0:UTTypeIdentifier)" == org.bittorrent.torrent ]]
+  [[ "$(read_plist :UTImportedTypeDeclarations:0:UTTypeConformsTo:0)" == public.data ]]
+  [[ "$(read_plist :UTImportedTypeDeclarations:0:UTTypeTagSpecification:public.filename-extension:0)" == torrent ]]
+  [[ "$(read_plist :UTImportedTypeDeclarations:0:UTTypeTagSpecification:public.mime-type)" == application/x-bittorrent ]]
+  [[ "$(read_plist :CFBundleDocumentTypes:0:LSItemContentTypes:0)" == org.bittorrent.torrent ]]
+  [[ "$(read_plist :CFBundleURLTypes:0:CFBundleURLSchemes:0)" == magnet ]]
+fi
 export DOWNLOAD_ENGINE_HOME="$fixture/profile"
 "$programs/de-cli" --version
 "$programs/de-cli" list --no-start > "$fixture/list.json"

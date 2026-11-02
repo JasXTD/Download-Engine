@@ -11,11 +11,15 @@ const [binaryArg] = process.argv.slice(2);
 assert(binaryArg, 'Usage: Test-NativeUi.cjs BINARY');
 const binary = path.resolve(binaryArg);
 const failures = [];
+// Hosted Mac desktops clamp large content areas (1080x800 became 1024x653).
+// Test two sizes that fit their usable desktop; keep the strict pixel/aspect
+// check below. Larger layouts are also covered by headless interaction tests.
+const smallMacDesktop = process.platform === 'darwin' && process.env.GITHUB_ACTIONS === 'true';
 for (const [view, appearance, width, height] of [
-  ['preferences', 'dark', 1080, 800],
+  ['preferences', 'dark', smallMacDesktop ? 960 : 1080, smallMacDesktop ? 640 : 800],
   ['preferences', 'light', 860, 600],
   ['mcp', 'dark', 860, 600],
-  ['guide-cli', 'dark', 960, 720],
+  ['guide-cli', 'dark', 960, smallMacDesktop ? 640 : 720],
 ]) {
   const profile = fs.mkdtempSync(path.join(os.tmpdir(), 'download-engine-ui-'));
   const ppm = path.join(profile, 'capture.ppm');

@@ -269,7 +269,13 @@ mod tests {
             // must inspect it without running it or touching any user scanner.
             std::fs::copy(std::env::current_exe().unwrap(), &path).unwrap();
         }
-        assert_eq!(check_setup(&settings).unwrap(), path);
+        // Unix scanner validation resolves aliases such as macOS /var -> /private/var.
+        let expected = if cfg!(unix) {
+            path.canonicalize().unwrap()
+        } else {
+            path.clone()
+        };
+        assert_eq!(check_setup(&settings).unwrap(), expected);
         #[cfg(windows)]
         assert_eq!(
             std::fs::read(&path).unwrap(),

@@ -55,6 +55,18 @@ copy_source_tree() {
   [[ "$count" -gt 0 ]]
 }
 
+copy_media_build_record() {
+  local source=$1 destination=$2 record
+  [[ -d "$source" && ! -L "$source" ]] || { echo 'Invalid native build record directory' >&2; return 1; }
+  mkdir -p "$destination" || return
+  # Never copy the whole directory: FFmpeg's config.log dumps the environment,
+  # and callers may supply a helper built before that log was excluded.
+  for record in binaries.sha256 compiler-version.log config_components.h config.h config.mak ffmpeg-version.log hdr-metadata-test.log x264-config.mak; do
+    [[ -f "$source/$record" && ! -L "$source/$record" ]] || { echo "Missing or linked native build record: $record" >&2; return 1; }
+    cp "$source/$record" "$destination/$record" || return
+  done
+}
+
 media=${DOWNLOAD_ENGINE_NATIVE_FFMPEG:-"$work/media"}
 if [[ -z "${DOWNLOAD_ENGINE_NATIVE_FFMPEG:-}" ]]; then
   bash "$root/scripts/Build-UnixFfmpeg.sh" "$media"
@@ -88,7 +100,8 @@ for program in de de-cli de-host de-torrent; do
 done
 install -m 755 "$media/ffmpeg" "$resources/tools/ffmpeg/ffmpeg"
 cp "$media/LICENSE" "$resources/tools/ffmpeg/"
-cp -R "$media/licenses" "$media/build-record" "$resources/tools/ffmpeg/"
+cp -R "$media/licenses" "$resources/tools/ffmpeg/"
+copy_media_build_record "$media/build-record" "$resources/tools/ffmpeg/build-record"
 copy_source_tree tools/ffmpeg/source "$resources/tools/ffmpeg/source"
 mkdir -p "$resources/scripts"
 cp "$root/scripts/Build-UnixFfmpeg.sh" "$resources/scripts/"

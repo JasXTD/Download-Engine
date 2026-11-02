@@ -1,4 +1,6 @@
 use super::*;
+#[path = "../../tests/support/tls_fixtures.rs"]
+mod tls_fixtures;
 use std::{
     sync::{Arc, Mutex},
     time::Duration,
@@ -38,9 +40,7 @@ impl Fixture {
         Self { _root: root, store }
     }
     fn client(&self) -> reqwest::Client {
-        let certificate =
-            reqwest::Certificate::from_der(include_bytes!("../../tests/fixtures/ftp/server.cer"))
-                .unwrap();
+        let certificate = reqwest::Certificate::from_der(tls_fixtures::cert()).unwrap();
         configure(
             &self.store,
             crate::engine::client_builder()
@@ -70,11 +70,7 @@ async fn headers(stream: &mut (impl AsyncRead + Unpin)) -> String {
 }
 fn tls() -> tokio_native_tls::TlsAcceptor {
     native_tls::TlsAcceptor::new(
-        native_tls::Identity::from_pkcs12(
-            include_bytes!("../../tests/fixtures/ftp/server.pfx"),
-            "fixture",
-        )
-        .unwrap(),
+        native_tls::Identity::from_pkcs12(tls_fixtures::identity(), "fixture").unwrap(),
     )
     .unwrap()
     .into()

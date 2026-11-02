@@ -109,7 +109,9 @@ cc -std=c17 -O2 -Wall -Wextra -Werror -I. "$repo/tools/ffmpeg/source/test-hdr-me
 stage=hdr-test-run
 "$build/hdr-metadata-test" > "$output/build-record/hdr-metadata-test.log"
 stage=build-record
-cp config.h config_components.h ffbuild/config.mak ffbuild/config.log "$output/build-record/"
+# configure's config.log includes `set` output (the complete environment).
+# Keep it private to the temporary build; failures use the redacted CI report.
+cp config.h config_components.h ffbuild/config.mak "$output/build-record/"
 cp COPYING.GPLv3 "$output/LICENSE"
 cp COPYING.* LICENSE.md "$output/licenses/"
 cc --version > "$output/build-record/compiler-version.log"

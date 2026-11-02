@@ -30,6 +30,7 @@ perl -MJSON::PP -e '
 test -x "$programs/de" && test -x "$programs/de-torrent"
 test -s "$resources/tools/ffmpeg/source/ffmpeg-946fcce07b6dcd0331c8cc609192aeff5e1924f8.tar.gz"
 test -s "$resources/tools/ffmpeg/LICENSE"
+test ! -e "$resources/tools/ffmpeg/build-record/config.log"
 test -s "$resources/docs/licenses/RUST-DEPENDENCIES.md"
 test -s "$resources/extensions/firefox/manifest.json"
 printf 'Packaged CLI, native host, FFmpeg encode/decode, notices and source passed.\n'

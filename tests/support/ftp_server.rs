@@ -15,10 +15,9 @@ use tokio::{
 };
 use tokio_util::sync::CancellationToken;
 
-pub const CERT: &[u8] = include_bytes!("../fixtures/ftp/server.cer");
-pub const OTHER_CERT: &[u8] = include_bytes!("../fixtures/ftp/alternate.cer");
-const PFX: &[u8] = include_bytes!("../fixtures/ftp/server.pfx");
-const OTHER_PFX: &[u8] = include_bytes!("../fixtures/ftp/alternate.pfx");
+#[path = "tls_fixtures.rs"]
+mod tls_fixtures;
+pub use tls_fixtures::{alternate_cert, cert};
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum Mode {
     Plain,
@@ -150,8 +149,14 @@ trait Io: AsyncRead + AsyncWrite + Unpin + Send {}
 impl<T: AsyncRead + AsyncWrite + Unpin + Send> Io for T {}
 type Stream = Box<dyn Io>;
 async fn tls(socket: Stream, other: bool) -> anyhow::Result<Stream> {
-    let identity =
-        native_tls::Identity::from_pkcs12(if other { OTHER_PFX } else { PFX }, "fixture")?;
+    let identity = native_tls::Identity::from_pkcs12(
+        if other {
+            tls_fixtures::alternate_identity()
+        } else {
+            tls_fixtures::identity()
+        },
+        "fixture",
+    )?;
     let acceptor = tokio_native_tls::TlsAcceptor::from(
         native_tls::TlsAcceptor::builder(identity)
             .min_protocol_version(Some(native_tls::Protocol::Tlsv12))

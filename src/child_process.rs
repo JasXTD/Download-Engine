@@ -6,6 +6,8 @@ use std::{
     sync::mpsc,
 };
 use tokio_util::sync::CancellationToken;
+#[cfg(target_os = "macos")]
+mod macos_memory;
 
 pub(crate) fn reader(
     mut pipe: impl Read + Send + 'static,
@@ -38,9 +40,13 @@ pub(crate) struct Running {
     tree: Option<std::os::windows::io::OwnedHandle>,
     #[cfg(unix)]
     reaped: bool,
+    #[cfg(target_os = "macos")]
+    memory: Option<macos_memory::Guard>,
 }
 impl Drop for Running {
     fn drop(&mut self) {
+        #[cfg(target_os = "macos")]
+        drop(self.memory.take()); // Stop all PID access before reaping.
         #[cfg(windows)]
         drop(self.tree.take());
         #[cfg(unix)]
@@ -204,6 +210,8 @@ impl Running {
     /// Poll through this method, not Child::try_wait: on Unix the leader must
     /// remain unreaped until its descendants have been stopped, avoiding ID reuse.
     pub(crate) fn try_wait(&mut self) -> std::io::Result<Option<std::process::ExitStatus>> {
+        #[cfg(target_os = "macos")]
+        let mut memory_error = None;
         #[cfg(unix)]
         if !self.reaped {
             let mut info: libc::siginfo_t = unsafe { std::mem::zeroed() };
@@ -219,7 +227,15 @@ impl Running {
                 return Err(std::io::Error::last_os_error());
             }
             if info.si_signo == 0 {
+                #[cfg(target_os = "macos")]
+                if let Some(error) = self.memory.as_ref().and_then(macos_memory::Guard::error) {
+                    return Err(error);
+                }
                 return Ok(None);
+            }
+            #[cfg(target_os = "macos")]
+            {
+                memory_error = self.memory.take().and_then(|mut guard| guard.finish());
             }
             self.kill_group();
         }
@@ -228,10 +244,15 @@ impl Running {
         {
             self.reaped |= status.is_some();
         }
+        #[cfg(target_os = "macos")]
+        if let Some(error) = memory_error {
+            return Err(error);
+        }
         Ok(status)
     }
 
-    /// Attach the suspended child to its kill-on-close Job before any child code runs.
+    /// Own the helper's lifetime and memory guard. Windows attaches a suspended
+    /// child to a Job; Unix starts an isolated process group before exec.
     pub(crate) fn spawn(
         command: &mut Command,
         cancel: &CancellationToken,
@@ -244,6 +265,7 @@ impl Running {
             command.process_group(0);
             // Only async-signal-safe system calls in the forked child. Never
             // increase an inherited limit; an unconfigurable bound fails spawn.
+            #[cfg(not(target_os = "macos"))]
             unsafe {
                 command.pre_exec(move || {
                     if let Some(bytes) = memory_limit {
@@ -273,9 +295,15 @@ impl Running {
             tree: None,
             #[cfg(unix)]
             reaped: false,
+            #[cfg(target_os = "macos")]
+            memory: None,
         };
-        #[cfg(windows)]
+        #[cfg(any(windows, target_os = "macos"))]
         let mut running = running;
+        #[cfg(target_os = "macos")]
+        if let Some(bytes) = memory_limit {
+            running.memory = Some(macos_memory::Guard::new(running.child.id(), bytes)?);
+        }
         #[cfg(windows)]
         {
             running.tree = Some(process_tree(&running.child, memory_limit)?);
@@ -294,6 +322,72 @@ mod unix_tests {
         process::Stdio,
         time::{Duration, Instant},
     };
+
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn memory_fixture() {
+        if std::env::var("DOWNLOAD_ENGINE_MEMORY_FIXTURE").as_deref() != Ok("1") {
+            return;
+        }
+        let touched = vec![1_u8; 128 << 20];
+        std::hint::black_box(&touched);
+        std::thread::sleep(Duration::from_secs(30));
+        std::hint::black_box(touched);
+    }
+
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn memory_guard_stops_an_owned_helper_without_polling_or_harming_its_neighbour() {
+        let mut neighbour = Running::spawn(
+            Command::new("/bin/sleep").arg("60"),
+            &CancellationToken::new(),
+            None,
+        )
+        .unwrap();
+        let mut command = Command::new(std::env::current_exe().unwrap());
+        command
+            .args(["--exact", "child_process::unix_tests::memory_fixture"])
+            .env("DOWNLOAD_ENGINE_MEMORY_FIXTURE", "1")
+            .stdin(Stdio::null())
+            .stdout(Stdio::null())
+            .stderr(Stdio::null());
+        let mut helper =
+            Running::spawn(&mut command, &CancellationToken::new(), Some(64 << 20)).unwrap();
+        let deadline = Instant::now() + Duration::from_secs(15);
+        // Do not call Running::try_wait until the watchdog has acted: provider
+        // request loops read their pipe without polling the process status.
+        loop {
+            let mut info: libc::siginfo_t = unsafe { std::mem::zeroed() };
+            assert_eq!(
+                unsafe {
+                    libc::waitid(
+                        libc::P_PID,
+                        helper.child.id(),
+                        &mut info,
+                        libc::WEXITED | libc::WNOHANG | libc::WNOWAIT,
+                    )
+                },
+                0
+            );
+            if info.si_signo != 0 {
+                break;
+            }
+            assert!(
+                Instant::now() < deadline,
+                "memory guard did not terminate the helper"
+            );
+            std::thread::sleep(Duration::from_millis(10));
+        }
+        assert!(
+            helper
+                .try_wait()
+                .unwrap_err()
+                .to_string()
+                .contains("exceeded its memory limit")
+        );
+        assert!(helper.reaped);
+        assert!(neighbour.try_wait().unwrap().is_none());
+    }
 
     #[test]
     fn dropping_or_reaping_a_helper_closes_descendant_pipes_without_killing_another_helper() {

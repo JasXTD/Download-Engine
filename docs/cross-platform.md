@@ -87,6 +87,9 @@ Node.js for dependency notices and Perl's standard JSON::PP module to copy only
 files listed in the reviewed source inventory. Linux additionally
 needs the OpenSSL and D-Bus development packages. The project's locked Cargo
 dependencies must already be available for the offline build commands.
+macOS TLS tests use the installed `openssl` command to create temporary 30-day
+localhost identities. Their keys are removed after loading; tests never change
+the system trust store or disable certificate/hostname verification.
 
 ```sh
 bash scripts/Build-UnixFfmpeg.sh "$PWD/artifacts/native-ffmpeg"
@@ -104,6 +107,16 @@ FFmpeg/x264 sources and security patch. Its checksum is compiled into the app;
 replacing the helper without rebuilding the matching app is rejected. Packages
 include its source, notices, rebuild script, native Rust dependency notices and
 all four application executables. Packaging downloads and installs nothing.
+Native packages exclude FFmpeg's raw `config.log`, which contains the build
+environment. Only the explicitly listed configuration, version, hash and test
+records are copied.
+
+Helper memory protection follows platform facilities: Windows Job limits, Linux
+address-space limits, and a macOS watchdog sampling each owned helper's physical
+memory every 25 ms. The macOS guard can allow a brief burst between samples; it is
+not an allocation-level limit. Lua additionally retains its allocator limit.
+The watchdog stops before the child is reaped so an old PID cannot target a new
+process. Helper exit/cancellation also closes its owned process group.
 
 On Linux, `bash scripts/Test-LinuxDesktop.sh` checks desktop-entry parsing and
 magnet forwarding using a harmless stub in a temporary directory. It needs the
@@ -112,6 +125,8 @@ It does not change default file associations.
 
 `bash scripts/Test-UnixPackaging.sh` verifies that native packages copy only
 reviewed source files and reject source symlinks or paths outside the checkout.
+It also verifies that environment dumps and unlisted FFmpeg build records are
+excluded and that linked build records are rejected.
 Its fixtures are temporary and are removed afterward.
 
 Validation evidence and remaining platform checks are recorded in

@@ -9,3 +9,9 @@ fixtures, pinned by path and SHA-256 in scripts/release-source-inventory.json.
 Never include them in application/installer payloads, replace them with production
 identities, or install their certificates in an operating-system trust store.
 Tests trust them only in private connectors. The fixture password is public.
+
+macOS tests instead generate two short-lived (30-day) localhost identities with
+the installed OpenSSL command through scripts/Create-TestTlsFixtures.sh. This
+respects macOS certificate-validity rules without weakening TLS verification.
+The certificates and identities are held in memory and their temporary files
+are removed immediately. Nothing is added to an OS trust store or release bundle.

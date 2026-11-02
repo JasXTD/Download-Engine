@@ -145,7 +145,30 @@ pub(super) fn same_name_ignoring_case(from: &Path, to: &Path) -> bool {
             ) == CSTR_EQUAL
         }
     }
-    #[cfg(not(windows))]
+    #[cfg(target_os = "macos")]
+    {
+        use std::os::unix::fs::MetadataExt;
+        let same_identity = |first: &Path, second: &Path| {
+            std::fs::symlink_metadata(first)
+                .ok()
+                .zip(std::fs::symlink_metadata(second).ok())
+                .is_some_and(|(a, b)| {
+                    !a.is_symlink() && !b.is_symlink() && a.dev() == b.dev() && a.ino() == b.ino()
+                })
+        };
+        from.file_name()
+            .and_then(|name| name.to_str())
+            .zip(to.file_name().and_then(|name| name.to_str()))
+            .is_some_and(|(a, b)| a.to_lowercase() == b.to_lowercase())
+            && from
+                .parent()
+                .zip(to.parent())
+                .is_some_and(|(a, b)| same_identity(a, b))
+            && same_identity(from, to)
+        // The eventual RENAME_EXCL remains authoritative: macOS permits this
+        // only for the same entry on a case-insensitive filesystem, atomically.
+    }
+    #[cfg(not(any(windows, target_os = "macos")))]
     {
         let _ = (from, to);
         false

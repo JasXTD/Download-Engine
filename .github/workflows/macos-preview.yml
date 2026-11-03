@@ -49,6 +49,13 @@ jobs:
           security unlock-keychain -p 'public-ci-fixture' "$keychain"
           security list-keychains -d user -s "$keychain"
           security default-keychain -d user -s "$keychain"
+      - name: Torrent regression tests
+        if: github.event.inputs.validation == '' || github.event.inputs.validation == 'full'
+        timeout-minutes: 15
+        env:
+          DOWNLOAD_ENGINE_CI_IDLE_TIMEOUT_MS: '300000'
+        run: |
+          node scripts/Run-NativeCi.cjs torrent-tests "$RUNNER_TEMP/native-diagnostics" cargo test --locked --offline --manifest-path torrent/Cargo.toml -j 2 -- --test-threads=2
       - name: Build pinned native FFmpeg
         if: github.event.inputs.validation != 'ui'
         run: |
@@ -65,7 +72,6 @@ jobs:
           DOWNLOAD_ENGINE_CI_IDLE_TIMEOUT_MS: '300000'
         run: |
           node scripts/Run-NativeCi.cjs root-tests "$RUNNER_TEMP/native-diagnostics" node scripts/Run-MacTests.cjs
-          node scripts/Run-NativeCi.cjs torrent-tests "$RUNNER_TEMP/native-diagnostics" cargo test --locked --offline --manifest-path torrent/Cargo.toml -j 2 -- --test-threads=2
       - name: Package preview
         if: github.event.inputs.validation != 'ui'
         run: |

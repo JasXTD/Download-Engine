@@ -117,6 +117,42 @@ mod tests {
     use std::os::unix::fs::symlink;
 
     #[test]
+    fn concurrent_first_writes_keep_every_block() {
+        use std::{os::unix::fs::FileExt, sync::Barrier, thread};
+
+        const WRITERS: usize = 8;
+        const BLOCK: usize = 64;
+        let base = TempFolder::new();
+        let root = Root::new(base.path());
+        // Each fresh name exercises the first-create race between peer writers.
+        for round in 0..32 {
+            let relative = PathBuf::from(format!("piece-{round}.bin"));
+            let ready = Barrier::new(WRITERS);
+            thread::scope(|scope| {
+                let workers: Vec<_> = (0..WRITERS)
+                    .map(|index| {
+                        let (root, relative, ready) = (&root, &relative, &ready);
+                        scope.spawn(move || {
+                            ready.wait();
+                            root.open(relative, true, (WRITERS * BLOCK) as u64)?
+                                .write_all_at(&[index as u8 + 1; BLOCK], (index * BLOCK) as u64)
+                        })
+                    })
+                    .collect();
+                for worker in workers {
+                    worker.join().unwrap().unwrap_or_else(|error| {
+                        panic!("concurrent first write, round {round}: {error}")
+                    });
+                }
+            });
+            let expected: Vec<_> = (0..WRITERS)
+                .flat_map(|index| [index as u8 + 1; BLOCK])
+                .collect();
+            assert_eq!(fs::read(base.path().join(relative)).unwrap(), expected);
+        }
+    }
+
+    #[test]
     fn symlinks_and_hard_links_cannot_redirect_reads_or_writes() {
         let base = TempFolder::new();
         let outside = base.path().join("outside");

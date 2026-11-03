@@ -120,6 +120,13 @@ FFmpeg/x264 sources and security patch. Its checksum is compiled into the app;
 replacing the helper without rebuilding the matching app is rejected. Packages
 include its source, notices, rebuild script, native Rust dependency notices and
 all four application executables. Packaging downloads and installs nothing.
+
+Native torrent tests cover concurrent first writes, pause/resume and file-path
+confinement. Unix storage uses exclusive file creation followed by opening an
+existing file when necessary, avoiding a macOS concurrent-creation failure while
+retaining symlink and hard-link protections. CI runs this suite before the longer
+application build so storage failures are reported early.
+
 Native packages exclude FFmpeg's raw `config.log`, which contains the build
 environment. Only the explicitly listed configuration, version, hash and test
 records are copied.

@@ -85,19 +85,27 @@ impl Root {
                 )
             })?;
         }
-        let access = if write {
-            libc::O_RDWR | libc::O_CREAT
-        } else {
-            libc::O_RDONLY
+        let open = |access| {
+            opened(unsafe {
+                libc::openat(
+                    directory.as_raw_fd(),
+                    leaf.as_ptr(),
+                    access | libc::O_NOFOLLOW | libc::O_CLOEXEC | libc::O_NONBLOCK,
+                    0o600,
+                )
+            })
         };
-        let file = opened(unsafe {
-            libc::openat(
-                directory.as_raw_fd(),
-                leaf.as_ptr(),
-                access | libc::O_NOFOLLOW | libc::O_CLOEXEC | libc::O_NONBLOCK,
-                0o600,
-            )
-        })?;
+        let file = if write {
+            // Concurrent openat(O_CREAT) calls can return ENOENT on macOS when
+            // another peer creates the file first. Use exclusive creation and
+            // a plain open for the existing-file case, keeping O_NOFOLLOW on both.
+            match open(libc::O_RDWR | libc::O_CREAT | libc::O_EXCL) {
+                Err(error) if error.kind() == io::ErrorKind::AlreadyExists => open(libc::O_RDWR)?,
+                result => result?,
+            }
+        } else {
+            open(libc::O_RDONLY)?
+        };
         let metadata = file.metadata()?;
         if !metadata.is_file() || metadata.nlink() != 1 {
             return Err(io::ErrorKind::PermissionDenied.into());
@@ -150,6 +158,15 @@ mod tests {
                 .collect();
             assert_eq!(fs::read(base.path().join(relative)).unwrap(), expected);
         }
+    }
+
+    #[test]
+    fn reading_a_missing_file_does_not_create_it() {
+        let base = TempFolder::new();
+        let root = Root::new(base.path());
+        let error = root.open(Path::new("missing.bin"), false, 10).unwrap_err();
+        assert_eq!(error.kind(), io::ErrorKind::NotFound);
+        assert_eq!(fs::read_dir(base.path()).unwrap().count(), 0);
     }
 
     #[test]

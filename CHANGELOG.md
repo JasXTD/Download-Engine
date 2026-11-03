@@ -2,6 +2,17 @@
 
 Release notes are available offline in Help → Changelog. Newest releases appear first.
 
+## 3.10.0 — 2026-11-03
+
+### macOS and Linux
+
+- Added native macOS packages for Apple Silicon and Intel, plus a Linux x64 archive. The existing interface, download engine, torrents, queues, Web Grabber, Lua extensions and localhost MCP are shared across Windows, macOS and Linux.
+- Added native file dialogs, platform download/profile folders, browser registration and torrent-opening integration. Linux dialogs are parented to the application window. Saved secrets use macOS Keychain or a Linux Secret Service keyring; Windows keeps its existing credential protection.
+- Bundled a native FFmpeg build, matching source and license notices in every desktop package. macOS bundles are ad-hoc signed and are not Apple-notarized; Windows packages remain unsigned. Linux requires a compatible desktop, portal backend and runtime libraries documented in the platform guide.
+- Fixed a macOS torrent race that could report a missing file when several peers started writing at once. Added a concurrent-write regression while retaining symlink and hard-link protections.
+- Native tests, package smoke checks and UI rendering checks run on both Mac architectures. Linux X11 dialogs, keyring and Firefox handoff were checked in an isolated Debian desktop. Interactive Mac permission prompts, Wayland and other Linux desktop/browser combinations still need separate hands-on validation.
+- Documented platform limits: Windows tray/startup/clipboard integrations, enterprise SSPI login and completion power actions remain Windows-specific. PowerShell automation on macOS/Linux requires an existing PowerShell 7 installation; Lua is bundled.
+
 ## 3.9.0 — 2026-11-01
 
 ### Torrent workflow

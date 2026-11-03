@@ -1,9 +1,10 @@
 # macOS and Linux
 
 The native builds use the same Rust download engine and egui interface as Windows.
-This branch adds platform adapters; it does not replace the Windows UI or installer.
-Native packages are previews until their platform validation is complete. The
-published Windows release remains the supported release in the meantime.
+Version 3.10.0 adds macOS Apple Silicon and Intel packages and a Linux x64 archive
+alongside the Windows installer and portable ZIP. Platform adapters preserve the
+existing UI and engine. Read the requirements and validation limits below before
+choosing a package.
 
 ## What is shared
 
@@ -15,7 +16,7 @@ before downloading; torrents remain off until the user enables them.
 Windows tray notifications, automatic clipboard offers, the floating drop box,
 Windows startup registration, Explorer antivirus integrations, enterprise SSPI
 login, and completion power actions are Windows integrations. Their Windows-only
-controls are not offered by the native previews. Linux/macOS can use ClamAV or a
+controls are not offered by the native builds. Linux/macOS can use ClamAV or a
 configured native command-line scanner. PowerShell automation needs an existing
 PowerShell 7 installation; Lua is included. No platform installs a scanner or
 PowerShell automatically.
@@ -56,7 +57,8 @@ an explicit `DOWNLOAD_ENGINE_HOME` or `portable.json` can select separate storag
 
 ## macOS
 
-The package contains `Download Engine.app`. Keep it in its final location before
+Choose `macos-arm64` for Apple Silicon or `macos-x64` for Intel. The package
+contains `Download Engine.app`. Keep it in its final location before
 connecting browsers. `.torrent` files and magnet links are declared in the app
 bundle and enter the same review inbox as pasted links. Finder's **Open With** can
 choose the app for torrent files. Dragging local torrent files onto the window also
@@ -74,9 +76,14 @@ CLI helpers are inside the app bundle:
 "/Applications/Download Engine.app/Contents/MacOS/de-cli" list
 ```
 
-Preview bundles have an ad-hoc signature for local integrity checks. They are not
-Apple Developer ID signed or notarized. Public macOS distribution still needs its
-signing/notarization and a real desktop smoke test; do not disable Gatekeeper.
+The bundles have an ad-hoc signature for local integrity checks. They are not
+Apple Developer ID signed or notarized, so macOS may block the first launch.
+If you trust the package, use macOS's per-app **Privacy & Security → Open Anyway**
+review after attempting to open it; follow [Apple's opening guidance](https://support.apple.com/en-gb/102445)
+and do not disable Gatekeeper globally. Native
+tests, package smoke checks and UI rendering ran on both Mac architectures in CI.
+Interactive Finder and Keychain permission prompts still need hands-on validation
+on a real Mac; CI does not prove those interactions.
 
 ## Browser integration
 

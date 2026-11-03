@@ -1,7 +1,7 @@
-name: macOS preview validation
+name: macOS build validation
 on:
   push:
-    branches: [codex/macos-linux-support]
+    branches: [main, codex/macos-linux-support]
   workflow_dispatch:
     inputs:
       validation:

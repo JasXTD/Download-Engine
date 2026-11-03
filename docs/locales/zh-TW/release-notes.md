@@ -1,3 +1,11 @@
+## 3.10.0 — 2026-11-03
+
+### macOS 和 Linux
+
+新增 Apple Silicon 和 Intel Mac 原生套件及 Linux x64 壓縮檔，與 Windows 共用介面和下載引擎。包含 FFmpeg、對應原始碼和授權文件，並支援原生檔案對話框及作業系統憑證儲存。Mac 套件採用臨時簽章，尚未通過 Apple 公證。系統需求和測試範圍請參閱指南。
+
+[Guide / English](../../cross-platform.md)
+
 ## 3.9.0 — 2026-11-01
 
 ### 種子工作流程

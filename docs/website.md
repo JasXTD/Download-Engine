@@ -67,10 +67,11 @@ The theme screenshots replace the capture machine's local download path in the
 details panel with `D:\Downloads\Programs`; redact any personal path the same way
 before adding a new screenshot.
 
-The 3.7.0 release copy describes torrents as optional and off by default. Retain
-the file-selection, upload, proxy and desktop-only limits in the FAQ; do not imply
-that browser capture, scripts or MCP can add torrents. Release links and structured
-data use the same version as the installer and portable packages. Publish the
+Torrent support is optional and off by default. Retain file-selection, upload and
+proxy limits in the FAQ. Connected browser extensions can hand off magnets and
+captured torrent files for review; scripts and MCP cannot add torrents. Clipboard
+offers remain Windows-only. Release links and structured data use the same
+version as the desktop packages. Publish the
 matching release assets before deploying these new download links.
 
 The hosting section documents MEGA public files, public WeTransfer transfers and
@@ -87,13 +88,16 @@ GitHub Pages deploys the `/docs` contents automatically. Check the repository's
 Actions page or Settings → Pages for the deployment result, then verify the
 published page and affected assets.
 
-Featured packages are explicitly pinned to **3.6.0**. Publish the v3.6.0 GitHub
-release with all seven assets before or together with pushing this site, or the
-download buttons return 404. When a new release is
-published, update the version labels, six asset URLs, release-notes URL and
-SoftwareApplication version/download URL together. The Firefox ZIP stays a release
-asset, but the site links to the signed Firefox Add-ons listing instead of it. Verify each asset exists in
-that release. The separate **Latest GitHub release** link always opens GitHub's
+Featured packages are explicitly pinned to **3.10.0**. Publish the GitHub release
+with all ten assets before or together with pushing this site, or download buttons
+return 404. Update the current version labels, all nine payload URLs, checksum URL,
+release-notes URL and SoftwareApplication version/download URL together. Keep
+historical feature-card versions unchanged. The four desktop cards cover Windows
+installer/portable, macOS Apple Silicon/Intel and Linux x64. Keep native runtime
+requirements and signing status visible and link to `cross-platform.md`.
+Firefox Add-ons is the normal installation route; the unsigned Firefox developer
+ZIP is labeled separately. Verify every linked asset exists in that release.
+The separate **Latest release** link always opens GitHub's
 current latest release. The website never downloads or runs an installer
 automatically.
 

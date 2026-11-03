@@ -15,9 +15,7 @@ use tokio::{
 };
 use tokio_util::sync::CancellationToken;
 
-#[path = "tls_fixtures.rs"]
-mod tls_fixtures;
-pub use tls_fixtures::{alternate_cert, cert};
+use crate::tls_fixtures;
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum Mode {
     Plain,

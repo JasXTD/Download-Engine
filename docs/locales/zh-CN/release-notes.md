@@ -1,3 +1,11 @@
+## 3.10.0 — 2026-11-03
+
+### macOS 和 Linux
+
+新增 Apple Silicon 和 Intel Mac 原生安装包及 Linux x64 压缩包，与 Windows 共用界面和下载引擎。包含 FFmpeg、对应源码和许可证，并支持原生文件对话框及操作系统凭据存储。Mac 包采用临时签名，尚未通过 Apple 公证。系统要求和测试范围请参阅指南。
+
+[Guide / English](../../cross-platform.md)
+
 ## 3.9.0 — 2026-11-01
 
 ### 种子工作流程

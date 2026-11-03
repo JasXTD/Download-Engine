@@ -1,3 +1,11 @@
+## 3.10.0 — 2026-11-03
+
+### macOS e Linux
+
+Pacchetti nativi per Mac Apple Silicon e Intel e un archivio Linux x64 con la stessa interfaccia e lo stesso motore di download di Windows. Sono inclusi FFmpeg, sorgenti e licenze, finestre di dialogo native e archiviazione delle credenziali tramite il sistema operativo. I pacchetti Mac hanno firma ad hoc, senza autenticazione notarile Apple. Requisiti e limiti dei test sono nella guida.
+
+[Guide / English](../../cross-platform.md)
+
 ## 3.9.0 — 2026-11-01
 
 ### Gestione dei torrent

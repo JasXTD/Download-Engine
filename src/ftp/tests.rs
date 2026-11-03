@@ -29,7 +29,10 @@ fn store() -> (tempfile::TempDir, Store) {
 fn trusted() -> tokio_native_tls::TlsConnector {
     let mut builder = native_tls::TlsConnector::builder();
     builder.min_protocol_version(Some(native_tls::Protocol::Tlsv12));
-    for bytes in [fixture::cert(), fixture::alternate_cert()] {
+    for bytes in [
+        crate::tls_fixtures::cert(),
+        crate::tls_fixtures::alternate_cert(),
+    ] {
         builder.add_root_certificate(native_tls::Certificate::from_der(bytes).unwrap());
     }
     builder.build().unwrap().into()

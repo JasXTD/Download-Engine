@@ -368,6 +368,9 @@ figcaption { padding: 12px 16px; color: #b3c0cf; font-size: 11px; line-height: 1
 .download-option h3 { font-size: 26px; }
 .download-option p { font-size: 14px; margin-block: 12px 24px; max-width: 360px; }
 .download-option .button { width: 100%; }
+.package-buttons { display: grid; gap: 10px; }
+.platform-wordmark { color: #b7dacb; font-size: 22px; font-weight: 700; }
+.package-guide { display: block; margin-top: 14px; text-align: center; font-size: 12px; }
 .package-detail { display: block; font-size: 11px; color: #a5b8c8; margin-top: 12px; text-align: center; }
 .download-note { display: flex; gap: 13px; margin-block: 22px 35px; padding-inline: 3px; color: var(--blue); }
 .download-note p { font-size: 12px; }

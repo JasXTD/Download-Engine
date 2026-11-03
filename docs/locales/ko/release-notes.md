@@ -1,3 +1,11 @@
+## 3.10.0 — 2026-11-03
+
+### macOS 및 Linux
+
+Apple Silicon 및 Intel Mac용 네이티브 패키지와 Linux x64 압축 파일을 추가했습니다. Windows와 같은 UI와 다운로드 엔진을 사용하며 FFmpeg와 소스 및 라이선스, 네이티브 대화상자, OS 자격 증명 저장소를 지원합니다. Mac 패키지는 임시 서명되었으며 Apple 공증을 받지 않았습니다. 요구 사항과 테스트 범위는 가이드를 확인하세요.
+
+[Guide / English](../../cross-platform.md)
+
 ## 3.9.0 — 2026-11-01
 
 ### 토렌트 작업 흐름

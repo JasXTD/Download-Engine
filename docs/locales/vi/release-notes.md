@@ -1,3 +1,11 @@
+## 3.10.0 — 2026-11-03
+
+### macOS và Linux
+
+Thêm gói gốc cho Mac Apple Silicon và Intel cùng tệp nén Linux x64, dùng chung giao diện và bộ máy tải xuống với Windows. Bao gồm FFmpeg, mã nguồn và giấy phép, hộp thoại gốc và kho thông tin xác thực của hệ điều hành. Gói Mac được ký ad hoc, chưa được Apple công chứng. Xem hướng dẫn về yêu cầu và phạm vi kiểm thử.
+
+[Guide / English](../../cross-platform.md)
+
 ## 3.9.0 — 2026-11-01
 
 ### Quy trình torrent

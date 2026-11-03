@@ -11,6 +11,8 @@ use std::{sync::atomic::Ordering, time::Duration};
 use tokio_util::sync::CancellationToken;
 #[path = "support/ftp_server.rs"]
 mod fixture;
+#[path = "support/tls_fixtures.rs"]
+mod tls_fixtures;
 use fixture::{Mode, Server};
 
 fn setup() -> (tempfile::TempDir, Store) {

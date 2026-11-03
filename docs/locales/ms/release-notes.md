@@ -1,3 +1,11 @@
+## 3.10.0 — 2026-11-03
+
+### macOS dan Linux
+
+Pakej asli untuk Mac Apple Silicon dan Intel serta arkib Linux x64 menggunakan antara muka dan enjin muat turun yang sama seperti Windows. FFmpeg, sumber dan lesennya disertakan, bersama dialog asli dan stor kelayakan sistem operasi. Pakej Mac ditandatangani ad hoc, tanpa notarisasi Apple. Rujuk panduan untuk keperluan dan had ujian.
+
+[Guide / English](../../cross-platform.md)
+
 ## 3.9.0 — 2026-11-01
 
 ### Aliran kerja torrent

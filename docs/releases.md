@@ -33,6 +33,7 @@ node scripts/Build-LicenseBundle.cjs --check
 .\scripts\Package.ps1 -SkipBuild -AllowUnsignedRelease
 .\scripts\Build-Installer.ps1 -SkipBuild -AllowUnsignedRelease
 .\scripts\Package-ReleaseSources.ps1
+# Stage the verified macOS and Linux archives described below before checksums.
 .\scripts\Write-ReleaseChecksums.ps1
 ```
 
@@ -59,8 +60,10 @@ For native dialog captures, build with `--features screenshot` and run
 
 Public artifacts are written to `dist/releases/<version>`. Every public packaging
 entry point rejects unexpected files, subdirectories and links in that version's
-folder; checksum generation additionally requires all six payloads. The completed
-folder contains exactly those six files plus `SHA256SUMS-<version>`. Never upload
+folder; checksum generation additionally requires all nine payloads: Windows
+installer and portable ZIP, macOS arm64 and x64 ZIPs, Linux x64 tar.gz, three
+extension ZIPs and the source ZIP. The completed folder contains exactly those
+nine files plus `SHA256SUMS-<version>`. Never upload
 the entire `dist` tree. Existing older builds and private test profiles are not moved.
 
 All packagers validate `scripts/release-source-inventory.json` before copying
@@ -92,6 +95,28 @@ instead of either unsigned switch. Do not mix signing modes.
 For signed public packages, also pass `-Signed` to `Package-ReleaseSources.ps1`
 and `Write-ReleaseChecksums.ps1`. A version folder cannot mix signed and unsigned
 Windows package names.
+
+## Native release packages
+
+Build macOS arm64 and x64 on their respective native runners using the full
+`macOS build validation` workflow. The workflow checks torrent/app regressions,
+builds FFmpeg from the pinned sources, packages the app, checks the extracted
+package and renders the UI. Use artifacts from the exact release commit; verify
+the artifact archive digest and each package's companion SHA-256 record before
+copying the two ZIPs into `dist/releases/<version>`.
+
+Build Linux x64 on Debian 12 with the [native-platform instructions](cross-platform.md#build-and-validate).
+Run `Test-UnixPackaging.sh`, extract the resulting archive and run
+`Test-NativePackage.sh` against that extracted folder. Keep the build isolated
+from personal profiles. Verify its companion SHA-256 record and copy only
+`DownloadEngine-<version>-linux-x64.tar.gz` into the release folder.
+
+Every desktop package must contain its matching native FFmpeg, source and license
+notices. Native binaries are built from source, not renamed Windows binaries.
+macOS bundles are ad-hoc signed, not Developer ID signed or notarized; describe
+that accurately. Preserve the platform guide's limits on interactive Mac testing,
+Linux desktop coverage and Windows-only integrations. Generate the combined
+checksums only after all nine payloads are present.
 
 ## Language release checks
 

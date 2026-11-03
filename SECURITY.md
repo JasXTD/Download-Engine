@@ -1,8 +1,8 @@
 # Security policy
 
 This policy explains how to report vulnerabilities in **Download Engine**, what
-the application trusts, and where its protections end. It covers the Windows
-desktop app, download engine, CLI, local MCP server, browser extensions, native
+the application trusts, and where its protections end. It covers the Windows,
+macOS and Linux desktop app, download engine, CLI, local MCP server, browser extensions, native
 messaging host, installer, packaging, and bundled integrations.
 
 **Report suspected vulnerabilities privately.** Do not publish exploit details,
@@ -51,7 +51,7 @@ use public issues.
 Include enough information to understand the problem and reproduce it safely.
 A complete exploit is not required:
 
-- **Environment:** app and extension versions, Windows/browser versions, installed
+- **Environment:** app and extension versions, OS/browser versions, installed
   or portable mode, and the affected component.
 - **Preconditions:** enabled features, permissions, proxy mode, script access, or
   user interaction needed to trigger the issue.
@@ -92,14 +92,14 @@ the maintainer your proposed timeline in that channel.
 
 ## Security model
 
-Download Engine runs under your Windows account. It treats remote pages, server
+Download Engine runs under your user account. It treats remote pages, server
 responses, filenames, manifests, archives, and browser handoffs as untrusted input.
 Its validation is intended to prevent that input from gaining unintended access
 to local files, credentials, or app control.
 
 These are application controls, not operating-system isolation. A program already
-running as your Windows user can have access to the same files and Windows
-credential facilities. The app does not protect a compromised Windows account.
+running as your user can have access to the same files and OS credential
+facilities. The app does not protect a compromised user account.
 
 ### Downloaded files and offline websites
 
@@ -210,8 +210,8 @@ Only enable scripts and automatic triggers you have reviewed and trust.
 | --- | --- |
 | Routing and completion rules | Supported app actions such as assigning queues or starting another queue; no shell execution. |
 | Lua automation | Restricted app API for reading state and permitted download/queue actions. It has application-level limits, not an OS sandbox. |
-| PowerShell scripts | Normal file, network, and program access under your Windows account. App API restrictions do not confine the PowerShell process. |
-| Custom scanner commands | External programs with your Windows account's permissions; trust both the executable and its arguments. |
+| PowerShell scripts | Normal file, network, and program access under your account. App API restrictions do not confine the PowerShell process. macOS/Linux require an existing PowerShell 7 installation. |
+| Custom scanner commands | External programs with your account's permissions; trust both the executable and its arguments. |
 | Lua site readers | A separate API for fetching public pages and returning supported files/streams; they cannot inspect or change existing downloads through the automation API. |
 | Extensions | Packages of Lua jobs, each in its own worker with the limits of its kind. Rust holds `xd.fetch` and `xd.add` to the hosts a package declares. These are application-level limits, not an OS sandbox, and publishers are not verified, so install only from people you trust. See [Extensions](docs/extensions.md). |
 
@@ -258,25 +258,31 @@ for profiles, access modes, and connection troubleshooting.
 
 ## Local data and credentials
 
-Installed profiles normally use `%LOCALAPPDATA%\Download Engine`. Older profiles
-may keep `%LOCALAPPDATA%\IDM_EX`; portable copies use their configured `data`
-directory. `DOWNLOAD_ENGINE_HOME` can select a separate profile, with
-`IDM_EX_HOME` retained for compatibility.
+Windows installed profiles normally use `%LOCALAPPDATA%\Download Engine`; portable
+copies use their configured `data` directory. macOS uses
+`~/Library/Application Support/Download Engine`. Linux uses
+`$XDG_DATA_HOME/Download Engine` or `~/.local/share/Download Engine`.
+`DOWNLOAD_ENGINE_HOME` can select a separate profile.
+
+Protected blobs use Windows user-scoped DPAPI or, on macOS/Linux, AES-GCM with a
+random key held in macOS Keychain or the Linux Secret Service keyring. The native
+keyring must be available and unlocked; there is no plaintext fallback. A Windows
+DPAPI blob cannot be decrypted after copying a profile to macOS/Linux.
 
 | Data | Protection and sharing considerations |
 | --- | --- |
 | Queue database and command records | Not encrypted; may contain URLs, signed query parameters, filenames, local paths, and download history. |
-| Supported saved site/proxy credentials | Stored using Windows Credential Manager; other programs under the same Windows user remain outside the isolation boundary. |
-| Browser-login snapshots | Encrypted using Windows user-scoped DPAPI before database storage and scoped to the associated download/origin. |
-| MCP access token | Encrypted using user-scoped DPAPI in the profile's `mcp-token.dpapi`; copied client configuration contains the usable token. |
+| Supported saved site/proxy credentials | Stored using Windows Credential Manager, macOS Keychain or Linux Secret Service. Other programs under the same account remain outside the isolation boundary. |
+| Browser-login snapshots | Encrypted using the protected-blob mechanism above before database storage and scoped to the associated download/origin. |
+| MCP access token | Stored as a protected blob in the profile's `mcp-token.dpapi` (the filename is retained on native platforms); copied client configuration contains the usable token. |
 | Saved scripts and script output | Stored locally; source and output can contain anything the script author includes. Review before sharing. |
-| Extension settings | Plain settings are stored locally. `secret` and `aes_key` settings are encrypted using Windows user-scoped DPAPI. A `secret` reaches the job as text, so its code could still write it to a run log. |
+| Extension settings | Plain settings are stored locally. `secret` and `aes_key` settings use protected blobs. A `secret` reaches the job as text, so its code could still write it to a run log. |
 | Diagnostics and exported lists | Can expose operational details or private URLs. Redact them manually; an export is not a safe anonymized profile. |
 
 Keep the application, portable folder, and profile writable only by accounts you
-trust. Windows credential protection does not encrypt the whole profile, prevent
+trust. Credential protection does not encrypt the whole profile, prevent
 access by another program running as you, or guarantee portable secrets will work
-under another Windows account. Secure backups of profiles and downloads separately.
+under another account or operating system. Secure backups of profiles and downloads separately.
 
 ## Packages and dependencies
 
@@ -284,6 +290,11 @@ Current Windows release packages use explicit **Unsigned** / **UnsignedSetup**
 filenames and have no verified Authenticode publisher signature. Release checksums
 help detect changed bytes when compared with a trusted copy of the checksum list;
 they are not a substitute for code signing or an independent security review.
+
+macOS bundles are ad-hoc signed for local integrity, not Developer ID signed or
+Apple-notarized. Linux is distributed as an x64 archive with documented runtime
+requirements. See the [native-platform guide](docs/cross-platform.md) for signing,
+desktop integration and validation limits.
 
 Use the project's published release assets rather than repackaged binaries. Keep
 the app, extension, and bundled media helper from the matching release together.

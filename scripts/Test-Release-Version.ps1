@@ -59,7 +59,7 @@ try {
     }
     $firefox = Get-Content (Join-Path $fixture 'extension/manifest.firefox.json') -Raw | ConvertFrom-Json
     $firefox.browser_specific_settings | Add-Member -NotePropertyName gecko_android -NotePropertyValue @{}
-    With-InvalidFile 'extension/manifest.firefox.json' ($firefox | ConvertTo-Json -Depth 8) 'Windows desktop companion'
+    With-InvalidFile 'extension/manifest.firefox.json' ($firefox | ConvertTo-Json -Depth 8) 'desktop companion'
     With-InvalidFile 'CHANGELOG.md' "# Changelog`n`n## 0.0.0 $([char]0x2014) 2026-10-16`n`nOld notes." 'first CHANGELOG.md release heading'
     With-InvalidFile 'CHANGELOG.md' "# Changelog`n`n## $version $([char]0x2014) 2026-02-30`n`nNotes." 'first CHANGELOG.md release heading'
     With-InvalidFile 'CHANGELOG.md' "# Changelog`n`n## $version $([char]0x2014) 2026-10-16`n`n### Added`n`n" 'must contain release notes'

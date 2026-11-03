@@ -5,7 +5,7 @@
 <h1 align="center">Download Engine</h1>
 
 <p align="center">
-  <strong>A free, open-source download manager for Windows.</strong><br>
+  <strong>A free, open-source download manager for Windows, macOS and Linux.</strong><br>
   Download files, videos and torrents, organize your queues and automate the routine. Built in Rust, with browser integration.
 </p>
 
@@ -22,21 +22,20 @@
 </p>
 
 <p align="center">
-  <strong>Windows x64</strong> · Installer or portable · Chrome, Edge, Brave &amp; Firefox · MIT licensed
+  <strong>Windows · macOS · Linux</strong> · Chrome, Edge, Brave &amp; Firefox · MIT licensed
 </p>
 
 ![Download Engine in dark mode, showing download controls, queues and file progress](docs/images/downloads-dark.png)
 
 <p align="center"><em>Example desktop layout in dark mode, with sample downloads.</em></p>
 
-macOS and Linux previews use the same interface and engine. See the
-[native-platform guide](docs/cross-platform.md) for build requirements, profiles
-and the integrations that remain Windows-only. Published downloads are still the
-Windows release while native validation is in progress.
+Windows, macOS and Linux use the same interface and engine. See the
+[native-platform guide](docs/cross-platform.md) for installation requirements,
+profiles, validation coverage and the integrations that remain Windows-only.
 
 ## What is Download Engine?
 
-Download Engine is a free, open-source download manager for Windows. It brings file
+Download Engine is a free, open-source download manager for Windows, macOS and Linux. It brings file
 transfers, supported video downloads, schedules, and browser handoffs into one
 desktop app. Add a link, review where it will be saved,
 and manage progress from a download list with queues and individual status windows.
@@ -47,10 +46,10 @@ Looking for a free **IDM alternative**? The familiar layout is inspired by
 **Internet Download Manager (IDM)**. Download Engine is an independent project, is
 not affiliated with IDM, and does not claim complete IDM feature parity.
 
-> **In this build, v3.9.0:** torrent opening from Windows and browser extensions,
-> drag-and-drop, clipboard review, optional seeding and incoming connections,
-> multi-file antivirus scans, and folder moves and renames.
-> Find published [installers, portable ZIPs and extensions](https://github.com/JasXTD/Download-Engine/releases),
+> **In this build, v3.10.0:** native macOS packages for Apple Silicon and Intel,
+> plus Linux x64, with native dialogs, OS credential storage and bundled FFmpeg.
+> Windows keeps its existing installer, portable package and integrations.
+> Find published [desktop packages and extensions](https://github.com/JasXTD/Download-Engine/releases),
 > or read the [changelog](CHANGELOG.md).
 
 ![A short tour of Download Engine: the download list, adding a link, the browser extension's Download video button and media list, choosing video quality, queues, schedules, the website grabber, app extensions and custom themes](docs/images/download-engine-demo.gif)
@@ -63,7 +62,7 @@ not affiliated with IDM, and does not claim complete IDM feature parity.
 
 - Download over **HTTP, HTTPS, FTP, and FTPS**, with parallel connections where
   supported by the server.
-- Download **MEGA public file links** on Windows, including parallel transfers,
+- Download **MEGA public file links**, including parallel transfers,
   pause/resume, local decryption, and mandatory file-integrity verification.
   Paste the complete link including its `#` key; see [MEGA downloads](docs/mega.md)
   for supported links and limits.
@@ -89,7 +88,7 @@ not affiliated with IDM, and does not claim complete IDM feature parity.
 > cannot guarantee that a file is safe. Torrent support is optional; seeding after
 > completion and incoming connections are off by default.
 
-- Open torrent files from Explorer, drop them on the app, or review a copied magnet link. Browser extensions can send clicked magnet links and captured torrent files for review. Optional Windows registration is under **Preferences → Torrents**.
+- Open torrent files from your file manager, or drop them on the app. Browser extensions can send clicked magnet links and captured torrent files for review. Windows also offers copied magnet links; its optional registration is under **Preferences → Torrents**. See [native file associations](docs/cross-platform.md) for macOS and Linux.
 
 - Open **Tasks → Open torrent file…**, or paste a magnet link into **Add download**.
   Enable torrents when prompted, then choose the files or folders to download.
@@ -110,8 +109,8 @@ not affiliated with IDM, and does not claim complete IDM feature parity.
 - Group downloads into named queues with their own order and concurrency limits.
 - Schedule a one-time start or recurring daily/weekday download windows.
 - Use synchronization queues to check supported files for changes.
-- Configure completion notifications and optional actions such as exiting the app,
-  shutting down, sleeping, or hibernating the computer.
+- Configure optional completion actions such as exiting the app. Windows also
+  supports tray notifications and shutting down, sleeping or hibernating the computer.
 
 ### Browser and website tools
 
@@ -129,14 +128,14 @@ not affiliated with IDM, and does not claim complete IDM feature parity.
 
 ### Desktop controls and automation
 
-- Follow Windows or pick Light, Dark or a **custom theme**: bundled artwork such as
+- Follow the system theme or pick Light, Dark or a **custom theme**: bundled artwork such as
   Aurora, Neon Courier, Reactor Night and Moonveil, or your own PNG/JPEG, shown behind the
   whole window with adjustable strength and accent color. Bright pictures are
   darkened automatically so text stays readable, and everything works offline.
 - Pin the toolbar actions you use under **More → Customize toolbar**, resize the
-  details panel, customize the download table, and keep transfers running in the
-  system tray.
-- Choose from **19 interface languages**, with Windows language detection and
+  details panel and customize the download table. Windows can also keep transfers
+  running in the system tray.
+- Choose from **19 interface languages**, with system language detection and
   English fallback; read the bundled guide offline with **F1**.
 - Verify SHA-256 checksums and optionally scan files with a configured antivirus.
 - On the **Extensions** page, build routing rules or write **Lua or PowerShell**
@@ -178,13 +177,22 @@ as a media file. Download only content you are authorized to save.
 
 ## Install
 
-Choose a **Windows x64** package from the project's release assets. The desktop app
+Choose the package for your computer from the project's release assets. The desktop app
 is required for browser integration; the browser extension does not download on its own.
 
 | Package | How to use it |
 | --- | --- |
 | `DownloadEngine-<version>-UnsignedSetup.exe` | Install for your Windows account; no administrator access needed. |
 | `DownloadEngine-<version>-Unsigned-windows-x64.zip` | Extract the entire archive into a writable folder and run `de.exe`. Keep its supporting files together. |
+| `DownloadEngine-<version>-macos-arm64.zip` | Apple Silicon Mac: extract and move `Download Engine.app` to its permanent location. |
+| `DownloadEngine-<version>-macos-x64.zip` | Intel Mac: extract and move `Download Engine.app` to its permanent location. |
+| `DownloadEngine-<version>-linux-x64.tar.gz` | Linux x64: extract into a permanent folder and run `./de`. Requires glibc 2.36+, OpenSSL 3, desktop libraries and a portal backend. |
+
+Every desktop package includes its native **FFmpeg**, matching source and license
+notices. macOS packages are **ad-hoc signed, not Apple-notarized**. See the
+[native-platform guide](docs/cross-platform.md) for Mac opening instructions,
+Linux runtime/keyring requirements, browser setup and platform limitations.
+There is no Android package.
 
 Current Windows packages are **unsigned**. They do not have a verified Authenticode
 publisher signature, and Windows may show an unknown-publisher warning. Check the
@@ -216,12 +224,12 @@ Download Engine checks for updates when the app opens, enabled by default. A new
 version offers **Get update** or **Later**. Disable **Check for updates on launch**
 in **Preferences → Startup & tray**, or check manually from **Help → Check for updates**.
 Updates are downloaded and installed manually from the official GitHub release page.
-**Help → About → GitHub** opens this repository. Windows is the supported desktop platform;
-macOS, Linux, and Android packages are not provided by this release workflow.
+**Help → About → GitHub** opens this repository. Choose the package for your OS
+and CPU architecture on the release page.
 
 ## Quick start
 
-1. Run `de.exe` and select **Add URL**.
+1. Open Download Engine (`de.exe` on Windows, the `.app` on macOS, or `./de` on Linux) and select **Add URL**.
 2. Paste a direct file link, choose a queue and destination, then select
    **Start download**. For a supported video page, review the quality choices first.
 3. Watch progress in the download list; double-click an entry for its status window.
@@ -278,7 +286,7 @@ Choose the level of automation you need:
 | --- | --- |
 | **Routing rules** | Send new files to a queue by site/file type, set a speed limit, or start another queue after completion. |
 | **Lua scripting** | Inspect queues, perform supported app actions, and react to download events using the built-in Lua runtime. |
-| **PowerShell scripting** | Run trusted Windows automation under your own account. This has normal file and program access. |
+| **PowerShell scripting** | Run trusted automation under your own account, with normal file and program access. macOS/Linux require an existing PowerShell 7 installation. |
 | **Lua site readers** | Extend file/video-page support in the same editor and core API, with restricted page-fetching permissions. |
 | **Lua download providers** | Resolve a file and apply a same-length byte transformation while the core owns transfers, recovery and verification. [Guide and examples](docs/lua-providers.md). |
 | **Extensions** | Install site support and automation as one reviewed package. Each job keeps its own limits, and the app holds it to the hosts it declares. [Guide](docs/extensions.md). |
@@ -312,10 +320,14 @@ Installed profiles normally live in `%LOCALAPPDATA%\Download Engine`. Portable
 copies use their own `data` folder. `DOWNLOAD_ENGINE_HOME` selects a separate
 profile.
 
+macOS uses `~/Library/Application Support/Download Engine`; Linux uses
+`$XDG_DATA_HOME/Download Engine` or `~/.local/share/Download Engine`. Native archives
+use these normal user profiles unless separate storage is explicitly configured.
+
 The queue database is **not encrypted** and can contain signed URLs and local file
 paths. Supported credentials and browser-login snapshots use Windows credential
-storage or user-scoped DPAPI, but other programs running as your Windows account
-are outside that protection boundary. Review scripts and extensions before running
+protection, macOS Keychain or a Linux Secret Service keyring. Other programs
+running as your account are outside that protection boundary. Review scripts and extensions before running
 them, keep MCP local, and treat downloaded files and offline websites as untrusted
 content.
 
@@ -327,6 +339,7 @@ permissions, data protection, and the limits of these controls.
 | Topic | Documentation |
 | --- | --- |
 | Everyday use, recovery, and troubleshooting | [User guide](docs/user-guide.md) |
+| macOS/Linux installation, profiles and platform limits | [Native-platform guide](docs/cross-platform.md) |
 | Supported sites, streams, and protocol limits | [Detailed reference](docs/reference.md#youtube-video-downloads) |
 | CLI, rules, and custom scripts | [Automation](docs/automation.md) · [Lua walkthrough](docs/user-guide.md#lua-scripting) |
 | Custom download providers and offline samples | [Provider API](docs/lua-providers.md) · [Offline lab](docs/lua-provider-lab.md) |
@@ -355,6 +368,9 @@ starts it only when a torrent needs it.
 Node.js is needed for JavaScript tests and packaging tools; Inno Setup is needed
 for the installer. Neither is required to run the packaged app.
 
+For macOS and Linux, follow the [native build instructions](docs/cross-platform.md#build-and-validate).
+The native packages build FFmpeg from the repository's pinned source archives.
+
 Video merging needs the pinned FFmpeg helper. Git checkouts and source ZIPs omit
 `tools/ffmpeg/ffmpeg.exe`; copy it from the matching portable release or follow the
 [FFmpeg build instructions](tools/ffmpeg/source/README.md). The installer and portable
@@ -366,7 +382,7 @@ See [build and verification details](docs/reference.md#build-and-verify) and the
 
 For a connection problem, expired link, or stalled queue, start with the
 [troubleshooting guide](docs/user-guide.md#troubleshooting). When reporting an
-ordinary bug, include the app/extension versions, Windows/browser versions, steps
+ordinary bug, include the app/extension versions, OS/browser versions, steps
 to reproduce, and redacted diagnostics. Use synthetic or public examples instead
 of private download URLs, cookies, tokens, or your profile database.
 

@@ -1,9 +1,9 @@
 # Privacy policy
 
-Last updated: 2026-11-01
+Last updated: 2026-11-03
 
 This policy covers the official Download Engine project website, browser extensions
-and their integration with the Download Engine desktop application for Windows. The project
+and their integration with Download Engine for Windows, macOS and Linux. The project
 is maintained at [JasXTD/Download-Engine](https://github.com/JasXTD/Download-Engine).
 
 Download Engine uses the information below to find, review, transfer and manage
@@ -120,7 +120,8 @@ are read, including HTTP-only cookies where applicable. The extension does not
 save cookie values in extension storage.
 
 The approved cookies are sent to the local desktop app. It stores the snapshot
-encrypted with Windows protection bound to your user account (DPAPI), restricts
+encrypted with Windows user-scoped DPAPI or, on macOS/Linux, an AES-GCM envelope
+whose key is held in the OS Keychain/Secret Service keyring. It restricts
 it to the relevant origin/download, and uses it for at most 24 hours. The saved
 snapshot is removed when the download completes, when its job is removed, or
 when you set that download's authentication to None. An expired snapshot is no

@@ -1,3 +1,11 @@
+## 3.10.0 — 2026-11-03
+
+### macOS och Linux
+
+Nativa paket för Mac med Apple Silicon och Intel samt ett Linux x64-arkiv använder samma gränssnitt och nedladdningsmotor som Windows. FFmpeg med källkod och licenser ingår, tillsammans med systemets fildialoger och lagring av inloggningsuppgifter. Mac-paketen är ad hoc-signerade och inte notariserade av Apple. Se guiden för krav och testbegränsningar.
+
+[Guide / English](../../cross-platform.md)
+
 ## 3.9.0 — 2026-11-01
 
 ### Torrenthantering

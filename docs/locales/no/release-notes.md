@@ -1,3 +1,11 @@
+## 3.10.0 — 2026-11-03
+
+### macOS og Linux
+
+Innebygde pakker for Mac med Apple Silicon eller Intel og et Linux x64-arkiv bruker samme grensesnitt og nedlastingsmotor som Windows. FFmpeg med kildekode og lisenser følger med, sammen med systemets fildialoger og lagring av påloggingsinformasjon. Mac-pakkene er ad hoc-signert og ikke attestert av Apple. Se veiledningen for krav og testbegrensninger.
+
+[Guide / English](../../cross-platform.md)
+
 ## 3.9.0 — 2026-11-01
 
 ### Torrentarbeidsflyt

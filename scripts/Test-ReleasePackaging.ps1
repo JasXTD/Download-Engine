@@ -133,13 +133,21 @@ try {
     & (Join-Path $fixture 'scripts/Write-ReleaseChecksums.ps1') | Out-Null
     $checksums = Join-Path $directory 'SHA256SUMS-9.8.7'
     $lines = @(Get-Content -LiteralPath $checksums)
-    Assert-Check ($lines.Count -eq 6) 'Expected six public asset checksums.'
+    Assert-Check ($lines.Count -eq 9) 'Expected nine Windows, macOS, Linux, extension and source checksums.'
     foreach ($line in $lines) {
         $hash, $name = $line -split '  ', 2
         Assert-Check ((Get-FileHash -LiteralPath (Join-Path $directory $name) -Algorithm SHA256).Hash -ieq $hash) 'Public artifact checksum mismatch.'
     }
     $checksumHash = (Get-FileHash -LiteralPath $checksums -Algorithm SHA256).Hash
-    foreach ($name in @('DownloadEngine-9.8.7-TestSetup.exe','DownloadEngine-9.8.6-UnsignedSetup.exe','DownloadEngine-9.8.7-Setup.exe','.env')) {
+    foreach ($name in @('DownloadEngine-9.8.7-macos-arm64.zip','DownloadEngine-9.8.7-macos-x64.zip','DownloadEngine-9.8.7-linux-x64.tar.gz')) {
+        $nativeFile = Join-Path $directory $name
+        Assert-Check (Test-Path -LiteralPath $nativeFile -PathType Leaf) 'Native release package is absent from the required inventory.'
+        Remove-Item -LiteralPath $nativeFile
+        Expect-Rejection { & (Join-Path $fixture 'scripts/Write-ReleaseChecksums.ps1') } 'Missing public release artifact'
+        Assert-Check ((Get-FileHash -LiteralPath $checksums -Algorithm SHA256).Hash -ceq $checksumHash) 'Missing native artifact changed the prior checksum manifest.'
+        Put-FixtureFile "dist/releases/9.8.7/$name" "Synthetic release artifact $name"
+    }
+    foreach ($name in @('DownloadEngine-9.8.7-TestSetup.exe','DownloadEngine-9.8.6-UnsignedSetup.exe','DownloadEngine-9.8.7-Setup.exe','DownloadEngine-9.8.6-macos-arm64.zip','DownloadEngine-9.8.7-linux-arm64.tar.gz','.env')) {
         Put-FixtureFile "dist/releases/9.8.7/$name" 'Unexpected public artifact fixture.'
         Expect-Rejection { & (Join-Path $fixture 'scripts/Write-ReleaseChecksums.ps1') } 'Unexpected artifact'
         Expect-Rejection { & (Join-Path $fixture 'scripts/Package-ReleaseSources.ps1') } 'Unexpected artifact'

@@ -8,8 +8,8 @@ through the normal download list or CLI pause/resume commands.
 
 Provider `xd.fetch` is available only in resolver workers. Processors use
 `xd.key(protected_token)` for private AES keys; `de-cli.exe scripts protect-key ID`
-reads the hex key from redirected stdin and returns a provider-bound Windows
-DPAPI token. See the provider guide for the `xd.phase` contract, protected frozen
+reads the hex key from redirected stdin and returns a provider-bound protected
+token (Windows DPAPI or an OS-keyring-protected envelope on macOS/Linux). See the provider guide for the `xd.phase` contract, protected frozen
 source, URL refresh and profile upgrades.
 
 Download Engine includes `de-cli.exe` beside the desktop executable. Run it from
@@ -310,7 +310,8 @@ Open **Extensions → Scripts → Loaded scripts → New script**, edit the buil
 changing the selected script is disabled until you save or discard them.
 
 New scripts use built-in **Lua 5.4**. Select **PowerShell** in the Language
-picker for Windows automation. Changing language preserves custom source; only
+picker for trusted automation. macOS/Linux require an existing PowerShell 7
+installation; the app does not install it. Changing language preserves custom source; only
 an untouched starter example is replaced. Saved PowerShell definitions and old
 run receipts retain their language. No separate Lua installation is needed.
 
@@ -423,7 +424,8 @@ The Lua and PowerShell editors check syntax automatically about 400 ms after you
 pause typing. There is no Check button. Checks parse the current draft without
 saving or running it; they never submit download commands. Outdated results are
 discarded when you edit, switch scripts or change language. PowerShell parsing
-uses Windows PowerShell 5.1 in a hidden, profile-free helper with a timeout.
+uses Windows PowerShell 5.1 or the existing native PowerShell 7 installation in a
+profile-free helper with a timeout; Windows also hides its console window.
 If that parser is unavailable, the editor reports it instead of claiming success.
 
 Line numbers and syntax colours help you read the code. Drag the editor's bottom

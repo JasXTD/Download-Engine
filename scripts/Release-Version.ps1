@@ -34,7 +34,7 @@ function Get-ReleaseVersion {
                 throw 'Firefox 142 or newer is required to pass both data-consent compatibility checks.'
             }
             if ($manifest.browser_specific_settings.PSObject.Properties.Name -contains 'gecko_android') {
-                throw 'Do not advertise Android support: the extension requires the Windows desktop companion.'
+                throw 'Do not advertise Android support: the extension requires the desktop companion.'
             }
         }
     }

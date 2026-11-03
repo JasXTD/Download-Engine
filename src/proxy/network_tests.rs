@@ -1,6 +1,5 @@
 use super::*;
-#[path = "../../tests/support/tls_fixtures.rs"]
-mod tls_fixtures;
+use crate::tls_fixtures;
 use std::{
     sync::{Arc, Mutex},
     time::Duration,

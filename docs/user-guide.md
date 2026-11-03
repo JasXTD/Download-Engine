@@ -3,6 +3,11 @@
 Open Help → Guide in Download Engine, or press F1 when no dialog is open. This guide
 is included in the application and works offline. Choose a topic to get started.
 
+Windows, macOS and Linux share the interface and download engine. For native
+installation, runtime libraries, credential storage and platform-specific limits,
+read the bundled [macOS/Linux guide](cross-platform.md). Tray, clipboard offers,
+Windows startup and completion power actions are Windows-specific.
+
 ## Getting started
 
 ### Toolbar and details

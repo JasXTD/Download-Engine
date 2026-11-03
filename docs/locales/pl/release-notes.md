@@ -1,3 +1,11 @@
+## 3.10.0 — 2026-11-03
+
+### macOS i Linux
+
+Natywne pakiety dla komputerów Mac z Apple Silicon i Intel oraz archiwum Linux x64 używają tego samego interfejsu i silnika pobierania co Windows. Zawierają FFmpeg, jego źródła i licencje, natywne okna dialogowe i systemowy magazyn poświadczeń. Pakiety Mac mają podpis ad hoc, bez notaryzacji Apple. Wymagania i zakres testów opisano w poradniku.
+
+[Guide / English](../../cross-platform.md)
+
 ## 3.9.0 — 2026-11-01
 
 ### Obsługa torrentów

@@ -124,7 +124,16 @@ function Get-PublicReleaseFileNames {
     param([Parameter(Mandatory)][string]$Version, [switch]$Signed)
     $portable = if ($Signed) { "DownloadEngine-$Version-windows-x64.zip" } else { "DownloadEngine-$Version-Unsigned-windows-x64.zip" }
     $installer = if ($Signed) { "DownloadEngine-$Version-Setup.exe" } else { "DownloadEngine-$Version-UnsignedSetup.exe" }
-    return @($portable,$installer,"download-engine-chrome-$Version.zip","download-engine-edge-$Version.zip","download-engine-firefox-$Version.zip","DownloadEngine-$Version-Source.zip") | Sort-Object
+    return @(
+        $portable, $installer,
+        "DownloadEngine-$Version-macos-arm64.zip",
+        "DownloadEngine-$Version-macos-x64.zip",
+        "DownloadEngine-$Version-linux-x64.tar.gz",
+        "download-engine-chrome-$Version.zip",
+        "download-engine-edge-$Version.zip",
+        "download-engine-firefox-$Version.zip",
+        "DownloadEngine-$Version-Source.zip"
+    ) | Sort-Object
 }
 
 function Assert-PublicReleaseContents {

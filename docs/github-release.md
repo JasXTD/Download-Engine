@@ -47,6 +47,7 @@ cargo build --release --offline --locked --bins
 .\scripts\Package.ps1 -SkipBuild -AllowUnsignedRelease
 .\scripts\Build-Installer.ps1 -SkipBuild -AllowUnsignedRelease
 .\scripts\Package-ReleaseSources.ps1
+# Copy verified native packages from the exact release commit into this version folder.
 .\scripts\Write-ReleaseChecksums.ps1
 ```
 
@@ -56,15 +57,22 @@ with signing parameters or `-AllowUnsignedDevelopment`. It produces a normal
 per-user installer with the stable application identity, not a smoke-test install.
 Windows may display an unknown-publisher warning. Do not describe it as signed.
 
-For version 2.0.0, upload only the following files from
-`dist/releases/2.0.0` after checksum generation succeeds:
+Build and verify the macOS arm64, macOS x64 and Linux x64 packages using the
+[native release workflow](releases.md#native-release-packages). Stage those three
+archives alongside the Windows outputs before generating checksums.
 
-- `DownloadEngine-2.0.0-Unsigned-windows-x64.zip` — portable application.
-- `DownloadEngine-2.0.0-UnsignedSetup.exe` — Windows installer.
-- `download-engine-chrome-2.0.0.zip`, `download-engine-edge-2.0.0.zip`, and
-  `download-engine-firefox-2.0.0.zip` — extension source/developer-loading packages.
-- `DownloadEngine-2.0.0-Source.zip` — matching application and dependency sources.
-- `SHA256SUMS-2.0.0` — checksums for the assets above.
+For version 3.10.0, upload only these ten files from
+`dist/releases/3.10.0` after checksum generation succeeds:
+
+- `DownloadEngine-3.10.0-Unsigned-windows-x64.zip` — Windows portable application.
+- `DownloadEngine-3.10.0-UnsignedSetup.exe` — Windows installer.
+- `DownloadEngine-3.10.0-macos-arm64.zip` — Apple Silicon Mac.
+- `DownloadEngine-3.10.0-macos-x64.zip` — Intel Mac.
+- `DownloadEngine-3.10.0-linux-x64.tar.gz` — Linux x64.
+- `download-engine-chrome-3.10.0.zip`, `download-engine-edge-3.10.0.zip`, and
+  `download-engine-firefox-3.10.0.zip` — extension source/developer-loading packages.
+- `DownloadEngine-3.10.0-Source.zip` — matching application and dependency sources.
+- `SHA256SUMS-3.10.0` — checksums for the nine payloads above.
 
 The version folder rejects unexpected files, links, subdirectories, old versions
 and test artifacts. Do not use a wildcard upload against `dist`. Older outputs
@@ -80,7 +88,9 @@ recipe records toolchain versions; it is not a promise of byte-identical output
 from future compiler/OS versions.
 
 Publish the matching source tree/tag, copy the newest changelog entry into the
-GitHub release notes, and state clearly that the Windows binaries are unsigned.
+GitHub release notes, and state clearly that the Windows binaries are unsigned
+and the macOS bundles are ad-hoc signed and not Apple-notarized. Include the native
+platform guide and its runtime requirements and validation limits.
 Do not upload `dist/IDM-EX-UnsignedDev`, `artifacts`, private queues, downloaded
 files, browser registrations, or old `TestSetup`/`UnsignedDev` archives.
 The source packaging script uses an exact file inventory rather than recursive

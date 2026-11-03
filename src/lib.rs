@@ -71,6 +71,9 @@ pub mod transfer_activity;
 
 pub mod browser_login;
 mod protected_data;
+#[cfg(test)]
+#[path = "../tests/support/tls_fixtures.rs"]
+mod tls_fixtures;
 #[cfg(unix)]
 mod unix_crypto;
 #[cfg(unix)]

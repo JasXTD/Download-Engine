@@ -1,3 +1,11 @@
+## 3.10.0 — 2026-11-03
+
+### macOS e Linux
+
+Pachets nativs per Mac cun Apple Silicon ed Intel ed in archiv Linux x64 dovran la medema interfatscha ed il medem motor da telechargiar sco Windows. FFmpeg, ses code da funtauna e sias licenzas èn inclus, ensemen cun dialogs nativs e la memorisaziun da las datas d’access dal sistem operativ. Ils pachets Mac èn signads ad hoc, senza notarissaziun dad Apple. Il manual descriva las pretensiuns ed ils cunfins dals tests.
+
+[Guide / English](../../cross-platform.md)
+
 ## 3.9.0 — 2026-11-01
 
 ### Lavurar cun torrents

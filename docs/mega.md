@@ -1,6 +1,6 @@
 # MEGA public file downloads
 
-On Windows, paste a complete `https://mega.nz/file/FILE_ID#KEY` link into Add
+On Windows, macOS or Linux, paste a complete `https://mega.nz/file/FILE_ID#KEY` link into Add
 download, import it as a batch, or send it with the browser connector. Legacy
 `https://mega.nz/#!FILE_ID!KEY` links are also accepted. The connector must be
 reloaded after updating its files so it retains the link's decryption key.

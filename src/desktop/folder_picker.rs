@@ -6,6 +6,8 @@ use std::path::Path;
 pub(super) struct FolderPicker {
     #[cfg(windows)]
     owner: Option<isize>,
+    #[cfg(target_os = "linux")]
+    parent_dialog: rfd::FileDialog,
     #[cfg(test)]
     pub response: Option<anyhow::Result<Option<String>>>,
 }
@@ -22,8 +24,25 @@ impl FolderPicker {
                     _ => None,
                 });
         }
-        #[cfg(not(windows))]
+        #[cfg(target_os = "linux")]
+        {
+            // Refresh the portal parent from the live frame. Each synchronous
+            // chooser clones only this parent; filters and paths stay per-call.
+            self.parent_dialog = rfd::FileDialog::new().set_parent(frame);
+        }
+        #[cfg(not(any(windows, target_os = "linux")))]
         let _ = frame;
+    }
+    #[cfg(not(windows))]
+    fn native_dialog(&self) -> rfd::FileDialog {
+        #[cfg(target_os = "linux")]
+        {
+            self.parent_dialog.clone()
+        }
+        #[cfg(not(target_os = "linux"))]
+        {
+            rfd::FileDialog::new()
+        }
     }
     pub fn field(
         &mut self,
@@ -96,7 +115,8 @@ impl FolderPicker {
             } else {
                 default
             };
-            Ok(rfd::FileDialog::new()
+            Ok(self
+                .native_dialog()
                 .set_title(title)
                 .set_directory(initial)
                 .pick_folder()
@@ -123,7 +143,7 @@ impl FolderPicker {
         }
         #[cfg(not(windows))]
         {
-            let result = unix_dialog(title, folder, filter)
+            let result = unix_dialog(self.native_dialog(), title, folder, filter)
                 .set_file_name(name)
                 .save_file();
             if let Some(mut path) = result {
@@ -157,7 +177,7 @@ impl FolderPicker {
         }
         #[cfg(not(windows))]
         {
-            Ok(unix_dialog(title, folder, filter).pick_file())
+            Ok(unix_dialog(self.native_dialog(), title, folder, filter).pick_file())
         }
     }
     #[cfg(windows)]
@@ -171,10 +191,13 @@ impl FolderPicker {
 }
 
 #[cfg(not(windows))]
-fn unix_dialog(title: &str, folder: &Path, filter: (&str, &str)) -> rfd::FileDialog {
-    let dialog = rfd::FileDialog::new()
-        .set_title(title)
-        .set_directory(folder);
+fn unix_dialog(
+    dialog: rfd::FileDialog,
+    title: &str,
+    folder: &Path,
+    filter: (&str, &str),
+) -> rfd::FileDialog {
+    let dialog = dialog.set_title(title).set_directory(folder);
     let extensions: Vec<_> = filter
         .1
         .split(';')

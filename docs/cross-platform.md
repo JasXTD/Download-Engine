@@ -25,9 +25,15 @@ PowerShell automatically.
 Builds made on Debian 12 require glibc 2.36 or newer, OpenSSL 3, D-Bus, and the
 desktop's graphics/input libraries. Use an X11 or Wayland desktop with
 `xdg-desktop-portal` and its GNOME/KDE/GTK backend for native file/folder dialogs.
+On Debian 12, X11 also requires `libxkbcommon-x11-0` (which pulls in
+`libxcb-xkb1`). A minimal Xfce installation may omit it; without it the window
+library cannot initialize. Install runtime libraries through your distribution's
+package manager before launching the extracted app.
 Saved credentials need an unlocked Secret Service keyring, such as GNOME Keyring
 or a compatible KDE service. A missing or locked keyring produces an error; the
 application does not fall back to plaintext secrets.
+If a fresh desktop account has no keyring yet, create and unlock one using the
+desktop's password manager before saving credentials in Download Engine.
 
 Language coverage uses installed system fonts. CJK, Thai and Arabic may need the
 corresponding font packages from your distribution. The app does not download
@@ -143,3 +149,19 @@ Its fixtures are temporary and are removed afterward.
 Validation evidence and remaining platform checks are recorded in
 `artifacts/cross-platform/` during development. A passing Windows build or Linux
 test does not substitute for macOS compilation, Keychain checks or Finder testing.
+
+Interactive Linux checks also ran in a disposable Debian 12/Xfce X11 desktop
+under WSL2, with a fresh user, software rendering and only local fixture traffic.
+They covered native folder/open/save dialogs, Unicode paths, cancellation,
+overwrite confirmation and duplicate-safe list import. GNOME Keyring's unlock
+and cancel prompts were exercised; an authenticated download retained its saved
+progress across an app restart and resumed with the stored credentials.
+Firefox ESR's temporary extension connected to the native host, captured one
+download without duplicating it, and disconnected/reconnected successfully.
+The downloaded fixtures were checked against their expected SHA-256 hashes.
+Evidence is in `artifacts/linux-desktop-vm/` during development.
+
+These results cover that X11 desktop and Firefox configuration. Wayland, other
+desktop/portal implementations, other Linux browsers and real macOS desktop
+prompts still need separate interactive checks. The Firefox test used a temporary
+add-on, not a store-signed installation.

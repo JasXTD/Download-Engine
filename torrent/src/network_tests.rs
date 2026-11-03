@@ -92,6 +92,45 @@ fn single_tracker_torrent(data: &[u8], tracker: &str) -> Vec<u8> {
     )
 }
 
+#[tokio::test]
+async fn shutdown_releases_the_listening_port_before_returning() {
+    let port = free_port().await;
+    let session = Session::new(SessionOptions {
+        listen_port: Some(port),
+        ..Default::default()
+    })
+    .await
+    .unwrap();
+
+    session.shutdown().await;
+    // No async operation here: a closed session must have released the port,
+    // without relying on another runtime turn to finish its listener task.
+    let replacement = std::net::TcpListener::bind((LOOPBACK, port)).unwrap();
+    session.shutdown().await;
+    drop(replacement);
+}
+
+#[tokio::test]
+async fn interrupted_and_concurrent_shutdowns_release_the_listening_port() {
+    let port = free_port().await;
+    let session = Session::new(SessionOptions {
+        listen_port: Some(port),
+        ..Default::default()
+    })
+    .await
+    .unwrap();
+
+    let mut interrupted = Box::pin(session.shutdown());
+    std::future::poll_fn(|context| {
+        let _ = interrupted.as_mut().poll(context);
+        std::task::Poll::Ready(())
+    })
+    .await;
+    drop(interrupted);
+    tokio::join!(session.shutdown(), session.shutdown());
+    let _replacement = std::net::TcpListener::bind((LOOPBACK, port)).unwrap();
+}
+
 #[tokio::test(flavor = "multi_thread")]
 async fn test_opt_in_incoming_read_only_seed_serves_verified_data_and_closes() {
     assert!(SessionOptions::default().listen_port.is_none());

@@ -78,6 +78,7 @@ pub struct Session {
     context: Context,
     torrents: Mutex<BTreeMap<String, Arc<Torrent>>>,
     cancel: CancellationToken,
+    listener: tokio::sync::Mutex<Option<tokio::task::JoinHandle<()>>>,
 }
 
 impl Session {
@@ -113,10 +114,11 @@ impl Session {
             context,
             torrents: Mutex::default(),
             cancel,
+            listener: tokio::sync::Mutex::new(None),
         });
         if let Some(port) = session.options.listen_port {
             let listener = bind(port)?;
-            tokio::spawn(session.clone().listen(listener));
+            *session.listener.lock().await = Some(tokio::spawn(session.clone().listen(listener)));
         }
         Ok(session)
     }
@@ -320,6 +322,15 @@ impl Session {
             torrent.pause().await;
         }
         self.cancel.cancel();
+        // Keep the handle until it finishes, even if this shutdown is cancelled.
+        // Concurrent/repeated callers must all wait until the socket is closed.
+        let mut listener = self.listener.lock().await;
+        if let Some(task) = listener.as_mut() {
+            if let Err(error) = task.await {
+                debug_log!("listener task ended unexpectedly: {error}");
+            }
+            *listener = None;
+        }
     }
 
     async fn listen(self: Arc<Self>, listener: TcpListener) {

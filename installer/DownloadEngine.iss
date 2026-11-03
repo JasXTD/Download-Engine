@@ -366,6 +366,7 @@ Source: "{#SourceRoot}\docs\lua-provider-lab.md"; DestDir: "{app}\docs"; Flags: 
 Source: "{#SourceRoot}\docs\mcp.md"; DestDir: "{app}\docs"; Flags: ignoreversion
 Source: "{#SourceRoot}\docs\mcp-ai-guide.md"; DestDir: "{app}\docs"; Flags: ignoreversion
 Source: "{#SourceRoot}\docs\user-guide.md"; DestDir: "{app}\docs"; Flags: ignoreversion
+Source: "{#SourceRoot}\docs\cross-platform.md"; DestDir: "{app}\docs"; Flags: ignoreversion
 Source: "{#SourceRoot}\docs\releases.md"; DestDir: "{app}\docs"; Flags: ignoreversion
 
 Source: "{#SourceRoot}\extension\i18n-catalog.js"; DestDir: "{app}\extensions\chrome"; Flags: ignoreversion

@@ -67,7 +67,7 @@ try {
       for(const file of fs.readdirSync(path.join(root,'extension')).filter(name=>/\.(js|css|html)$/.test(name)))
         assert.equal(digest(path.join(program,'extensions',browser,file)),digest(path.join(root,'extension',file)),`Missing or stale ${browser} runtime file: ${file}`);
     }
-    for(const guide of ['mega.md','wetransfer.md','extensions.md']) assert.equal(digest(path.join(program,'docs',guide)),digest(path.join(root,'docs',guide)));
+    for(const guide of ['mega.md','wetransfer.md','extensions.md','cross-platform.md']) assert.equal(digest(path.join(program,'docs',guide)),digest(path.join(root,'docs',guide)));
     const mediaManifest=JSON.parse(fs.readFileSync(path.join(root,'tools/ffmpeg/media-manifest.json'),'utf8'));
     for(const file of mediaManifest.files) assert.equal(digest(path.join(program,'tools/ffmpeg',file.path)),file.sha256,`Installed FFmpeg file: ${file.path}`);
     const cli=path.join(program,'de-cli.exe');

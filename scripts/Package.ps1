@@ -91,6 +91,7 @@ try {
         Copy-Item -LiteralPath (Join-Path $workspaceRoot 'docs\mcp.md') -Destination (Join-Path $stage 'docs')
         Copy-Item -LiteralPath (Join-Path $workspaceRoot 'docs\mcp-ai-guide.md') -Destination (Join-Path $stage 'docs')
         Copy-Item -LiteralPath (Join-Path $workspaceRoot 'docs\user-guide.md') -Destination (Join-Path $stage 'docs')
+        Copy-Item -LiteralPath (Join-Path $workspaceRoot 'docs\cross-platform.md') -Destination (Join-Path $stage 'docs')
         Copy-Item -LiteralPath (Join-Path $workspaceRoot 'docs\lua-providers.md') -Destination (Join-Path $stage 'docs')
         Copy-Item -LiteralPath (Join-Path $workspaceRoot 'docs\lua-provider-lab.md') -Destination (Join-Path $stage 'docs')
         Copy-Item -LiteralPath (Join-Path $workspaceRoot 'docs\releases.md') -Destination (Join-Path $stage 'docs')

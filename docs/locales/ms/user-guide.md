@@ -6,7 +6,7 @@
 
 Diaktifkan secara lalai dan menyemak sekali setiap kali aplikasi dibuka. Versi baharu menawarkan pilihan kemas kini atau kemudian. Ralat luar talian tidak membuka dialog. Boleh dimatikan dalam Keutamaan. Muat turun dan pasang kemas kini dari halaman keluaran GitHub rasmi.
 
-Keutamaan kini dibuka dalam tetingkap dengan kategori. Simpan menggunakan perubahan; Batal, × atau Escape membuang suntingan belum disimpan. Tema boleh dipratonton dan Tetap semula hanya menukar kategori semasa. Editor lanjutan menyimpan secara berasingan dan kembali ke Keutamaan apabila ditutup.
+Keutamaan kini dibuka dalam tetingkap dengan kategori. Simpan menggunakan perubahan; × atau Escape membuang suntingan belum disimpan; selagi ada suntingan belum disimpan, klik di luar tetingkap tidak menutupnya. Tema boleh dipratonton dan Tetap semula hanya menukar kategori semasa. Editor lanjutan menyimpan secara berasingan dan kembali ke Keutamaan apabila ditutup.
 
 ### Tambah muat turun pertama
 

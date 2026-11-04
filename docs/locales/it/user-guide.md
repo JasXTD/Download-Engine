@@ -6,7 +6,7 @@
 
 Attivo per impostazione predefinita, controlla una volta a ogni apertura dell’app. Una nuova versione propone l’aggiornamento o il rinvio. Gli errori di rete non aprono finestre. Disattivabile nelle Preferenze. Scarica e installa gli aggiornamenti dalla pagina ufficiale delle versioni su GitHub.
 
-Le preferenze si aprono in una finestra con categorie. Salva applica le modifiche; Annulla, × o Escape elimina quelle non salvate. Il tema può essere visualizzato in anteprima; Ripristina riguarda solo la categoria attuale. Gli editor avanzati salvano separatamente e tornano alle preferenze quando vengono chiusi.
+Le preferenze si aprono in una finestra con categorie. Salva applica le modifiche; × o Escape elimina quelle non salvate; finché ce ne sono, un clic fuori dalla finestra non la chiude. Il tema può essere visualizzato in anteprima; Ripristina riguarda solo la categoria attuale. Gli editor avanzati salvano separatamente e tornano alle preferenze quando vengono chiusi.
 
 ### Primi passi
 

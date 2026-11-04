@@ -1087,7 +1087,6 @@ impl Desktop {
             ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
                 let enabled = !choice.picker.chosen_indices().is_empty();
                 start = form_dialog::primary_enabled(ui, enabled, tr("Start download")).clicked();
-                cancel |= form_dialog::secondary_button(ui, tr("Cancel")).clicked();
             });
         });
         if start {
@@ -1285,8 +1284,26 @@ mod tests {
         click(&mut app, &ctx, "Preferences");
         click(&mut app, &ctx, "Torrents");
         click(&mut app, &ctx, "Torrent downloads");
-        click(&mut app, &ctx, "Cancel");
+        click(&mut app, &ctx, "×");
         assert!(!app.store.torrent_settings().unwrap().enabled);
+    }
+
+    #[test]
+    fn choose_files_closes_through_its_header_without_a_cancel_button() {
+        let (_temp, mut app, ctx) = fixture();
+        app.torrents.choice = Some(Choice {
+            id: "sample".into(),
+            name: "Sample".into(),
+            picker: sample(),
+        });
+        app.dialog = Some(Dialog::TorrentChoice);
+        let size = egui::vec2(1080.0, 800.0);
+        frame(&mut app, &ctx, size, vec![]);
+        let output = frame(&mut app, &ctx, size, vec![]);
+        assert!(shown(&output, "Choose files") && shown(&output, "Start download"));
+        assert!(!shown(&output, "Cancel"), "The header × already closes it");
+        click(&mut app, &ctx, "×");
+        assert!(app.dialog.is_none() && app.torrents.choice.is_none());
     }
 
     #[test]

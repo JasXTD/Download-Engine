@@ -6,7 +6,7 @@
 
 Aktivert som standard og sjekker én gang hver gang appen åpnes. En ny versjon gir valget mellom oppdatering og senere. Nettverksfeil åpner ingen dialog. Kan slås av i Innstillinger. Last ned og installer oppdateringer fra den offisielle utgivelsessiden på GitHub.
 
-Innstillinger åpnes i et vindu med kategorier. Lagre bruker endringene; Avbryt, × eller Escape forkaster ulagrede endringer. Temaer kan forhåndsvises; Tilbakestill gjelder bare gjeldende kategori. Avanserte redigerere lagrer separat og går tilbake til Innstillinger når de lukkes.
+Innstillinger åpnes i et vindu med kategorier. Lagre bruker endringene; × eller Escape forkaster ulagrede endringer; så lenge det finnes ulagrede endringer, lukkes ikke vinduet av et klikk utenfor. Temaer kan forhåndsvises; Tilbakestill gjelder bare gjeldende kategori. Avanserte redigerere lagrer separat og går tilbake til Innstillinger når de lukkes.
 
 ### Kom i gang
 

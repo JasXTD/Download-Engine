@@ -1138,7 +1138,7 @@ impl Desktop {
                 ui.add_space(6.0);
                 let notes: Vec<&str> = match &update {
                     Some(changes) => vec![
-                        tr("Not now keeps the installed version exactly as it is."),
+                        tr("Closing this keeps the installed version exactly as it is."),
                         tr("Downloads already running keep the code they started with."),
                         if changes.dropped_settings.is_empty() {
                             tr("Your settings, keys and stored values are kept.")
@@ -1164,15 +1164,6 @@ impl Desktop {
                     None => tr("Install"),
                 };
                 install = form_dialog::primary_button(ui, action).clicked();
-                cancel |= form_dialog::secondary_button(
-                    ui,
-                    if update.is_some() {
-                        tr("Not now")
-                    } else {
-                        tr("Cancel")
-                    },
-                )
-                .clicked();
             });
         });
         cancel |= response.should_close();

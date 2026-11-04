@@ -7834,15 +7834,15 @@
     "請在進階設定中輸入有效連接埠",
     "Masukkan port sah dalam Tetapan lanjutan"
   ],
-  "Advanced settings saved. Cancel will not undo those changes.": [
-    "高级设置已保存。取消不会撤销这些更改。",
-    "進階設定已儲存。取消不會復原這些變更。",
-    "Tetapan lanjutan disimpan. Batal tidak membatalkan perubahan itu."
+  "Advanced settings saved. Closing Preferences will not undo those changes.": [
+    "高级设置已保存。关闭偏好设置不会撤销这些更改。",
+    "進階設定已儲存。關閉偏好設定不會復原這些變更。",
+    "Tetapan lanjutan disimpan. Menutup Keutamaan tidak membatalkan perubahan itu."
   ],
-  "Save and Cancel apply to edits in this window. Separate dialogs save independently.": [
-    "保存和取消仅适用于此窗口中的修改。其他对话框独立保存。",
-    "儲存和取消僅適用於此視窗中的修改。其他對話框獨立儲存。",
-    "Simpan dan Batal terpakai pada tetingkap ini. Dialog lain menyimpan secara berasingan."
+  "Save applies to edits in this window. Separate dialogs save independently.": [
+    "保存仅适用于此窗口中的修改。其他对话框独立保存。",
+    "儲存僅適用於此視窗中的修改。其他對話框獨立儲存。",
+    "Simpan terpakai pada suntingan dalam tetingkap ini. Dialog lain menyimpan secara berasingan."
   ],
   "Editor": [
     "编辑器",
@@ -8007,7 +8007,7 @@
   "No jobs added or removed": ["未添加或移除任务","未新增或移除工作","Tiada tugas ditambah atau dibuang"],
   "No longer reads {host}": ["不再读取 {host}","不再讀取 {host}","Tidak lagi membaca {host}"],
   "Not now": ["暂不","暫不","Bukan sekarang"],
-  "Not now keeps the installed version exactly as it is.": ["“暂不”会让已安装的版本保持原样。","「暫不」會讓已安裝的版本保持原樣。","“Bukan sekarang” mengekalkan versi yang dipasang tanpa sebarang perubahan."],
+  "Closing this keeps the installed version exactly as it is.": ["关闭此窗口会让已安装的版本保持原样。","關閉此視窗會讓已安裝的版本保持原樣。","Menutup tetingkap ini mengekalkan versi yang dipasang tanpa sebarang perubahan."],
   "Not run yet": ["尚未运行","尚未執行","Belum dijalankan"],
   "Not set": ["未设置","未設定","Belum ditetapkan"],
   "On matching pages": ["在匹配的页面上","在相符的頁面上","Pada halaman sepadan"],

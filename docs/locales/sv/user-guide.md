@@ -6,7 +6,7 @@
 
 Aktiverat som standard och kontrollerar en gång varje gång appen öppnas. En ny version ger valet att hämta uppdateringen eller vänta. Nätverksfel öppnar ingen dialog. Kan stängas av i Inställningar. Hämta och installera uppdateringar från den officiella releasesidan på GitHub.
 
-Inställningar öppnas i en ruta med kategorier. Spara tillämpar ändringar; Avbryt, × eller Escape kastar osparade ändringar. Teman kan förhandsvisas; Återställ gäller endast aktuell kategori. Avancerade redigerare sparar separat och återgår till Inställningar när de stängs.
+Inställningar öppnas i en ruta med kategorier. Spara tillämpar ändringar; × eller Escape kastar osparade ändringar; så länge det finns osparade ändringar stänger ett klick utanför inte rutan. Teman kan förhandsvisas; Återställ gäller endast aktuell kategori. Avancerade redigerare sparar separat och återgår till Inställningar när de stängs.
 
 ### Kom igång
 

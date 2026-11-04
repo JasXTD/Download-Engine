@@ -1,5 +1,7 @@
 ## 3.10.1 — 2026-11-04
 
+### Sécurité et fiabilité
+
 Amélioration des limites de ressources pour la recherche de pairs torrent, de l’annulation et du filtrage des adresses réseau. Mise à jour du stockage des identifiants sur macOS et Linux en préservant les connexions enregistrées. L’enregistrement des dossiers torrent ne remplace plus une destination existante.
 
 [English details](../../../CHANGELOG.md#3101--2026-11-04)

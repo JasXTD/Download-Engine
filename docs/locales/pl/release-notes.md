@@ -1,5 +1,7 @@
 ## 3.10.1 — 2026-11-04
 
+### Bezpieczeństwo i niezawodność
+
 Ulepszono limity zasobów podczas wyszukiwania peerów torrent, anulowanie i filtrowanie adresów sieciowych. Zaktualizowano magazyny poświadczeń w macOS i Linuksie, zachowując zapisane loginy, oraz zabezpieczono istniejące lokalizacje przed nadpisaniem podczas zapisywania folderów torrent.
 
 [English details](../../../CHANGELOG.md#3101--2026-11-04)

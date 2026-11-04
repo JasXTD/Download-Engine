@@ -1,5 +1,7 @@
 ## 3.10.1 — 2026-11-04
 
+### Säkerhet och tillförlitlighet
+
 Förbättrade resursgränser för sökning efter torrentpeers, avbrytning och filtrering av nätverksadresser. Lagringen av inloggningsuppgifter i macOS och Linux har uppdaterats med bevarade inloggningar. Befintliga mål skrivs inte över när torrentmappar sparas.
 
 [English details](../../../CHANGELOG.md#3101--2026-11-04)

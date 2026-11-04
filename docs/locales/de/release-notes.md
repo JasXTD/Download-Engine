@@ -1,5 +1,7 @@
 ## 3.10.1 — 2026-11-04
 
+### Sicherheit und Zuverlässigkeit
+
 Ressourcenlimits bei der Torrent-Peer-Suche, Abbruch und Netzwerkadressfilter wurden verbessert. Die Zugangsdaten-Speicherung unter macOS und Linux wurde unter Beibehaltung gespeicherter Anmeldungen aktualisiert. Vorhandene Ziele werden beim Speichern von Torrent-Ordnern nicht überschrieben.
 
 [English details](../../../CHANGELOG.md#3101--2026-11-04)

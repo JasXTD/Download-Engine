@@ -1,5 +1,7 @@
 ## 3.10.1 — 2026-11-04
 
+### Keselamatan dan kebolehpercayaan
+
 Had sumber penemuan rakan torrent, pembatalan dan penapisan alamat rangkaian ditambah baik. Storan kelayakan macOS dan Linux dikemas kini dengan mengekalkan log masuk sedia ada, dan penyimpanan folder torrent tidak lagi menimpa destinasi yang telah wujud.
 
 [English details](../../../CHANGELOG.md#3101--2026-11-04)

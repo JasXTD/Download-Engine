@@ -494,6 +494,16 @@ impl<C: RecursiveRequestCallbacks> RecursiveRequest<C> {
             .inspect(|r| {
                 self.mark_node_responded(addr, r);
             });
+        // Bootstrap endpoints have no known node ID yet. Learn the responder
+        // from its matched response, even when it only returns itself: pending
+        // endpoint deduplication intentionally prevents a second request.
+        let id = id.or_else(|| match &response {
+            Ok(ResponseOrError::Response(response)) => {
+                self.callbacks.on_request_start(self, response.id, addr);
+                Some(response.id)
+            }
+            _ => None,
+        });
         if let Some(id) = id {
             self.callbacks.on_request_end(self, id, addr, &response);
         }

@@ -358,6 +358,39 @@ async fn peer_lookup_scheduler_limits_futures_and_cleans_up_when_aborted() {
 }
 
 #[tokio::test(start_paused = true)]
+async fn bootstrap_responder_enters_the_table_without_a_duplicate_request() {
+    let (lookup, _nodes_rx, _peers_rx, mut worker_rx) = fixture();
+    let bootstrap = address(0, true);
+    let responder_id = Id20::new([1; 20]);
+    let request = RecursiveRequest::find_node_for_routing_table(
+        lookup.dht.clone(),
+        Id20::new([0; 20]),
+        std::iter::once(bootstrap),
+    );
+    let response = async {
+        let outgoing = worker_rx.recv().await.unwrap();
+        reply(&lookup.dht, outgoing, &[(responder_id, bootstrap)], &[]);
+    };
+    let (result, ()) = tokio::join!(request, response);
+    result.unwrap();
+    assert!(worker_rx.try_recv().is_err());
+    assert!(
+        lookup
+            .dht
+            .routing_table_v4
+            .read()
+            .sorted_by_distance_from(responder_id, now())
+            .iter()
+            .any(|node| node.id() == responder_id && node.addr() == bootstrap)
+    );
+    assert!(lookup.dht.inflight_by_transaction_id.lock().is_empty());
+    assert_eq!(
+        lookup.dht.lookup_budget.available_permits(),
+        MAX_PENDING_DHT_NODES
+    );
+}
+
+#[tokio::test(start_paused = true)]
 async fn routing_lookup_bounds_initial_work_and_drains_queued_nodes() {
     let (lookup, _nodes_rx, _peers_rx, mut worker_rx) = fixture();
     let addrs = (0..MAX_PENDING_NODES as u16 + 40).map(|n| address(n, true));

@@ -106,7 +106,9 @@ All of these come from data that strangers control, and each has a regression te
   256-entry queue across IPv4/IPv6 discovery; a slow consumer cannot stall recursion or
   accumulate unlimited results. Cancelled requests also release response-tracking entries.
   Socket-free tests feed decoded responses through both lookup schedulers and cover floods,
-  queue draining, duplicate nodes, timeouts and cancellation.
+  queue draining, duplicate nodes, timeouts and cancellation. Bootstrap responders are
+  learned from matched replies, so endpoint deduplication cannot leave the routing table
+  empty when a bootstrap node returns itself.
 
 - File names on Windows: `validate` blocked only `..` and slashes, so `C:evil.dll`,
   `file.txt:stream`, `CON` and trailing dots passed, and a drive prefix replaced the

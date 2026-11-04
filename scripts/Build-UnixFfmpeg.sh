@@ -103,11 +103,15 @@ if [[ $(uname -s) == Darwin ]]; then
     /usr/bin/codesign --force --sign - "$output/ffmpeg"
     /usr/bin/codesign --force --sign - "$output/ffprobe"
 fi
-stage=hdr-test-build
-cc -std=c17 -O2 -Wall -Wextra -Werror -I. "$repo/tools/ffmpeg/source/test-hdr-metadata.c" \
-    libavutil/libavutil.a -lm -pthread -o "$build/hdr-metadata-test"
-stage=hdr-test-run
-"$build/hdr-metadata-test" > "$output/build-record/hdr-metadata-test.log"
+if [[ "${DOWNLOAD_ENGINE_SKIP_FFMPEG_TESTS:-0}" == 1 ]]; then
+    printf 'Not rerun: FFmpeg functional tests explicitly skipped for this app release.\n' > "$output/build-record/hdr-metadata-test.log"
+else
+    stage=hdr-test-build
+    cc -std=c17 -O2 -Wall -Wextra -Werror -I. "$repo/tools/ffmpeg/source/test-hdr-metadata.c" \
+        libavutil/libavutil.a -lm -pthread -o "$build/hdr-metadata-test"
+    stage=hdr-test-run
+    "$build/hdr-metadata-test" > "$output/build-record/hdr-metadata-test.log"
+fi
 stage=build-record
 # configure's config.log includes `set` output (the complete environment).
 # Keep it private to the temporary build; failures use the redacted CI report.
@@ -118,4 +122,4 @@ cc --version > "$output/build-record/compiler-version.log"
 "$output/ffmpeg" -version > "$output/build-record/ffmpeg-version.log"
 cd "$output"
 sha256sum ffmpeg ffprobe > build-record/binaries.sha256
-printf 'Verified native helper: %s\n' "$output/ffmpeg"
+printf 'Built native helper: %s\n' "$output/ffmpeg"

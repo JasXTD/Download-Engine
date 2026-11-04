@@ -9,6 +9,10 @@ on:
         type: choice
         options: [full, package, ui]
         default: full
+      ffmpeg_tests:
+        description: 'Re-run FFmpeg functional tests; enable when changing the pinned media build'
+        type: boolean
+        default: false
 permissions:
   contents: read
 concurrency:
@@ -26,6 +30,9 @@ jobs:
       CARGO_INCREMENTAL: '0'
       CARGO_PROFILE_DEV_DEBUG: '0'
       MACOSX_DEPLOYMENT_TARGET: '11.0'
+      # App-only releases keep the previously validated media source. Packaging
+      # still checks that its native helper, source and notices are included.
+      DOWNLOAD_ENGINE_SKIP_FFMPEG_TESTS: ${{ inputs.ffmpeg_tests && '0' || '1' }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:

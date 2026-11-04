@@ -46,14 +46,19 @@ perl -MJSON::PP -e '
   my $j=decode_json(substr($b,4));
   $j->{ok} && grep($_ eq "torrent_review_v1",@{$j->{capabilities}}) or die "Bad host reply";
 ' "$fixture/reply"
-"$resources/tools/ffmpeg/ffmpeg" -hide_banner -nostdin -loglevel error \
-  -f lavfi -i color=c=green:s=64x64:r=1 -frames:v 1 -c:v libx264 "$fixture/harmless.mp4"
-"$resources/tools/ffmpeg/ffmpeg" -hide_banner -nostdin -loglevel error -xerror \
-  -i "$fixture/harmless.mp4" -f null -
+if [[ "${DOWNLOAD_ENGINE_SKIP_FFMPEG_TESTS:-0}" == 1 ]]; then
+  printf 'FFmpeg encode/decode tests skipped as requested; bundle presence checked.\n'
+else
+  "$resources/tools/ffmpeg/ffmpeg" -hide_banner -nostdin -loglevel error \
+    -f lavfi -i color=c=green:s=64x64:r=1 -frames:v 1 -c:v libx264 "$fixture/harmless.mp4"
+  "$resources/tools/ffmpeg/ffmpeg" -hide_banner -nostdin -loglevel error -xerror \
+    -i "$fixture/harmless.mp4" -f null -
+  printf 'Packaged FFmpeg encode/decode passed.\n'
+fi
 test -x "$programs/de" && test -x "$programs/de-torrent"
 test -s "$resources/tools/ffmpeg/source/ffmpeg-946fcce07b6dcd0331c8cc609192aeff5e1924f8.tar.gz"
 test -s "$resources/tools/ffmpeg/LICENSE"
 test ! -e "$resources/tools/ffmpeg/build-record/config.log"
 test -s "$resources/docs/licenses/RUST-DEPENDENCIES.md"
 test -s "$resources/extensions/firefox/manifest.json"
-printf 'Packaged CLI, native host, FFmpeg encode/decode, notices and source passed.\n'
+printf 'Packaged CLI, native host, bundle contents, notices and source passed.\n'

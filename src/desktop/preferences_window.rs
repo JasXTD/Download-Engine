@@ -471,7 +471,13 @@ impl Desktop {
                         state.reset_category();
                     }
                     cancel |= form_dialog::secondary_button(ui, tr("Cancel")).clicked();
-                    save = form_dialog::primary_enabled(ui, state.dirty() && !self.theme_assets.importing(), tr("Save")).clicked();
+                    let response = form_dialog::primary_enabled(ui, state.dirty() && !self.theme_assets.importing(), tr("Save"));
+                    save = if state.dirty() {
+                        response
+                    } else {
+                        response.on_disabled_hover_text(tr("No unsaved changes"))
+                    }
+                    .clicked();
                 });
             });
         });

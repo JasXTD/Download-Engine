@@ -231,7 +231,12 @@ fn mark(ui: &egui::Ui, rect: Rect, icon: Icon) {
 pub(super) fn primary_button(ui: &mut egui::Ui, label: &str) -> egui::Response {
     let custom = theme::custom(ui.ctx()).is_some();
     let p = Palette::for_context(ui.ctx());
-    let ink = if custom {
+    // A turned-off action looks like the other turned-off buttons. Kept green, it read as
+    // a live button that ignored the click.
+    let off = (!ui.is_enabled()).then(|| ui.visuals().widgets.inactive);
+    let ink = if let Some(off) = off {
+        off.fg_stroke.color
+    } else if custom {
         p.accent_text
     } else {
         Color32::WHITE
@@ -244,6 +249,13 @@ pub(super) fn primary_button(ui: &mut egui::Ui, label: &str) -> egui::Response {
     response.widget_info(|| {
         egui::WidgetInfo::labeled(egui::WidgetType::Button, response.enabled(), label)
     });
+    if let Some(off) = off {
+        ui.painter()
+            .rect(rect, 7, off.weak_bg_fill, off.bg_stroke, StrokeKind::Inside);
+        let text_rect = Align2::CENTER_CENTER.anchor_size(rect.center(), text.size());
+        ui.painter().galley(text_rect.min, text, ink);
+        return response;
+    }
     // White label text keeps at least 4.5:1 contrast against every gradient stop.
     let (top, bottom) = if custom {
         let factor = if response.is_pointer_button_down_on() {

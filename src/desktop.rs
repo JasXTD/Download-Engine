@@ -43,7 +43,6 @@ mod torrents;
 mod updates;
 use formatting::*;
 use theme::Palette;
-pub use theme::configure;
 use view::SquareCheckbox;
 
 mod antivirus;
@@ -85,6 +84,18 @@ use std::{
 };
 use uuid::Uuid;
 use zeroize::Zeroizing;
+
+/// Sets up a new egui context: fonts and theme, and how presses become clicks.
+pub fn configure(ctx: &egui::Context) {
+    theme::configure(ctx);
+    ctx.options_mut(|options| {
+        // egui drops a press held for 0.8 s or moved 6 points before release, and it reads
+        // the time once per frame, so a busy frame also counts as holding the button. Dialog
+        // buttons missed deliberate clicks. Touch press-and-hold menus now open after 2 s.
+        options.input_options.max_click_duration = 2.0;
+        options.input_options.max_click_dist = 10.0;
+    });
+}
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 enum Filter {

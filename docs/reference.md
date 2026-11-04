@@ -67,6 +67,24 @@ downloads, and removes only browser registrations pointing to the removed copy.
 Cancelling uninstall leaves those registrations alone. Setup refuses to install
 over a portable folder. Portable history is not moved or merged automatically.
 
+### Upgrade notes by version
+
+Some releases need extra steps beyond the general
+[upgrade steps](../README.md#upgrade-an-existing-copy).
+
+**Upgrading to 3.6:** the **Scripting** page is now **Extensions**, and your scripts,
+rules and run history are on its tabs. Installing your first extension upgrades the
+profile, so older versions then refuse it. Back up the profile before going back to
+an older version.
+
+**Upgrading to 3.0:** the Firefox extension now has the identity
+`download-engine@xetro`. Finish any pending browser handoffs, remove the old
+developer-loaded extension, and install the new one, then reconnect it through
+**Tools → Browser setup**. Firefox treats it as
+a different extension, so its settings start fresh; your desktop queues, downloads,
+and profile stay in place. Reload developer-loaded Chromium extensions after
+replacing their files. See the [browser setup guide](#connect-a-browser).
+
 ## Start
 
 Open **Help → Guide** (or press **F1**) for offline instructions, a topic list beside
@@ -723,8 +741,8 @@ suspends the schedule; **Enable schedule** restores it.
 
 The extensions add **Download with Download Engine** to the right-click menu for file links,
 and provide a popup for pasting URLs. The popup also has an **Automatic capture**
-switch, off by default. Connect the desktop app first, then turn the switch on
-and allow the browser's download permission. Reload an already-loaded extension
+switch, on by default after installation. If the desktop app is not connected,
+file downloads stay in the browser. Reload an already-loaded extension
 after updating this package.
 
 **Capture rules**, under the switch, choose which downloads are captured: file types
@@ -997,9 +1015,10 @@ and segment downloads after you review them.
 Open the actual video page and scan again after a source appears. Login-only
 sources can fail because the desktop performs its own GET request.
 
-For media requested during playback, turn on **Detect media while browsing** in
-the popup and grant optional **webRequest** and HTTP/HTTPS website access. It is
-off by default. Start playback or reload the page after enabling it. The popup
+For media requested during playback, use **Detect media while browsing** in the
+popup. It is on by default once the extension's **webRequest** and HTTP/HTTPS
+website access are granted; the extension requests both at installation. Start
+playback or reload the page after enabling it. The popup
 shows the active tab's detected audio, video, HLS and DASH entries; its toolbar
 badge shows their count. Click an entry to review it in Download Engine before any download. **Find
 videos** also includes these detected items in its review.
@@ -1895,7 +1914,7 @@ executable; the window and tray use PNG sizes derived from the same master artwo
     ./scripts/Package.ps1 @signing
     ./scripts/Build-Installer.ps1 -SkipBuild @signing
 
-Signed packaging verifies all three executables, Setup, and the generated
+Signed packaging verifies all four executables, Setup, and the generated
 uninstaller against the configured publisher certificate. For an unsigned public
 GitHub release, explicitly use `-AllowUnsignedRelease` instead of the signing
 parameters; see [release instructions](github-release.md). For isolated

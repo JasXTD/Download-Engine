@@ -1,3 +1,11 @@
+## 3.10.2 — 2026-11-04
+
+### Rapports locals da collaps
+
+Agid e protocols permettan da leger, copiar ed exportar rapports da Rust panic e da serradas nunregularas. Nagina transmissiun automatica; ils rapports na cuntegnan nagins pleds-clav, URLs da telechargiada, percurs persunals ni dumps da memoria.
+
+[English details](../../../CHANGELOG.md#3102--2026-11-04)
+
 ## 3.10.1 — 2026-11-04
 
 ### Segirezza e fidadad

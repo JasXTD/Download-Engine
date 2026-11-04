@@ -568,6 +568,7 @@ impl Desktop {
                 }
             });
         self.clipboard_card(&ctx, p);
+        self.poll_crash_reports(&ctx);
         self.poll_launch_updates(&ctx);
         if self.dialog != Some(Dialog::CheckUpdates) {
             self.extras.update_check = None;
@@ -581,6 +582,7 @@ impl Desktop {
             Some(Dialog::Confirm) => self.confirmation_dialog(&ctx, p),
             Some(Dialog::About) => self.about_dialog(&ctx),
             Some(Dialog::CheckUpdates) => self.updates_dialog(&ctx, p),
+            Some(Dialog::CrashReports) => self.crash_reports_dialog(&ctx, p),
             Some(Dialog::Legal(page)) => self.legal_dialog(&ctx, page),
             Some(Dialog::Proxy) => self.proxy_dialog(&ctx, p),
             Some(Dialog::Connections) => self.connections_dialog(&ctx, p),

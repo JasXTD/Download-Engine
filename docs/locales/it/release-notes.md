@@ -1,3 +1,11 @@
+## 3.10.2 — 2026-11-04
+
+### Rapporti di arresto anomalo locali
+
+Guida e Registri consentono di esaminare, copiare ed esportare rapporti di Rust panic e chiusura anomala. Nessun invio automatico; password, URL di download, percorsi personali e dump di memoria sono esclusi.
+
+[English details](../../../CHANGELOG.md#3102--2026-11-04)
+
 ## 3.10.1 — 2026-11-04
 
 ### Sicurezza e affidabilità

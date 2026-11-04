@@ -153,6 +153,14 @@ copy, use the desktop download's authentication controls or remove its job.
 - Local diagnostics keep bounded recent operation records. Extension diagnostic
   messages redact addresses and Windows paths, but you should still review any
   logs or screenshots before sharing them.
+- Local crash reports contain app version, platform, component, timestamps and,
+  for Rust panics, a relative code location when available. They exclude panic
+  messages, download URLs/names, personal paths, credentials and process memory.
+  A desktop session marker also detects unclean exits; it cannot distinguish a
+  crash from power loss or forced termination. Startup keeps the newest 20 valid
+  reports in the profile's `logs/crashes` folder. Help → Crash reports lets you
+  review, copy or export them. Nothing is uploaded automatically. Opening
+  **Report an issue** opens GitHub without attaching your report or its contents.
 - Desktop jobs, settings, saved history and downloaded files remain in your
   configured local profile or download folders until removed. Ordinary metadata
   such as URLs, titles and paths is not generally encrypted by the application.

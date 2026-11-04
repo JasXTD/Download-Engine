@@ -150,6 +150,16 @@ fn start() -> anyhow::Result<()> {
         }
         Err(e) => return Err(e.into()),
     }
+    let _crash_session = match download_engine::crash_reports::DesktopSession::begin(&paths) {
+        Ok(session) => Some(session),
+        Err(_) => {
+            eprintln!("Download Engine could not track unexpected desktop exits.");
+            None
+        }
+    };
+    // Retain the original lock until the session marker is cleaned. The UI's
+    // duplicate handle may close earlier when eframe tears its application down.
+    let desktop_lock = lock.try_clone()?;
     let store = Store::open(paths)?;
     if !launch.targets.is_empty() {
         store.submit_external_opens(&launch.targets)?;
@@ -195,7 +205,7 @@ fn start() -> anyhow::Result<()> {
         options,
         Box::new(move |cc| {
             desktop::configure(&cc.egui_ctx);
-            let mut app = desktop::Desktop::new(store, scheduler, lock);
+            let mut app = desktop::Desktop::new(store, scheduler, desktop_lock);
             app.configure_appearance(&cc.egui_ctx);
             #[cfg(windows)]
             app.sync_window_frame(&cc.egui_ctx, cc);
@@ -208,6 +218,7 @@ fn start() -> anyhow::Result<()> {
             app.attach_clipboard(&cc.egui_ctx);
             app.attach_drop_target(&cc.egui_ctx);
             app.check_updates_on_launch(&cc.egui_ctx);
+            app.check_crash_reports_on_launch(&cc.egui_ctx);
             if show_browser_setup {
                 app.open_browser_setup();
             }

@@ -46,11 +46,14 @@ Looking for a free **IDM alternative**? The familiar layout is inspired by
 **Internet Download Manager (IDM)**. Download Engine is an independent project, is
 not affiliated with IDM, and does not claim complete IDM feature parity.
 
-> **In this build, v3.10.1:** safer torrent peer discovery and network filtering,
-> protected folder moves on macOS and Linux, and updated native credential storage
-> that keeps existing saved logins. All desktop packages include FFmpeg.
+> **In this build, v3.10.2:** Help → Crash reports lets you review, copy and export
+> local panic and unclean-exit reports. New reports are offered on the next launch;
+> nothing is uploaded automatically. All desktop packages include FFmpeg.
 > Find published [desktop packages and extensions](https://github.com/JasXTD/Download-Engine/releases),
 > or read the [changelog](CHANGELOG.md).
+
+See the [diagnostics guide](docs/user-guide.md#read-diagnostics) for crash reports,
+their privacy protections and the limits of unclean-exit detection.
 
 ![A short tour of Download Engine: the download list, adding a link, the browser extension's Download video button and media list, choosing video quality, queues, schedules, the website grabber, app extensions and custom themes](docs/images/download-engine-demo.gif)
 

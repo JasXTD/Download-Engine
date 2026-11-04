@@ -186,6 +186,14 @@ function capture(name, dark, size, view = 'downloads', empty = false, legacy = f
       fs.appendFileSync(path.join(logDir,'native-host.log'),(JSON.stringify(record)+'\n').repeat(2050)+'interrupted entry\n');
     }
   }
+  if (view === 'crash-reports' && !name.includes('empty')) {
+    const report = {schema:1,id:randomUUID(),session_started_utc:'2026-11-04T01:00:00.000Z',recorded_utc:'2026-11-04T01:01:00.000Z',
+      version:JSON.parse(fs.readFileSync(path.join(root,'extension/manifest.chromium.json'),'utf8')).version,
+      os:'windows',architecture:'x86_64',component:'desktop',kind:name.includes('unclean')?'unexpected_exit':'rust_panic'};
+    if(report.kind === 'rust_panic') report.location={file:'src/desktop.rs',line:42,column:3};
+    const crashes=path.join(home,'data','logs','crashes');fs.mkdirSync(crashes,{recursive:true});
+    fs.writeFileSync(path.join(crashes,`report-${report.id}.json`),JSON.stringify(report));
+  }
   const ppm = path.join(home,'native-ui.ppm'), env={...process.env};
   for(const key of Object.keys(env)) if(key.startsWith('IDM_EX_TEST_') || key.includes('SCREENSHOT_TO')) delete env[key];
   Object.assign(env,{DOWNLOAD_ENGINE_HOME:home,IDM_EX_HOME:home,IDM_EX_SCREENSHOT_TO:ppm,IDM_EX_TEST_SIZE:size,IDM_EX_TEST_VIEW:view});
@@ -247,6 +255,16 @@ function capture(name, dark, size, view = 'downloads', empty = false, legacy = f
   for (const event of ['started','ready','stopped']) assert(diagnostics.some(record => record.event === event), `Missing ${event} log`);
   console.log(JSON.stringify({name,screenshot}));
   return {name,screenshot,size,view,dark,legacy,compact,toolbar,queuedNetworkWork:false};
+}
+if(process.argv.includes('--crash-reports')) {
+  const results=[];
+  for(const dark of [true,false]) for(const state of ['empty','panic','unclean']) {
+    const result=capture(`crash-${state}-${dark?'dark':'light'}`,dark,dark?'860x600':'1280x860','crash-reports');
+    assert(!fs.existsSync(path.join(output,result.name,'data','logs','crashes','desktop-session.json')),'Clean GUI exit must remove its session marker');
+    results.push(result);
+  }
+  fs.writeFileSync(path.join(output,'verification.json'),JSON.stringify({results,scope:'Native crash-report UI, synthetic local reports, isolated paused profiles and clean-exit markers. No live crashes, downloads or automatic sharing.'},null,2));
+  console.log(`Verification: ${path.join(output,'verification.json')}`);process.exit(0);
 }
 if(process.argv.includes('--torrent-workflow')) {
   const results=[];

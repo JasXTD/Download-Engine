@@ -8,6 +8,7 @@ mod background_io;
 mod browser_video;
 mod browsers;
 mod clipboard;
+mod crash_reports;
 mod diagnostics;
 mod download_status;
 mod drop_target;
@@ -124,6 +125,7 @@ enum Dialog {
     Confirm,
     About,
     CheckUpdates,
+    CrashReports,
     Legal(about::LegalPage),
     Proxy,
     Connections,
@@ -387,6 +389,7 @@ pub struct Desktop {
     form_error: Option<String>,
     notice: Option<Notice>,
     diagnostics: diagnostics::State,
+    crash_reports: crash_reports::State,
     list_transfer: list_transfer::State,
     logs: logs::State,
     background_io: background_io::State,
@@ -518,6 +521,7 @@ impl Desktop {
                 .or(startup_error)
                 .map(Notice::error),
             diagnostics: diagnostics::State::default(),
+            crash_reports: crash_reports::State::default(),
             list_transfer: list_transfer::State::default(),
             logs: logs::State::default(),
             background_io: background_io::State::default(),
@@ -682,6 +686,7 @@ impl Desktop {
                     "legal-notices" => {
                         app.dialog = Some(Dialog::Legal(about::LegalPage::ThirdParty));
                     }
+                    "crash-reports" => app.open_crash_reports(&egui::Context::default()),
                     _ => {}
                 }
             }
@@ -1309,6 +1314,7 @@ impl Desktop {
             && !self.theme_assets.busy()
             && (self.view != View::Logs || self.logs.loaded())
             && (self.dialog != Some(Dialog::Mcp) || self.mcp.capture_ready())
+            && (self.dialog != Some(Dialog::CrashReports) || self.crash_reports.capture_ready())
             && (!std::env::var("IDM_EX_TEST_VIEW")
                 .is_ok_and(|view| view.starts_with("automation-scripts"))
                 || self.scripts.capture_ready())

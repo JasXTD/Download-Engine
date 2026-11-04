@@ -1,3 +1,11 @@
+## 3.10.2 — 2026-11-04
+
+### Lokala kraschrapporter
+
+Hjälp och Loggar låter dig granska, kopiera och exportera rapporter om Rust-panik och onormal avslutning. Ingen automatisk uppladdning; lösenord, nedladdningsadresser, personliga sökvägar och minnesdumpar ingår inte.
+
+[English details](../../../CHANGELOG.md#3102--2026-11-04)
+
 ## 3.10.1 — 2026-11-04
 
 ### Säkerhet och tillförlitlighet

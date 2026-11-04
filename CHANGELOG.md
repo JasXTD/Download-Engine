@@ -2,6 +2,16 @@
 
 Release notes are available offline in Help → Changelog. Newest releases appear first.
 
+## 3.10.2 — 2026-11-04
+
+### Local crash reports
+
+- Added Help → Crash reports and a shortcut in Logs. Review, copy or export a local report, then open the GitHub issue form yourself. Reports are never uploaded automatically.
+- Desktop and browser-connector Rust panics save app version, platform, time and a code location independently of the normal log writer. Panic messages, URLs, credentials, personal paths and memory dumps are excluded.
+- A marker owned by the running desktop detects an unclean shutdown on the next launch. Reports distinguish this from a captured Rust panic: power loss and forced termination can also leave a marker. Normal exit and a second launch do not create an incident.
+- The next launch offers unreviewed reports without interrupting another dialog. Dismissed reports remain available from Help without prompting again. The newest 20 valid reports are retained during startup maintenance.
+- Native access violations/signals, out-of-memory failures and machine failures do not provide a stack dump; the next-launch marker can indicate an unclean exit but cannot identify its cause.
+
 ## 3.10.1 — 2026-11-04
 
 ### Security and reliability

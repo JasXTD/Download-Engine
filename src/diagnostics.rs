@@ -429,8 +429,17 @@ pub fn init(paths: &AppPaths, component: Component) -> io::Result<()> {
                 sender,
             })
             .map_err(|_| io::Error::other("Diagnostics already initialized"))?;
+        if let Some(client) = LOGGER.get()
+            && crate::crash_reports::init(paths, component, client.writer.session).is_err()
+        {
+            let _ = writeln!(
+                io::stderr(),
+                "Download Engine local crash reports are unavailable."
+            );
+        }
         let previous = std::panic::take_hook();
         std::panic::set_hook(Box::new(move |info| {
+            crate::crash_reports::capture(info.location());
             // A panic could originate while writing a log. Never wait on our
             // own file lock here, and never persist the arbitrary panic payload.
             if let Some(logger) = LOGGER.get() {

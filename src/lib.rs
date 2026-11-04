@@ -6,6 +6,7 @@ pub mod bilibili;
 pub mod capture;
 pub mod categories;
 pub mod control;
+pub mod crash_reports;
 pub mod dash;
 pub mod diagnostics;
 pub mod engine;

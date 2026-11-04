@@ -1,3 +1,11 @@
+## 3.10.2 — 2026-11-04
+
+### Laporan ranap setempat
+
+Bantuan dan Log kini menyediakan laporan Rust panic dan penutupan tidak normal untuk disemak, disalin atau dieksport. Tiada muat naik automatik; kata laluan, URL muat turun, laluan peribadi dan dump memori tidak disertakan.
+
+[English details](../../../CHANGELOG.md#3102--2026-11-04)
+
 ## 3.10.1 — 2026-11-04
 
 ### Keselamatan dan kebolehpercayaan

@@ -1857,6 +1857,25 @@ profiles, or files you downloaded. Existing exports are never overwritten.
 Browser extension settings diagnostics remain separate under the extension's
 **Diagnostic log**; copy that log too for permission/popup bugs.
 
+**Help → Crash reports** (also available from Logs) lists local failure reports
+under the active profile's `logs/crashes` folder. The desktop and native browser host record the first
+Rust panic in each process directly, independently of the diagnostic log queue.
+Reports contain version, OS, architecture, component, timestamps and a relative
+Rust source location where available. Panic payloads, stack/memory dumps, URLs,
+credentials, personal paths and environment variables are excluded. These are
+not native exception or signal dumps; they do not diagnose every possible crash.
+
+The desktop owns a session marker while holding its profile lock. Normal exit
+removes it; the next launch turns a leftover marker into an **unclean exit**
+report unless that session already has a panic report. Power loss and forced
+termination can produce the same marker, so the UI never claims a known cause.
+Other app processes do not create desktop markers. Startup retains the newest
+20 valid reports; malformed or redirected files are skipped, not exported.
+An unreviewed report prompts once when the app is focused and no other dialog is
+open. Closing the dialog acknowledges its reports while keeping them available
+for later review. Exports use exactly the previewed fields, unique filenames and
+explicit folder selection. No report is automatically uploaded or sent to GitHub.
+
 ## Build and verify
 
 Rust stable with the Windows MSVC target, Visual Studio C++ build tools, and the

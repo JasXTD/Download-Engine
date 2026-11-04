@@ -1,3 +1,11 @@
+## 3.10.2 — 2026-11-04
+
+### Báo cáo sự cố cục bộ
+
+Trợ giúp và Nhật ký cho phép xem, sao chép và xuất báo cáo Rust panic hoặc thoát bất thường. Không tự động tải lên; không chứa mật khẩu, URL tải xuống, đường dẫn cá nhân hay bản kết xuất bộ nhớ.
+
+[English details](../../../CHANGELOG.md#3102--2026-11-04)
+
 ## 3.10.1 — 2026-11-04
 
 ### Bảo mật và độ tin cậy

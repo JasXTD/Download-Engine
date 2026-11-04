@@ -1,3 +1,11 @@
+## 3.10.2 — 2026-11-04
+
+### Rapports de plantage locaux
+
+L’aide et les journaux permettent de consulter, copier et exporter les rapports de panique Rust et de fermeture anormale. Aucun envoi automatique ; les mots de passe, URL de téléchargement, chemins personnels et images mémoire sont exclus.
+
+[English details](../../../CHANGELOG.md#3102--2026-11-04)
+
 ## 3.10.1 — 2026-11-04
 
 ### Sécurité et fiabilité

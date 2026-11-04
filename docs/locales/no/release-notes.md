@@ -1,3 +1,11 @@
+## 3.10.2 — 2026-11-04
+
+### Lokale krasjrapporter
+
+Hjelp og Logger lar deg lese, kopiere og eksportere rapporter om Rust-panikker og unormal avslutning. Ingen automatisk opplasting; passord, nedlastingsadresser, personlige filbaner og minnedumper er utelatt.
+
+[English details](../../../CHANGELOG.md#3102--2026-11-04)
+
 ## 3.10.1 — 2026-11-04
 
 ### Sikkerhet og pålitelighet

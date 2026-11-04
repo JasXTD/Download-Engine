@@ -454,6 +454,9 @@ impl Desktop {
             }
         });
         ui.add_space(8.0);
+        if ui.button(tr("Crash reports")).clicked() {
+            self.open_crash_reports(ui.ctx());
+        }
         self.notice(ui, p);
         if !diagnostics::available() {
             alert_banner(

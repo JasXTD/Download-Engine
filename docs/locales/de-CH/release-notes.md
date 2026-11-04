@@ -1,3 +1,11 @@
+## 3.10.2 — 2026-11-04
+
+### Lokale Absturzberichte
+
+Hilfe und Protokolle bieten Berichte zu Rust-Panics und unerwartetem Beenden zum Prüfen, Kopieren und Exportieren. Kein automatischer Upload; Passwörter, Download-URLs, persönliche Pfade und Speicherabbilder sind ausgeschlossen.
+
+[English details](../../../CHANGELOG.md#3102--2026-11-04)
+
 ## 3.10.1 — 2026-11-04
 
 ### Sicherheit und Zuverlässigkeit

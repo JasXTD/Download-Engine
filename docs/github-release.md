@@ -61,18 +61,18 @@ Build and verify the macOS arm64, macOS x64 and Linux x64 packages using the
 [native release workflow](releases.md#native-release-packages). Stage those three
 archives alongside the Windows outputs before generating checksums.
 
-For version 3.10.1, upload only these ten files from
-`dist/releases/3.10.1` after checksum generation succeeds:
+For version 3.10.2, upload only these ten files from
+`dist/releases/3.10.2` after checksum generation succeeds:
 
-- `DownloadEngine-3.10.1-Unsigned-windows-x64.zip` — Windows portable application.
-- `DownloadEngine-3.10.1-UnsignedSetup.exe` — Windows installer.
-- `DownloadEngine-3.10.1-macos-arm64.zip` — Apple Silicon Mac.
-- `DownloadEngine-3.10.1-macos-x64.zip` — Intel Mac.
-- `DownloadEngine-3.10.1-linux-x64.tar.gz` — Linux x64.
-- `download-engine-chrome-3.10.1.zip`, `download-engine-edge-3.10.1.zip`, and
-  `download-engine-firefox-3.10.1.zip` — extension source/developer-loading packages.
-- `DownloadEngine-3.10.1-Source.zip` — matching application and dependency sources.
-- `SHA256SUMS-3.10.1` — checksums for the nine payloads above.
+- `DownloadEngine-3.10.2-Unsigned-windows-x64.zip` — Windows portable application.
+- `DownloadEngine-3.10.2-UnsignedSetup.exe` — Windows installer.
+- `DownloadEngine-3.10.2-macos-arm64.zip` — Apple Silicon Mac.
+- `DownloadEngine-3.10.2-macos-x64.zip` — Intel Mac.
+- `DownloadEngine-3.10.2-linux-x64.tar.gz` — Linux x64.
+- `download-engine-chrome-3.10.2.zip`, `download-engine-edge-3.10.2.zip`, and
+  `download-engine-firefox-3.10.2.zip` — extension source/developer-loading packages.
+- `DownloadEngine-3.10.2-Source.zip` — matching application and dependency sources.
+- `SHA256SUMS-3.10.2` — checksums for the nine payloads above.
 
 The version folder rejects unexpected files, links, subdirectories, old versions
 and test artifacts. Do not use a wildcard upload against `dist`. Older outputs

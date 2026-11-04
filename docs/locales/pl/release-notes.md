@@ -1,3 +1,11 @@
+## 3.10.2 — 2026-11-04
+
+### Lokalne raporty awarii
+
+Pomoc i dzienniki umożliwiają przeglądanie, kopiowanie i eksport raportów Rust panic oraz nieprawidłowego zamknięcia. Brak automatycznego przesyłania; raporty nie zawierają haseł, adresów pobierania, prywatnych ścieżek ani zrzutów pamięci.
+
+[English details](../../../CHANGELOG.md#3102--2026-11-04)
+
 ## 3.10.1 — 2026-11-04
 
 ### Bezpieczeństwo i niezawodność

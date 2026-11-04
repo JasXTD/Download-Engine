@@ -7,6 +7,7 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const { spawnSync } = require('node:child_process');
+const { randomUUID } = require('node:crypto');
 const [binaryArg] = process.argv.slice(2);
 assert(binaryArg, 'Usage: Test-NativeUi.cjs BINARY');
 const binary = path.resolve(binaryArg);
@@ -20,10 +21,20 @@ for (const [view, appearance, width, height] of [
   ['preferences', 'light', 860, 600],
   ['mcp', 'dark', 860, 600],
   ['guide-cli', 'dark', 960, smallMacDesktop ? 640 : 720],
+  ['crash-reports', 'dark', 860, 600],
+  ['crash-reports', 'light', 960, smallMacDesktop ? 640 : 720],
 ]) {
   const profile = fs.mkdtempSync(path.join(os.tmpdir(), 'download-engine-ui-'));
   const ppm = path.join(profile, 'capture.ppm');
   try {
+    if (view === 'crash-reports' && appearance === 'dark') {
+      const report = {schema:1,id:randomUUID(),session_started_utc:'2026-11-04T01:00:00.000Z',recorded_utc:'2026-11-04T01:01:00.000Z',
+        version:JSON.parse(fs.readFileSync(path.resolve('extension/manifest.chromium.json'),'utf8')).version,
+        os:process.platform === 'darwin'?'macos':process.platform === 'win32'?'windows':'linux',architecture:process.arch === 'arm64'?'aarch64':'x86_64',component:'desktop',kind:'rust_panic',
+        location:{file:'src/desktop.rs',line:42,column:3}};
+      const reports=path.join(profile,'data','logs','crashes');fs.mkdirSync(reports,{recursive:true});
+      fs.writeFileSync(path.join(reports,`report-${report.id}.json`),JSON.stringify(report));
+    }
     const result = spawnSync(binary, [], {
       encoding: 'utf8', timeout: 60000, maxBuffer: 2 * 1024 * 1024,
       env: { ...process.env, DOWNLOAD_ENGINE_HOME: profile, XDG_CACHE_HOME: path.join(profile, 'cache'), IDM_EX_SCREENSHOT_TO: ppm, IDM_EX_TEST_VIEW: view, IDM_EX_TEST_SIZE: `${width}x${height}`, IDM_EX_TEST_APPEARANCE: appearance },
@@ -32,6 +43,7 @@ for (const [view, appearance, width, height] of [
     if (result.stderr) process.stderr.write(result.stderr);
     if (result.error) throw result.error;
     assert.equal(result.status, 0, `Capture failed: ${view} (${result.signal || result.status})`);
+    assert(!fs.existsSync(path.join(profile,'data','logs','crashes','desktop-session.json')), 'Normal desktop exit left a crash marker');
     assert(fs.statSync(ppm).size <= 64 * 1024 * 1024, 'Oversized capture');
     const data = fs.readFileSync(ppm);
     const header = /^P6\n(\d+) (\d+)\n255\n/.exec(data.subarray(0, 80).toString('ascii'));

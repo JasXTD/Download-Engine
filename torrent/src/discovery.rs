@@ -358,6 +358,11 @@ mod tests {
         let (found, mut received) = PeerCandidates::channel(known, false);
         assert!(found.send("[::ffff:9.9.9.9]:1".parse().unwrap()).await);
         assert!(found.send("10.0.0.1:80".parse().unwrap()).await);
+        assert!(
+            found
+                .send("[64:ff9b:1::c0a8:101]:80".parse().unwrap())
+                .await
+        );
         assert!(found.send("8.8.8.8:0".parse().unwrap()).await);
         let other = found.clone();
         let one = "1.2.3.4:6881".parse().unwrap();
@@ -455,6 +460,7 @@ mod tests {
             "http://[fc00::1]/announce",
             "http://[fe80::1]/announce",
             "http://[::ffff:192.168.1.1]/announce",
+            "http://[64:ff9b:1::c0a8:101]/announce",
             "http://localhost/announce",
             "http://LOCALHOST./announce",
             "http://router.local/announce",
@@ -464,6 +470,7 @@ mod tests {
             "udp://2130706433:80/announce",
             "udp://0x7f.1:80/announce",
             "udp://[::1]:80/announce",
+            "udp://[64:ff9b:1::a00:1]:80/announce",
             "udp://LOCALHOST:80/announce",
         ] {
             assert!(stays_local(&Url::parse(address).unwrap()), "{address}");

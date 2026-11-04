@@ -1,3 +1,9 @@
+## 3.10.1 — 2026-11-04
+
+Ulepszono limity zasobów podczas wyszukiwania peerów torrent, anulowanie i filtrowanie adresów sieciowych. Zaktualizowano magazyny poświadczeń w macOS i Linuksie, zachowując zapisane loginy, oraz zabezpieczono istniejące lokalizacje przed nadpisaniem podczas zapisywania folderów torrent.
+
+[English details](../../../CHANGELOG.md#3101--2026-11-04)
+
 ## 3.10.0 — 2026-11-03
 
 ### macOS i Linux

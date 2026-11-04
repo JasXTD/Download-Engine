@@ -1,3 +1,9 @@
+## 3.10.1 — 2026-11-04
+
+Forbedrede ressursgrenser for søk etter torrentnoder, avbryting og filtrering av nettverksadresser. Lagringen av påloggingsinformasjon i macOS og Linux er oppdatert med bevarte pålogginger. Eksisterende mål overskrives ikke når torrentmapper lagres.
+
+[English details](../../../CHANGELOG.md#3101--2026-11-04)
+
 ## 3.10.0 — 2026-11-03
 
 ### macOS og Linux

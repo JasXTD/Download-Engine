@@ -100,6 +100,14 @@ Node.js for dependency notices and Perl's standard JSON::PP module to copy only
 files listed in the reviewed source inventory. Linux additionally
 needs the OpenSSL and D-Bus development packages. The project's locked Cargo
 dependencies must already be available for the offline build commands.
+
+Credential storage uses `keyring-core` with the encrypted D-Bus Secret Service
+store on Linux and the user Keychain store on macOS. Keep the existing service
+names, account identifiers, and Linux `target=default` attribute when changing
+these adapters; saved logins and the protected-data master key depend on them.
+A missing or locked store must remain an error, and a failed connection must be
+retryable without restarting the application.
+
 macOS TLS tests use the installed `openssl` command to create temporary 30-day
 localhost identities. Their keys are removed after loading; tests never change
 the system trust store or disable certificate/hostname verification.

@@ -119,8 +119,26 @@ pub(crate) fn delete(id: Uuid) -> Result<()> {
 }
 
 #[cfg(not(windows))]
-fn entry(id: Uuid) -> Result<keyring::Entry> {
-    Ok(keyring::Entry::new(
+pub(crate) fn native_entry(service: &str, user: &str) -> keyring_core::Result<keyring_core::Entry> {
+    use keyring_core::api::CredentialStoreApi;
+    // Scope the native connection to this entry. A failed connection must not
+    // poison later attempts after the user starts or unlocks their keyring.
+    #[cfg(target_os = "linux")]
+    {
+        // Retain keyring 3's item attributes and default collection so existing
+        // logins and the protected-data master key remain accessible.
+        let modifiers = std::collections::HashMap::from([("target", "default")]);
+        dbus_secret_service_keyring_store::Store::new()?.build(service, user, Some(&modifiers))
+    }
+    #[cfg(target_os = "macos")]
+    {
+        apple_native_keyring_store::keychain::Store::new()?.build(service, user, None)
+    }
+}
+
+#[cfg(not(windows))]
+fn entry(id: Uuid) -> Result<keyring_core::Entry> {
+    Ok(native_entry(
         "com.xetro.downloadengine.credentials",
         &id.to_string(),
     )?)
@@ -135,7 +153,7 @@ pub(crate) fn write(id: Uuid, bytes: &mut [u8]) -> Result<()> {
 pub(crate) fn read(id: Uuid) -> Result<Option<Zeroizing<Vec<u8>>>> {
     match entry(id)?.get_secret() {
         Ok(bytes) => Ok(Some(Zeroizing::new(bytes))),
-        Err(keyring::Error::NoEntry) => Ok(None),
+        Err(keyring_core::Error::NoEntry) => Ok(None),
         Err(error) => Err(anyhow::anyhow!(
             "The system credential store could not unlock this login: {error}"
         )),
@@ -144,7 +162,7 @@ pub(crate) fn read(id: Uuid) -> Result<Option<Zeroizing<Vec<u8>>>> {
 #[cfg(not(windows))]
 pub(crate) fn delete(id: Uuid) -> Result<()> {
     match entry(id)?.delete_credential() {
-        Ok(()) | Err(keyring::Error::NoEntry) => Ok(()),
+        Ok(()) | Err(keyring_core::Error::NoEntry) => Ok(()),
         Err(error) => Err(error.into()),
     }
 }
@@ -153,6 +171,22 @@ pub(crate) fn delete(id: Uuid) -> Result<()> {
 mod tests {
     use super::*;
     use std::sync::{Arc, Barrier, Mutex};
+
+    #[cfg(unix)]
+    #[test]
+    fn native_binary_secrets_survive_reopening_and_updates() {
+        let id = Uuid::new_v4();
+        assert!(read(id).unwrap().is_none());
+        delete(id).unwrap();
+        for bytes in [vec![0, 255, 128, 10], vec![17, 0, 254]] {
+            let mut secret = Zeroizing::new(bytes.clone());
+            write(id, &mut secret).unwrap();
+            assert_eq!(&*read(id).unwrap().unwrap(), &bytes);
+        }
+        delete(id).unwrap();
+        assert!(read(id).unwrap().is_none());
+        delete(id).unwrap();
+    }
 
     #[test]
     fn concurrent_vault_entries_round_trip_without_affecting_each_other() {

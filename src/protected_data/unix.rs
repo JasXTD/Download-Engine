@@ -26,10 +26,13 @@ fn master_key(create: bool) -> Result<Zeroizing<Vec<u8>>> {
         .open(root.join("secret-storage.lock"))?;
     lock.lock()
         .context("Cannot lock the system keychain setup")?;
-    let entry = keyring::Entry::new("com.xetro.downloadengine.protected-data", "master-key-v1")?;
+    let entry = crate::credential_vault::native_entry(
+        "com.xetro.downloadengine.protected-data",
+        "master-key-v1",
+    )?;
     let key = match entry.get_secret() {
         Ok(bytes) => Zeroizing::new(bytes),
-        Err(keyring::Error::NoEntry) if create => {
+        Err(keyring_core::Error::NoEntry) if create => {
             let mut bytes = Zeroizing::new(vec![0; 32]);
             OsRng
                 .try_fill_bytes(&mut bytes)

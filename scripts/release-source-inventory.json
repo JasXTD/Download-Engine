@@ -1357,6 +1357,7 @@
     "vendor/rqbit/librqbit-dht/resources/test_requests/get_peers_request_1.bin",
     "vendor/rqbit/librqbit-dht/src/bprotocol.rs",
     "vendor/rqbit/librqbit-dht/src/dht.rs",
+    "vendor/rqbit/librqbit-dht/src/dht_lookup_tests.rs",
     "vendor/rqbit/librqbit-dht/src/error.rs",
     "vendor/rqbit/librqbit-dht/src/lib.rs",
     "vendor/rqbit/librqbit-dht/src/peer_store.rs",

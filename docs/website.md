@@ -88,7 +88,7 @@ GitHub Pages deploys the `/docs` contents automatically. Check the repository's
 Actions page or Settings → Pages for the deployment result, then verify the
 published page and affected assets.
 
-Featured packages are explicitly pinned to **3.10.0**. Publish the GitHub release
+Featured packages are explicitly pinned to **3.10.1**. Publish the GitHub release
 with all ten assets before or together with pushing this site, or download buttons
 return 404. Update the current version labels, all nine payload URLs, checksum URL,
 release-notes URL and SoftwareApplication version/download URL together. Keep

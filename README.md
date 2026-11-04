@@ -46,9 +46,9 @@ Looking for a free **IDM alternative**? The familiar layout is inspired by
 **Internet Download Manager (IDM)**. Download Engine is an independent project, is
 not affiliated with IDM, and does not claim complete IDM feature parity.
 
-> **In this build, v3.10.0:** native macOS packages for Apple Silicon and Intel,
-> plus Linux x64, with native dialogs, OS credential storage and bundled FFmpeg.
-> Windows keeps its existing installer, portable package and integrations.
+> **In this build, v3.10.1:** safer torrent peer discovery and network filtering,
+> protected folder moves on macOS and Linux, and updated native credential storage
+> that keeps existing saved logins. All desktop packages include FFmpeg.
 > Find published [desktop packages and extensions](https://github.com/JasXTD/Download-Engine/releases),
 > or read the [changelog](CHANGELOG.md).
 

@@ -1,3 +1,9 @@
+## 3.10.1 — 2026-11-04
+
+Meglieradas las limitas da resursas per tschertgar peers torrent, l’annullaziun e la filtraziun da las adressas da rait. L’arcunaziun da las datas d’annunzia sin macOS e Linux è actualisada e mantegna las annunzias existentas. La memorisaziun d’ordinaturs torrent na remplazza betg pli destinaziuns existentas.
+
+[English details](../../../CHANGELOG.md#3101--2026-11-04)
+
 ## 3.10.0 — 2026-11-03
 
 ### macOS e Linux

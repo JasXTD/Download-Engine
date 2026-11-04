@@ -1,3 +1,9 @@
+## 3.10.1 — 2026-11-04
+
+Cải thiện giới hạn tài nguyên khi tìm kiếm peer torrent, xử lý hủy và lọc địa chỉ mạng. Cập nhật kho thông tin xác thực trên macOS và Linux nhưng vẫn giữ thông tin đăng nhập hiện có, đồng thời ngăn ghi đè đích đã tồn tại khi lưu thư mục torrent.
+
+[English details](../../../CHANGELOG.md#3101--2026-11-04)
+
 ## 3.10.0 — 2026-11-03
 
 ### macOS và Linux

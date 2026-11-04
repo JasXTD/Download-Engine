@@ -94,7 +94,19 @@ All of these come from data that strangers control, and each has a regression te
 - Public endpoints: `librqbit-core/src/network.rs` shares the existing address policy with
   the engine and DHT. DHT filters discovered nodes/peers and guards request submission,
   incoming messages and final UDP sends, including bootstrap and persisted nodes.
+  The RFC 8215 local-use translation prefix `64:ff9b:1::/48` is blocked because a
+  network translator can use it to reach private IPv4 destinations.
   `allow_local_addresses` is an explicit isolated-LAN opt-in, off by default.
+- DHT recursive work: each lookup admits at most 256 queued or active nodes and creates
+  at most eight concurrent request futures, within a shared 4,096-node admission budget
+  across torrent searches, bootstrap and routing refreshes. Pending endpoints and IDs
+  remain deduplicated independently of cache eviction until completion or cancellation.
+  Full queues discard
+  additional discoveries without changing retry timestamps. Peer results share a bounded
+  256-entry queue across IPv4/IPv6 discovery; a slow consumer cannot stall recursion or
+  accumulate unlimited results. Cancelled requests also release response-tracking entries.
+  Socket-free tests feed decoded responses through both lookup schedulers and cover floods,
+  queue draining, duplicate nodes, timeouts and cancellation.
 
 - File names on Windows: `validate` blocked only `..` and slashes, so `C:evil.dll`,
   `file.txt:stream`, `CON` and trailing dots passed, and a drive prefix replaced the

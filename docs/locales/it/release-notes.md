@@ -1,3 +1,9 @@
+## 3.10.1 — 2026-11-04
+
+Migliorati i limiti delle risorse per la ricerca dei peer torrent, l’annullamento e il filtraggio degli indirizzi di rete. Aggiornata l’archiviazione delle credenziali su macOS e Linux preservando gli accessi salvati. Il salvataggio delle cartelle torrent non sovrascrive le destinazioni esistenti.
+
+[English details](../../../CHANGELOG.md#3101--2026-11-04)
+
 ## 3.10.0 — 2026-11-03
 
 ### macOS e Linux

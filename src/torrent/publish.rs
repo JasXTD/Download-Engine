@@ -98,10 +98,21 @@ fn move_folder(from: &Path, to: &Path) -> std::io::Result<()> {
 
 #[cfg(not(windows))]
 fn move_folder(from: &Path, to: &Path) -> std::io::Result<()> {
-    if to.exists() {
-        return Err(ErrorKind::AlreadyExists.into());
-    }
-    std::fs::rename(from, to)
+    use std::os::unix::fs::OpenOptionsExt;
+    let original = std::fs::OpenOptions::new()
+        .read(true)
+        .custom_flags(libc::O_DIRECTORY | libc::O_NOFOLLOW | libc::O_CLOEXEC)
+        .open(from)?;
+    #[cfg(test)]
+    tests::before_folder_rename(to)?;
+    // The destination can appear after the caller's check. Refuse replacement atomically.
+    crate::unix_files::rename_owned(&original, from, to).map_err(|error| {
+        // Keep AlreadyExists so publication can try the next numbered name.
+        let kind = error
+            .downcast_ref::<std::io::Error>()
+            .map_or(ErrorKind::Other, std::io::Error::kind);
+        std::io::Error::new(kind, error)
+    })
 }
 
 fn folder_candidate(directory: &Path, name: &str, index: u32) -> PathBuf {
@@ -236,6 +247,81 @@ pub(crate) fn delete_saved(store: &Store, job: &Job, path: &Path) -> Result<()> 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[cfg(unix)]
+    std::thread_local! {
+        static CREATE_DESTINATION_BEFORE_RENAME: std::cell::Cell<bool> = const {
+            std::cell::Cell::new(false)
+        };
+    }
+
+    #[cfg(unix)]
+    pub(super) fn before_folder_rename(to: &Path) -> std::io::Result<()> {
+        if CREATE_DESTINATION_BEFORE_RENAME.replace(false) {
+            std::fs::create_dir(to)?;
+        }
+        Ok(())
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_destination_created_during_publication_is_preserved() {
+        let temp = tempfile::tempdir().unwrap();
+        let (from, to) = (temp.path().join("from"), temp.path().join("to"));
+        write(&from, "a.bin");
+        assert!(!to.exists());
+        CREATE_DESTINATION_BEFORE_RENAME.set(true);
+        let error = move_folder(&from, &to).unwrap_err();
+        assert_eq!(error.kind(), ErrorKind::AlreadyExists, "{error}");
+        assert_eq!(std::fs::read(from.join("a.bin")).unwrap(), b"abc");
+        assert!(to.is_dir());
+        assert_eq!(std::fs::read_dir(&to).unwrap().count(), 0);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn destination_symlinks_are_preserved() {
+        for dangling in [false, true] {
+            let temp = tempfile::tempdir().unwrap();
+            let (from, to) = (temp.path().join("from"), temp.path().join("to"));
+            let target = temp.path().join("target");
+            write(&from, "a.bin");
+            if !dangling {
+                write(&target, "keep.bin");
+            }
+            std::os::unix::fs::symlink(&target, &to).unwrap();
+            let error = move_folder(&from, &to).unwrap_err();
+            assert_eq!(error.kind(), ErrorKind::AlreadyExists, "{error}");
+            assert_eq!(std::fs::read(from.join("a.bin")).unwrap(), b"abc");
+            assert_eq!(std::fs::read_link(&to).unwrap(), target);
+            if dangling {
+                assert!(!target.exists());
+            } else {
+                assert_eq!(std::fs::read(target.join("keep.bin")).unwrap(), b"abc");
+                assert!(!target.join("a.bin").exists());
+            }
+        }
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn source_symlinks_and_regular_files_are_rejected() {
+        let temp = tempfile::tempdir().unwrap();
+        let (from, to) = (temp.path().join("from"), temp.path().join("to"));
+        let target = temp.path().join("target");
+        write(&target, "keep.bin");
+        std::os::unix::fs::symlink(&target, &from).unwrap();
+        assert!(move_folder(&from, &to).is_err());
+        assert_eq!(std::fs::read_link(&from).unwrap(), target);
+        assert_eq!(std::fs::read(target.join("keep.bin")).unwrap(), b"abc");
+        assert!(!to.exists());
+
+        let file = temp.path().join("file.bin");
+        std::fs::write(&file, b"keep").unwrap();
+        assert!(move_folder(&file, &to).is_err());
+        assert_eq!(std::fs::read(&file).unwrap(), b"keep");
+        assert!(!to.exists());
+    }
 
     fn file(index: usize, path: &str) -> File {
         File {

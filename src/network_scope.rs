@@ -45,6 +45,8 @@ fn ipv6_scope(ip: Ipv6Addr) -> Result<NetworkScope> {
         || segments[0] & 0xfe00 == 0xfc00 // unique-local fc00::/7
         || segments[0] & 0xffc0 == 0xfe80 // link-local fe80::/10
         || segments[0] & 0xffc0 == 0xfec0 // deprecated site-local fec0::/10
+        // RFC 8215 local-use translation can reach private IPv4 destinations.
+        || (segments[0] == 0x64 && segments[1] == 0xff9b && segments[2] == 1)
         || (segments[0] == 0x2001 && segments[1] == 0x0db8); // documentation
     Ok(if special {
         NetworkScope::LocalOrSpecial
@@ -150,6 +152,54 @@ mod tests {
         assert!(validate_resolution([]).is_err());
         for address in ["0.0.0.0", "255.255.255.255", "224.0.0.1", "::", "ff02::1"] {
             assert!(validate_resolution([address.parse().unwrap()]).is_err());
+        }
+    }
+
+    #[test]
+    fn local_use_translation_is_not_public() {
+        for address in [
+            "64:ff9b:1::",
+            "64:ff9b:1::c0a8:101",
+            "64:ff9b:1::a00:1",
+            "64:ff9b:1:ffff:ffff:ffff:ffff:ffff",
+        ] {
+            let ip = address.parse().unwrap();
+            assert_eq!(network_scope(ip).unwrap(), NetworkScope::LocalOrSpecial);
+            for addresses in [
+                ["2606:4700::1111".parse().unwrap(), ip],
+                [ip, "8.8.8.8".parse().unwrap()],
+            ] {
+                assert!(validate_resolution(addresses).is_err());
+            }
+        }
+        // Neither adjacent prefixes nor the well-known translation prefix are
+        // part of the local-use /48; normal public IPv6 must remain available.
+        for address in [
+            "64:ff9b::808:808",
+            "64:ff9b:0:ffff:ffff:ffff:ffff:ffff",
+            "64:ff9b:2::",
+            "2606:4700::1111",
+        ] {
+            assert_eq!(
+                network_scope(address.parse().unwrap()).unwrap(),
+                NetworkScope::Public
+            );
+        }
+    }
+
+    #[tokio::test]
+    async fn public_reader_rejects_local_use_translation_before_io() {
+        // Only construct a checked client. Never resolve a host or send a request.
+        for address in [
+            "64:ff9b:1::",
+            "64:ff9b:1::c0a8:101",
+            "64:ff9b:1:ffff:ffff:ffff:ffff:ffff",
+        ] {
+            let url = reqwest::Url::parse(&format!("https://[{address}]/")).unwrap();
+            let error = public_client(&url, &crate::proxy::Route::direct())
+                .await
+                .unwrap_err();
+            assert!(error.to_string().contains("only reach the public internet"));
         }
     }
 }

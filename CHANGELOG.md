@@ -2,6 +2,15 @@
 
 Release notes are available offline in Help → Changelog. Newest releases appear first.
 
+## 3.10.1 — 2026-11-04
+
+### Security and reliability
+
+- Bounded recursive torrent DHT discovery, queued peer results and concurrent requests. Completion, cancellation and failures release pending work so oversized discovery responses cannot grow these queues without limit.
+- Blocked the local-use IPv6 translation range in public-reader, torrent peer, tracker and DHT address checks, while preserving normal public IPv6 access.
+- Fixed torrent folder publication on macOS and Linux so a destination created during the move is preserved. Existing folders and symlinks are never replaced; publication can select another numbered name.
+- Updated macOS Keychain and Linux Secret Service adapters while preserving existing saved logins and protected-data keys. Failed credential-store connections can be retried without restarting the app.
+
 ## 3.10.0 — 2026-11-03
 
 ### macOS and Linux

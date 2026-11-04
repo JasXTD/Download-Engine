@@ -258,7 +258,6 @@ Download Engine builds a modified copy of librqbit-tracker-comms 9.1.0 (the BitT
 - **tower-layer 0.3.3** — MIT. [LICENSE](rust/tower-layer-0.3.3/LICENSE).
 - **tower-service 0.3.3** — MIT. [LICENSE](rust/tower-service-0.3.3/LICENSE).
 - **tracing 0.1.44** — MIT. [LICENSE](rust/tracing-0.1.44/LICENSE).
-- **tracing-attributes 0.1.31** — MIT. [LICENSE](rust/tracing-attributes-0.1.31/LICENSE).
 - **tracing-core 0.1.36** — MIT. [LICENSE](rust/tracing-core-0.1.36/LICENSE), [LICENSE](rust/tracing-core-0.1.36/src/spin/LICENSE).
 - **try-lock 0.2.5** — MIT. [LICENSE](rust/try-lock-0.2.5/LICENSE).
 - **type-map 0.5.1** — MIT/Apache-2.0. [LICENSE-APACHE](rust/type-map-0.5.1/LICENSE-APACHE), [LICENSE-MIT](rust/type-map-0.5.1/LICENSE-MIT).

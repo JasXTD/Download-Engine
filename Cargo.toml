@@ -1,6 +1,6 @@
 [package]
 name = "download-engine"
-version = "3.10.0"
+version = "3.10.1"
 license = "MIT"
 edition = "2024"
 default-run = "de"
@@ -50,13 +50,15 @@ aes = { version = "=0.8.4", features = ["zeroize"] }
 aes-gcm = { version = "=0.10.3", features = ["zeroize"] }
 libc = "0.2"
 rfd = { version = "=0.17.2", default-features = false, features = ["xdg-portal"] }
+# Select native stores explicitly; the all-in-one keyring wrapper uses ZBus on Linux.
+keyring-core = { version = "=1.0.1", default-features = false }
 
 [target.'cfg(target_os = "linux")'.dependencies]
 eframe = { version = "0.36.2", default-features = false, features = ["x11", "wayland"] }
-keyring = { version = "=3.6.3", default-features = false, features = ["sync-secret-service", "crypto-rust"] }
+dbus-secret-service-keyring-store = { version = "=1.0.1", default-features = false, features = ["crypto-rust"] }
 
 [target.'cfg(target_os = "macos")'.dependencies]
-keyring = { version = "=3.6.3", default-features = false, features = ["apple-native"] }
+apple-native-keyring-store = { version = "=1.0.2", default-features = false, features = ["keychain"] }
 # Reuse the Apple bindings already locked through the GUI dependencies.
 objc2 = "=0.6.5"
 objc2-foundation = { version = "=0.3.2", default-features = false, features = ["std", "NSObject", "NSString", "NSData", "NSLocale", "NSAppleEventManager", "NSAppleEventDescriptor"] }

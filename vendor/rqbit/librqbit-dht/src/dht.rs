@@ -1,5 +1,5 @@
 // Modified by Download Engine: replaced backon, leaky-bucket and dashmap, and guarded
-// public-network endpoints. See ../../patch.md.
+// public-network endpoints and bounded recursive lookups. See ../../patch.md.
 use std::{
     cmp::Reverse,
     collections::HashMap,
@@ -41,7 +41,11 @@ use librqbit_dualstack_sockets::{BindDevice, UdpSocket};
 use parking_lot::{Mutex, RwLock};
 
 use serde::Serialize;
-use tokio::sync::mpsc::{Sender, UnboundedReceiver, UnboundedSender, channel, unbounded_channel};
+use tokio::sync::mpsc::{
+    Receiver, Sender, UnboundedReceiver, UnboundedSender, channel, error::TrySendError,
+    unbounded_channel,
+};
+use tokio::sync::{OwnedSemaphorePermit, Semaphore};
 
 use tokio_util::sync::CancellationToken;
 use tracing::{Instrument, debug, debug_span, error, info, trace, warn};
@@ -61,6 +65,18 @@ pub struct DhtStats {
 
 struct OutstandingRequest {
     done: tokio::sync::oneshot::Sender<crate::Result<ResponseOrError>>,
+}
+
+// Also remove requests when their lookup is cancelled while awaiting a response.
+struct InflightRequest<'a> {
+    requests: &'a Mutex<HashMap<(u16, SocketAddr), OutstandingRequest>>,
+    key: (u16, SocketAddr),
+}
+
+impl Drop for InflightRequest<'_> {
+    fn drop(&mut self) {
+        self.requests.lock().remove(&self.key);
+    }
 }
 
 pub struct WorkerSendRequest {
@@ -171,6 +187,30 @@ impl RecursiveRequestCallbacks for RecursiveRequestCallbacksFindNodes {
     }
 }
 
+// The useful-node cache is a ranking, not a work budget: closer IDs can evict
+// nodes whose requests are still pending. Keep admission separate from ranking.
+const MAX_PENDING_NODES: usize = 256;
+const MAX_CONCURRENT_LOOKUP_REQUESTS: usize = 8;
+const MAX_QUEUED_PEERS: usize = 256;
+// Bound aggregate admission across torrent searches, bootstrap and bucket refresh.
+const MAX_PENDING_DHT_NODES: usize = 4096;
+
+type PendingNodes = Arc<Mutex<HashMap<SocketAddr, Option<Id20>>>>;
+
+struct PendingNode {
+    id: Option<Id20>,
+    addr: SocketAddr,
+    depth: usize,
+    pending: PendingNodes,
+    _permit: OwnedSemaphorePermit,
+}
+
+impl Drop for PendingNode {
+    fn drop(&mut self) {
+        self.pending.lock().remove(&self.addr);
+    }
+}
+
 struct RecursiveRequest<C: RecursiveRequestCallbacks> {
     max_depth: usize,
     useful_nodes_limit: usize,
@@ -178,22 +218,23 @@ struct RecursiveRequest<C: RecursiveRequestCallbacks> {
     request: Request,
     dht: Arc<DhtState>,
     useful_nodes: RwLock<Vec<MaybeUsefulNode>>,
-    peer_tx: tokio::sync::mpsc::UnboundedSender<SocketAddr>,
-    node_tx: tokio::sync::mpsc::UnboundedSender<(Option<Id20>, SocketAddr, usize)>,
+    peer_tx: Sender<SocketAddr>,
+    node_tx: Sender<PendingNode>,
+    pending_nodes: PendingNodes,
     callbacks: C,
 }
 
 pub struct RequestPeersStream {
-    rx: tokio::sync::mpsc::UnboundedReceiver<SocketAddr>,
+    rx: Receiver<SocketAddr>,
     cancel_join_handle_v4: tokio::task::JoinHandle<()>,
     cancel_join_handle_v6: tokio::task::JoinHandle<()>,
 }
 
 impl RequestPeersStream {
     fn new(dht: Arc<DhtState>, info_hash: Id20, announce_port: Option<u16>) -> Self {
-        let (peer_tx, peer_rx) = unbounded_channel();
-        let make = |is_v4: bool, dht: Arc<DhtState>, peer_tx: UnboundedSender<SocketAddr>| {
-            let (node_tx, node_rx) = unbounded_channel();
+        let (peer_tx, peer_rx) = channel(MAX_QUEUED_PEERS);
+        let make = |is_v4: bool, dht: Arc<DhtState>, peer_tx: Sender<SocketAddr>| {
+            let (node_tx, node_rx) = channel(MAX_PENDING_NODES);
             let rp = Arc::new(RecursiveRequest {
                 max_depth: 4,
                 info_hash,
@@ -203,6 +244,7 @@ impl RequestPeersStream {
                 useful_nodes: RwLock::new(Vec::new()),
                 peer_tx,
                 node_tx,
+                pending_nodes: Default::default(),
                 callbacks: RecursiveRequestCallbacksGetPeers {
                     min_distance_to_announce: Id20::from_str(
                         "0000ffffffffffffffffffffffffffffffffffff",
@@ -250,7 +292,7 @@ impl RecursiveRequest<RecursiveRequestCallbacksFindNodes> {
         target: Id20,
         addrs: impl Iterator<Item = SocketAddr>,
     ) -> crate::Result<()> {
-        let (node_tx, mut node_rx) = unbounded_channel();
+        let (node_tx, mut node_rx) = channel(MAX_PENDING_NODES);
         let req = RecursiveRequest {
             max_depth: 4,
             info_hash: target,
@@ -258,13 +300,15 @@ impl RecursiveRequest<RecursiveRequestCallbacksFindNodes> {
             dht,
             useful_nodes_limit: 32,
             useful_nodes: RwLock::new(Vec::new()),
-            peer_tx: unbounded_channel().0,
+            peer_tx: channel(MAX_QUEUED_PEERS).0,
             node_tx,
+            pending_nodes: Default::default(),
             callbacks: RecursiveRequestCallbacksFindNodes {},
         };
 
-        let request_one = |id, addr, depth| {
-            req.request_one(id, addr, depth)
+        let request_one = |node: PendingNode| {
+            let addr = node.addr;
+            req.request_one(node)
                 .map_err(|e| {
                     debug!("error: {e:#}");
                     e
@@ -280,35 +324,27 @@ impl RecursiveRequest<RecursiveRequestCallbacksFindNodes> {
 
         let mut initial_addrs = 0;
         for addr in addrs {
-            futs.push(request_one(None, addr, 0));
-            initial_addrs += 1;
+            initial_addrs += usize::from(req.enqueue_node(None, addr, 0)?);
         }
 
         let mut successes = 0;
         let mut errors = 0;
 
         loop {
-            tokio::select! {
-                biased;
-
-                r = node_rx.recv() => {
-                    let (id, addr, depth) = r.unwrap();
-                    futs.push(request_one(id, addr, depth))
-                },
-                f = futs.next() => {
-                    let f = match f {
-                        Some(f) => f,
-                        None => {
-                            // find_node recursion finished.
-                            break;
-                        }
-                    };
-                    if f.is_ok() {
-                        successes += 1;
-                    } else {
-                        errors += 1;
-                    }
-                }
+            // Only these futures can add more nodes. Drain queued work before
+            // deciding that recursion is finished, without allocating waiters
+            // for every advertised node behind the outgoing rate limiter.
+            while futs.len() < MAX_CONCURRENT_LOOKUP_REQUESTS {
+                let Ok(node) = node_rx.try_recv() else { break };
+                futs.push(request_one(node));
+            }
+            let Some(result) = futs.next().await else {
+                break;
+            };
+            if result.is_ok() {
+                successes += 1;
+            } else {
+                errors += 1;
             }
         }
         if successes == 0 {
@@ -324,7 +360,7 @@ impl RecursiveRequest<RecursiveRequestCallbacksFindNodes> {
 impl RecursiveRequest<RecursiveRequestCallbacksGetPeers> {
     fn request_peers_forever(
         self: &Arc<Self>,
-        mut node_rx: tokio::sync::mpsc::UnboundedReceiver<(Option<Id20>, SocketAddr, usize)>,
+        mut node_rx: Receiver<PendingNode>,
         is_v4: bool,
     ) -> tokio::task::JoinHandle<()> {
         let this = self.clone();
@@ -358,10 +394,10 @@ impl RecursiveRequest<RecursiveRequestCallbacksGetPeers> {
                 let mut futs = FuturesUnordered::new();
                 loop {
                     tokio::select! {
-                        addr = node_rx.recv() => {
-                            let (id, addr, depth) = addr.unwrap();
+                        Some(node) = node_rx.recv(), if futs.len() < MAX_CONCURRENT_LOOKUP_REQUESTS => {
+                            let addr = node.addr;
                             futs.push(
-                                this.request_one(id, addr, depth)
+                                this.request_one(node)
                                     .map_err(|e| debug!("error: {e:#}"))
                                     .instrument(debug_span!("addr", addr=addr.to_string()))
                             );
@@ -391,10 +427,7 @@ impl RecursiveRequest<RecursiveRequestCallbacksGetPeers> {
             .take(8)
         {
             count += 1;
-            self.node_tx
-                .send((Some(id), addr, 0))
-                .ok()
-                .ok_or(Error::DhtDead)?;
+            self.enqueue_node(Some(id), addr, 0)?;
         }
 
         Ok(count)
@@ -402,12 +435,54 @@ impl RecursiveRequest<RecursiveRequestCallbacksGetPeers> {
 }
 
 impl<C: RecursiveRequestCallbacks> RecursiveRequest<C> {
-    async fn request_one(
+    fn enqueue_node(
         &self,
         id: Option<Id20>,
         addr: SocketAddr,
         depth: usize,
-    ) -> crate::Result<()> {
+    ) -> crate::Result<bool> {
+        if depth > self.max_depth || !self.dht.allows_address(addr) {
+            return Ok(false);
+        }
+        let slot = match self.node_tx.try_reserve() {
+            Ok(slot) => slot,
+            Err(TrySendError::Full(_)) => return Ok(false),
+            Err(TrySendError::Closed(_)) => return Err(Error::ReceiverDead),
+        };
+        let Ok(permit) = self.dht.lookup_budget.clone().try_acquire_owned() else {
+            return Ok(false);
+        };
+        let mut pending = self.pending_nodes.lock();
+        if pending.len() >= MAX_PENDING_NODES
+            || pending.contains_key(&addr)
+            || (id.is_some() && pending.values().any(|pending_id| *pending_id == id))
+        {
+            return Ok(false);
+        }
+        // Do not update retry timestamps or evict useful nodes for work that
+        // cannot be admitted. Root nodes retain their periodic requery policy.
+        if depth > 0
+            && let Some(id) = id
+            && !self.should_request_node(id, addr, depth - 1, now())
+        {
+            return Ok(false);
+        }
+        pending.insert(addr, id);
+        drop(pending);
+        slot.send(PendingNode {
+            id,
+            addr,
+            depth,
+            pending: self.pending_nodes.clone(),
+            _permit: permit,
+        });
+        Ok(true)
+    }
+
+    async fn request_one(&self, node: PendingNode) -> crate::Result<()> {
+        // Keep admission and deduplication until completion or cancellation,
+        // including the time spent waiting for the outgoing rate limiter.
+        let (id, addr, depth) = (node.id, node.addr, node.depth);
         if let Some(id) = id {
             self.callbacks.on_request_start(self, id, addr);
         }
@@ -440,7 +515,13 @@ impl<C: RecursiveRequestCallbacks> RecursiveRequest<C> {
                 .into_iter()
                 .filter(|peer| self.dht.allows_address(peer.0))
             {
-                self.peer_tx.send(peer.0).ok().ok_or(Error::ReceiverDead)?;
+                match self.peer_tx.try_send(peer.0) {
+                    Ok(()) => {}
+                    // A slow peer consumer must not move the unbounded backlog
+                    // here or stall the recursive lookup. Later replies retry.
+                    Err(TrySendError::Full(_)) => break,
+                    Err(TrySendError::Closed(_)) => return Err(Error::ReceiverDead),
+                }
             }
         }
 
@@ -456,20 +537,12 @@ impl<C: RecursiveRequestCallbacks> RecursiveRequest<C> {
             )
             .filter(|node| addr.is_ipv4() == node.addr.is_ipv4());
 
-        let now = now();
-
         for node in node_it {
-            let should_request = self.should_request_node(node.id, node.addr, depth, now);
+            let should_request = self.enqueue_node(Some(node.id), node.addr, depth + 1)?;
             trace!(
                 "should_request={}, id={:?}, addr={}, depth={}/{}",
                 should_request, node.id, node.addr, depth, self.max_depth
             );
-            if should_request {
-                self.node_tx
-                    .send((Some(node.id), node.addr, depth + 1))
-                    .ok()
-                    .ok_or(Error::ReceiverDead)?;
-            }
         }
         Ok(())
     }
@@ -574,6 +647,7 @@ pub struct DhtState {
 
     // Sending requests to the worker.
     rate_limiter: RateLimiter,
+    lookup_budget: Arc<Semaphore>,
     // This is to send raw messages
     worker_sender: UnboundedSender<WorkerSendRequest>,
 
@@ -604,6 +678,7 @@ impl DhtState {
             worker_sender: sender,
             listen_addr,
             rate_limiter: RateLimiter::new(),
+            lookup_budget: Arc::new(Semaphore::new(MAX_PENDING_DHT_NODES)),
             peer_store,
             cancellation_token,
         }
@@ -620,6 +695,10 @@ impl DhtState {
         self.inflight_by_transaction_id
             .lock()
             .insert(key, OutstandingRequest { done: tx });
+        let _inflight = InflightRequest {
+            requests: &self.inflight_by_transaction_id,
+            key,
+        };
         trace!("sending {message:?}");
         match self.worker_sender.send(WorkerSendRequest {
             our_tid: Some(tid),
@@ -627,24 +706,15 @@ impl DhtState {
             addr,
         }) {
             Ok(_) => {}
-            Err(_) => {
-                self.inflight_by_transaction_id.lock().remove(&key);
-                return Err(Error::DhtDead);
-            }
+            Err(_) => return Err(Error::DhtDead),
         };
         match tokio::time::timeout(RESPONSE_TIMEOUT, rx).await {
             Ok(Ok(r)) => r.map(|r| {
                 trace!("received {r:?}");
                 r
             }),
-            Ok(Err(_)) => {
-                self.inflight_by_transaction_id.lock().remove(&key);
-                Err(Error::DhtDead)
-            }
-            Err(_) => {
-                self.inflight_by_transaction_id.lock().remove(&key);
-                Err(Error::ResponseTimeout(RESPONSE_TIMEOUT))
-            }
+            Ok(Err(_)) => Err(Error::DhtDead),
+            Err(_) => Err(Error::ResponseTimeout(RESPONSE_TIMEOUT)),
         }
     }
 
@@ -1442,6 +1512,10 @@ impl FromSocketAddr for SocketAddrV6 {
 }
 
 #[cfg(test)]
+#[path = "dht_lookup_tests.rs"]
+mod lookup_limit_tests;
+
+#[cfg(test)]
 mod endpoint_policy_tests {
     use super::*;
 
@@ -1481,6 +1555,8 @@ mod endpoint_policy_tests {
             "[fc00::1]:80",
             "[fe80::1]:80",
             "[::ffff:192.168.1.1]:80",
+            "[64:ff9b:1::c0a8:101]:80",
+            "[64:ff9b:1:ffff:ffff:ffff:ffff:ffff]:80",
         ] {
             assert!(
                 matches!(

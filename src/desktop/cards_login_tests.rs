@@ -412,6 +412,9 @@ fn settings_groups_fit_minimum_width_and_scrolling_reaches_every_summary() {
         app.interface.appearance = appearance;
         app.configure_appearance(&ctx);
         app.open_preferences_window();
+        // The summaries load on a worker. A fixed number of rendered frames
+        // cannot guarantee that its result is ready on a busy native runner.
+        app.wait_for_io();
         for (category, labels) in [
             (
                 C::Appearance,

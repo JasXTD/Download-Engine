@@ -56,7 +56,7 @@ Extensiuns agiuntan sustegn per websites ed automatisaziun en in sulet pachet. E
 
 1. Avra Extensiuns en la glista d’utensils sura. Il tab Installadas mussa quai che ti has.
 
-2. Tscherna Installar da datoteca… e tscherna lura ina datoteca .de-extension.json.
+2. Tscherna Installar da datoteca… e tscherna lura ina datoteca .de-extension.json. Per empruvar l’emprim ina, tscherni empè Exempels…: tschintg pitschens exempels vegnan cun l’app.
 
 3. Legia la fanestra da verificaziun. Ella mussa il producent, quai che l’extensiun po far e sias incumbensas. Anc na vegn nagut exequì.
 
@@ -68,7 +68,7 @@ Ils producents na vegnan betg verifitgads, perquai installescha extensiuns mo da
 
 ### Parameters, code ed actualisaziuns
 
-Tscherna ina extensiun per vesair quai ch’ella po far, quai ch’ella na po betg far e cur che sias incumbensas èn vegnidas exequidas l’ultima giada. Parameters cuntegna sias opziuns. Valurs protegidas pon vegnir remplazzadas u stizzadas, ma betg pli mussadas. Code mussa sias datotecas, mo per leger. Copiar en mes scripts fa ina copia modifitgabla sco script persunal.
+Tscherna ina extensiun per vesair quai ch’ella po far, quai ch’ella na po betg far e cur che sias incumbensas èn vegnidas exequidas l’ultima giada. Parameters cuntegna sias opziuns. Valurs protegidas pon vegnir remplazzadas u stizzadas, ma betg pli mussadas. Code mussa sias datotecas, mo per leger. Copiar en mes scripts fa ina copia modifitgabla sco script persunal. Sch’ina incumbensa dumonda da midar datotecas e Vus avais laschà vid il champ, conceda Lubir… sin il tab Survista l’access pli tard, e Revocar al prenda puspè.
 
 Per actualisar, tscherna Installar da datoteca… e lura ina datoteca pli nova. La fanestra da verificaziun mussa las midadas. Sche l’actualisaziun dumonda nov access, stos ti l’approvar, e Betg ussa lascha la versiun installada sco ch’ella era. Parameters, clavs e valurs memorisadas vegnan mantegnids, e telechargiadas gia en curs mantegnan il code cun il qual ellas èn vegnidas aviadas.
 

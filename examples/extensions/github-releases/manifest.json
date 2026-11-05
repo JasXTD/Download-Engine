@@ -1,0 +1,34 @@
+{
+  "format": "download-engine-extension",
+  "format_version": 1,
+  "id": "examples.github-releases",
+  "name": "GitHub release files",
+  "version": "1.0.0",
+  "publisher": "Download Engine examples",
+  "description": "Lists the files attached to a GitHub release so you can choose which ones to download.",
+  "license": "MIT",
+  "api_version": 1,
+  "permissions": {
+    "network": ["github.com", "api.github.com"]
+  },
+  "settings": [
+    {
+      "id": "include_source",
+      "type": "boolean",
+      "label": "Also list the source code archives GitHub makes for each release",
+      "default": false
+    }
+  ],
+  "jobs": [
+    {
+      "id": "release-files",
+      "name": "GitHub release pages",
+      "entry": "reader.lua",
+      "timeout_seconds": 30,
+      "trigger": {
+        "kind": "site_reader",
+        "pages": ["github.com/*/releases/tag/*", "github.com/*/releases/latest", "github.com/*/releases"]
+      }
+    }
+  ]
+}

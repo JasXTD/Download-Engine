@@ -56,7 +56,7 @@ Le estensioni aggiungono supporto per i siti e automazione in un unico pacchetto
 
 1. Apri Estensioni nella barra degli strumenti in alto. La scheda Installate elenca ciò che hai.
 
-2. Scegli Installa da file… e seleziona un file .de-extension.json.
+2. Scegli Installa da file… e seleziona un file .de-extension.json. Per provarne prima uno, scegli invece Esempi…: con l’app sono inclusi cinque piccoli esempi.
 
 3. Leggi la finestra di verifica. Mostra il produttore, cosa può fare l’estensione e le sue attività. Non viene ancora eseguito nulla.
 
@@ -68,7 +68,7 @@ I produttori non sono verificati, quindi installa estensioni solo da persone di 
 
 ### Impostazioni, codice e aggiornamenti
 
-Seleziona un’estensione per vedere cosa può fare, cosa non può fare e quando le sue attività sono state eseguite l’ultima volta. Impostazioni contiene le sue opzioni. I valori protetti possono essere sostituiti o cancellati, ma non mostrati di nuovo. Codice mostra i suoi file in sola lettura. Copia nei miei script crea una copia modificabile come script personale.
+Seleziona un’estensione per vedere cosa può fare, cosa non può fare e quando le sue attività sono state eseguite l’ultima volta. Impostazioni contiene le sue opzioni. I valori protetti possono essere sostituiti o cancellati, ma non mostrati di nuovo. Codice mostra i suoi file in sola lettura. Copia nei miei script crea una copia modificabile come script personale. Se un’attività chiede di modificare i file e hai lasciato vuota la casella, Consenti… nella scheda Panoramica concede l’accesso in seguito e Revoca lo toglie.
 
 Per aggiornare, scegli Installa da file… e seleziona un file più recente. La finestra di verifica mostra cosa è cambiato. Se l’aggiornamento chiede un nuovo accesso, devi approvarlo, e Non ora lascia la versione installata com’era. Impostazioni, chiavi e valori memorizzati vengono conservati e i download già in corso mantengono il codice con cui sono partiti.
 

@@ -56,7 +56,7 @@ Tiện ích mở rộng bổ sung hỗ trợ trang và tự động hóa trong m
 
 1. Mở Tiện ích mở rộng trên thanh công cụ phía trên. Thẻ Đã cài đặt liệt kê các tiện ích mở rộng bạn có.
 
-2. Chọn Cài đặt từ tệp… rồi chọn một tệp .de-extension.json.
+2. Chọn Cài đặt từ tệp… rồi chọn một tệp .de-extension.json. Để thử trước, hãy chọn Ví dụ… thay vào đó: ứng dụng có sẵn năm ví dụ nhỏ.
 
 3. Đọc cửa sổ xem xét. Cửa sổ này cho biết nhà phát hành, những việc tiện ích mở rộng có thể làm và các tác vụ của nó. Chưa có gì chạy.
 
@@ -68,7 +68,7 @@ Nhà phát hành chưa được xác minh, vì vậy chỉ cài đặt tiện í
 
 ### Cài đặt, mã và cập nhật
 
-Chọn một tiện ích mở rộng để xem những việc nó có thể làm, những việc nó không thể làm và thời điểm các tác vụ chạy gần nhất. Thẻ Cài đặt chứa các tùy chọn của nó. Giá trị được bảo vệ có thể được thay thế hoặc xóa nhưng không thể hiển thị lại. Thẻ Mã hiển thị các tệp ở chế độ chỉ đọc. Sao chép vào tập lệnh của tôi tạo một bản sao có thể chỉnh sửa dưới dạng tập lệnh cá nhân.
+Chọn một tiện ích mở rộng để xem những việc nó có thể làm, những việc nó không thể làm và thời điểm các tác vụ chạy gần nhất. Thẻ Cài đặt chứa các tùy chọn của nó. Giá trị được bảo vệ có thể được thay thế hoặc xóa nhưng không thể hiển thị lại. Thẻ Mã hiển thị các tệp ở chế độ chỉ đọc. Sao chép vào tập lệnh của tôi tạo một bản sao có thể chỉnh sửa dưới dạng tập lệnh cá nhân. Nếu một tác vụ yêu cầu thay đổi tệp và bạn đã để trống ô đó, Cho phép… trên thẻ Tổng quan sẽ cấp quyền sau, còn Thu hồi sẽ gỡ quyền.
 
 Để cập nhật, chọn Cài đặt từ tệp… rồi chọn tệp mới hơn. Cửa sổ xem xét cho biết những gì đã thay đổi. Nếu tiện ích mở rộng yêu cầu quyền mới, bạn phải duyệt; chọn Để sau sẽ giữ nguyên phiên bản đã cài đặt. Cài đặt, khóa và giá trị đã lưu được giữ lại, và các lượt tải đang chạy vẫn dùng mã lúc bắt đầu.
 

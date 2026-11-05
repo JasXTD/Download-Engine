@@ -1,0 +1,35 @@
+{
+  "api_version": 1,
+  "description": "Shows a notification when a queue you choose finishes, and can start another queue next.",
+  "files": {
+    "notify.lua": "-- Automation: runs when every download in a queue has finished. You choose\n-- which queue in the install review, because a package can't name your\n-- queues: manifest.json leaves \"queue\" empty, and the review asks.\n--\n-- It shows a notification and can start another queue. To start the next\n-- queue without a notification, a rule on the Rules tab does that with no code.\n\n-- 1. event.queue is the ID of the queue that finished. Look up its name.\nlocal queue_name = event.queue\nfor _, queue in ipairs(xd.queues()) do\n  if queue.id == event.queue then\n    queue_name = queue.name\n  end\nend\n\n-- 2. Count the finished downloads in that queue.\nlocal finished = 0\nfor _, download in ipairs(xd.downloads()) do\n  if download.queue == event.queue and download.status == \"complete\" then\n    finished = finished + 1\n  end\nend\n\n-- 3. Show a notification. Scripts can show up to five per run, and each one\n--    is also written to the run log.\nlocal text = finished == 1 and \"1 download is complete\" or finished .. \" downloads are complete\"\nxd.notify(\"Queue finished: \" .. queue_name, text)\n\n-- 4. Read a setting from the Settings tab. Jobs can read settings but never\n--    change them. An empty value means: don't start another queue.\nlocal next_queue = xd.setting(\"next_queue\")\nif next_queue and next_queue ~= \"\" then\n  xd.start_queue(next_queue) -- A queue's name or its ID both work.\n  print(\"Started the queue \" .. next_queue)\nend\n"
+  },
+  "format": "download-engine-extension",
+  "format_version": 1,
+  "id": "examples.queue-finished",
+  "jobs": [
+    {
+      "entry": "notify.lua",
+      "id": "notify",
+      "name": "Notify when the queue finishes",
+      "timeout_seconds": 30,
+      "trigger": {
+        "kind": "queue_completed",
+        "queue": ""
+      }
+    }
+  ],
+  "license": "MIT",
+  "name": "Queue finished",
+  "publisher": "Download Engine examples",
+  "settings": [
+    {
+      "default": "",
+      "id": "next_queue",
+      "label": "Queue to start next. Leave empty to only show the notification",
+      "max_length": 64,
+      "type": "string"
+    }
+  ],
+  "version": "1.0.0"
+}

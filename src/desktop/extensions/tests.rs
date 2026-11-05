@@ -50,16 +50,26 @@ fn has_text(output: &egui::FullOutput, label: &str) -> bool {
     })
 }
 
+/// One automation job that asks for file access. Its Access list is in view in
+/// the window the click helper uses, without scrolling.
+fn tidy_only() -> Vec<u8> {
+    let mut value: Value = serde_json::from_slice(&package("1.2.0", &[])).unwrap();
+    value["jobs"] = json!([value["jobs"][1].clone()]);
+    value["settings"] = json!([]);
+    value["files"] = json!({ "tidy.lua": "print('tidy')\n" });
+    serde_json::to_vec(&value).unwrap()
+}
+
 #[test]
 fn the_page_opens_on_installed_and_keeps_scripts_and_rules_as_tabs() {
     let (_temp, mut app, ctx) = fixture();
     open(&mut app);
     frame(&mut app, &ctx, size(), vec![]);
     let output = frame(&mut app, &ctx, size(), vec![]);
-    text_rect(&output, "No extensions yet");
+    text_rect(&output, "What do you want Download Engine to do?");
     click(&mut app, &ctx, "Scripts");
     let output = frame(&mut app, &ctx, size(), vec![]);
-    assert!(!has_text(&output, "No extensions yet"));
+    assert!(!has_text(&output, "What do you want Download Engine to do?"));
     click(&mut app, &ctx, "Rules (0)");
     let output = frame(&mut app, &ctx, size(), vec![]);
     text_rect(&output, "+ New rule");
@@ -77,7 +87,11 @@ fn installing_goes_through_a_review_and_starts_turned_off() {
     frame(&mut app, &ctx, size(), vec![]);
     let output = frame(&mut app, &ctx, size(), vec![]);
     text_rect(&output, "Install VideoHost?");
-    text_rect(&output, "Read videohost.example");
+    text_rect(&output, "Reads videohost.example");
+    text_rect(&output, "Runs when you open one of these pages:");
+    text_rect(&output, "videohost.example/watch/*");
+    text_rect(&output, "Runs when any download finishes.");
+    text_rect(&output, "Let it rename, move and delete any downloaded file");
     text_rect(
         &output,
         "It installs turned off. Turn it on after you review it.",
@@ -98,17 +112,37 @@ fn installing_goes_through_a_review_and_starts_turned_off() {
     frame(&mut app, &ctx, size(), vec![]);
     let output = frame(&mut app, &ctx, size(), vec![]);
     text_rect(&output, "1.2.0 · Example · Publisher not verified");
-    text_rect(&output, "Disabled");
-    text_rect(&output, "What it can do");
-    text_rect(&output, "Use your browser logins or cookies");
+    text_rect(&output, "Turned off");
+    text_rect(&output, "Turned off. Nothing runs until you turn it on.");
+    text_rect(&output, "What it does");
+    text_rect(&output, "Never: your browser logins or cookies, or other programs.");
     text_rect(&output, "Tidy finished files");
+    text_rect(&output, "Not allowed");
 
     click(&mut app, &ctx, "Enabled");
+    assert!(app.store.extension(ID).unwrap().enabled);
+    frame(&mut app, &ctx, size(), vec![]);
+    let output = frame(&mut app, &ctx, size(), vec![]);
+    assert!(!has_text(&output, "Turned off. Nothing runs until you turn it on."));
+    text_rect(&output, "Turned on");
+}
+
+#[test]
+fn turn_on_in_the_banner_turns_the_extension_on() {
+    let (_temp, mut app, ctx) = fixture();
+    app.store
+        .install_extension(
+            &package("1.2.0", &["videohost.example"]),
+            &Grants::default(),
+        )
+        .unwrap();
+    open(&mut app);
+    click(&mut app, &ctx, "Turn on");
     assert!(app.store.extension(ID).unwrap().enabled);
 }
 
 #[test]
-fn the_jobs_table_becomes_a_list_when_it_would_not_fit() {
+fn long_job_names_and_page_lists_stay_inside_a_small_window() {
     let (_temp, mut app, ctx) = fixture();
     open(&mut app);
     let long = "This job name cannot share a row with three other columns";
@@ -121,14 +155,10 @@ fn the_jobs_table_becomes_a_list_when_it_would_not_fit() {
     let small = egui::vec2(860.0, 1200.0);
     frame(&mut app, &ctx, small, vec![]);
     let output = frame(&mut app, &ctx, small, vec![]);
-    assert!(!has_text(&output, "Type"));
-    text_rect(&output, "Site reader · On matching pages · Not run yet");
     assert!(text_rect(&output, long).right() <= small.x);
-
-    let wide = egui::vec2(1800.0, 860.0);
-    frame(&mut app, &ctx, wide, vec![]);
-    let output = frame(&mut app, &ctx, wide, vec![]);
-    text_rect(&output, "Type");
+    assert!(text_rect(&output, "videohost.example/watch/*").right() <= small.x);
+    text_rect(&output, "Runs when you open one of these pages:");
+    text_rect(&output, "2 jobs");
 }
 
 #[test]
@@ -165,10 +195,142 @@ fn ticking_file_access_is_what_grants_it() {
     click(
         &mut app,
         &ctx,
-        "Let Tidy finished files rename, move and delete any downloaded file",
+        "Let it rename, move and delete any downloaded file",
     );
     click(&mut app, &ctx, "Install");
     assert!(app.store.extension_job(ID, "tidy").unwrap().change_files);
+}
+
+#[test]
+fn file_access_can_be_allowed_after_install_and_taken_back() {
+    let (_temp, mut app, ctx) = fixture();
+    app.store
+        .install_extension(&tidy_only(), &Grants::default())
+        .unwrap();
+    open(&mut app);
+    click(&mut app, &ctx, "Allow…");
+    assert_eq!(app.dialog, Some(Dialog::ExtensionFileAccess));
+    assert!(
+        !app.store.extension_job(ID, "tidy").unwrap().change_files,
+        "nothing changes until the person confirms"
+    );
+    frame(&mut app, &ctx, size(), vec![]);
+    let output = frame(&mut app, &ctx, size(), vec![]);
+    text_rect(&output, "Allow VideoHost to change files?");
+    click(&mut app, &ctx, "Allow");
+    assert!(app.dialog.is_none());
+    assert!(app.store.extension_job(ID, "tidy").unwrap().change_files);
+
+    frame(&mut app, &ctx, size(), vec![]);
+    let output = frame(&mut app, &ctx, size(), vec![]);
+    text_rect(
+        &output,
+        "Rename, move and delete any downloaded file. You allowed this.",
+    );
+    click(&mut app, &ctx, "Take back");
+    assert!(!app.store.extension_job(ID, "tidy").unwrap().change_files);
+}
+
+#[test]
+fn closing_the_file_access_question_grants_nothing() {
+    let (_temp, mut app, ctx) = fixture();
+    app.store
+        .install_extension(&tidy_only(), &Grants::default())
+        .unwrap();
+    open(&mut app);
+    click(&mut app, &ctx, "Allow…");
+    assert_eq!(app.dialog, Some(Dialog::ExtensionFileAccess));
+    let size = size();
+    frame(&mut app, &ctx, size, vec![]);
+    frame(
+        &mut app,
+        &ctx,
+        size,
+        vec![egui::Event::Key {
+            key: egui::Key::Escape,
+            physical_key: None,
+            pressed: true,
+            repeat: false,
+            modifiers: egui::Modifiers::NONE,
+        }],
+    );
+    frame(&mut app, &ctx, size, vec![]);
+    assert!(app.dialog.is_none());
+    assert!(!app.store.extension_job(ID, "tidy").unwrap().change_files);
+}
+
+#[test]
+fn the_empty_page_points_each_goal_to_the_right_place() {
+    let (_temp, mut app, ctx) = fixture();
+    open(&mut app);
+    click(&mut app, &ctx, "+ New rule");
+    assert_eq!(app.dialog, Some(Dialog::Automation));
+    assert!(app.automation.tab() == automation::Tab::Rules);
+    app.dialog = None;
+
+    app.automation.show_installed();
+    click(&mut app, &ctx, "Write a script");
+    assert!(app.automation.tab() == automation::Tab::Scripts);
+    assert!(app.scripts.draft().is_some_and(|draft| draft.revision == 0));
+
+    app.automation.show_installed();
+    click(&mut app, &ctx, "See examples");
+    assert_eq!(app.dialog, Some(Dialog::ExtensionExamples));
+}
+
+#[test]
+fn an_example_opens_the_normal_review_and_installs_turned_off() {
+    let (_temp, mut app, ctx) = fixture();
+    open(&mut app);
+    click(&mut app, &ctx, "Examples…");
+    assert_eq!(app.dialog, Some(Dialog::ExtensionExamples));
+    frame(&mut app, &ctx, size(), vec![]);
+    let output = frame(&mut app, &ctx, size(), vec![]);
+    for name in [
+        "Internet Archive files",
+        "Wikimedia Commons originals",
+        "GitHub release files",
+        "Sort finished files",
+        "Queue finished",
+        "Reads archive.org",
+        "Asks to change files",
+        "You pick the queue in the review",
+    ] {
+        text_rect(&output, name);
+    }
+    assert!(app.store.extensions().unwrap().is_empty(), "nothing installs from the list");
+
+    // With a dialog open, a click goes to the top-most match: the last
+    // example's Review…, Queue finished.
+    click(&mut app, &ctx, "Review…");
+    assert_eq!(app.dialog, Some(Dialog::ExtensionReview));
+    frame(&mut app, &ctx, size(), vec![]);
+    let output = frame(&mut app, &ctx, size(), vec![]);
+    text_rect(&output, "Install Queue finished?");
+    text_rect(&output, "Runs when the queue you choose finishes.");
+    text_rect(&output, "Choose a queue");
+    text_rect(&output, "Can't rename, move or delete them.");
+    click(&mut app, &ctx, "Install");
+    let installed = app.store.extension("examples.queue-finished").unwrap();
+    assert!(!installed.enabled);
+    assert_eq!(
+        app.store
+            .extension_job("examples.queue-finished", "notify")
+            .unwrap()
+            .trigger,
+        Trigger::QueueCompleted {
+            queue: MAIN_QUEUE.into()
+        }
+    );
+    frame(&mut app, &ctx, size(), vec![]);
+    let output = frame(&mut app, &ctx, size(), vec![]);
+    let main = automation::queue_label(&app.queues, MAIN_QUEUE);
+    text_rect(&output, &format!("Runs when {main} finishes."));
+
+    click(&mut app, &ctx, "Examples…");
+    frame(&mut app, &ctx, size(), vec![]);
+    let output = frame(&mut app, &ctx, size(), vec![]);
+    text_rect(&output, "Installed");
 }
 
 #[test]
@@ -460,8 +622,104 @@ fn the_page_fits_the_smallest_window() {
     let small = egui::vec2(860.0, 600.0);
     frame(&mut app, &ctx, small, vec![]);
     let output = frame(&mut app, &ctx, small, vec![]);
-    let enabled = text_rect(&output, "Enabled");
-    assert!(enabled.right() <= small.x, "{enabled:?}");
-    let remove = text_rect(&output, "Remove");
-    assert!(remove.right() <= small.x, "{remove:?}");
+    for label in ["Enabled", "Remove", "Turn on", "Examples…", "Install from file…"] {
+        let rect = text_rect(&output, label);
+        assert!(rect.right() <= small.x, "{label}: {rect:?}");
+    }
+}
+
+#[test]
+fn german_labels_fit_the_smallest_window() {
+    use download_engine::i18n::Language;
+    let german = |text: &str| {
+        let _scope = download_engine::i18n::scope(Language::German);
+        tr(text).to_owned()
+    };
+    let fits = |output: &egui::FullOutput, size: egui::Vec2, labels: &[&str]| {
+        for label in labels {
+            let rect = text_rect(output, &german(label));
+            assert!(
+                rect.right() <= size.x && rect.bottom() <= size.y,
+                "{label}: {rect:?}"
+            );
+        }
+    };
+    let small = egui::vec2(860.0, 600.0);
+
+    // Nothing installed: the goal cards fit across, and their buttons too once
+    // the window is tall enough not to scroll.
+    let (_temp, mut app, ctx) = fixture();
+    app.interface.language = Language::German;
+    open(&mut app);
+    frame(&mut app, &ctx, small, vec![]);
+    let output = frame(&mut app, &ctx, small, vec![]);
+    fits(
+        &output,
+        small,
+        &[
+            "Examples…",
+            "Install from file…",
+            "Get files from a website",
+            "Do something after a download",
+            "Send downloads to the right queue",
+        ],
+    );
+    let taller = egui::vec2(860.0, 900.0);
+    frame(&mut app, &ctx, taller, vec![]);
+    let output = frame(&mut app, &ctx, taller, vec![]);
+    fits(&output, taller, &["See examples", "Write a script", "+ New rule"]);
+
+    // The Examples list.
+    app.open_extension_examples();
+    frame(&mut app, &ctx, small, vec![]);
+    let output = frame(&mut app, &ctx, small, vec![]);
+    fits(&output, small, &["Review…", "Internet Archive files"]);
+    app.dialog = None;
+
+    // An installed extension: the header, the banner and the Access list.
+    app.store
+        .install_extension(
+            &package("1.2.0", &["videohost.example"]),
+            &Grants::default(),
+        )
+        .unwrap();
+    app.refresh_extensions();
+    frame(&mut app, &ctx, small, vec![]);
+    let output = frame(&mut app, &ctx, small, vec![]);
+    fits(&output, small, &["Enabled", "Remove", "Turn on"]);
+    let tall = egui::vec2(860.0, 1400.0);
+    frame(&mut app, &ctx, tall, vec![]);
+    let output = frame(&mut app, &ctx, tall, vec![]);
+    fits(
+        &output,
+        tall,
+        &["Allow…", "Not allowed", "Your files", "Your downloads"],
+    );
+}
+
+#[test]
+fn the_access_list_fits_the_smallest_window() {
+    let (_temp, mut app, ctx) = fixture();
+    app.store
+        .install_extension(
+            &package("1.2.0", &["videohost.example"]),
+            &Grants::default(),
+        )
+        .unwrap();
+    open(&mut app);
+    // Tall enough to reach the Access group without scrolling.
+    let small = egui::vec2(860.0, 1400.0);
+    frame(&mut app, &ctx, small, vec![]);
+    let output = frame(&mut app, &ctx, small, vec![]);
+    for label in ["Allow…", "Not allowed", "Your files", "Your downloads"] {
+        let rect = text_rect(&output, label);
+        assert!(rect.right() <= small.x, "{label}: {rect:?}");
+    }
+    // A chip squeezed next to wrapped text once stacked its letters one per line
+    // and pushed the group past the panel.
+    let chip = text_rect(&output, "Not allowed");
+    assert!(chip.width() > chip.height() * 2.0, "{chip:?}");
+    let allow = text_rect(&output, "Allow…");
+    let panel = text_rect(&output, "Runs when any download finishes.");
+    assert!(allow.right() < small.x - 24.0, "{allow:?} {panel:?}");
 }

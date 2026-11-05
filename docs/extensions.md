@@ -6,11 +6,13 @@ Extensions are not the Download Engine browser extension. That is the add-on you
 
 Your own scripts stay on the **Scripts** tab and work as they always have. Write a script for something just for you. Make an extension for something you want to share or keep updated.
 
+New to extensions? [Make your first extension](first-extension.md) walks through one of the examples that come with Download Engine, line by line.
+
 ## Install, update and remove
 
-Open **Extensions** in the top toolbar, then choose **Install from file…** and pick a `.de-extension.json` file.
+Open **Extensions** in the top toolbar, then choose **Install from file…** and pick a `.de-extension.json` file. To try one first, choose **Examples…**. Five small examples come with the app: three site readers, for Internet Archive items, Wikimedia Commons file pages and GitHub releases, and two automations, which sort finished files into folders and show a notification when a queue finishes. Each one goes through the same review as a file.
 
-- **Install.** The review shows the publisher, what the extension can do and its jobs. Nothing runs yet. It installs turned off, so tick **Enabled** when you are ready. File access is only a request, and stays off unless you tick it.
+- **Install.** The review shows the publisher, what each job does and when it runs, and what the extension can reach: the web, your downloads and your files. Nothing runs yet. It installs turned off, so choose **Turn on** or tick **Enabled** when you are ready. File access is only a request, and stays off unless you tick it. You can allow it later with **Allow…** on the Overview tab, which asks you to confirm, and take it back there with **Take back**. Only a job whose package asks for file access can get it.
 - **Update.** Open a newer file with the same ID. The review shows what changed. You must approve new access, a new publisher, every added job, and any job that now runs at other times, on other pages or from another file. This includes replacing a job's ID, even when its name and kind stay the same. **Not now** leaves the installed version exactly as it was. Settings, keys, stored values and run history are kept, except a saved value the new version can't use, which the review names. Downloads already running keep the code they started with. Going back to an older version means removing the extension first.
 - **Turn off.** Untick **Enabled**. Its running jobs stop and its running downloads pause. Nothing it owns starts until you turn it back on, so a waiting download fails with a message saying so.
 - **Remove.** Its settings, keys and stored values are deleted. Run history stays, and files you downloaded are kept. Removing is refused while unfinished downloads still use it.
@@ -64,7 +66,7 @@ Authors work in a folder holding `manifest.json` and `.lua` files, then build th
 .\de-cli.exe extensions pack .\videohost --out .\videohost.de-extension.json
 ```
 
-Pack refuses links and any file that is not `.lua`, so nothing is left out by accident. It never replaces an existing file.
+Pack refuses links and any file that is not `.lua`, so nothing is left out by accident. It never replaces an existing file. The examples in `examples/extensions` are built this way, and each folder sits next to its packed file.
 
 ```json
 {
@@ -136,7 +138,7 @@ Unknown fields are refused.
 | --- | --- | --- |
 | `format` | Yes | Exactly `download-engine-extension`. |
 | `format_version` | Yes | Exactly `1`. |
-| `id` | Yes | Lower-case words with at least one dot, up to 64 characters. It never changes, because updates find the installed copy by it. |
+| `id` | Yes | Lower-case words with at least one dot, up to 64 characters. It never changes, because updates find the installed copy by it. Ids that start with `examples.` belong to the examples that come with the app: only those exact files can install or update under one, so a changed copy can't replace an example and keep the access you gave it. |
 | `name` | Yes | Up to 64 characters, no control characters. |
 | `version` | Yes | `MAJOR.MINOR.PATCH`. An update must be higher. |
 | `publisher` | Yes | Up to 64 characters. Shown as not verified. |

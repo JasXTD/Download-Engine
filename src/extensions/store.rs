@@ -202,6 +202,17 @@ fn stale_settings(conn: &Connection, old: &Package, new: &Package) -> Result<Vec
         .collect())
 }
 
+/// Decodes a package file, and refuses an `examples.` id on anything but the
+/// examples that come with the app, which could otherwise be impersonated.
+fn checked(bytes: &[u8]) -> Result<Package> {
+    let package = Package::decode(bytes)?;
+    ensure!(
+        !super::examples::reserved(&package.id) || super::examples::is_example(bytes),
+        "Only the examples that come with Download Engine can use an id that starts with \"examples.\". Change the id in manifest.json to your own"
+    );
+    Ok(package)
+}
+
 fn read(conn: &Connection, id: &str) -> Result<Option<Installed>> {
     let row: Option<(String, bool, i64)> = conn
         .query_row(
@@ -283,7 +294,7 @@ impl Store {
 
     /// Checks a package and says what installing it would change. Saves nothing.
     pub fn review_extension(&self, bytes: &[u8]) -> Result<Review> {
-        let package = Package::decode(bytes)?;
+        let package = checked(bytes)?;
         let conn = self.connect()?;
         let update = read(&conn, &package.id)?
             .map(|old| {
@@ -304,7 +315,7 @@ impl Store {
 
     /// Installs a new extension turned off, or updates an installed one.
     pub fn install_extension(&self, bytes: &[u8], grants: &Grants) -> Result<Installed> {
-        let package = Package::decode(bytes)?;
+        let package = checked(bytes)?;
         let mut conn = self.connect()?;
         let tx = conn.transaction_with_behavior(TransactionBehavior::Immediate)?;
         let old = read(&tx, &package.id)?;
@@ -474,6 +485,44 @@ impl Store {
                 }
             }
         }
+        Ok(())
+    }
+
+    /// Grants or takes back the file access a job's package asks for, after the
+    /// install. Only the person decides this, and a job that doesn't ask never
+    /// gets it. The change applies to the job's next file command, even mid-run.
+    pub fn set_extension_file_access(&self, id: &str, job: &str, allowed: bool) -> Result<()> {
+        let mut conn = self.connect()?;
+        let tx = conn.transaction_with_behavior(TransactionBehavior::Immediate)?;
+        let installed = read(&tx, id)?.context("Extension no longer exists")?;
+        let asked = installed
+            .package
+            .job(job)
+            .context("This extension has no such job")?
+            .change_files;
+        ensure!(
+            !allowed || asked,
+            "This job doesn't ask to change downloaded files"
+        );
+        let script = job_scripts(&tx, id)?
+            .remove(job)
+            .context("This extension has no such job")?;
+        let mut script = definition(&tx, &script)?;
+        if script.change_files != allowed {
+            script.change_files = allowed;
+            script.revision = script
+                .revision
+                .checked_add(1)
+                .context("Script revision overflow")?;
+            script.validate()?;
+            // Unlike put_script, this keeps the job's place in the event queue
+            // and its interval: only what it may do changes.
+            tx.execute(
+                "UPDATE automation_scripts SET data=?2 WHERE id=?1",
+                params![script.id, serde_json::to_string(&script)?],
+            )?;
+        }
+        tx.commit()?;
         Ok(())
     }
 

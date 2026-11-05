@@ -1,0 +1,23 @@
+{
+  "format": "download-engine-extension",
+  "format_version": 1,
+  "id": "examples.wikimedia-commons",
+  "name": "Wikimedia Commons originals",
+  "version": "1.0.0",
+  "publisher": "Download Engine examples",
+  "description": "Gets the full-size original behind a Wikimedia Commons file page, not the preview.",
+  "license": "MIT",
+  "api_version": 1,
+  "permissions": {
+    "network": ["commons.wikimedia.org"]
+  },
+  "jobs": [
+    {
+      "id": "original-file",
+      "name": "Commons file pages",
+      "entry": "reader.lua",
+      "timeout_seconds": 30,
+      "trigger": { "kind": "site_reader", "pages": ["commons.wikimedia.org/wiki/File:*"] }
+    }
+  ]
+}

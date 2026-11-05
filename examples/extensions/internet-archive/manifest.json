@@ -1,0 +1,31 @@
+{
+  "format": "download-engine-extension",
+  "format_version": 1,
+  "id": "examples.internet-archive",
+  "name": "Internet Archive files",
+  "version": "1.0.0",
+  "publisher": "Download Engine examples",
+  "description": "Lists the files in an archive.org item so you can choose which ones to download.",
+  "license": "MIT",
+  "api_version": 1,
+  "permissions": {
+    "network": ["archive.org"]
+  },
+  "settings": [
+    {
+      "id": "include_derivatives",
+      "type": "boolean",
+      "label": "Also list copies archive.org made, such as other formats and thumbnails",
+      "default": false
+    }
+  ],
+  "jobs": [
+    {
+      "id": "item-files",
+      "name": "archive.org item pages",
+      "entry": "reader.lua",
+      "timeout_seconds": 30,
+      "trigger": { "kind": "site_reader", "pages": ["archive.org/details/*"] }
+    }
+  ]
+}

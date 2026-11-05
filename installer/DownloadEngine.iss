@@ -357,10 +357,27 @@ Source: "{#SourceRoot}\docs\browser-release.md"; DestDir: "{app}\docs"; Flags: i
 Source: "{#SourceRoot}\docs\youtube-port.md"; DestDir: "{app}\docs"; Flags: ignoreversion
 Source: "{#SourceRoot}\docs\automation.md"; DestDir: "{app}\docs"; Flags: ignoreversion
 Source: "{#SourceRoot}\docs\extensions.md"; DestDir: "{app}\docs"; Flags: ignoreversion
+Source: "{#SourceRoot}\docs\first-extension.md"; DestDir: "{app}\docs"; Flags: ignoreversion
 Source: "{#SourceRoot}\examples\core-api-automation.lua"; DestDir: "{app}\examples"; Flags: ignoreversion
 Source: "{#SourceRoot}\examples\custom-site-reader.lua"; DestDir: "{app}\examples"; Flags: ignoreversion
 Source: "{#SourceRoot}\examples\download-provider.lua"; DestDir: "{app}\examples"; Flags: ignoreversion
 Source: "{#SourceRoot}\examples\download-provider-custom-ctr.lua"; DestDir: "{app}\examples"; Flags: ignoreversion
+; The extension starter pack: each packed file beside the folder it was packed from.
+Source: "{#SourceRoot}\examples\extensions\internet-archive.de-extension.json"; DestDir: "{app}\examples\extensions"; Flags: ignoreversion
+Source: "{#SourceRoot}\examples\extensions\internet-archive\manifest.json"; DestDir: "{app}\examples\extensions\internet-archive"; Flags: ignoreversion
+Source: "{#SourceRoot}\examples\extensions\internet-archive\reader.lua"; DestDir: "{app}\examples\extensions\internet-archive"; Flags: ignoreversion
+Source: "{#SourceRoot}\examples\extensions\wikimedia-commons.de-extension.json"; DestDir: "{app}\examples\extensions"; Flags: ignoreversion
+Source: "{#SourceRoot}\examples\extensions\wikimedia-commons\manifest.json"; DestDir: "{app}\examples\extensions\wikimedia-commons"; Flags: ignoreversion
+Source: "{#SourceRoot}\examples\extensions\wikimedia-commons\reader.lua"; DestDir: "{app}\examples\extensions\wikimedia-commons"; Flags: ignoreversion
+Source: "{#SourceRoot}\examples\extensions\github-releases.de-extension.json"; DestDir: "{app}\examples\extensions"; Flags: ignoreversion
+Source: "{#SourceRoot}\examples\extensions\github-releases\manifest.json"; DestDir: "{app}\examples\extensions\github-releases"; Flags: ignoreversion
+Source: "{#SourceRoot}\examples\extensions\github-releases\reader.lua"; DestDir: "{app}\examples\extensions\github-releases"; Flags: ignoreversion
+Source: "{#SourceRoot}\examples\extensions\sort-by-type.de-extension.json"; DestDir: "{app}\examples\extensions"; Flags: ignoreversion
+Source: "{#SourceRoot}\examples\extensions\sort-by-type\manifest.json"; DestDir: "{app}\examples\extensions\sort-by-type"; Flags: ignoreversion
+Source: "{#SourceRoot}\examples\extensions\sort-by-type\sort.lua"; DestDir: "{app}\examples\extensions\sort-by-type"; Flags: ignoreversion
+Source: "{#SourceRoot}\examples\extensions\queue-finished.de-extension.json"; DestDir: "{app}\examples\extensions"; Flags: ignoreversion
+Source: "{#SourceRoot}\examples\extensions\queue-finished\manifest.json"; DestDir: "{app}\examples\extensions\queue-finished"; Flags: ignoreversion
+Source: "{#SourceRoot}\examples\extensions\queue-finished\notify.lua"; DestDir: "{app}\examples\extensions\queue-finished"; Flags: ignoreversion
 Source: "{#SourceRoot}\docs\lua-providers.md"; DestDir: "{app}\docs"; Flags: ignoreversion
 Source: "{#SourceRoot}\docs\lua-provider-lab.md"; DestDir: "{app}\docs"; Flags: ignoreversion
 Source: "{#SourceRoot}\docs\mcp.md"; DestDir: "{app}\docs"; Flags: ignoreversion

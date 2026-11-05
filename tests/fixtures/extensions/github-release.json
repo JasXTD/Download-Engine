@@ -1,0 +1,42 @@
+{
+  "url": "https://api.github.com/repos/example-org/example-tool/releases/1",
+  "html_url": "https://github.com/example-org/example-tool/releases/tag/v2.1.0",
+  "id": 1,
+  "tag_name": "v2.1.0",
+  "name": "Example Tool 2.1",
+  "draft": false,
+  "prerelease": false,
+  "assets": [
+    {
+      "name": "example-tool-2.1.0-windows-x64.zip",
+      "content_type": "application/zip",
+      "size": 5242880,
+      "download_count": 10,
+      "browser_download_url": "https://github.com/example-org/example-tool/releases/download/v2.1.0/example-tool-2.1.0-windows-x64.zip"
+    },
+    {
+      "name": "example-tool-2.1.0-linux-x64.tar.gz",
+      "content_type": "application/gzip",
+      "size": 4194304,
+      "download_count": 5,
+      "browser_download_url": "https://github.com/example-org/example-tool/releases/download/v2.1.0/example-tool-2.1.0-linux-x64.tar.gz"
+    },
+    {
+      "name": "preview.m3u8",
+      "content_type": "application/vnd.apple.mpegurl",
+      "size": 120,
+      "download_count": 0,
+      "browser_download_url": "https://github.com/example-org/example-tool/releases/download/v2.1.0/preview.m3u8"
+    },
+    {
+      "name": "empty-placeholder.txt",
+      "content_type": "text/plain",
+      "size": 0,
+      "download_count": 0,
+      "browser_download_url": "https://github.com/example-org/example-tool/releases/download/v2.1.0/empty-placeholder.txt"
+    }
+  ],
+  "tarball_url": "https://api.github.com/repos/example-org/example-tool/tarball/v2.1.0",
+  "zipball_url": "https://api.github.com/repos/example-org/example-tool/zipball/v2.1.0",
+  "body": "Release notes."
+}

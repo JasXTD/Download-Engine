@@ -1,0 +1,27 @@
+{
+  "api_version": 1,
+  "description": "Moves each finished download into a folder for its type, such as Videos or Documents, next to where it was saved.",
+  "files": {
+    "sort.lua": "-- Automation: when downloads finish, move each file into a folder named after\n-- its type, next to where it was saved:\n--   Downloads\\holiday.mp4  ->  Downloads\\Videos\\holiday.mp4\n--\n-- Moving files needs file access. manifest.json asks for it with\n-- \"change_files\": true, and the install review shows a box to allow it. If\n-- you leave the box clear, each move fails and the run log says why.\n--\n-- Download Engine's category folders choose a folder when a download is\n-- added. This example tidies up after a download finishes instead, so use\n-- one or the other.\n\n-- File types, by the last part of the file name. To change them, open the\n-- Code tab, choose Copy to my scripts and edit your copy.\nlocal types = {\n  Videos = { \"mp4\", \"mkv\", \"webm\", \"avi\", \"mov\" },\n  Music = { \"mp3\", \"flac\", \"wav\", \"m4a\", \"ogg\", \"opus\" },\n  Pictures = { \"jpg\", \"jpeg\", \"png\", \"gif\", \"webp\" },\n  Documents = { \"pdf\", \"docx\", \"xlsx\", \"pptx\", \"txt\", \"epub\" },\n  Archives = { \"zip\", \"7z\", \"rar\", \"tar\", \"gz\" },\n  Programs = { \"exe\", \"msi\", \"msix\", \"apk\", \"dmg\" },\n}\n\n-- Turn that list around, so folder_for[\"mp4\"] is \"Videos\".\nlocal folder_for = {}\nfor folder, endings in pairs(types) do\n  for _, ending in ipairs(endings) do\n    folder_for[ending] = folder\n  end\nend\n\n-- Works out where one finished file should go, or returns nil to leave it.\nlocal function target_for(path)\n  local ending = path:match(\"%.(%w+)$\")\n  local folder = ending and folder_for[ending:lower()]\n  if not folder then\n    return nil -- Not one of the types above.\n  end\n  -- Split \"C:\\Downloads\\holiday.mp4\" into \"C:\\Downloads\" and \"\\\".\n  -- macOS and Linux use \"/\" between folders, so both are accepted.\n  local parent, separator = path:match(\"^(.*)([/\\\\])[^/\\\\]+$\")\n  if not parent then\n    return nil\n  end\n  -- Leave files that are already in a folder with that name.\n  local current = parent:match(\"[^/\\\\]+$\") or \"\"\n  if current:lower() == folder:lower() then\n    return nil\n  end\n  return parent .. separator .. folder\nend\n\n-- event.downloads holds the downloads that just finished, up to 100 at once.\nfor _, download in ipairs(event.downloads) do\n  -- saved_path is empty when the download was removed in the meantime.\n  local target = download.saved_path and target_for(download.saved_path)\n  if target then\n    local name = download.name or download.id\n    -- pcall catches an error, so one file that can't move doesn't stop the rest.\n    local moved, problem = pcall(xd.move, download.id, target)\n    if moved then\n      print(\"Moved \" .. name .. \" to \" .. target)\n    else\n      -- The first line says why. The lines after it say where in the code.\n      local reason = tostring(problem):match(\"[^\\n]+\")\n      xd.log(\"warning\", \"Could not move \" .. name .. \": \" .. reason)\n    end\n  end\nend\n"
+  },
+  "format": "download-engine-extension",
+  "format_version": 1,
+  "id": "examples.sort-by-type",
+  "jobs": [
+    {
+      "change_files": true,
+      "entry": "sort.lua",
+      "id": "sort",
+      "name": "Sort into type folders",
+      "timeout_seconds": 300,
+      "trigger": {
+        "kind": "download_completed",
+        "queue": null
+      }
+    }
+  ],
+  "license": "MIT",
+  "name": "Sort finished files",
+  "publisher": "Download Engine examples",
+  "version": "1.0.0"
+}

@@ -31,6 +31,15 @@ impl State {
         self.tab = Tab::Scripts;
     }
 }
+#[cfg(test)]
+impl State {
+    pub(super) fn tab(&self) -> Tab {
+        self.tab
+    }
+    pub(super) fn show_installed(&mut self) {
+        self.tab = Tab::Installed;
+    }
+}
 
 struct Draft {
     id: String,
@@ -324,6 +333,13 @@ impl Desktop {
         }
     }
 
+    /// Opens an empty rule on the Rules tab, where it appears once saved.
+    pub(super) fn open_new_rule(&mut self) {
+        self.automation.tab = Tab::Rules;
+        self.automation.draft = Some(Draft::new());
+        self.dialog = Some(Dialog::Automation);
+    }
+
     pub(super) fn refresh_automation(&mut self) {
         scripts::refresh(&self.store, &mut self.scripts);
         // The count on the tab needs a first load, whichever tab opens.
@@ -382,8 +398,7 @@ impl Desktop {
                     ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
                         if ui.add(primary(tr("+ New rule"), p)
                             .min_size(egui::vec2(112.0, view::PRIMARY_HEIGHT))).clicked() {
-                            self.automation.draft = Some(Draft::new());
-                            self.dialog = Some(Dialog::Automation);
+                            self.open_new_rule();
                         }
                     });
                 }

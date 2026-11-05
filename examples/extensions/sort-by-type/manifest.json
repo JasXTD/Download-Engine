@@ -1,0 +1,21 @@
+{
+  "format": "download-engine-extension",
+  "format_version": 1,
+  "id": "examples.sort-by-type",
+  "name": "Sort finished files",
+  "version": "1.0.0",
+  "publisher": "Download Engine examples",
+  "description": "Moves each finished download into a folder for its type, such as Videos or Documents, next to where it was saved.",
+  "license": "MIT",
+  "api_version": 1,
+  "jobs": [
+    {
+      "id": "sort",
+      "name": "Sort into type folders",
+      "entry": "sort.lua",
+      "timeout_seconds": 300,
+      "change_files": true,
+      "trigger": { "kind": "download_completed", "queue": null }
+    }
+  ]
+}

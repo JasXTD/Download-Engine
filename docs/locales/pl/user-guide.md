@@ -56,7 +56,7 @@ Rozszerzenia dodają obsługę witryn i automatyzację w jednym pakiecie. Dział
 
 1. Otwórz Rozszerzenia na górnym pasku narzędzi. Karta Zainstalowane pokazuje, co masz.
 
-2. Wybierz Zainstaluj z pliku… i wskaż plik .de-extension.json.
+2. Wybierz Zainstaluj z pliku… i wskaż plik .de-extension.json. Aby najpierw coś wypróbować, wybierz zamiast tego Przykłady…: z aplikacją dostarczanych jest pięć małych przykładów.
 
 3. Przeczytaj okno przeglądu. Pokazuje wydawcę, możliwości rozszerzenia i jego zadania. Na razie nic się nie uruchamia.
 
@@ -68,7 +68,7 @@ Wydawcy nie są weryfikowani, więc instaluj rozszerzenia tylko od osób, który
 
 ### Ustawienia, kod i aktualizacje
 
-Wybierz rozszerzenie, aby zobaczyć, co może robić, czego nie może robić i kiedy ostatnio działały jego zadania. Ustawienia zawierają jego opcje. Wartości chronione można zastąpić lub wyczyścić, ale nie można ich ponownie wyświetlić. Kod pokazuje jego pliki w trybie tylko do odczytu. Kopiuj do moich skryptów tworzy edytowalną kopię jako osobisty skrypt.
+Wybierz rozszerzenie, aby zobaczyć, co może robić, czego nie może robić i kiedy ostatnio działały jego zadania. Ustawienia zawierają jego opcje. Wartości chronione można zastąpić lub wyczyścić, ale nie można ich ponownie wyświetlić. Kod pokazuje jego pliki w trybie tylko do odczytu. Kopiuj do moich skryptów tworzy edytowalną kopię jako osobisty skrypt. Jeśli zadanie prosi o zmianę plików, a pole zostało puste, Zezwól… na karcie Przegląd przyzna ten dostęp później, a Cofnij go odbierze.
 
 Aby zaktualizować rozszerzenie, wybierz Zainstaluj z pliku… i wskaż nowszy plik. Okno przeglądu pokazuje, co się zmieniło. Jeśli rozszerzenie prosi o nowy dostęp, musisz go zatwierdzić, a Nie teraz pozostawia zainstalowaną wersję bez zmian. Ustawienia, klucze i zapisane wartości zostają zachowane, a trwające pobrania zachowują kod, z którym zostały uruchomione.
 

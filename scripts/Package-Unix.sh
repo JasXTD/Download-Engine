@@ -107,7 +107,7 @@ mkdir -p "$resources/scripts"
 cp "$root/scripts/Build-UnixFfmpeg.sh" "$resources/scripts/"
 cp "$root/tools/ffmpeg/PROVENANCE.md" "$resources/tools/ffmpeg/"
 for file in README.md SECURITY.md PRIVACY.md CHANGELOG.md LICENSE THIRD-PARTY-NOTICES.md; do cp "$root/$file" "$resources/"; done
-for file in user-guide.md native-guide.md cross-platform.md automation.md extensions.md mcp.md mcp-ai-guide.md lua-providers.md lua-provider-lab.md browser-release.md mega.md wetransfer.md; do cp "$root/docs/$file" "$resources/docs/"; done
+for file in user-guide.md native-guide.md cross-platform.md automation.md extensions.md first-extension.md mcp.md mcp-ai-guide.md lua-providers.md lua-provider-lab.md browser-release.md mega.md wetransfer.md; do cp "$root/docs/$file" "$resources/docs/"; done
 copy_source_tree docs/locales "$resources/docs/locales"
 copy_source_tree examples "$resources/examples"
 copy_source_tree docs/licenses/common "$resources/docs/licenses/common"

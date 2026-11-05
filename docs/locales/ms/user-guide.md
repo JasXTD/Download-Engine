@@ -70,7 +70,7 @@ Sambungan menambah sokongan laman dan automasi dalam satu pakej. Sambungan berja
 
 1. Buka Sambungan pada bar alat atas. Tab Dipasang menyenaraikan sambungan yang anda ada.
 
-2. Pilih Pasang daripada fail… dan pilih fail .de-extension.json.
+2. Pilih Pasang daripada fail… dan pilih fail .de-extension.json. Untuk mencuba dahulu, pilih Contoh… sebaliknya: lima contoh kecil disertakan dengan aplikasi.
 
 3. Baca tetingkap semakan. Ia menunjukkan penerbit, perkara yang boleh dilakukan oleh sambungan dan tugasnya. Belum ada apa-apa yang dijalankan.
 
@@ -82,7 +82,7 @@ Penerbit tidak disahkan, jadi pasang sambungan hanya daripada orang yang anda pe
 
 ### Tetapan, kod dan kemas kini
 
-Pilih sambungan untuk melihat perkara yang boleh dilakukannya, perkara yang tidak boleh dilakukannya dan masa tugasnya terakhir dijalankan. Tetapan mengandungi pilihannya. Nilai dilindungi boleh diganti atau dikosongkan tetapi tidak boleh dipaparkan lagi. Kod menunjukkan failnya secara baca sahaja. Salin ke skrip saya membuat salinan boleh sunting sebagai skrip peribadi.
+Pilih sambungan untuk melihat perkara yang boleh dilakukannya, perkara yang tidak boleh dilakukannya dan masa tugasnya terakhir dijalankan. Tetapan mengandungi pilihannya. Nilai dilindungi boleh diganti atau dikosongkan tetapi tidak boleh dipaparkan lagi. Kod menunjukkan failnya secara baca sahaja. Salin ke skrip saya membuat salinan boleh sunting sebagai skrip peribadi. Jika tugas meminta untuk mengubah fail dan anda membiarkan kotak itu kosong, Benarkan… pada tab Gambaran keseluruhan memberikannya kemudian, dan Tarik balik membuangnya.
 
 Untuk mengemas kini, pilih Pasang daripada fail… dan pilih fail yang lebih baharu. Tetingkap semakan menunjukkan perkara yang berubah. Jika sambungan meminta akses baharu, anda mesti meluluskannya, dan Bukan sekarang mengekalkan versi yang dipasang tanpa sebarang perubahan. Tetapan, kunci dan nilai tersimpan dikekalkan, dan muat turun yang sedang berjalan mengekalkan kod yang digunakan semasa bermula.
 

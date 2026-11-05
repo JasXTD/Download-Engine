@@ -11,6 +11,10 @@ use std::{
     io::Read,
 };
 
+mod access;
+mod examples;
+mod goals;
+
 const PUZZLE: &str = "\u{ea86}";
 
 #[derive(Clone, Copy, Default, PartialEq, Eq)]
@@ -48,9 +52,9 @@ impl Entry {
         } else if self.failed().is_some() {
             (tr("Last run failed").into(), p.warning)
         } else if self.installed.enabled {
-            (tr("Enabled").into(), p.accent)
+            (tr("Turned on").into(), p.accent)
         } else {
-            (tr("Disabled").into(), p.muted)
+            (tr("Turned off").into(), p.muted)
         }
     }
 }
@@ -84,6 +88,8 @@ pub(super) struct State {
     file_name: String,
     request: String,
     added: bool,
+    /// The extension and job waiting for the person to allow file access.
+    granting: Option<(String, String)>,
 }
 
 impl State {
@@ -105,6 +111,9 @@ enum Act {
     AddDownload(Script),
     OpenLog(String),
     OpenScripts,
+    /// Asks before granting the file access a job's package asks for.
+    AllowFiles(String, String),
+    TakeBackFiles(String, String),
 }
 
 fn panel(p: Palette) -> egui::Frame {
@@ -140,7 +149,7 @@ fn tile(painter: &egui::Painter, rect: egui::Rect, name: &str, p: Palette) {
     );
 }
 
-fn row(ui: &mut egui::Ui, entry: &Entry, selected: bool, p: Palette) -> bool {
+fn row(ui: &mut egui::Ui, entry: &Entry, summary: &str, selected: bool, p: Palette) -> bool {
     let (rect, response) = ui.allocate_exact_size(vec2(ui.available_width(), 62.0), Sense::click());
     let painter = ui.painter_at(rect);
     let fill = if selected {
@@ -159,20 +168,27 @@ fn row(ui: &mut egui::Ui, entry: &Entry, selected: bool, p: Palette) -> bool {
         p,
     );
     let (status, color) = entry.status(p);
+    // Long names, summaries and translations end in "…" instead of being cut.
+    let width = (rect.width() - 58.0).max(20.0);
     for (y, text, color) in [
-        (6.0, package.name.clone(), p.text),
-        (
-            23.0,
-            format!("{} · {}", package.version, job_count(package.jobs.len())),
-            p.muted,
-        ),
-        (40.0, status, color),
+        (6.0, package.name.as_str(), p.text),
+        (23.0, summary, p.muted),
+        (40.0, status.as_str(), color),
     ] {
-        painter.text(
-            pos2(rect.left() + 50.0, rect.top() + y),
-            Align2::LEFT_TOP,
-            text,
+        let mut job = egui::text::LayoutJob::simple_singleline(
+            text.to_owned(),
             FontId::proportional(if y == 6.0 { 13.0 } else { 12.0 }),
+            color,
+        );
+        job.wrap = egui::text::TextWrapping {
+            max_width: width,
+            max_rows: 1,
+            break_anywhere: true,
+            overflow_character: Some('…'),
+        };
+        painter.galley(
+            pos2(rect.left() + 50.0, rect.top() + y),
+            painter.layout_job(job),
             color,
         );
     }
@@ -190,77 +206,6 @@ fn job_count(count: usize) -> String {
     }
 }
 
-/// In plain words, what the package's jobs can and cannot do.
-fn powers(package: &Package, files_allowed: bool) -> (Vec<String>, Vec<String>) {
-    let web = package.jobs.iter().any(|job| !job.is_automation());
-    let automation = package.jobs.iter().any(|job| job.is_automation());
-    let hosts = package.permissions.network.join(", ");
-    let mut can = Vec::new();
-    if web && !hosts.is_empty() {
-        can.push(tf!("Read {hosts}", hosts = hosts));
-    }
-    if automation {
-        if !hosts.is_empty() {
-            can.push(tf!("Add downloads only from {hosts}", hosts = hosts));
-        }
-        can.push(tr("See download names, folders and status, never their addresses").into());
-        can.push(
-            tr("Pause, resume and retry downloads, manage queues and show notifications").into(),
-        );
-    }
-    if package
-        .settings
-        .iter()
-        .any(|s| matches!(s, Setting::AesKey { .. }))
-    {
-        can.push(tr("Use a key you save in Settings").into());
-    }
-    if files_allowed {
-        can.push(tr("Rename, move and delete any downloaded file. You allowed this.").into());
-    }
-    let mut cannot: Vec<String> = vec![
-        tr("Use your browser logins or cookies").into(),
-        tr("Run other programs").into(),
-    ];
-    if !files_allowed {
-        cannot.push(tr("Change, move or delete your files").into());
-    }
-    if hosts.is_empty() {
-        cannot.push(tr("Reach the web").into());
-    }
-    (can, cannot)
-}
-
-fn power_list(ui: &mut egui::Ui, items: &[String], allowed: bool, p: Palette) {
-    for item in items {
-        ui.horizontal_top(|ui| {
-            ui.spacing_mut().item_spacing.x = 6.0;
-            ui.label(
-                RichText::new(if allowed { "✓" } else { "×" }).color(if allowed {
-                    p.accent
-                } else {
-                    p.muted
-                }),
-            );
-            ui.add(egui::Label::new(item.as_str()).wrap());
-        });
-    }
-}
-
-fn kind_name(job: &Script) -> &'static str {
-    match job.trigger {
-        Trigger::SiteReader { .. } => tr("Site reader"),
-        Trigger::Provider => tr("Download provider"),
-        _ => tr("Automation"),
-    }
-}
-fn runs_when(job: &Script) -> &'static str {
-    match job.trigger {
-        Trigger::SiteReader { .. } => tr("On matching pages"),
-        Trigger::Provider => tr("When you add a download"),
-        _ => scripts::trigger_name(&job.trigger),
-    }
-}
 fn last_run(job: &Job) -> String {
     let Some(run) = &job.last else {
         return tr("Not run yet").into();
@@ -278,99 +223,28 @@ fn last_run(job: &Job) -> String {
     }
 }
 
-fn overview(ui: &mut egui::Ui, state: &mut State, index: usize, p: Palette) -> Option<Act> {
+fn overview(
+    ui: &mut egui::Ui,
+    state: &mut State,
+    index: usize,
+    queues: &[DownloadQueue],
+    p: Palette,
+) -> Option<Act> {
     let entry = &state.entries[index];
     let package = &entry.installed.package;
-    let files = entry.jobs.iter().any(|job| job.script.change_files);
-    let (can, cannot) = powers(package, files);
-    let mut act = None;
-    let width = ui.available_width();
-    if width >= 560.0 {
-        ui.columns(2, |columns| {
-            group(p).show(&mut columns[0], |ui| {
-                ui.set_width(ui.available_width());
-                heading(ui, tr("What it can do"), p);
-                power_list(ui, &can, true, p);
-            });
-            group(p).show(&mut columns[1], |ui| {
-                ui.set_width(ui.available_width());
-                heading(ui, tr("What it can't do"), p);
-                power_list(ui, &cannot, false, p);
-            });
-        });
-    } else {
-        for (title, items, allowed) in [
-            (tr("What it can do"), &can, true),
-            (tr("What it can't do"), &cannot, false),
-        ] {
-            group(p).show(ui, |ui| {
-                ui.set_width(ui.available_width());
-                heading(ui, title, p);
-                power_list(ui, items, allowed, p);
-            });
-            ui.add_space(8.0);
-        }
-    }
+    let lines: Vec<access::JobLine> = entry
+        .jobs
+        .iter()
+        .map(|job| access::JobLine {
+            name: &job.script.name,
+            trigger: &job.script.trigger,
+            last: Some(last_run(job)),
+        })
+        .collect();
+    access::what_it_does(ui, &lines, queues, p);
     ui.add_space(8.0);
-    group(p).show(ui, |ui| {
-        ui.set_width(ui.available_width());
-        heading(ui, tr("Jobs"), p);
-        ui.add_space(4.0);
-        let titles = [tr("Name"), tr("Type"), tr("Runs"), tr("Last run")];
-        let rows: Vec<[String; 4]> = entry
-            .jobs
-            .iter()
-            .map(|job| {
-                [
-                    job.script.name.clone(),
-                    kind_name(&job.script).to_owned(),
-                    runs_when(&job.script).to_owned(),
-                    last_run(job),
-                ]
-            })
-            .collect();
-        let gap = 16.0;
-        let font = egui::TextStyle::Body.resolve(ui.style());
-        let measure = |text: &str| {
-            ui.painter()
-                .layout_no_wrap(text.to_owned(), font.clone(), p.accent)
-                .size()
-                .x
-        };
-        let table = (0..titles.len())
-            .map(|column| {
-                rows.iter()
-                    .map(|row| measure(&row[column]))
-                    .fold(measure(titles[column]), f32::max)
-            })
-            .sum::<f32>()
-            + gap * (titles.len() - 1) as f32;
-        if table > ui.available_width() {
-            // Long names and translations can't share a row in a small window.
-            for row in &rows {
-                ui.label(&row[0]);
-                ui.label(RichText::new(row[1..].join(" · ")).small().color(p.muted));
-                ui.add_space(4.0);
-            }
-            return;
-        }
-        egui::Grid::new("extension-jobs")
-            .num_columns(titles.len())
-            .spacing(vec2(gap, 6.0))
-            .min_col_width(60.0)
-            .show(ui, |ui| {
-                for title in titles {
-                    ui.label(RichText::new(title).small().color(p.muted));
-                }
-                ui.end_row();
-                for row in &rows {
-                    for cell in row {
-                        ui.label(cell);
-                    }
-                    ui.end_row();
-                }
-            });
-    });
+    let mut act = None;
+    access::access(ui, package, p, |ui| act = access::overview_files(ui, entry, p));
     let provider = entry
         .jobs
         .iter()
@@ -580,7 +454,46 @@ fn code(ui: &mut egui::Ui, state: &mut State, index: usize, p: Palette) -> Optio
     act
 }
 
-fn detail(ui: &mut egui::Ui, state: &mut State, index: usize, p: Palette) -> Option<Act> {
+/// Shown while an extension is off, which is how every extension starts.
+fn turned_off(ui: &mut egui::Ui, id: &str, p: Palette) -> Option<Act> {
+    let mut act = None;
+    ui.add_space(6.0);
+    group(p)
+        .stroke(Stroke::new(1.0, p.blue.gamma_multiply(0.6)))
+        .show(ui, |ui| {
+            ui.set_width(ui.available_width());
+            let action = tr("Turn on");
+            let font = egui::TextStyle::Button.resolve(ui.style());
+            let button = ui
+                .painter()
+                .layout_no_wrap(action.to_owned(), font, p.text)
+                .size()
+                .x
+                + 2.0 * ui.spacing().button_padding.x
+                + ui.spacing().item_spacing.x;
+            ui.horizontal(|ui| {
+                ui.vertical(|ui| {
+                    ui.set_width((ui.available_width() - button).max(120.0));
+                    ui.add(
+                        egui::Label::new(tr("Turned off. Nothing runs until you turn it on."))
+                            .wrap(),
+                    );
+                });
+                if ui.button(action).clicked() {
+                    act = Some(Act::Enable(id.to_owned(), true));
+                }
+            });
+        });
+    act
+}
+
+fn detail(
+    ui: &mut egui::Ui,
+    state: &mut State,
+    index: usize,
+    queues: &[DownloadQueue],
+    p: Palette,
+) -> Option<Act> {
     let mut act = None;
     let entry = &state.entries[index];
     let id = entry.id().to_owned();
@@ -616,6 +529,9 @@ fn detail(ui: &mut egui::Ui, state: &mut State, index: usize, p: Palette) -> Opt
             }
         });
     });
+    if !entry.installed.enabled {
+        act = act.or(turned_off(ui, &id, p));
+    }
     ui.add_space(6.0);
     ui.add(egui::Label::new(&package.description).wrap());
     if entry.installed.enabled
@@ -679,7 +595,7 @@ fn detail(ui: &mut egui::Ui, state: &mut State, index: usize, p: Palette) -> Opt
             egui::ScrollArea::vertical()
                 .id_salt("extension-overview")
                 .auto_shrink([false, false])
-                .show(ui, |ui| overview(ui, state, index, p))
+                .show(ui, |ui| overview(ui, state, index, queues, p))
                 .inner
         }
         Detail::Settings => {
@@ -803,13 +719,27 @@ impl Desktop {
                     self.review_extension(bytes, review);
                 }
             }
+            "automation-installed-examples" => self.open_extension_examples(),
+            "automation-installed-allow" => {
+                let asking = self.extensions.entries.iter().find_map(|entry| {
+                    let job = access::asking(&entry.installed.package).first()?.id.clone();
+                    Some((entry.id().to_owned(), job))
+                });
+                if let Some((id, job)) = asking {
+                    self.extension_action(Act::AllowFiles(id, job));
+                }
+            }
             _ => {}
         }
     }
 
     pub(super) fn extension_actions(&mut self, ui: &mut egui::Ui, p: Palette) {
+        // Laid out right to left: the primary action stays at the edge.
         if ui.add(primary(tr("Install from file…"), p)).clicked() {
             self.pick_extension_file();
+        }
+        if ui.button(tr("Examples…")).clicked() {
+            self.open_extension_examples();
         }
     }
 
@@ -879,38 +809,12 @@ impl Desktop {
             ui.add_space(6.0);
         }
         if self.extensions.entries.is_empty() {
-            let mut open_scripts = false;
-            let mut install = false;
-            panel(p).show(ui, |ui| {
-                ui.set_min_size(ui.available_size());
-                ui.vertical_centered(|ui| {
-                    ui.add_space((ui.available_height() / 2.0 - 70.0).max(16.0));
-                    ui.label(RichText::new(tr("No extensions yet")).size(16.0).strong());
-                    ui.add_space(4.0);
-                    ui.label(
-                        RichText::new(tr(
-                            "Extensions add site support and automation without changing the app. Install one from a file, or write your own script.",
-                        ))
-                        .color(p.muted),
-                    );
-                    ui.add_space(8.0);
-                    ui.horizontal(|ui| {
-                        ui.add_space((ui.available_width() - 250.0).max(0.0) / 2.0);
-                        install = ui.add(primary(tr("Install from file…"), p)).clicked();
-                        open_scripts = ui.button(tr("Open Scripts")).clicked();
-                    });
-                });
-            });
-            if install {
-                self.pick_extension_file();
-            }
-            if open_scripts {
-                self.automation.show_scripts();
-            }
+            self.goals(ui, p);
             return;
         }
         let height = ui.available_height();
         let left = (ui.available_width() * 0.3).clamp(210.0, 292.0);
+        let queues = &self.queues;
         let state = &mut self.extensions;
         let mut act = None;
         let full = vec2(ui.available_width(), height);
@@ -942,7 +846,8 @@ impl Desktop {
                                     continue;
                                 }
                                 let selected = state.selected.as_deref() == Some(entry.id());
-                                if row(ui, entry, selected, p) {
+                                let summary = access::summary(&entry.jobs, queues);
+                                if row(ui, entry, &summary, selected, p) {
                                     act = Some(Act::Select(entry.id().to_owned()));
                                 }
                             }
@@ -959,7 +864,7 @@ impl Desktop {
                 ui.set_width(ui.available_width());
                 ui.set_min_height(height - 26.0);
                 ui.with_layout(Layout::top_down(Align::Min), |ui| {
-                    if let Some(next) = detail(ui, state, index, p) {
+                    if let Some(next) = detail(ui, state, index, queues, p) {
                         act = Some(next);
                     }
                 });
@@ -1006,6 +911,13 @@ impl Desktop {
                 self.automation.show_scripts();
                 Ok(())
             }
+            Act::AllowFiles(id, job) => {
+                self.extensions.granting = Some((id, job));
+                self.dialog = Some(Dialog::ExtensionFileAccess);
+                Ok(())
+            }
+            // Taking access back needs no question: it only removes a power.
+            Act::TakeBackFiles(id, job) => self.store.set_extension_file_access(&id, &job, false),
         };
         if let Err(error) = result {
             self.extensions.error = Some(format!("{error:#}"));
@@ -1111,31 +1023,16 @@ impl Desktop {
                 ui.add_space(6.0);
                 match &update {
                     Some(changes) => update_summary(ui, changes, p),
-                    None => {
-                        let (can, _) = powers(&package, false);
-                        group(p).show(ui, |ui| {
-                            ui.set_width(ui.available_width());
-                            heading(ui, tr("It can"), p);
-                            power_list(ui, &can, true, p);
-                        });
-                    }
+                    None => install_summary(ui, pending, &package, &self.queues, p),
                 }
                 ui.add_space(6.0);
-                file_requests(ui, pending, &package, update.as_ref(), p);
+                if update.is_some() {
+                    file_requests(ui, pending, &package, update.as_ref(), p);
+                }
                 queue_choices(ui, pending, &package, &self.queues, p);
-                group(p).show(ui, |ui| {
-                    ui.set_width(ui.available_width());
-                    heading(ui, &tf!("Jobs ({count})", count = package.jobs.len()), p);
-                    for job in &package.jobs {
-                        ui.horizontal(|ui| {
-                            ui.label(&job.name);
-                            ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                                ui.label(RichText::new(job_kind(job)).color(p.muted));
-                            });
-                        });
-                    }
-                });
-                ui.add_space(6.0);
+                if update.is_some() {
+                    update_jobs(ui, &package, p);
+                }
                 let notes: Vec<&str> = match &update {
                     Some(changes) => vec![
                         tr("Not now keeps the installed version exactly as it is."),
@@ -1251,6 +1148,47 @@ fn job_kind(job: &download_engine::extensions::Job) -> &'static str {
         Trigger::Provider => tr("Download provider"),
         _ => tr("Automation"),
     }
+}
+
+/// What a new install will do, in the same words as the Overview tab.
+fn install_summary(
+    ui: &mut egui::Ui,
+    pending: &mut Pending,
+    package: &Package,
+    queues: &[DownloadQueue],
+    p: Palette,
+) {
+    let lines: Vec<access::JobLine> = package
+        .jobs
+        .iter()
+        .map(|job| access::JobLine {
+            name: &job.name,
+            trigger: &job.trigger,
+            last: None,
+        })
+        .collect();
+    access::what_it_does(ui, &lines, queues, p);
+    ui.add_space(6.0);
+    access::access(ui, package, p, |ui| {
+        access::review_files(ui, pending, package, p);
+    });
+}
+
+/// An update's jobs, under what changes.
+fn update_jobs(ui: &mut egui::Ui, package: &Package, p: Palette) {
+    group(p).show(ui, |ui| {
+        ui.set_width(ui.available_width());
+        heading(ui, &tf!("Jobs ({count})", count = package.jobs.len()), p);
+        for job in &package.jobs {
+            ui.horizontal(|ui| {
+                ui.label(&job.name);
+                ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+                    ui.label(RichText::new(job_kind(job)).color(p.muted));
+                });
+            });
+        }
+    });
+    ui.add_space(6.0);
 }
 
 fn update_summary(ui: &mut egui::Ui, changes: &Changes, p: Palette) {

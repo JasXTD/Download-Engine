@@ -56,7 +56,7 @@ Utvidelser gir nettstedstøtte og automatisering i én pakke. De kjører i de sa
 
 1. Åpne Utvidelser i verktøylinjen øverst. Fanen Installert viser hva du har.
 
-2. Velg Installer fra fil… og velg deretter en .de-extension.json-fil.
+2. Velg Installer fra fil… og velg deretter en .de-extension.json-fil. Vil du prøve først, kan du i stedet velge Eksempler…: fem små eksempler følger med appen.
 
 3. Les gjennomgangsvinduet. Det viser utgiveren, hva utvidelsen kan gjøre, og jobbene dens. Ingenting kjører ennå.
 
@@ -68,7 +68,7 @@ Utgivere er ikke verifisert, så installer bare utvidelser fra folk du stoler p�
 
 ### Innstillinger, kode og oppdateringer
 
-Velg en utvidelse for å se hva den kan gjøre, hva den ikke kan gjøre og når jobbene dens sist kjørte. Innstillinger inneholder alternativene dens. Beskyttede verdier kan erstattes eller tømmes, men ikke vises igjen. Kode viser filene dens, som er skrivebeskyttet. Kopier til skriptene mine lager en redigerbar kopi som et personlig skript.
+Velg en utvidelse for å se hva den kan gjøre, hva den ikke kan gjøre og når jobbene dens sist kjørte. Innstillinger inneholder alternativene dens. Beskyttede verdier kan erstattes eller tømmes, men ikke vises igjen. Kode viser filene dens, som er skrivebeskyttet. Kopier til skriptene mine lager en redigerbar kopi som et personlig skript. Hvis en jobb ber om å endre filer og du lot boksen stå tom, gir Tillat… på fanen Oversikt tilgangen senere, og Trekk tilbake fjerner den.
 
 Hvis du vil oppdatere, velger du Installer fra fil… og deretter en nyere fil. Gjennomgangsvinduet viser hva som er endret. Hvis oppdateringen ber om ny tilgang, må du godkjenne den, og Ikke nå lar den installerte versjonen være som den var. Innstillinger, nøkler og lagrede verdier beholdes, og nedlastinger som allerede kjører, beholder koden de startet med.
 

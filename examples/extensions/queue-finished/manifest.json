@@ -1,0 +1,29 @@
+{
+  "format": "download-engine-extension",
+  "format_version": 1,
+  "id": "examples.queue-finished",
+  "name": "Queue finished",
+  "version": "1.0.0",
+  "publisher": "Download Engine examples",
+  "description": "Shows a notification when a queue you choose finishes, and can start another queue next.",
+  "license": "MIT",
+  "api_version": 1,
+  "settings": [
+    {
+      "id": "next_queue",
+      "type": "string",
+      "label": "Queue to start next. Leave empty to only show the notification",
+      "default": "",
+      "max_length": 64
+    }
+  ],
+  "jobs": [
+    {
+      "id": "notify",
+      "name": "Notify when the queue finishes",
+      "entry": "notify.lua",
+      "timeout_seconds": 30,
+      "trigger": { "kind": "queue_completed", "queue": "" }
+    }
+  ]
+}

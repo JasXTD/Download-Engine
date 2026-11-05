@@ -592,7 +592,10 @@ impl Bench {
             std::thread::sleep(PATIENCE);
             watchdog.cancel();
         });
-        let details = self.store.fetch_torrent_details(link, &cancel).unwrap();
+        let details = self
+            .store
+            .fetch_torrent_details(link, &cancel, false)
+            .unwrap();
         assert!(!cancel.is_cancelled(), "no file list arrived");
         details
     }
@@ -775,7 +778,7 @@ fn torrents_start_switched_off_and_nothing_can_run_until_they_are_on() {
     let cancel = tokio_util::sync::CancellationToken::new();
     let error = bench
         .store
-        .fetch_torrent_details(&magnet(&bench.seeder.sample), &cancel)
+        .fetch_torrent_details(&magnet(&bench.seeder.sample), &cancel, false)
         .unwrap_err();
     assert!(error.to_string().contains(OFF_MESSAGE), "{error}");
     let error = bench
@@ -785,6 +788,7 @@ fn torrents_start_switched_off_and_nothing_can_run_until_they_are_on() {
             Some(&bench.folder),
             MAIN,
             uuid::Uuid::new_v4().to_string(),
+            false,
         )
         .unwrap_err();
     assert!(error.to_string().contains(OFF_MESSAGE), "{error}");
@@ -946,9 +950,14 @@ fn a_magnet_link_added_for_later_waits_for_a_choice_then_downloads_only_that() {
             Some(&bench.folder),
             MAIN,
             uuid::Uuid::new_v4().to_string(),
+            false,
         )
         .unwrap();
     assert_eq!(job.name, "sample");
+    assert!(
+        !bench.store.torrent_dht_consent(&job).unwrap(),
+        "no yes was given"
+    );
 
     let waiting = bench.wait(
         "the file list",
@@ -1015,16 +1024,35 @@ fn the_file_list_of_a_magnet_link_comes_from_peers_and_can_be_cancelled() {
         .fetch_torrent_details(
             &magnet(&unknown),
             &tokio_util::sync::CancellationToken::new(),
+            false,
         )
         .unwrap_err();
     assert!(error.to_string().contains(".torrent file"));
+    // The helper's reason reaches the window, which explains it in the person's language.
+    assert_eq!(
+        download_engine::torrent::MagnetStop::of(&error),
+        Some(download_engine::torrent::MagnetStop::DhtOff)
+    );
+    // A yes doesn't help while the DHT is off, and nothing searches.
+    let error = bench
+        .store
+        .fetch_torrent_details(
+            &magnet(&unknown),
+            &tokio_util::sync::CancellationToken::new(),
+            true,
+        )
+        .unwrap_err();
+    assert_eq!(
+        download_engine::torrent::MagnetStop::of(&error),
+        Some(download_engine::torrent::MagnetStop::DhtOff)
+    );
     bench.wait_for_helper_to_stop();
     let cancel = tokio_util::sync::CancellationToken::new();
     cancel.cancel();
     assert!(
         bench
             .store
-            .fetch_torrent_details(&magnet(&unknown), &cancel)
+            .fetch_torrent_details(&magnet(&unknown), &cancel, false)
             .unwrap()
             .is_none()
     );
@@ -1232,6 +1260,7 @@ fn a_magnet_link_cannot_choose_its_own_files() {
             Some(&bench.folder),
             MAIN,
             uuid::Uuid::new_v4().to_string(),
+            false,
         )
         .unwrap();
     bench.wait(

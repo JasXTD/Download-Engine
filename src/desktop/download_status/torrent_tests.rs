@@ -197,6 +197,7 @@ fn running_window(app: &mut Desktop, private: bool) -> Job {
         upload_speed: 0,
         uploaded: 0,
         file_progress: vec![1000, 1000, 0].into(),
+        sharing: None,
     });
     window.torrent.apply(
         Some(Arc::new(details(private))),

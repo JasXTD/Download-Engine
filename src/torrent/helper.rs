@@ -65,6 +65,10 @@ fn arguments(settings: &Settings, state_dir: &Path) -> Vec<std::ffi::OsString> {
     if let Some(port) = settings.incoming_port {
         list.push("--port".into());
         list.push(port.to_string().into());
+        // Router setup only ever goes with a port, and only when it is switched on.
+        if settings.upnp {
+            list.push("--upnp".into());
+        }
     }
     if !settings.upload {
         list.push("--no-upload".into());
@@ -114,17 +118,47 @@ fn stopped() -> anyhow::Error {
     crate::retry::incomplete("The torrent helper stopped unexpectedly.")
 }
 
+/// Something the helper refused or stopped on. `code` names the engine's reason, for the
+/// few the app explains in the person's language; see `torrent/src/reason.rs`.
+#[derive(Debug)]
+pub struct HelperError {
+    pub code: Option<String>,
+    pub message: String,
+}
+impl std::fmt::Display for HelperError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&self.message)
+    }
+}
+impl std::error::Error for HelperError {}
+impl HelperError {
+    pub(super) fn new(code: Option<&str>, message: &str) -> Self {
+        Self {
+            // A code is a short name. Anything else is ignored, never shown.
+            code: code
+                .filter(|code| {
+                    !code.is_empty()
+                        && code.len() <= 64
+                        && code.bytes().all(|b| b.is_ascii_lowercase() || b == b'_')
+                })
+                .map(str::to_owned),
+            message: message.to_owned(),
+        }
+    }
+}
+
 fn decode(line: &str) -> Result<Value> {
     let reply: Value = serde_json::from_str(line).context("The torrent helper sent bad data")?;
     if reply["ok"] == Value::Bool(true) {
         return Ok(reply["result"].clone());
     }
-    bail!(
-        "{}",
+    Err(HelperError::new(
+        reply["code"].as_str(),
         reply["error"]
             .as_str()
-            .unwrap_or("The torrent helper failed")
+            .unwrap_or("The torrent helper failed"),
     )
+    .into())
 }
 
 impl Helper {
@@ -223,6 +257,8 @@ pub type RequestOutcome = std::result::Result<Option<&'static str>, String>;
 #[derive(Default)]
 struct Shared {
     helper: Option<Arc<Helper>>,
+    /// Router setup as the running helper last reported it.
+    router: Option<super::RouterStatus>,
     users: usize,
     selections: HashMap<String, Vec<usize>>,
     test_peers: Vec<SocketAddr>,
@@ -282,16 +318,33 @@ impl Host {
             helper.kill();
         }
         shared.network = None;
+        shared.router = None;
     }
 
     /// Passes changed settings to a running helper. One that starts later reads them itself.
+    /// Router setup goes on or off at once; turning it off removes the rule.
     pub(crate) fn configure(&self, settings: &Settings) {
         if let Some(helper) = &self.shared().helper {
             let _ = helper.send(&json!({
                 "cmd": "configure",
                 "upload_limit": settings.upload_limit,
                 "no_upload": !settings.upload,
+                "upnp": settings.upnp && settings.incoming_port.is_some(),
             }));
+        }
+    }
+
+    /// Router setup as the running helper reports it. None while no helper runs, or while
+    /// router setup is off.
+    pub fn router_status(&self) -> Option<super::RouterStatus> {
+        let shared = self.shared();
+        shared.helper.as_ref().and(shared.router)
+    }
+
+    pub(super) fn set_router(&self, status: Option<super::RouterStatus>) {
+        let mut shared = self.shared();
+        if shared.helper.is_some() {
+            shared.router = status;
         }
     }
 
@@ -414,7 +467,64 @@ impl Drop for Lease {
         if shared.users == 0
             && let Some(helper) = shared.helper.take()
         {
+            // Leaving lets the helper remove its router rule before it ends.
+            shared.router = None;
             helper.stop();
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn args(settings: Settings) -> Vec<String> {
+        arguments(&settings, Path::new("state"))
+            .iter()
+            .map(|argument| argument.to_string_lossy().into_owned())
+            .collect()
+    }
+
+    #[test]
+    fn no_port_opens_and_no_router_is_asked_unless_both_are_switched_on() {
+        let has = |list: &[String], flag: &str| list.iter().any(|argument| argument == flag);
+        let defaults = args(Settings::default());
+        assert!(!has(&defaults, "--port") && !has(&defaults, "--upnp"), "{defaults:?}");
+        let router_only = args(Settings {
+            upnp: true,
+            ..Default::default()
+        });
+        assert!(
+            !has(&router_only, "--port") && !has(&router_only, "--upnp"),
+            "without a port there is no router setup"
+        );
+        let port_only = args(Settings {
+            incoming_port: Some(6881),
+            ..Default::default()
+        });
+        assert!(has(&port_only, "--port") && !has(&port_only, "--upnp"));
+        let both = args(Settings {
+            incoming_port: Some(6881),
+            upnp: true,
+            ..Default::default()
+        });
+        assert!(has(&both, "--port") && has(&both, "--upnp"));
+    }
+
+    #[test]
+    fn a_reason_code_is_kept_only_when_it_looks_like_one() {
+        assert_eq!(
+            HelperError::new(Some("dht_off"), "text").code.as_deref(),
+            Some("dht_off")
+        );
+        for odd in ["Drop table", "a-b", "", &"x".repeat(65)] {
+            assert_eq!(HelperError::new(Some(odd), "text").code, None, "{odd}");
+        }
+        let error = anyhow::Error::from(HelperError::new(Some("private_from_dht"), "Private"));
+        assert_eq!(format!("{error:#}"), "Private");
+        assert_eq!(
+            super::super::MagnetStop::of(&error),
+            Some(super::super::MagnetStop::Private)
+        );
     }
 }

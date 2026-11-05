@@ -32,6 +32,9 @@ librqbit-dualstack-sockets = "0.7"
 librqbit-peer-protocol = "9.1.0"
 librqbit-tracker-comms = "9.1.0"
 parking_lot = "0.12"
+# Reads the router's answers for router setup. The app already uses this version, so its
+# build gains no crate.
+quick-xml = "0.41"
 # The app's build adds HTTPS through its own reqwest features. Builds of this folder alone are
 # only for tests, and stay free of a TLS library.
 reqwest = { version = "0.13", default-features = false }
@@ -43,7 +46,8 @@ tokio-util = "0.7"
 url = "2"
 
 [target.'cfg(windows)'.dependencies]
-windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_System_IO", "Win32_System_Ioctl"] }
+# IpHelper, Ndis and WinSock read the routing table for router setup.
+windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_System_IO", "Win32_System_Ioctl", "Win32_NetworkManagement_IpHelper", "Win32_NetworkManagement_Ndis", "Win32_Networking_WinSock"] }
 
 [target.'cfg(unix)'.dependencies]
 libc = "0.2"

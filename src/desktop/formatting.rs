@@ -165,7 +165,11 @@ pub(super) fn eta(job: &Job, rate: f64) -> String {
     let Some(total) = job.total.filter(|total| *total > job.downloaded) else {
         return "—".into();
     };
-    let seconds = ((total - job.downloaded) as f64 / rate).ceil() as u64;
+    duration(((total - job.downloaded) as f64 / rate).ceil() as u64)
+}
+
+/// A length of time as the status window shows it, from seconds to days.
+pub(super) fn duration(seconds: u64) -> String {
     if seconds < 60 {
         tf!("{seconds} sec", seconds = seconds)
     } else if seconds < 3600 {
@@ -175,6 +179,35 @@ pub(super) fn eta(job: &Job, rate: f64) -> String {
     } else {
         tf!("{} days", seconds / 86400)
     }
+}
+
+/// A share ratio kept in hundredths, such as "1.42".
+pub(super) fn share_ratio(hundredths: u64) -> String {
+    format!("{}.{:02}", hundredths / 100, hundredths % 100)
+}
+
+/// A ratio choice in Preferences, such as "2.0", or no limit.
+pub(super) fn share_ratio_choice(hundredths: Option<u32>) -> String {
+    hundredths.map_or_else(
+        || tr("No limit").into(),
+        |value| format!("{}.{}", value / 100, value % 100 / 10),
+    )
+}
+
+/// A sharing time from Preferences. Only the listed times can be saved.
+pub(super) fn sharing_time(seconds: u32) -> String {
+    match seconds {
+        3_600 => tr("1 hour").into(),
+        21_600 => tr("6 hours").into(),
+        86_400 => tr("1 day").into(),
+        259_200 => tr("3 days").into(),
+        604_800 => tr("1 week").into(),
+        other => duration(u64::from(other)),
+    }
+}
+
+pub(super) fn sharing_time_choice(seconds: Option<u32>) -> String {
+    seconds.map_or_else(|| tr("No limit").into(), sharing_time)
 }
 
 pub(super) fn bytes(n: u64) -> String {

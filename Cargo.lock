@@ -644,6 +644,7 @@ dependencies = [
  "librqbit-tracker-comms",
  "objc2-foundation 0.3.2",
  "parking_lot",
+ "quick-xml",
  "reqwest",
  "serde",
  "serde_json",

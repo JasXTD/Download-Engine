@@ -169,6 +169,9 @@ pub struct Search {
     pub cancel: CancellationToken,
     /// Whether to ask the DHT as well, when the torrent allows it.
     pub ask_dht: bool,
+    /// A magnet the person agreed to look up: the DHT may be asked before the details are
+    /// known, without announcing this computer.
+    pub search_only: bool,
     /// Where each tracker's answers are written down for the status window.
     pub board: Option<Arc<TrackerBoard>>,
     /// Counts the new peers the DHT finds.
@@ -308,6 +311,7 @@ impl Discovery {
             found,
             cancel,
             ask_dht,
+            search_only,
             board,
             dht_found,
         } = search;
@@ -350,7 +354,8 @@ impl Discovery {
             });
         }
         // A private torrent's peers may only come from its own trackers.
-        if ask_dht && self.options.use_dht && permits_dht(private) {
+        let plan = dht_plan(private, search_only, self.options.listen_port);
+        if ask_dht && self.options.use_dht && let Some(announce) = plan {
             let this = self.clone();
             let found = match dht_found {
                 Some(counter) => found.counted(counter),
@@ -360,7 +365,7 @@ impl Discovery {
                 let Some(dht) = this.dht().await else {
                     return;
                 };
-                let stream = dht.get_peers(info_hash, this.options.listen_port);
+                let stream = dht.get_peers(info_hash, announce);
                 tokio::select! {
                     _ = cancel.cancelled() => {}
                     _ = drain_addresses(stream, found) => {}
@@ -374,6 +379,19 @@ fn permits_dht(private: Option<bool>) -> bool {
     private == Some(false)
 }
 
+/// Whether to ask the DHT, and the port to announce there, if any. A public torrent may
+/// announce. A magnet the person agreed to look up may only ask, until its details say
+/// public. Everything else stays off the DHT.
+fn dht_plan(private: Option<bool>, search_only: bool, listen_port: Option<u16>) -> Option<Option<u16>> {
+    if permits_dht(private) {
+        Some(listen_port)
+    } else if search_only && private.is_none() {
+        Some(None)
+    } else {
+        None
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -384,9 +402,10 @@ mod tests {
     async fn discovery_backpressures_before_draining_a_large_source() {
         let (found, mut received) = PeerCandidates::channel(std::iter::empty(), false);
         let polled = AtomicUsize::new(0);
+        // Ports stay above the service ports, which are never queued at all.
         let source = futures_util::stream::iter((1..1000).map(|port| {
             polled.fetch_add(1, Ordering::Relaxed);
-            SocketAddr::from(([1, 2, 3, 4], port))
+            SocketAddr::from(([1, 2, 3, 4], 10_000 + port))
         }));
         let mut pumping = Box::pin(drain_addresses(source, found));
         assert!(pumping.as_mut().now_or_never().is_none());
@@ -439,26 +458,26 @@ mod tests {
     #[tokio::test]
     async fn peer_exchange_drops_overflow_without_spending_the_search_budget() {
         let (found, mut received) = PeerCandidates::channel(std::iter::empty(), false);
-        for port in 1..=129 {
+        for port in 10_001..=10_129 {
             found.try_send(([1, 2, 3, 4], port).into());
         }
         assert_eq!(received.len(), 128);
-        assert_eq!(received.recv().await.unwrap().port(), 1);
-        found.try_send(([1, 2, 3, 4], 129).into());
+        assert_eq!(received.recv().await.unwrap().port(), 10_001);
+        found.try_send(([1, 2, 3, 4], 10_129).into());
         let mut ports = Vec::new();
         while let Ok(addr) = received.try_recv() {
             ports.push(addr.port());
         }
-        assert_eq!(ports, (2..=129).collect::<Vec<_>>());
+        assert_eq!(ports, (10_002..=10_129).collect::<Vec<_>>());
     }
 
     #[tokio::test]
     async fn searches_waiting_for_space_still_deduplicate_against_each_other() {
         let (found, mut received) = PeerCandidates::channel(std::iter::empty(), false);
-        for port in 1..=128 {
+        for port in 10_001..=10_128 {
             found.try_send(([1, 2, 3, 4], port).into());
         }
-        let peer = SocketAddr::from(([1, 2, 3, 4], 129));
+        let peer = SocketAddr::from(([1, 2, 3, 4], 10_129));
         let other = found.clone();
         let mut one = Box::pin(found.send(peer));
         let mut two = Box::pin(other.send(peer));
@@ -489,6 +508,20 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn peers_on_service_ports_are_never_queued() {
+        let (found, mut received) = PeerCandidates::channel(std::iter::empty(), false);
+        // An internet-phone server, a web server and a name server, as poisoned lists name them.
+        for addr in ["66.205.236.7:5060", "93.184.216.34:80", "93.184.216.34:53"] {
+            assert!(found.send(addr.parse().unwrap()).await, "{addr}");
+            found.try_send(addr.parse().unwrap());
+        }
+        assert!(received.try_recv().is_err(), "none of them was queued");
+        // A peer on an ordinary port still is.
+        assert!(found.send("94.228.209.182:3491".parse().unwrap()).await);
+        assert_eq!(received.try_recv().unwrap().port(), 3491);
+    }
+
+    #[tokio::test]
     async fn a_counted_copy_counts_only_the_new_addresses_it_delivers() {
         let (found, mut received) = PeerCandidates::channel(std::iter::empty(), false);
         let counter = Arc::new(AtomicUsize::new(0));
@@ -508,6 +541,20 @@ mod tests {
         assert!(!permits_dht(None));
         assert!(!permits_dht(Some(true)));
         assert!(permits_dht(Some(false)));
+    }
+
+    #[test]
+    fn a_searched_magnet_only_asks_and_a_private_torrent_never_uses_the_dht() {
+        // Without a yes, an unknown hash stays off the DHT.
+        assert_eq!(dht_plan(None, false, Some(6881)), None);
+        // With one, the DHT is asked, but this computer is announced nowhere.
+        assert_eq!(dht_plan(None, true, Some(6881)), Some(None));
+        // Private details end any search, with or without a yes.
+        assert_eq!(dht_plan(Some(true), true, Some(6881)), None);
+        assert_eq!(dht_plan(Some(true), false, None), None);
+        // A public torrent announces its port, when it listens.
+        assert_eq!(dht_plan(Some(false), true, Some(6881)), Some(Some(6881)));
+        assert_eq!(dht_plan(Some(false), false, None), Some(None));
     }
 
     #[test]

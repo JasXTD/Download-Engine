@@ -83,8 +83,21 @@ pub struct TorrentSnapshot {
     pub peers: usize,
     pub download_speed: u64,
     pub upload_speed: u64,
+    /// While sharing, everything this torrent has uploaded, across runs.
     pub uploaded: u64,
     pub file_progress: Arc<[u64]>,
+    /// Only while a finished torrent is shared.
+    pub sharing: Option<SharingView>,
+}
+
+/// How far a shared torrent is from its limits, for the status window.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct SharingView {
+    pub ratio_hundredths: u64,
+    pub shared_secs: u64,
+    /// None when that limit is off, or after the person chose to share again.
+    pub limit_ratio: Option<u32>,
+    pub limit_seconds: Option<u32>,
 }
 
 #[derive(Clone)]

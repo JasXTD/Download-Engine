@@ -34,6 +34,7 @@ use crate::details::{
 use crate::discovery::{Discovery, PeerCandidates, Search};
 use crate::meta::{TorrentMeta, usable_tracker};
 use crate::metadata;
+use crate::reason;
 use crate::peer::{
     BoxedStream, Hello, Out, PeerLink, read_handshake, run_connection, send_handshake,
 };
@@ -138,6 +139,21 @@ pub struct TorrentOptions {
     pub allowance: Arc<Allowance>,
     /// Trackers the user added. They are only ever asked about a torrent known to be public.
     pub trackers: Vec<Url>,
+    /// A magnet with nothing else to go on, which the person agreed to look up on the DHT.
+    /// The search announces nothing, stops after `DHT_SEARCH_LIMIT`, and a private
+    /// torrent stops as soon as its details arrive.
+    pub dht_search: bool,
+}
+
+/// How long a DHT search for a magnet's details may go on without an answer.
+pub const DHT_SEARCH_LIMIT: Duration = Duration::from_secs(10 * 60);
+
+/// Details found by a DHT search may not lead a private torrent on.
+fn check_searched_details(options: &TorrentOptions, meta: &TorrentMeta) -> Result<()> {
+    if options.dht_search && meta.private {
+        return Err(reason::PRIVATE_FROM_DHT.into());
+    }
+    Ok(())
 }
 
 /// Refused for private torrents, because asking another tracker would tell it the hash.
@@ -148,6 +164,8 @@ pub const PRIVATE_TRACKERS: &str =
 pub struct TorrentStats {
     pub state: &'static str,
     pub error: Option<String>,
+    /// Set for errors the app explains in the person's language. See `reason`.
+    pub error_code: Option<&'static str>,
     pub finished: bool,
     pub progress_bytes: u64,
     pub total_bytes: u64,
@@ -646,6 +664,8 @@ pub struct Torrent {
     meta: OnceLock<Arc<TorrentMeta>>,
     core: OnceLock<Arc<TorrentCore>>,
     phase: Mutex<Phase>,
+    /// The code of the error in `phase`, when it has one.
+    error_code: Mutex<Option<&'static str>>,
     selection: Mutex<Option<Vec<usize>>>,
     selected: Notify,
     run: tokio::sync::Mutex<Option<RunHandle>>,
@@ -711,6 +731,7 @@ impl Torrent {
             meta: OnceLock::new(),
             core: OnceLock::new(),
             phase: Mutex::new(Phase::Paused),
+            error_code: Mutex::new(None),
             selected: Notify::new(),
             run: tokio::sync::Mutex::new(None),
             board,
@@ -758,6 +779,7 @@ impl Torrent {
             return;
         }
         // Nothing should see this torrent as paused while its task gets going.
+        *self.error_code.lock() = None;
         self.set_phase(if self.meta.get().is_some() {
             Phase::Checking
         } else {
@@ -820,7 +842,10 @@ impl Torrent {
     async fn lifetime(self: Arc<Self>, cancel: CancellationToken) {
         match self.run_stages(&cancel).await {
             Ok(()) => {}
-            Err(error) => self.set_phase(Phase::Error(format!("{error:#}"))),
+            Err(error) => {
+                *self.error_code.lock() = reason::code_of(&error);
+                self.set_phase(Phase::Error(format!("{error:#}")));
+            }
         }
     }
 
@@ -829,9 +854,12 @@ impl Torrent {
             Some(meta) => meta.clone(),
             None => {
                 self.set_phase(Phase::Metadata);
-                let Some(meta) = self.fetch_metadata(cancel).await else {
+                let Some(meta) = self.fetch_metadata(cancel).await? else {
                     return Ok(());
                 };
+                // Checked before anything is saved or started, so a private torrent found
+                // this way leaves nothing behind that could lead it on later.
+                check_searched_details(&self.options, &meta)?;
                 if let Some(state_dir) = &self.options.state_dir
                     && let Err(error) = resume::save_info(state_dir, &meta)
                 {
@@ -870,7 +898,10 @@ impl Torrent {
         Ok(())
     }
 
-    async fn fetch_metadata(&self, cancel: &CancellationToken) -> Option<Arc<TorrentMeta>> {
+    async fn fetch_metadata(
+        &self,
+        cancel: &CancellationToken,
+    ) -> Result<Option<Arc<TorrentMeta>>> {
         // Ending this stage must also end the searches started for it.
         let cancel = cancel.child_token();
         let _stop_search = cancel.clone().drop_guard();
@@ -890,6 +921,7 @@ impl Torrent {
                 found: found_tx.clone(),
                 cancel: cancel.clone(),
                 ask_dht: true,
+                search_only: self.options.dht_search,
                 board: Some(self.board.clone()),
                 dht_found: Some(self.dht_found.clone()),
             });
@@ -898,9 +930,22 @@ impl Torrent {
         let budget = metadata::Budget::default();
         let mut attempts: JoinSet<(SocketAddr, Result<metadata::Fetched>)> = JoinSet::new();
         let mut tick = tokio::time::interval(Duration::from_secs(1));
+        // A DHT search alone gives up in the end. Other magnets wait for their trackers.
+        let give_up = self
+            .options
+            .dht_search
+            .then(|| Instant::now() + DHT_SEARCH_LIMIT);
+        let gave_up = async {
+            match give_up {
+                Some(at) => tokio::time::sleep_until(at).await,
+                None => std::future::pending().await,
+            }
+        };
+        tokio::pin!(gave_up);
         loop {
             tokio::select! {
-                _ = cancel.cancelled() => return None,
+                _ = cancel.cancelled() => return Ok(None),
+                _ = &mut gave_up => return Err(reason::DHT_SEARCH_TIMEOUT.into()),
                 Some(peer) = found.recv() => book.add_found(peer, allow_loopback),
                 Some(done) = attempts.join_next(), if !attempts.is_empty() => {
                     let Ok((addr, result)) = done else {
@@ -910,7 +955,7 @@ impl Torrent {
                         TorrentMeta::from_info_bytes(self.info_hash, info.bytes.clone(), self.trackers.clone())
                     });
                     match meta {
-                        Ok(meta) => return Some(Arc::new(meta)),
+                        Ok(meta) => return Ok(Some(Arc::new(meta))),
                         Err(error) => {
                             debug_log!("no metadata from {addr}: {error:#}");
                             book.ended(addr, false, Instant::now());
@@ -987,11 +1032,13 @@ impl Torrent {
             Phase::Error(message) => Some(message.clone()),
             _ => None,
         };
+        let error_code = error.as_ref().and(*self.error_code.lock());
         let name = self.meta.get().map(|meta| meta.name.clone());
         let Some(core) = self.core.get() else {
             return TorrentStats {
                 state: phase.name(),
                 error,
+                error_code,
                 finished: false,
                 progress_bytes: 0,
                 total_bytes: 0,
@@ -1023,6 +1070,7 @@ impl Torrent {
         TorrentStats {
             state: phase.name(),
             error,
+            error_code,
             // Pieces found on disk don't count as finished until checking is over.
             finished: finished && core.checked.load(Ordering::Acquire),
             progress_bytes,
@@ -1175,6 +1223,7 @@ impl Torrent {
             found: live.search_found.clone(),
             cancel: cancel.clone(),
             ask_dht: false,
+            search_only: false,
             board: Some(self.board.clone()),
             dht_found: None,
         });
@@ -1388,6 +1437,7 @@ async fn run_swarm(
             found: found_tx.clone(),
             cancel: search_cancel.clone(),
             ask_dht: true,
+            search_only: false,
             board: Some(torrent.board.clone()),
             dht_found: Some(torrent.dht_found.clone()),
         });
@@ -1959,6 +2009,68 @@ mod tests {
         assert_eq!(second.len(), UPLOAD_SLOTS);
         assert!(second.ends_with(&[4, 5, 6]), "{second:?}");
         assert_ne!(first[0], second[0]);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn a_dht_search_gives_up_after_ten_minutes_with_a_reason() {
+        let options = TorrentOptions {
+            dht_search: true,
+            connect_out: false,
+            ..Default::default()
+        };
+        let torrent = Torrent::from_magnet(Id20::new([7; 20]), Vec::new(), options, context(1));
+        torrent.start().await;
+        tokio::time::sleep(DHT_SEARCH_LIMIT - Duration::from_secs(1)).await;
+        assert_eq!(torrent.stats().state, "metadata");
+        assert_eq!(torrent.stats().error_code, None);
+        tokio::time::sleep(Duration::from_secs(2)).await;
+        for _ in 0..100 {
+            if torrent.stats().state == "error" {
+                break;
+            }
+            tokio::task::yield_now().await;
+        }
+        let stats = torrent.stats();
+        assert_eq!(stats.state, "error");
+        assert_eq!(stats.error_code, Some("dht_search_timeout"));
+        // Starting again clears the reason along with the error.
+        torrent.start().await;
+        assert_eq!(torrent.stats().error_code, None);
+        torrent.pause().await;
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn a_magnet_with_trackers_waits_for_them_without_a_time_limit() {
+        let options = TorrentOptions {
+            connect_out: false,
+            ..Default::default()
+        };
+        let torrent = Torrent::from_magnet(Id20::new([8; 20]), Vec::new(), options, context(1));
+        torrent.start().await;
+        tokio::time::sleep(DHT_SEARCH_LIMIT * 3).await;
+        assert_eq!(torrent.stats().state, "metadata");
+        torrent.pause().await;
+    }
+
+    #[test]
+    fn details_found_by_a_dht_search_may_not_lead_a_private_torrent_on() {
+        let data = [3u8; 40_000];
+        let files: &[(&[&str], &[u8], bool)] = &[(&["a.bin"], &data, false)];
+        let private = meta_of(&crate::testkit::multi_file_torrent_with(
+            "pack", files, 16384, None, true,
+        ));
+        let public = meta_of(&crate::testkit::multi_file_torrent_with(
+            "pack", files, 16384, None, false,
+        ));
+        let searched = TorrentOptions {
+            dht_search: true,
+            ..Default::default()
+        };
+        let error = check_searched_details(&searched, &private).unwrap_err();
+        assert_eq!(reason::code_of(&error), Some("private_from_dht"));
+        assert!(check_searched_details(&searched, &public).is_ok());
+        // A private torrent from its own tracker or file goes on as always.
+        assert!(check_searched_details(&TorrentOptions::default(), &private).is_ok());
     }
 
     #[test]

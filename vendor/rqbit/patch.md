@@ -97,6 +97,10 @@ All of these come from data that strangers control, and each has a regression te
   The RFC 8215 local-use translation prefix `64:ff9b:1::/48` is blocked because a
   network translator can use it to reach private IPv4 destinations.
   `allow_local_addresses` is an explicit isolated-LAN opt-in, off by default.
+  Public endpoints also exclude service ports: everything below 1024 and a short list of
+  well-known non-torrent ports such as SIP 5060 (`is_service_port`), so poisoned peer and
+  node lists can't turn the client against someone else's server. Trackers, incoming
+  connections and explicitly named peers don't use this check.
 - DHT recursive work: each lookup admits at most 256 queued or active nodes and creates
   at most eight concurrent request futures, within a shared 4,096-node admission budget
   across torrent searches, bootstrap and routing refreshes. Pending endpoints and IDs

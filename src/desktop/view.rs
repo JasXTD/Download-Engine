@@ -1326,6 +1326,7 @@ impl Desktop {
             if let Some(provider) = &mut copy.provider {
                 // Redownload keeps the reviewed code, but resolves a fresh plan.
                 provider.plan = None;
+                provider.media = None;
                 copy.server_name_pending = false;
             }
             copy.ftp.clone_from(&job.ftp);

@@ -2,6 +2,35 @@
 
 Release notes are available offline in Help → Changelog. Newest releases appear first.
 
+## 3.12.0 — 2026-11-05
+
+### Discoverable Lua extensions
+
+- The Extensions page discovers `.de-extension.json` packages in the application's `plugins` folder at launch, when opening Installed, and on Refresh. Installed and portable copies use their own application resources; no profile or working-directory plugin folder is scanned.
+- Found packages appear for permission review. New installs start disabled, updates require review, and replacing a source file never silently changes installed code. Duplicate IDs, changed packages with an unchanged version, invalid files and scan limits are reported.
+- Bundled the offline episode demo, its generated encrypted media, launcher and author guide in Windows and native package recipes. It demonstrates quality/language selection, multiple tracks and muxing without contacting a commercial service. The sample server starts only when the user runs its launcher.
+- Discovery reads bounded regular files on a background worker. It ignores nested folders, rejects linked packages and retains the exact reviewed bytes through installation. Removing a source file leaves the reviewed installed copy intact.
+
+### Unix media merger security
+
+- HLS and Lua media providers execute a private, checksum-verified FFmpeg copy through an open directory handle on macOS/Linux. Replacing the original helper or renaming a parent directory after verification cannot redirect the launch. Cancellation and failed launches release the private copy; temporary storage that forbids execution fails without falling back to the original path.
+
+## 3.11.0 — 2026-11-05
+
+### Lua media providers
+
+- Added Media API 1 for Lua scripts and installed extensions: ordered HTTP segments and byte ranges, video/audio/subtitle tracks, optional per-segment verification, and MKV or MP4 output through the bundled FFmpeg.
+- Providers can process encrypted segments with existing AES helpers and protected key settings. Rust owns downloads, checkpoints, track assembly and muxing; scripts cannot pass commands, executable paths or remote inputs to FFmpeg.
+- Pause, Stop and crash recovery preserve verified completed segments. Resuming refreshes links and rejects changed content or corrupt saved bytes. An interrupted segment restarts from its beginning; video/audio are muxed without re-encoding and MP4 subtitles use mov_text.
+- Added a media-provider template, author guide and isolated tests using generated encrypted video, two audio tracks and subtitles. No commercial service, DRM license or real account is involved.
+- Added a buildable offline episode extension example with quality/language settings, generated encrypted fragments, MKV/MP4 output and protected-key demonstrations. Selected language/timeline helpers are adapted from CuteTenshii/crunchyroll-downloader with the original MIT notice; this is not a live-service integration.
+- Single-file provider API 1 remains compatible. Saving a media job raises profile data/writer compatibility to 7 so older versions cannot discard its metadata.
+
+### Interface
+
+- Torrent status now shows pieces, files, peers and trackers.
+- Removed duplicate footer Close actions from four dialogs. Preferences keeps unsaved edits when a click lands outside the popup.
+
 ## 3.10.2 — 2026-11-04
 
 ### Local crash reports

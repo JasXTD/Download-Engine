@@ -302,8 +302,14 @@ async fn transfer(
         .await
         .context("Cannot create the download folder")?;
     if job.provider.is_some() {
-        let source = crate::provider::resolve(store, job, cancel).await?;
-        return http::transfer(source, store, job, &root, cancel, limiter).await;
+        return match crate::provider::resolve(store, job, cancel).await? {
+            crate::provider::Source::File(source) => {
+                http::transfer(source, store, job, &root, cancel, limiter).await
+            }
+            crate::provider::Source::Media(plan) => {
+                crate::provider::media::download(store, job, &root, plan, cancel, limiter).await
+            }
+        };
     }
     if job.hls.is_some() {
         return crate::hls::transfer(store, job, &root, cancel, limiter).await;

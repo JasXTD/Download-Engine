@@ -320,7 +320,7 @@ Extensions add site support and automation as one package. They run on the same 
 
 1. Open Extensions in the top toolbar. The Installed tab lists what you have.
 
-2. Choose Install from file… and pick a .de-extension.json file.
+2. Under From plugins folder, choose Review install for the bundled demo or another discovered package. Or choose Install from file… and pick a .de-extension.json file anywhere.
 
 3. Read the review. It shows the publisher, what the extension can do and its jobs. Nothing runs yet.
 
@@ -330,11 +330,20 @@ Extensions add site support and automation as one package. They run on the same 
 
 Publishers are not verified, so install extensions only from people you trust.
 
+From 3.12.0, discovery checks only this application's plugins folder: beside de.exe
+on Windows, beside de on Linux, or Contents/Resources/plugins inside the macOS app.
+Open folder shows the exact location. Add packaged .de-extension.json files there
+and choose Refresh; the app also checks at launch and when opening Installed.
+No profile plugin folder is scanned. Discovery never installs, enables or runs
+code automatically. Subfolders are ignored; duplicate IDs and invalid files show
+errors. Keep one package per ID, and increase its version when changing it.
+Deleting the source file leaves the reviewed installed copy intact.
+
 ### Settings, code and updates
 
 Select an extension to see what it can do, what it cannot do and when its jobs last ran. Settings holds its options. Protected values can be replaced or cleared but not shown again. Code shows its files, read-only. Copy to my scripts makes an editable copy as a personal script.
 
-To update, choose Install from file… and pick a newer file. The review shows what changed. If it asks for new access, you must approve it, and Not now leaves the installed version as it was. Settings, keys and stored values are kept, and downloads already running keep the code they started with.
+To update, choose Review update beside a newer discovered package, or Install from file… and pick a newer file. The review shows what changed. If it asks for new access, you must approve it; closing the review leaves the installed version as it was. Settings, keys and stored values are kept, and downloads already running keep the code they started with.
 
 Remove deletes the extension's settings, keys and stored values. Run history stays, and files you downloaded are kept.
 
@@ -672,6 +681,34 @@ return {
 From then on, Download video, Find videos on this page, Add URL and Preview video open matching pages with your reader. One stream goes straight to the quality choice; files or several streams open the Video downloads list. If the reader fails on a page opened from the browser, Download Engine shows what the browser found instead. YouTube, Bilibili, TikTok and Twitch always use the built-in readers.
 
 Site readers can read web pages but cannot see or change your downloads. Their requests and returned downloads reach the public internet only: home-network and local addresses are refused and browser cookies and logins are never sent by the reader. Choose Preferences → Connection → Proxy → Direct connection to use a reader or download its results; System and custom proxies are refused because they cannot guarantee the same address checks. Redirects to another origin drop script-supplied headers and cannot forward a POST body. The full reference is in docs/automation.md.
+
+### Segmented media providers
+
+Download Engine 3.11.0 adds `xd.media_plan(...)` to Lua download providers and
+installed extensions. A media plan contains ordered segments and selected video,
+audio and subtitle tracks. The core downloads and verifies segments, lets Lua
+process encrypted bytes using a supplied key, then muxes the tracks into MKV or
+MP4 with the bundled FFmpeg. Language, title and default-track metadata are kept.
+
+Choose **Download provider** as the script trigger, adapt
+`examples/media-provider.lua`, save it, enter **Source URL** and choose **Add
+provider download**. Pause/Stop keeps completed segments; Resume refreshes links
+and verifies saved bytes. An unfinished segment restarts from its beginning.
+Wrong hashes or incompatible tracks fail without publishing a partial result.
+The core downloads one segment at a time and copies video/audio without re-encoding.
+
+Read `docs/lua-media-providers.md` for fields, callbacks, protected keys and the
+offline test command. The first media job raises profile compatibility to version
+7; older app builds cannot reopen that profile. These APIs were tested with owned
+encrypted samples only and do not implement Widevine or service-specific access.
+
+For a runnable extension with quality, language and container settings, see
+`plugins/offline-episode/README.md` beside the installed application resources.
+The source archive also includes `examples/offline-episode/README.md`, and a
+companion `Offline-Episode-1.0.0.zip` can be extracted separately. Run its sample
+server, choose Review install for the demo in Extensions, enable it and paste
+the printed local address into Source URL. All media is generated sample content;
+no service account is needed. The server exists only to provide an offline source.
 
 ### Download providers — API 1
 

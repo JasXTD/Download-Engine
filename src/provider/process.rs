@@ -183,6 +183,19 @@ impl Worker {
         previous: Option<&Content>,
         cancel: &CancellationToken,
     ) -> Result<Plan> {
+        match self.resolve_any(url, serde_json::to_value(previous)?, cancel)? {
+            super::Resolution::File(plan) => Ok(plan),
+            super::Resolution::Media(_) => {
+                anyhow::bail!("Provider changed from file to media. Restart this download.")
+            }
+        }
+    }
+    pub(crate) fn resolve_any(
+        &mut self,
+        url: &str,
+        previous: serde_json::Value,
+        cancel: &CancellationToken,
+    ) -> Result<super::Resolution> {
         ensure!(
             self.role == Role::Resolver,
             "Processor workers cannot resolve or refresh"
@@ -191,9 +204,44 @@ impl Worker {
             serde_json::json!({"op":"resolve","url":url,"previous":previous}),
             cancel,
         )?;
-        let plan: Plan = serde_json::from_value(value)?;
-        plan.validate()?;
-        Ok(plan)
+        super::Resolution::parse(value)
+    }
+    pub(crate) fn transform_media(
+        &mut self,
+        context: &super::media::Chunk,
+        bytes: &[u8],
+        offset: u64,
+        cancel: &CancellationToken,
+    ) -> Result<Vec<u8>> {
+        ensure!(
+            self.role == Role::Processor && bytes.len() <= CHUNK_BYTES,
+            "Invalid media processor request"
+        );
+        let value = self.call(serde_json::json!({"op":"media_transform","context":context,"bytes":STANDARD.encode(bytes),"offset":offset}), cancel)?;
+        let text = value.as_str().context("Invalid provider chunk")?;
+        ensure!(
+            text.len() <= CHUNK_BYTES.div_ceil(3) * 4,
+            "Provider output exceeds 256 KiB"
+        );
+        let output = STANDARD.decode(text)?;
+        ensure!(
+            output.len() == bytes.len(),
+            "Provider must return exactly one output byte per input byte"
+        );
+        Ok(output)
+    }
+    pub(crate) fn finish_media(
+        &mut self,
+        plan: &super::media::Plan,
+        cancel: &CancellationToken,
+    ) -> Result<()> {
+        ensure!(
+            self.role == Role::Processor,
+            "Resolver workers cannot finish files"
+        );
+        let value = self.call(serde_json::json!({"op":"media_finish","plan":plan}), cancel)?;
+        ensure!(value == true, "Provider finish must return true");
+        Ok(())
     }
     pub(crate) fn transform(
         &mut self,

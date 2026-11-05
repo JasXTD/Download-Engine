@@ -4,7 +4,7 @@ use serde_json::{Value, json};
 
 const ID: &str = "example.videohost";
 
-fn package(version: &str, hosts: &[&str]) -> Vec<u8> {
+pub(super) fn package(version: &str, hosts: &[&str]) -> Vec<u8> {
     serde_json::to_vec(&json!({
         "format": "download-engine-extension",
         "format_version": 1,

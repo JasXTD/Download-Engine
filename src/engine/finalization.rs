@@ -261,7 +261,9 @@ async fn prepare_copy(
 /// A single-part publication uses the original cache file as its recovery
 /// anchor. No new saved-job format is needed; multi-part/media jobs keep staging.
 fn direct_source(job: &Job, root: &Path) -> Option<PathBuf> {
-    if job.provider.is_some() {
+    if job.provider.as_ref().is_some_and(|p| p.media.is_some()) {
+        None
+    } else if job.provider.is_some() {
         Some(root.join("provider-output.part"))
     } else if job.hls.is_some() {
         None
@@ -319,6 +321,11 @@ pub(super) async fn recover(
         })
         .await??;
         if let Some((actual, guard)) = recovered {
+            ensure!(
+                !job.provider.as_ref().is_some_and(|p| p.media.is_some())
+                    || job.integrity.actual.is_some(),
+                "Published media has no verification receipt"
+            );
             if let Some(previous) = &job.integrity.actual {
                 ensure!(
                     previous.eq_ignore_ascii_case(&actual),
@@ -326,7 +333,9 @@ pub(super) async fn recover(
                 );
             }
             job.integrity.actual = Some(actual);
-            if let Some(provider) = &job.provider {
+            if let Some(provider) = &job.provider
+                && provider.media.is_none()
+            {
                 ensure!(
                     provider
                         .plan

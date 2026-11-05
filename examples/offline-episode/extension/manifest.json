@@ -1,0 +1,25 @@
+{
+  "format": "download-engine-extension",
+  "format_version": 1,
+  "id": "download-engine.offline-episode",
+  "name": "Offline episode downloader",
+  "version": "1.0.0",
+  "publisher": "Download Engine examples",
+  "description": "Offline teaching example inspired by crunchyroll-downloader: select tracks, decrypt generated segments and mux an episode. Does not connect to Crunchyroll.",
+  "homepage": "https://github.com/JasXTD/Download-Engine",
+  "license": "MIT",
+  "api_version": 1,
+  "provider_api": 1,
+  "permissions": { "network": ["offline-example.invalid"] },
+  "settings": [
+    { "id": "quality", "type": "choice", "label": "Sample video quality", "options": ["144p", "90p"], "default": "144p" },
+    { "id": "audio_languages", "type": "string", "label": "Audio locales (ja-JP, en-US, or ALL)", "default": "ja-JP,en-US", "max_length": 128 },
+    { "id": "subtitle_languages", "type": "string", "label": "Subtitle locales (en-US, ja-JP, ALL, or NONE)", "default": "en-US", "max_length": 128 },
+    { "id": "container", "type": "choice", "label": "Output container", "options": ["mkv", "mp4"], "default": "mkv" },
+    { "id": "use_saved_key", "type": "boolean", "label": "Use the optional saved AES key instead of the public sample key", "default": false },
+    { "id": "sample_key", "type": "aes_key", "label": "Optional sample AES key (see README)" }
+  ],
+  "jobs": [
+    { "id": "episode", "name": "Download the offline sample episode", "entry": "provider.lua", "timeout_seconds": 60, "trigger": { "kind": "provider" } }
+  ]
+}

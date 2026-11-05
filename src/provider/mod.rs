@@ -2,6 +2,7 @@
 #[cfg(any(windows, unix))]
 mod crypto;
 mod keys;
+pub mod media;
 mod persistence;
 pub(crate) mod process;
 mod runtime;
@@ -29,6 +30,12 @@ pub const MAX_CALLBACK_SECONDS: u32 = 60;
 pub const EXAMPLE: &str = include_str!("../../examples/download-provider.lua");
 
 const FUNCTIONS: &[crate::script_automation::api::Function] = &[
+    crate::script_automation::api::Function {
+        name: "xd.media_plan",
+        arguments: "plan",
+        description: "Validate a finite media plan: ordered segments, up to 16 video/audio/subtitle tracks, and MKV or MP4 muxing. Sets kind=media and media_api=1; performs no downloads.",
+        access: crate::script_automation::api::Access::Reader,
+    },
     crate::script_automation::api::Function {
         name: "xd.key",
         arguments: "protected_token",
@@ -167,6 +174,8 @@ pub struct State {
     pub api_version: u32,
     pub script: FrozenScript,
     pub plan: Option<Content>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub media: Option<media::Plan>,
 }
 impl State {
     pub fn validate(&self) -> Result<()> {
@@ -183,6 +192,13 @@ impl State {
         );
         if let Some(plan) = &self.plan {
             plan.validate()?;
+        }
+        ensure!(
+            self.plan.is_none() || self.media.is_none(),
+            "Provider cannot contain both file and media plans"
+        );
+        if let Some(media) = &self.media {
+            media.validate(false)?;
         }
         Ok(())
     }
@@ -230,6 +246,7 @@ impl Store {
             api_version: VERSION,
             script: FrozenScript::new(script)?,
             plan: None,
+            media: None,
         };
         state.validate()?;
         let mut job = self.new_download(url, name, None, format!("provider:{request}"))?;
@@ -247,11 +264,32 @@ impl Store {
 }
 
 /// Starts a restricted worker and resolves/refreshes before touching remote bytes.
+pub(crate) enum Source {
+    File(crate::engine::http::Source),
+    Media(media::Plan),
+}
+pub(crate) enum Resolution {
+    File(Plan),
+    Media(media::Plan),
+}
+impl Resolution {
+    pub(crate) fn parse(value: serde_json::Value) -> Result<Self> {
+        if value.get("kind").is_some() {
+            let plan: media::Plan = serde_json::from_value(value)?;
+            plan.validate(true)?;
+            Ok(Self::Media(plan))
+        } else {
+            let plan: Plan = serde_json::from_value(value)?;
+            plan.validate()?;
+            Ok(Self::File(plan))
+        }
+    }
+}
 pub(crate) async fn resolve(
     store: &Store,
     job: &mut Job,
     cancel: &tokio_util::sync::CancellationToken,
-) -> Result<crate::engine::http::Source> {
+) -> Result<Source> {
     let state = job.provider.clone().context("Missing provider")?;
     let extension = store.extension_context(&state.script, crate::extensions::Reach::Web)?;
     let limit = extension
@@ -269,9 +307,56 @@ pub(crate) async fn resolve(
             extension.as_ref(),
             &token,
         )?;
-        worker.resolve(&input, state.plan.as_ref(), &token)
+        let previous = if let Some(media) = &state.media {
+            serde_json::to_value(media)?
+        } else {
+            serde_json::to_value(&state.plan)?
+        };
+        worker.resolve_any(&input, previous, &token)
     })
     .await??;
+    let plan = match plan {
+        Resolution::Media(plan) => {
+            ensure!(
+                job.provider.as_ref().unwrap().plan.is_none(),
+                "Provider changed from file to media. Restart this download."
+            );
+            if let Some(previous) = &job.provider.as_ref().unwrap().media {
+                ensure!(
+                    previous == &plan.content(),
+                    "Provider media content changed. Restart this download."
+                );
+            }
+            for segment in plan.tracks.iter().flat_map(|t| &t.segments) {
+                if let Some(hosts) = &limit {
+                    ensure!(
+                        crate::extensions::url_allowed(hosts, &segment.url),
+                        "An extension with a saved secret can only return addresses on its declared hosts"
+                    );
+                }
+                ensure!(
+                    crate::model::validate_url(&job.url)?.scheme() != "https"
+                        || crate::model::validate_url(&segment.url)?.scheme() == "https",
+                    "Media providers cannot downgrade HTTPS to HTTP"
+                );
+            }
+            job.provider.as_mut().unwrap().media = Some(plan.content());
+            let stem = std::path::Path::new(&job.name)
+                .file_stem()
+                .and_then(|s| s.to_str())
+                .unwrap_or("media");
+            job.name = crate::model::safe_filename(&format!("{stem}.{}", plan.extension()));
+            store.checkpoint(job).await?;
+            return Ok(Source::Media(plan));
+        }
+        Resolution::File(plan) => {
+            ensure!(
+                job.provider.as_ref().unwrap().media.is_none(),
+                "Provider changed from media to file. Restart this download."
+            );
+            plan
+        }
+    };
     if let Some(previous) = &job.provider.as_ref().unwrap().plan {
         ensure!(
             previous == &plan.content(),
@@ -295,5 +380,5 @@ pub(crate) async fn resolve(
     };
     job.provider.as_mut().unwrap().plan = Some(plan.content());
     store.checkpoint(job).await?;
-    Ok(source)
+    Ok(Source::File(source))
 }

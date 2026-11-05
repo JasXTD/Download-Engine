@@ -216,6 +216,7 @@ pub(super) fn apply(
             job.plan = None;
             if let Some(provider) = &mut job.provider {
                 provider.plan = None;
+                provider.media = None;
             }
             job.link_fallback = None;
             if let Some(ftp) = &mut job.ftp {

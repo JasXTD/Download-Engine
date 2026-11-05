@@ -6,9 +6,57 @@ Extensions are not the Download Engine browser extension. That is the add-on you
 
 Your own scripts stay on the **Scripts** tab and work as they always have. Write a script for something just for you. Make an extension for something you want to share or keep updated.
 
+For a runnable example, see the [offline episode extension](../examples/offline-episode/README.md).
+From 3.12.0 it ships in the application's `plugins` folder; its companion bundle also contains an installable JSON, generated encrypted media and
+a loopback sample server. It adapts helpers from crunchyroll-downloader under MIT
+and demonstrates language/quality selection, protected keys and MKV/MP4 muxing;
+it does not connect to Crunchyroll. Build it with
+`node scripts/build_offline_episode_demo.cjs` from the source checkout.
+
+## The application's plugins folder
+
+From **3.12.0**, open **Extensions → Installed → From plugins folder**. The app
+checks this folder in the background at launch, when opening Installed, and when
+you choose **Refresh**. **Open folder** opens the exact location for this copy:
+
+| App layout | Folder |
+| --- | --- |
+| Windows installer or portable | `plugins` beside `de.exe` |
+| Linux archive | `plugins` beside `de` |
+| macOS app bundle | `Download Engine.app/Contents/Resources/plugins` |
+
+Place `.de-extension.json` files directly in this folder, then choose **Refresh**.
+Unpacked Lua files and nested folders are not scanned. There is **no profile
+plugins folder**, and changing the current directory or `DOWNLOAD_ENGINE_HOME`
+does not change discovery. A protected install directory may need administrator
+permission to add files; **Install from file…** remains available from any folder.
+On macOS, use **Install from file…** for your own packages: modifying a signed
+`.app` bundle can invalidate its resource signature. The bundled demo is included
+before the package is signed.
+
+Choose **Review install** or **Review update** beside a discovered package. The
+normal permission review still applies; new installs start disabled. Discovery
+never runs Lua, starts a sample server, grants access or silently updates code.
+It installs the exact bytes reviewed, even if the source file changes afterward.
+
+Keep one file per extension ID. Duplicate IDs are blocked. A package with the same
+version but different contents needs a version increase from its author; older
+versions do not replace newer installed versions. Invalid packages show an error
+without hiding valid ones. Scans accept up to 64 packages, 1 MiB each, 16 MiB total,
+and at most 1,024 directory entries; linked files/folders are refused.
+
+Reviewed installed copies and their enable/permission settings stay in the app's
+normal database. Deleting a package file does not uninstall it. Removing an
+installed extension makes its source package available for review again, if the
+file remains here. Refreshing or reopening never enables it automatically.
+
+The bundled **Offline episode** demo uses `offline-episode.de-extension.json`;
+its files and instructions are under `plugins/offline-episode/README.md`.
+
 ## Install, update and remove
 
-Open **Extensions** in the top toolbar, then choose **Install from file…** and pick a `.de-extension.json` file.
+Open **Extensions** in the top toolbar. Choose **Review install** for a discovered
+package, or **Install from file…** to pick a `.de-extension.json` from elsewhere.
 
 - **Install.** The review shows the publisher, what the extension can do and its jobs. Nothing runs yet. It installs turned off, so tick **Enabled** when you are ready. File access is only a request, and stays off unless you tick it.
 - **Update.** Open a newer file with the same ID. The review shows what changed. You must approve new access, a new publisher, every added job, and any job that now runs at other times, on other pages or from another file. This includes replacing a job's ID, even when its name and kind stay the same. **Not now** leaves the installed version exactly as it was. Settings, keys, stored values and run history are kept, except a saved value the new version can't use, which the review names. Downloads already running keep the code they started with. Going back to an older version means removing the extension first.
@@ -205,6 +253,11 @@ Extension jobs use Lua API 1 with these additions. Personal scripts do not have 
 Check `xd.supports("xd.setting")` to tell whether the code is running in an extension.
 
 ## Compatibility
+
+Provider jobs can also return `xd.media_plan(...)` for segmented media, multiple
+tracks and core-controlled MKV/MP4 muxing in Download Engine 3.11.0 or newer.
+Check `xd.media_api == 1` in the Lua entry. Protected `aes_key` settings work in
+media processors too. See [the media-provider guide](lua-media-providers.md).
 
 The first install raises the profile's data version, so older builds refuse that profile rather than misread it. Keep a profile backup before downgrading. Profiles without extensions are unaffected.
 

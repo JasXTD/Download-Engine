@@ -1,5 +1,9 @@
 # Lua download providers — API 1
 
+For segmented video/audio/subtitle tracks and MKV/MP4 muxing, see
+[Media API 1](lua-media-providers.md), available from Download Engine 3.11.0.
+The single-file API described below remains compatible.
+
 Download Engine 3.5.0 runs user-written Lua providers from the Scripts tab of the
 Extensions page. A provider resolves a direct file URL and transforms downloaded bytes.
 Download Engine owns the network transfer, files, checkpoints and final hash
@@ -103,8 +107,9 @@ Resume creates fresh workers. `refresh` must work without an earlier `resolve`
 call in that Lua instance. Load private keys in the processor with `xd.key`,
 as described below. Transform each chunk independently using its absolute
 offset; do not depend on global counters surviving a pause. Chunks are at most
-256 KiB. API 1 supports same-length transforms, not decompression, arbitrary
-remuxing, multiple tracks, or transformations that change byte offsets.
+256 KiB. Single-file plans support same-length transforms, not decompression or
+transformations that change byte offsets. Media plans add ordered segments,
+multiple tracks and controlled muxing through the separate Media API 1 contract.
 
 ## Core helpers and boundaries
 

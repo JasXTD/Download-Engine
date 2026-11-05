@@ -462,6 +462,7 @@ fn frozen_source_rejects_tampering_and_keeps_checkpoint_identity() {
         api_version: VERSION,
         script: frozen,
         plan: Some(plan().content()),
+        media: None,
     };
     let mut old_plan = plan();
     old_plan.url.clear();

@@ -3,6 +3,7 @@
 //! A package groups jobs. It never merges their powers: each job is saved as an
 //! ordinary script and runs in its own worker with the limits of its kind. Jobs
 //! share only read-only settings, and Rust limits them to the hosts they declare.
+pub mod discovery;
 mod package;
 mod runtime;
 mod store;

@@ -70,8 +70,15 @@ try {
         Copy-Item -LiteralPath (Join-Path $workspaceRoot 'THIRD-PARTY-NOTICES.md') -Destination $stage
         $examplesRoot = Join-Path $stage 'examples'
         New-Item -ItemType Directory -Path $examplesRoot | Out-Null
-        foreach ($example in @('core-api-automation.lua','custom-site-reader.lua','download-provider.lua','download-provider-custom-ctr.lua')) {
+        foreach ($example in @('core-api-automation.lua','custom-site-reader.lua','download-provider.lua','download-provider-custom-ctr.lua','media-provider.lua')) {
             Copy-Item -LiteralPath (Join-Path $workspaceRoot "examples/$example") -Destination $examplesRoot
+        }
+        & node (Join-Path $PSScriptRoot 'prepare_bundled_plugins.cjs') (Join-Path $stage 'plugins') (Join-Path $workspaceRoot 'target/release/de-cli.exe') (Join-Path $workspaceRoot 'tools/ffmpeg/ffmpeg.exe')
+        if ($LASTEXITCODE -ne 0) { throw 'Bundled extension preparation failed.' }
+        $demoGuideRoot = Join-Path $examplesRoot 'offline-episode'
+        New-Item -ItemType Directory -Path $demoGuideRoot | Out-Null
+        foreach ($guide in @('README.md','NOTICE.md')) {
+            Copy-Item -LiteralPath (Join-Path $workspaceRoot "examples/offline-episode/$guide") -Destination $demoGuideRoot
         }
         $mediaRoot = Join-Path $stage 'tools\ffmpeg'
         New-Item -ItemType Directory -Force -Path $mediaRoot | Out-Null
@@ -93,6 +100,7 @@ try {
         Copy-Item -LiteralPath (Join-Path $workspaceRoot 'docs\user-guide.md') -Destination (Join-Path $stage 'docs')
         Copy-Item -LiteralPath (Join-Path $workspaceRoot 'docs\cross-platform.md') -Destination (Join-Path $stage 'docs')
         Copy-Item -LiteralPath (Join-Path $workspaceRoot 'docs\lua-providers.md') -Destination (Join-Path $stage 'docs')
+        Copy-Item -LiteralPath (Join-Path $workspaceRoot 'docs\lua-media-providers.md') -Destination (Join-Path $stage 'docs')
         Copy-Item -LiteralPath (Join-Path $workspaceRoot 'docs\lua-provider-lab.md') -Destination (Join-Path $stage 'docs')
         Copy-Item -LiteralPath (Join-Path $workspaceRoot 'docs\releases.md') -Destination (Join-Path $stage 'docs')
         Copy-Item -LiteralPath (Join-Path $workspaceRoot 'docs\localization.md') -Destination (Join-Path $stage 'docs')
@@ -120,7 +128,7 @@ try {
                 Compress-Archive -Path (Join-Path $extensionRoot '*') -DestinationPath (Join-Path $outputDirectory "download-engine-$browserName-$extensionVersion.zip") -Force
             }
         }
-        $payload = @('de.exe','de-host.exe','de-cli.exe','de-torrent.exe','portable.json','Register-Browsers.ps1','README.md','SECURITY.md','PRIVACY.md','CHANGELOG.md','LICENSE','THIRD-PARTY-NOTICES.md','extensions','docs','tools','examples') |
+        $payload = @('de.exe','de-host.exe','de-cli.exe','de-torrent.exe','portable.json','Register-Browsers.ps1','README.md','SECURITY.md','PRIVACY.md','CHANGELOG.md','LICENSE','THIRD-PARTY-NOTICES.md','extensions','docs','tools','examples','plugins') |
             ForEach-Object { Join-Path $stage $_ }
         $portableArchive = Join-Path $outputDirectory "DownloadEngine-$artifactVersion-windows-x64.zip"
         Compress-Archive -LiteralPath $payload -DestinationPath $portableArchive -Force

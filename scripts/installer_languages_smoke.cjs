@@ -71,6 +71,17 @@ try {
     const mediaManifest=JSON.parse(fs.readFileSync(path.join(root,'tools/ffmpeg/media-manifest.json'),'utf8'));
     for(const file of mediaManifest.files) assert.equal(digest(path.join(program,'tools/ffmpeg',file.path)),file.sha256,`Installed FFmpeg file: ${file.path}`);
     const cli=path.join(program,'de-cli.exe');
+    const plugin=path.join(program,'plugins','offline-episode.de-extension.json');
+    const demo=path.join(program,'plugins','offline-episode');
+    assert.equal(JSON.parse(fs.readFileSync(plugin,'utf8')).id,'download-engine.offline-episode');
+    assert.equal(digest(plugin),digest(path.join(demo,'offline-episode.de-extension.json')));
+    for(const line of fs.readFileSync(path.join(demo,'SHA256SUMS'),'utf8').trim().split('\n')){
+      const [expected,relative]=line.split('  ');
+      assert(relative&&!relative.includes('..')&&!path.isAbsolute(relative));
+      assert.equal(digest(path.join(demo,relative)),expected,`Bundled demo: ${relative}`);
+    }
+    const customPlugin=path.join(program,'plugins','keep-user-plugin.de-extension.json');
+    fs.writeFileSync(customPlugin,'Harmless untracked plugin preservation fixture.');
     const queues=run(cli,['queues'],env,15000);assert.equal(queues.status,0,queues.stderr);
     const reply=JSON.parse(queues.stdout);assert.equal(reply.ok,true);assert(Array.isArray(reply.result));assert(reply.result.some(queue=>queue.id==='main'));
     const database=path.join(profile,'Download Engine','queue.sqlite3');
@@ -88,6 +99,8 @@ try {
     assert.equal(JSON.parse(fs.readFileSync(path.join(program,'installer-language.json'),'utf8')),next);
     assert.equal(run(cli,['queues'],env,15000).status,0);
     db=openProfileDatabase(database);assert.deepEqual(preferences(),saved);db.close();
+    assert.equal(fs.readFileSync(customPlugin,'utf8'),'Harmless untracked plugin preservation fixture.');
+    assert(fs.existsSync(plugin),'Installer upgrade keeps the bundled demo');
     // First install: its own entry is removed. Second: another copy's entry is kept.
     const startupCheck=index<2;
     if(startupCheck) plantStartup(`"${index===0?path.join(program,'de.exe'):path.join(workspace,'Other copy','de.exe')}" --autostart`);
@@ -95,6 +108,8 @@ try {
     assert.equal(uninstall.status,0,uninstall.stderr);installed=null;
     assert(!fs.existsSync(path.join(program,'de.exe')));
     assert(fs.existsSync(database));assert(fs.existsSync(downloaded));assert(fs.existsSync(userFile));
+    assert(fs.existsSync(customPlugin),'Uninstall preserves user-supplied plugins');
+    assert(!fs.existsSync(plugin),'Uninstall removes its own bundled demo');
     assert.deepEqual(snapshot(),before,'Native browser registrations must remain unchanged');
     if(startupCheck) {
       const kept=startupKeys.map(key=>startupValue(key)!==null);
@@ -104,7 +119,7 @@ try {
       assert.equal(spawnSync('reg.exe',['delete',startupKey,'/f'],{windowsHide:true,timeout:10000}).status,0);
     }
     assert.deepEqual(realStartup(),startupBefore,'The real Run key must remain unchanged');
-    checks.push({language:lang,installed:true,upgradePreservedPreferences:true,uninstallPreservedData:true,extensionCatalogs:supportedLanguages.length*4,ffmpegFilesVerified:mediaManifest.files.length,
+    checks.push({language:lang,installed:true,upgradePreservedPreferences:true,uninstallPreservedData:true,bundledDemoVerified:true,userPluginsPreserved:true,extensionCatalogs:supportedLanguages.length*4,ffmpegFilesVerified:mediaManifest.files.length,
       ...(startupCheck?{startupEntry:index===0?'own entry removed':'other copy entry kept'}:{})});
     // Only remove our verified isolated fixture, after recording preservation checks.
     removeIsolated(workspace);

@@ -11,6 +11,8 @@ use std::{
     io::Read,
 };
 
+mod discovery;
+
 const PUZZLE: &str = "\u{ea86}";
 
 #[derive(Clone, Copy, Default, PartialEq, Eq)]
@@ -66,6 +68,7 @@ struct Pending {
 
 #[derive(Default)]
 pub(super) struct State {
+    discovery: discovery::State,
     loaded: bool,
     entries: Vec<Entry>,
     selected: Option<String>,
@@ -878,6 +881,7 @@ impl Desktop {
             });
             ui.add_space(6.0);
         }
+        self.plugin_discovery_panel(ui, p);
         if self.extensions.entries.is_empty() {
             let mut open_scripts = false;
             let mut install = false;

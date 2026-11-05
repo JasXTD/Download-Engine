@@ -63,6 +63,11 @@ not redistributed. Rust's standard-library notices are included in
 
 ## Other included components
 
+- The optional offline episode example adapts language-selection and segment
+  helpers from CuteTenshii/crunchyroll-downloader (MIT). Its
+  [source notice](examples/offline-episode/NOTICE.md) records the exact revision,
+  source hashes and modifications. The MIT notice is embedded in the Lua module
+  and its installable extension JSON. No upstream service media or DRM code is included.
 - The adapted yt-dlp extraction code retains the
   [Unlicense notice](docs/licenses/yt-dlp-LICENSE); see
   [source attribution](docs/youtube-port.md).

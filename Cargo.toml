@@ -1,6 +1,6 @@
 [package]
 name = "download-engine"
-version = "3.10.2"
+version = "3.12.0"
 license = "MIT"
 edition = "2024"
 default-run = "de"
@@ -49,6 +49,8 @@ de-torrent = { path = "torrent" }
 aes = { version = "=0.8.4", features = ["zeroize"] }
 aes-gcm = { version = "=0.10.3", features = ["zeroize"] }
 libc = "0.2"
+# Reuse the already locked tempfile crate for private executable snapshots.
+tempfile = "=3.27.0"
 rfd = { version = "=0.17.2", default-features = false, features = ["xdg-portal"] }
 # Select native stores explicitly; the all-in-one keyring wrapper uses ZBus on Linux.
 keyring-core = { version = "=1.0.1", default-features = false }

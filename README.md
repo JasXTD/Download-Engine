@@ -46,9 +46,13 @@ Looking for a free **IDM alternative**? The familiar layout is inspired by
 **Internet Download Manager (IDM)**. Download Engine is an independent project, is
 not affiliated with IDM, and does not claim complete IDM feature parity.
 
-> **In this build, v3.10.2:** Help → Crash reports lets you review, copy and export
-> local panic and unclean-exit reports. New reports are offered on the next launch;
-> nothing is uploaded automatically. All desktop packages include FFmpeg.
+> **In this build, v3.12.0:** Lua extensions placed in the app's `plugins` folder
+> appear automatically for permission review. The offline episode demo is bundled;
+> nothing installs or runs until you approve it. Lua providers can download ordered media segments,
+> process encrypted bytes with supplied keys, and mux video, multiple audio tracks
+> and subtitles into MKV or MP4. See the [media-provider guide](docs/lua-media-providers.md).
+> This is a generic API tested with offline fixtures, not a commercial DRM integration.
+> Try the [offline episode extension example](examples/offline-episode/README.md).
 > Find published [desktop packages and extensions](https://github.com/JasXTD/Download-Engine/releases),
 > or read the [changelog](CHANGELOG.md).
 
@@ -151,7 +155,8 @@ their privacy protections and the limits of unclean-exit detection.
 - Install **extensions**: one file that packages site readers, download providers
   and automation jobs. A review shows what it can do before you install it, it
   starts turned off, and each job keeps its own limits. Extensions install from a
-  local file and publishers are not verified, so use only ones you trust. See the
+  local file or are discovered in the app's `plugins` folder. Publishers are not
+  verified, so use only ones you trust. See the
   [extension guide](docs/extensions.md).
 
 ## Supported video sites and formats

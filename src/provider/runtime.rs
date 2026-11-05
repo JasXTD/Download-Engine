@@ -1,4 +1,4 @@
-use super::{CHUNK_BYTES, Content, Plan, VERSION, process::Role};
+use super::{CHUNK_BYTES, Content, VERSION, process::Role};
 use crate::script_automation::{Fetcher, helpers, json, lua::to_lua};
 use anyhow::{Context, Result, ensure};
 use base64::{Engine as _, engine::general_purpose::STANDARD};
@@ -57,6 +57,24 @@ impl Runtime {
         };
         xd.set("script_kind", "provider")?;
         xd.set("provider_api", VERSION)?;
+        xd.set("media_api", super::media::API)?;
+        xd.set(
+            "media_plan",
+            lua.create_function(|lua, table: Table| {
+                table.set("kind", "media")?;
+                table.set("media_api", super::media::API)?;
+                let value = json::from_lua(
+                    lua,
+                    Value::Table(table.clone()),
+                    super::media::MAX_PLAN_BYTES,
+                )
+                .map_err(mlua::Error::external)?;
+                let plan: super::media::Plan =
+                    serde_json::from_value(value).map_err(mlua::Error::external)?;
+                plan.validate(true).map_err(mlua::Error::external)?;
+                Ok(table)
+            })?,
+        )?;
         xd.set(
             "phase",
             if role == Role::Resolver {
@@ -160,10 +178,63 @@ impl Runtime {
                         "refresh"
                     })?;
                 let value = callback.call::<Value>((request, to_lua(&self.lua, previous)?))?;
-                let value = json::from_lua(&self.lua, value, 32 * 1024)?;
-                let plan: Plan = serde_json::from_value(value.clone())?;
-                plan.validate()?;
+                let value = json::from_lua(&self.lua, value, super::media::MAX_PLAN_BYTES)?;
+                super::Resolution::parse(value.clone())?;
                 Ok(value)
+            }
+            "media_transform" => {
+                ensure!(
+                    self.role == Role::Processor,
+                    "Resolver workers cannot process file bytes"
+                );
+                let context: super::media::Chunk =
+                    serde_json::from_value(message["context"].clone())?;
+                context.validate()?;
+                let encoded = message["bytes"]
+                    .as_str()
+                    .context("Missing provider chunk")?;
+                ensure!(
+                    encoded.len() <= CHUNK_BYTES.div_ceil(3) * 4,
+                    "Provider input too large"
+                );
+                let bytes = STANDARD.decode(encoded)?;
+                let offset = message["offset"].as_u64().context("Missing byte offset")?;
+                ensure!(
+                    bytes.len() <= CHUNK_BYTES
+                        && offset
+                            .checked_add(bytes.len() as u64)
+                            .is_some_and(|end| end <= context.size),
+                    "Invalid media chunk bounds"
+                );
+                let output: mlua::LuaString =
+                    self.callbacks.get::<mlua::Function>("transform")?.call((
+                        to_lua(&self.lua, &context)?,
+                        self.lua.create_string(&bytes)?,
+                        offset,
+                    ))?;
+                ensure!(
+                    output.as_bytes().len() == bytes.len(),
+                    "Provider must return exactly one output byte per input byte"
+                );
+                Ok(serde_json::json!(STANDARD.encode(output.as_bytes())))
+            }
+            "media_finish" => {
+                ensure!(
+                    self.role == Role::Processor,
+                    "Resolver workers cannot finish files"
+                );
+                let plan: super::media::Plan = serde_json::from_value(message["plan"].clone())?;
+                plan.validate(false)?;
+                let result = serde_json::json!({"size":plan.size(),"tracks":plan.tracks.len(),"stage":"before_mux"});
+                let finished: Value = self
+                    .callbacks
+                    .get::<mlua::Function>("finish")?
+                    .call((to_lua(&self.lua, &plan)?, to_lua(&self.lua, &result)?))?;
+                ensure!(
+                    matches!(finished, Value::Boolean(true)),
+                    "Provider finish must return true"
+                );
+                Ok(serde_json::json!(true))
             }
             "transform" => {
                 ensure!(

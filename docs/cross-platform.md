@@ -136,6 +136,13 @@ replacing the helper without rebuilding the matching app is rejected. Packages
 include its source, notices, rebuild script, native Rust dependency notices and
 all four application executables. Packaging downloads and installs nothing.
 
+On Unix, each merge copies the helper into a private temporary directory and
+checks that copy against the compiled checksum. Launches use the open directory
+handle, so replacing the original executable or renaming a parent cannot redirect
+execution after verification. The temporary filesystem must permit execution;
+otherwise merging fails without falling back to the original pathname. Normal
+completion, cancellation and failed launches release the private copy.
+
 Native torrent tests cover concurrent first writes, pause/resume and file-path
 confinement. Unix storage uses exclusive file creation followed by opening an
 existing file when necessary, avoiding a macOS concurrent-creation failure while

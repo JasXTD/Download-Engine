@@ -59,6 +59,7 @@ fn provider_redownload_keeps_its_frozen_script_instead_of_adding_a_plain_downloa
         api_version: 1,
         script: download_engine::provider::FrozenScript::new(saved.clone()).unwrap(),
         plan: None,
+        media: None,
     });
     app.store.remove_script(&saved.id).unwrap();
     assert!(!supports_authentication(&original));

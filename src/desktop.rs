@@ -544,6 +544,7 @@ impl Desktop {
             _lock: lock,
         };
         app.initialize_snapshot();
+        app.start_plugin_discovery();
         #[cfg(feature = "screenshot")]
         if std::env::var_os("IDM_EX_SCREENSHOT_TO").is_some()
             && let Ok(state) = std::env::var("IDM_EX_TEST_LINK_DIALOG")
@@ -874,6 +875,7 @@ impl Desktop {
         let _language = download_engine::i18n::scope(self.interface.language);
         self.poll_theme_assets(ctx);
         self.poll_background_io(ctx);
+        self.poll_plugin_discovery(ctx);
         self.poll_browser_recovery(ctx);
         self.mcp.poll(&self.store, ctx);
         self.poll_diagnostic_export();
@@ -1321,6 +1323,7 @@ impl Desktop {
             file.sync_all().expect("Cannot save test screenshot");
             ctx.send_viewport_cmd_to(egui::ViewportId::ROOT, egui::ViewportCommand::Close);
         } else if !self.screenshot_requested
+            && self.plugin_discovery_capture_ready()
             && self.external_open_capture_ready()
             && !self.theme_assets.busy()
             && (self.view != View::Logs || self.logs.loaded())

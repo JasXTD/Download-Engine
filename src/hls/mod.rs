@@ -1,6 +1,6 @@
 //! Bounded, anonymous HLS and DASH previews and downloads. Never fetch encryption keys.
 mod aac;
-mod merge;
+pub(crate) mod merge;
 mod mp4;
 pub(crate) mod network;
 mod parser;

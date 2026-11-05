@@ -417,6 +417,7 @@ impl Desktop {
                     {
                         self.automation.tab = Tab::Installed;
                         self.refresh_extensions();
+                        self.start_plugin_discovery();
                     }
                     if subtab_button(ui, tab == Tab::Scripts, tr("Scripts"), p).clicked() {
                         self.automation.tab = Tab::Scripts;

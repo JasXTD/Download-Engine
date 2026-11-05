@@ -1042,7 +1042,10 @@ mod tests {
             router(json!({"state": "working", "gateway": "<b>router</b>", "port": 6881})),
             None
         );
-        assert_eq!(router(json!({"state": "working", "gateway": "192.168.1.1", "port": 70000})), None);
+        assert_eq!(
+            router(json!({"state": "working", "gateway": "192.168.1.1", "port": 70000})),
+            None
+        );
         assert_eq!(router(Value::Null), None);
     }
 

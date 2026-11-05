@@ -329,10 +329,22 @@ mod sharing_tests {
         assert_eq!(initial.share_seconds, Some(604_800));
         assert!(!initial.upnp, "router setup starts off");
         for bad in [
-            Settings { share_ratio: Some(250), ..initial },
-            Settings { share_ratio: Some(0), ..initial },
-            Settings { share_seconds: Some(1), ..initial },
-            Settings { share_seconds: Some(0), ..initial },
+            Settings {
+                share_ratio: Some(250),
+                ..initial
+            },
+            Settings {
+                share_ratio: Some(0),
+                ..initial
+            },
+            Settings {
+                share_seconds: Some(1),
+                ..initial
+            },
+            Settings {
+                share_seconds: Some(0),
+                ..initial
+            },
         ] {
             assert!(store.save_torrent_settings(bad).is_err(), "{bad:?}");
             assert_eq!(store.torrent_settings().unwrap(), initial);

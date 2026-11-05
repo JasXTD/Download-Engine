@@ -483,15 +483,20 @@ impl Desktop {
             }
             Category::Torrents => {
                 // Only read here: nothing in Preferences starts the helper or asks a router.
-                let (router, helper_running) =
-                    (self.store.torrents.router_status(), self.store.torrents.is_running());
+                let (router, helper_running) = (
+                    self.store.torrents.router_status(),
+                    self.store.torrents.is_running(),
+                );
                 // A reviewed sample of a working router, for screenshots only.
                 #[cfg(feature = "screenshot")]
                 let (router, helper_running) = if std::env::var("IDM_EX_TEST_FEATURE").as_deref()
                     == Ok("torrent-router-working")
                 {
                     let gateway = std::net::Ipv4Addr::new(192, 168, 1, 1);
-                    let working = download_engine::torrent::RouterStatus::Working { gateway, port: 6881 };
+                    let working = download_engine::torrent::RouterStatus::Working {
+                        gateway,
+                        port: 6881,
+                    };
                     (Some(working), true)
                 } else {
                     (router, helper_running)

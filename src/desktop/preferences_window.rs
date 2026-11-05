@@ -355,7 +355,12 @@ impl Desktop {
                 ui.label(RichText::new(error).color(p.warning));
             }
             if state.advanced_saved {
-                ui.label(RichText::new(tr("Advanced settings saved. Closing Preferences will not undo those changes.")).color(p.success));
+                ui.label(
+                    RichText::new(tr(
+                        "Advanced settings saved. Closing Preferences will not undo those changes.",
+                    ))
+                    .color(p.success),
+                );
             }
             ui.separator();
             ui.add_space(8.0);
@@ -447,7 +452,13 @@ impl Desktop {
             });
             ui.add_space(8.0);
             ui.separator();
-            ui.label(RichText::new(tr("Save applies to edits in this window. Separate dialogs save independently.")).size(11.0).color(p.muted));
+            ui.label(
+                RichText::new(tr(
+                    "Save applies to edits in this window. Separate dialogs save independently.",
+                ))
+                .size(11.0)
+                .color(p.muted),
+            );
             // Save and Reset, as in the approved mockups. The header × closes without
             // saving, like every other form, so there is no Cancel beside it.
             ui.horizontal(|ui| {
@@ -471,7 +482,11 @@ impl Desktop {
                     {
                         state.reset_category();
                     }
-                    let response = form_dialog::primary_enabled(ui, state.dirty() && !self.theme_assets.importing(), tr("Save"));
+                    let response = form_dialog::primary_enabled(
+                        ui,
+                        state.dirty() && !self.theme_assets.importing(),
+                        tr("Save"),
+                    );
                     save = if state.dirty() {
                         response
                     } else {

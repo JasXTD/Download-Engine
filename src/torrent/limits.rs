@@ -100,8 +100,14 @@ mod tests {
     fn a_ratio_limit_fires_exactly_at_the_limit_and_not_one_byte_before() {
         let limits = Limits::new(Some(200), None);
         assert_eq!(reached(shared(1_999, 1_000, 0), limits), None);
-        assert_eq!(reached(shared(2_000, 1_000, 0), limits), Some(Reached::Ratio));
-        assert_eq!(reached(shared(2_001, 1_000, 0), limits), Some(Reached::Ratio));
+        assert_eq!(
+            reached(shared(2_000, 1_000, 0), limits),
+            Some(Reached::Ratio)
+        );
+        assert_eq!(
+            reached(shared(2_001, 1_000, 0), limits),
+            Some(Reached::Ratio)
+        );
         // Half a ratio on an odd size: 3 × 0.5 = 1.5 bytes, so 2 bytes are needed.
         let half = Limits::new(Some(50), None);
         assert_eq!(reached(shared(1, 3, 0), half), None);
@@ -146,7 +152,10 @@ mod tests {
             Some(Reached::Time)
         );
         assert_eq!(ratio_hundredths(u64::MAX, NonZeroU64::MIN), u64::MAX);
-        assert_eq!(ratio_hundredths(1_420, NonZeroU64::new(1_000).unwrap()), 142);
+        assert_eq!(
+            ratio_hundredths(1_420, NonZeroU64::new(1_000).unwrap()),
+            142
+        );
     }
 
     #[test]

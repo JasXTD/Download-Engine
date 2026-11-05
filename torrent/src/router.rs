@@ -156,8 +156,8 @@ pub(crate) fn location_in_answer(answer: &[u8], from: SocketAddr, gateway: Gatew
         match name.trim().to_ascii_lowercase().as_str() {
             "location" => location = Some(value),
             "st" | "nt" => {
-                device |= value.contains(":device:InternetGatewayDevice:")
-                    || SERVICES.contains(&value);
+                device |=
+                    value.contains(":device:InternetGatewayDevice:") || SERVICES.contains(&value);
             }
             _ => {}
         }
@@ -407,7 +407,15 @@ async fn holder<T: Transport>(
     port: u16,
 ) -> std::result::Result<Option<(Ipv4Addr, String)>, RouterState> {
     let wanted = ["NewInternalClient", "NewPortMappingDescription"];
-    match ask(transport, service, "GetSpecificPortMappingEntry", &mapping_args(port), &wanted).await? {
+    match ask(
+        transport,
+        service,
+        "GetSpecificPortMappingEntry",
+        &mapping_args(port),
+        &wanted,
+    )
+    .await?
+    {
         Answer::Fields(fields) => {
             // A rule that names no IPv4 address can't be this computer's.
             let client = field(&fields, "NewInternalClient")
@@ -485,7 +493,14 @@ async fn close<T: Transport>(
         && client == gateway.me
         && held == name
     {
-        let _ = ask(transport, service, "DeletePortMapping", &mapping_args(port), &[]).await;
+        let _ = ask(
+            transport,
+            service,
+            "DeletePortMapping",
+            &mapping_args(port),
+            &[],
+        )
+        .await;
     }
 }
 
@@ -626,7 +641,9 @@ impl Transport for Network {
             // Straight to the gateway first, so that its answer comes back the way it went.
             let direct = SocketAddr::new(gateway.router.into(), SSDP.port());
             let _ = socket.send_to(request.as_bytes(), direct).await;
-            let _ = socket.send_to(request.as_bytes(), SocketAddr::V4(SSDP)).await;
+            let _ = socket
+                .send_to(request.as_bytes(), SocketAddr::V4(SSDP))
+                .await;
         }
         let deadline = tokio::time::Instant::now() + ANSWER_TIMEOUT;
         let mut buffer = vec![0; MAX_SEARCH_ANSWER + 1];
@@ -776,7 +793,10 @@ fn default_route(table: &str) -> Option<Ipv4Addr> {
             }
             let (destination, gateway, flags) = (hex(fields[1])?, hex(fields[2])?, hex(fields[3])?);
             let (metric, mask) = (fields[6].parse::<u32>().ok()?, hex(fields[7])?);
-            (destination == 0 && mask == 0 && flags & (UP | GATEWAY) == UP | GATEWAY && gateway != 0)
+            (destination == 0
+                && mask == 0
+                && flags & (UP | GATEWAY) == UP | GATEWAY
+                && gateway != 0)
                 .then(|| (metric, Ipv4Addr::from(gateway.to_ne_bytes())))
         })
         .min_by_key(|(metric, _)| *metric)
@@ -879,11 +899,17 @@ mod tests {
         let printer = String::from_utf8(good.clone())
             .unwrap()
             .replace("device:InternetGatewayDevice:1", "device:Printer:1");
-        assert_eq!(location_in_answer(printer.as_bytes(), from_router, gateway), None);
+        assert_eq!(
+            location_in_answer(printer.as_bytes(), from_router, gateway),
+            None
+        );
         let failed = String::from_utf8(good.clone())
             .unwrap()
             .replace("200 OK", "404 Not Found");
-        assert_eq!(location_in_answer(failed.as_bytes(), from_router, gateway), None);
+        assert_eq!(
+            location_in_answer(failed.as_bytes(), from_router, gateway),
+            None
+        );
         let mut huge = good.clone();
         huge.extend(std::iter::repeat_n(b' ', MAX_SEARCH_ANSWER));
         assert_eq!(location_in_answer(&huge, from_router, gateway), None);
@@ -898,15 +924,23 @@ mod tests {
     }
 
     fn service(kind: &str, control: &str) -> String {
-        format!("<service><serviceType>{kind}</serviceType><controlURL>{control}</controlURL></service>")
+        format!(
+            "<service><serviceType>{kind}</serviceType><controlURL>{control}</controlURL></service>"
+        )
     }
 
     #[test]
     fn a_description_gives_the_best_service_on_the_gateway() {
         let gateway = gateway();
         let services = [
-            service("urn:schemas-upnp-org:service:Layer3Forwarding:1", "/ctl/L3F"),
-            service("urn:schemas-upnp-org:service:WANPPPConnection:1", "/ctl/PPP"),
+            service(
+                "urn:schemas-upnp-org:service:Layer3Forwarding:1",
+                "/ctl/L3F",
+            ),
+            service(
+                "urn:schemas-upnp-org:service:WANPPPConnection:1",
+                "/ctl/PPP",
+            ),
             service(IGD, "/ctl/IPConn"),
         ]
         .concat();
@@ -916,7 +950,10 @@ mod tests {
         // A better service that leads elsewhere is skipped, never followed.
         let services = [
             service(IGD, "/ctl/IPConn"),
-            service("urn:schemas-upnp-org:service:WANIPConnection:2", "http://203.0.113.7/ctl"),
+            service(
+                "urn:schemas-upnp-org:service:WANIPConnection:2",
+                "http://203.0.113.7/ctl",
+            ),
         ]
         .concat();
         let found = find_service(&description(&services, ""), &location(), gateway).unwrap();
@@ -924,16 +961,31 @@ mod tests {
         // Entities in the address are read, not executed.
         let amp = service(IGD, "/ctl?a=1&amp;b=&#50;");
         let found = find_service(&description(&amp, ""), &location(), gateway).unwrap();
-        assert_eq!(found.control.as_str(), "http://192.168.1.1:5000/ctl?a=1&b=2");
+        assert_eq!(
+            found.control.as_str(),
+            "http://192.168.1.1:5000/ctl?a=1&b=2"
+        );
         // A base address counts only on the gateway, and a bad one refuses everything.
-        let based = description(&service(IGD, "ctl"), "<URLBase>http://192.168.1.1:49152/</URLBase>");
+        let based = description(
+            &service(IGD, "ctl"),
+            "<URLBase>http://192.168.1.1:49152/</URLBase>",
+        );
         let found = find_service(&based, &location(), gateway).unwrap();
         assert_eq!(found.control.as_str(), "http://192.168.1.1:49152/ctl");
-        let moved = description(&service(IGD, "ctl"), "<URLBase>http://203.0.113.7/</URLBase>");
+        let moved = description(
+            &service(IGD, "ctl"),
+            "<URLBase>http://203.0.113.7/</URLBase>",
+        );
         assert_eq!(find_service(&moved, &location(), gateway), None);
         // No port-forwarding service at all.
-        let other = service("urn:schemas-upnp-org:service:Layer3Forwarding:1", "/ctl/L3F");
-        assert_eq!(find_service(&description(&other, ""), &location(), gateway), None);
+        let other = service(
+            "urn:schemas-upnp-org:service:Layer3Forwarding:1",
+            "/ctl/L3F",
+        );
+        assert_eq!(
+            find_service(&description(&other, ""), &location(), gateway),
+            None
+        );
     }
 
     #[test]
@@ -943,7 +995,11 @@ mod tests {
         assert!(leaves(laughs).is_none(), "a DOCTYPE is refused");
         let unknown = description(&service(IGD, "/ctl/&secret;"), "");
         assert_eq!(find_service(&unknown, &location(), gateway), None);
-        let deep = format!("{}{}", "<a>".repeat(MAX_DEPTH + 1), "</a>".repeat(MAX_DEPTH + 1));
+        let deep = format!(
+            "{}{}",
+            "<a>".repeat(MAX_DEPTH + 1),
+            "</a>".repeat(MAX_DEPTH + 1)
+        );
         assert!(leaves(deep.as_bytes()).is_none());
         let long = format!("<root><x>{}</x></root>", "a".repeat(MAX_FIELD + 1));
         assert!(leaves(long.as_bytes()).is_none());
@@ -973,7 +1029,11 @@ mod tests {
         assert_eq!(read_answer(500, fault, &[]), Some(Answer::Fault(Some(725))));
         assert_eq!(read_answer(500, b"", &[]), Some(Answer::Fault(None)));
         assert_eq!(read_answer(200, b"", &[]), Some(Answer::Fields(Vec::new())));
-        assert_eq!(read_answer(302, ok, &[]), None, "no redirects or odd answers");
+        assert_eq!(
+            read_answer(302, ok, &[]),
+            None,
+            "no redirects or odd answers"
+        );
     }
 
     #[test]
@@ -988,7 +1048,10 @@ mod tests {
         );
         assert!(body.contains("<NewExternalPort>6881</NewExternalPort>"));
         assert!(body.contains("a&lt;b&gt;&amp;&quot;c&apos;"));
-        assert!(leaves(body.as_bytes()).is_some(), "the request itself is valid XML");
+        assert!(
+            leaves(body.as_bytes()).is_some(),
+            "the request itself is valid XML"
+        );
         assert!(rule_name().starts_with("Download Engine torrents "));
     }
 
@@ -1041,7 +1104,10 @@ mod tests {
     }
 
     fn ok(fields: &str) -> (u16, Vec<u8>) {
-        (200, format!("<s:Envelope><s:Body><u:R>{fields}</u:R></s:Body></s:Envelope>").into_bytes())
+        (
+            200,
+            format!("<s:Envelope><s:Body><u:R>{fields}</u:R></s:Body></s:Envelope>").into_bytes(),
+        )
     }
 
     fn fault(code: u32) -> (u16, Vec<u8>) {
@@ -1061,7 +1127,12 @@ mod tests {
 
         async fn soap(&self, url: &Url, action: &str, body: String) -> Result<(u16, Vec<u8>)> {
             assert_eq!(url.as_str(), "http://192.168.1.1:5000/ctl/IPConn");
-            let name = action.trim_matches('"').rsplit('#').next().unwrap().to_owned();
+            let name = action
+                .trim_matches('"')
+                .rsplit('#')
+                .next()
+                .unwrap()
+                .to_owned();
             self.calls.lock().push(name.clone());
             let mut rule = self.rule.lock();
             Ok(match name.as_str() {
@@ -1081,7 +1152,10 @@ mod tests {
                         assert_eq!(between(&body, "NewLeaseDuration"), Some("3600"));
                         assert_eq!(between(&body, "NewProtocol"), Some("TCP"));
                         assert_eq!(between(&body, "NewExternalPort"), Some("6881"));
-                        let client = between(&body, "NewInternalClient").unwrap().parse().unwrap();
+                        let client = between(&body, "NewInternalClient")
+                            .unwrap()
+                            .parse()
+                            .unwrap();
                         let held = between(&body, "NewPortMappingDescription").unwrap();
                         *rule = Some((client, held.to_owned()));
                         ok("")
@@ -1125,7 +1199,11 @@ mod tests {
 
     fn run(
         router: &Arc<FakeRouter>,
-    ) -> (Arc<Mutex<RouterState>>, CancellationToken, tokio::task::JoinHandle<()>) {
+    ) -> (
+        Arc<Mutex<RouterState>>,
+        CancellationToken,
+        tokio::task::JoinHandle<()>,
+    ) {
         let state = Arc::new(Mutex::new(RouterState::Looking));
         let cancel = CancellationToken::new();
         let task = tokio::spawn(keep_open(
@@ -1186,8 +1264,16 @@ mod tests {
                 other: Some(OTHER)
             }
         );
-        assert!(!router.calls().iter().any(|call| call == "AddPortMapping" || call == "DeletePortMapping"));
-        assert_eq!(router.rule.lock().clone(), Some((OTHER, "Game console".into())));
+        assert!(
+            !router
+                .calls()
+                .iter()
+                .any(|call| call == "AddPortMapping" || call == "DeletePortMapping")
+        );
+        assert_eq!(
+            router.rule.lock().clone(),
+            Some((OTHER, "Game console".into()))
+        );
     }
 
     #[tokio::test(start_paused = true)]
@@ -1201,7 +1287,11 @@ mod tests {
         assert_eq!(*state.lock(), RouterState::PermanentOnly);
         assert_eq!(*router.rule.lock(), None);
         assert_eq!(
-            router.calls().iter().filter(|call| *call == "AddPortMapping").count(),
+            router
+                .calls()
+                .iter()
+                .filter(|call| *call == "AddPortMapping")
+                .count(),
             1,
             "never asked again with a lease that lasts forever"
         );
@@ -1245,7 +1335,10 @@ mod tests {
         *router.rule.lock() = Some((ME, "Download Engine torrents 1".into()));
         cancel.cancel();
         task.await.unwrap();
-        assert_eq!(router.calls().last().map(String::as_str), Some("GetSpecificPortMappingEntry"));
+        assert_eq!(
+            router.calls().last().map(String::as_str),
+            Some("GetSpecificPortMappingEntry")
+        );
         assert_eq!(
             router.rule.lock().clone(),
             Some((ME, "Download Engine torrents 1".into())),
@@ -1257,7 +1350,14 @@ mod tests {
     async fn a_system_port_is_never_forwarded() {
         let router = Arc::new(FakeRouter::new());
         let state = Arc::new(Mutex::new(RouterState::Looking));
-        keep_open(router.clone(), gateway(), 445, state.clone(), CancellationToken::new()).await;
+        keep_open(
+            router.clone(),
+            gateway(),
+            445,
+            state.clone(),
+            CancellationToken::new(),
+        )
+        .await;
         assert_eq!(*state.lock(), RouterState::Unavailable);
         assert!(router.calls().is_empty(), "the router was never asked");
     }

@@ -355,7 +355,10 @@ impl Discovery {
         }
         // A private torrent's peers may only come from its own trackers.
         let plan = dht_plan(private, search_only, self.options.listen_port);
-        if ask_dht && self.options.use_dht && let Some(announce) = plan {
+        if ask_dht
+            && self.options.use_dht
+            && let Some(announce) = plan
+        {
             let this = self.clone();
             let found = match dht_found {
                 Some(counter) => found.counted(counter),
@@ -382,7 +385,11 @@ fn permits_dht(private: Option<bool>) -> bool {
 /// Whether to ask the DHT, and the port to announce there, if any. A public torrent may
 /// announce. A magnet the person agreed to look up may only ask, until its details say
 /// public. Everything else stays off the DHT.
-fn dht_plan(private: Option<bool>, search_only: bool, listen_port: Option<u16>) -> Option<Option<u16>> {
+fn dht_plan(
+    private: Option<bool>,
+    search_only: bool,
+    listen_port: Option<u16>,
+) -> Option<Option<u16>> {
     if permits_dht(private) {
         Some(listen_port)
     } else if search_only && private.is_none() {

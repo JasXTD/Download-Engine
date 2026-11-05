@@ -3,9 +3,13 @@ const fs = require('node:fs');
 const path = require('node:path');
 function literals(source) {
   const out = [];
-  const pattern = /\/\*[\s\S]*?\*\/|\/\/[^\n]*|r(#+)?"[\s\S]*?"\1|"(?:\\[\s\S]|[^"\\])*"/g;
+  // Comments, raw strings, strings and char literals. A char literal such as '"', b'"' or '\''
+  // is consumed whole, so its quote cannot open a string that runs to the next quote in the
+  // file. A lifetime or loop label ('a, 'static) has no closing quote after one character and
+  // stays code.
+  const pattern = /\/\*[\s\S]*?\*\/|\/\/[^\n]*|r(#+)?"[\s\S]*?"\1|"(?:\\[\s\S]|[^"\\])*"|'(?:\\(?:u\{[0-9a-fA-F_]+\}|x[0-9a-fA-F]{2}|.)|[^'\\\n\r\t])'/gu;
   for (const m of source.matchAll(pattern)) {
-    if (m[0].startsWith('/')) continue;
+    if (m[0].startsWith('/') || m[0].startsWith("'")) continue;
     const raw = m[0];
     let value;
     if (raw.startsWith('r')) { const q=raw.indexOf('"'); value=raw.slice(q+1,-q); }
@@ -17,9 +21,18 @@ function literals(source) {
   }
   return out;
 }
+// String literals passed as the first argument of tr( or tf!(. rustfmt may wrap the call and
+// indent the literal on a later line, so any whitespace may separate it from the opening paren.
+function labels(source) {
+  return literals(source).filter(literal => {
+    let start = literal.start;
+    while (start > 0 && /\s/.test(source[start - 1])) start--;
+    return /\b(?:tr|tf!)\($/.test(source.slice(Math.max(0, start - 5), start));
+  });
+}
 function files(directory) { return fs.readdirSync(directory,{withFileTypes:true}).flatMap(d=>d.isDirectory()?files(path.join(directory,d.name)):[path.join(directory,d.name)]); }
 function production(source) { return source.split(/#\[cfg\(test\)\]\s*(?:mod tests|mod interaction_tests)\s*\{/)[0]; }
-module.exports={literals,files,production};
+module.exports={literals,labels,files,production};
 if (require.main===module) {
  const root=path.resolve(__dirname,'..');
  const map=new Map();

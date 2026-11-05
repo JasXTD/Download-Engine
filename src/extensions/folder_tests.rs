@@ -29,18 +29,34 @@ fn package(id: &str, version: &str) -> Vec<u8> {
 }
 
 fn names(listing: &Listing) -> Vec<&str> {
-    listing.found.iter().map(|found| found.name.as_str()).collect()
+    listing
+        .found
+        .iter()
+        .map(|found| found.name.as_str())
+        .collect()
 }
 
 fn package_in(listing: &Listing, name: &str) -> Package {
-    match &listing.found.iter().find(|found| found.name == name).unwrap().kind {
+    match &listing
+        .found
+        .iter()
+        .find(|found| found.name == name)
+        .unwrap()
+        .kind
+    {
         Kind::Package(package) => (**package).clone(),
         other => panic!("{name}: {other:?}"),
     }
 }
 
 fn unreadable(listing: &Listing, name: &str) -> String {
-    match &listing.found.iter().find(|found| found.name == name).unwrap().kind {
+    match &listing
+        .found
+        .iter()
+        .find(|found| found.name == name)
+        .unwrap()
+        .kind
+    {
         Kind::Unreadable(why) => why.clone(),
         other => panic!("{name}: {other:?}"),
     }
@@ -51,18 +67,33 @@ fn a_missing_folder_lists_nothing() {
     let temp = tempfile::tempdir().unwrap();
     let listing = scan(&temp.path().join("Extensions")).unwrap();
     assert_eq!(listing, Listing::default());
-    assert!(!temp.path().join("Extensions").exists(), "listing creates nothing");
+    assert!(
+        !temp.path().join("Extensions").exists(),
+        "listing creates nothing"
+    );
 }
 
 #[test]
 fn extension_files_are_listed_in_name_order_and_checked_like_an_install() {
     let temp = tempfile::tempdir().unwrap();
     let folder = temp.path();
-    fs::write(folder.join("b-tidy.de-extension.json"), package("test.b", "1.0.0")).unwrap();
-    fs::write(folder.join("A-TIDY.DE-EXTENSION.JSON"), package("test.a", "2.1.0")).unwrap();
+    fs::write(
+        folder.join("b-tidy.de-extension.json"),
+        package("test.b", "1.0.0"),
+    )
+    .unwrap();
+    fs::write(
+        folder.join("A-TIDY.DE-EXTENSION.JSON"),
+        package("test.a", "2.1.0"),
+    )
+    .unwrap();
     fs::write(folder.join("broken.de-extension.json"), b"{").unwrap();
     fs::write(folder.join("notes.txt"), b"not an extension").unwrap();
-    fs::write(folder.join(".hidden.de-extension.json"), package("test.h", "1.0.0")).unwrap();
+    fs::write(
+        folder.join(".hidden.de-extension.json"),
+        package("test.h", "1.0.0"),
+    )
+    .unwrap();
     fs::create_dir(folder.join("my-reader")).unwrap();
     fs::write(folder.join("my-reader/manifest.json"), b"{}").unwrap();
     fs::create_dir(folder.join("pictures")).unwrap();
@@ -77,8 +108,14 @@ fn extension_files_are_listed_in_name_order_and_checked_like_an_install() {
             "my-reader"
         ]
     );
-    assert_eq!(package_in(&listing, "A-TIDY.DE-EXTENSION.JSON").id, "test.a");
-    assert_eq!(package_in(&listing, "b-tidy.de-extension.json").version, "1.0.0");
+    assert_eq!(
+        package_in(&listing, "A-TIDY.DE-EXTENSION.JSON").id,
+        "test.a"
+    );
+    assert_eq!(
+        package_in(&listing, "b-tidy.de-extension.json").version,
+        "1.0.0"
+    );
     assert!(
         unreadable(&listing, "broken.de-extension.json")
             .contains("This is not a valid extension file")
@@ -111,8 +148,15 @@ fn a_reason_never_repeats_a_whole_file() {
     );
     fs::write(temp.path().join("long.de-extension.json"), text).unwrap();
     let why = unreadable(&scan(temp.path()).unwrap(), "long.de-extension.json");
-    assert!(why.chars().count() <= 201, "{} characters", why.chars().count());
-    assert!(why.starts_with("This is not a valid extension file"), "{why}");
+    assert!(
+        why.chars().count() <= 201,
+        "{} characters",
+        why.chars().count()
+    );
+    assert!(
+        why.starts_with("This is not a valid extension file"),
+        "{why}"
+    );
 }
 
 #[test]
@@ -153,14 +197,21 @@ fn a_review_reads_the_file_as_it_is_now_and_only_inside_the_folder() {
     let temp = tempfile::tempdir().unwrap();
     let name = "tidy.de-extension.json";
     fs::write(temp.path().join(name), package("test.tidy", "1.0.0")).unwrap();
-    assert_eq!(package_in(&scan(temp.path()).unwrap(), name).version, "1.0.0");
+    assert_eq!(
+        package_in(&scan(temp.path()).unwrap(), name).version,
+        "1.0.0"
+    );
     fs::write(temp.path().join(name), package("test.tidy", "1.1.0")).unwrap();
     let (current, bytes) = read(temp.path(), name).unwrap();
     assert_eq!(current.version, "1.1.0");
     assert_eq!(bytes, package("test.tidy", "1.1.0"));
 
     fs::create_dir(temp.path().join("inner")).unwrap();
-    fs::write(temp.path().join("inner").join(name), package("test.tidy", "2.0.0")).unwrap();
+    fs::write(
+        temp.path().join("inner").join(name),
+        package("test.tidy", "2.0.0"),
+    )
+    .unwrap();
     for outside in [
         format!("inner/{name}"),
         format!("..{}{name}", std::path::MAIN_SEPARATOR),
@@ -212,7 +263,10 @@ fn a_junction_to_an_unpacked_extension_elsewhere_is_skipped() {
         .output()
         .unwrap();
     assert!(made.status.success(), "{made:?}");
-    assert!(junction.join("manifest.json").is_file(), "the junction leads there");
+    assert!(
+        junction.join("manifest.json").is_file(),
+        "the junction leads there"
+    );
     let listing = scan(&folder).unwrap();
     assert!(listing.found.is_empty(), "{listing:?}");
     assert_eq!(listing.skipped, 1);

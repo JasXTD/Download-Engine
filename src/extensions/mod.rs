@@ -3,15 +3,15 @@
 //! A package groups jobs. It never merges their powers: each job is saved as an
 //! ordinary script and runs in its own worker with the limits of its kind. Jobs
 //! share only read-only settings, and Rust limits them to the hosts they declare.
+#[cfg(test)]
+mod example_tests;
 pub mod examples;
 pub mod folder;
+#[cfg(test)]
+mod folder_tests;
 mod package;
 mod runtime;
 mod store;
-#[cfg(test)]
-mod example_tests;
-#[cfg(test)]
-mod folder_tests;
 #[cfg(test)]
 mod tests;
 

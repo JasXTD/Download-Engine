@@ -247,7 +247,9 @@ fn overview(
     access::what_it_does(ui, &lines, queues, p);
     ui.add_space(8.0);
     let mut act = None;
-    access::access(ui, package, p, |ui| act = access::overview_files(ui, entry, p));
+    access::access(ui, package, p, |ui| {
+        act = access::overview_files(ui, entry, p)
+    });
     let provider = entry
         .jobs
         .iter()

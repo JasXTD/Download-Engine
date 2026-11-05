@@ -101,7 +101,11 @@ fn status<'a>(package: &Package, entries: &'a [Entry]) -> Status<'a> {
 /// A Unix time as the local hour and minute.
 fn clock(at: i64) -> String {
     chrono::DateTime::from_timestamp(at, 0)
-        .map(|time| time.with_timezone(&chrono::Local).format("%H:%M").to_string())
+        .map(|time| {
+            time.with_timezone(&chrono::Local)
+                .format("%H:%M")
+                .to_string()
+        })
         .unwrap_or_default()
 }
 

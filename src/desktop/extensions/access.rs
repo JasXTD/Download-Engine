@@ -59,7 +59,9 @@ fn kind(trigger: &Trigger) -> (&'static str, &'static str) {
     match trigger {
         Trigger::SiteReader { .. } => (
             tr("Site reader"),
-            tr("Reads a page you open and lists the files on it. It reaches only the sites it names, and can't see or change your downloads."),
+            tr(
+                "Reads a page you open and lists the files on it. It reaches only the sites it names, and can't see or change your downloads.",
+            ),
         ),
         Trigger::Provider => (
             tr("Download provider"),
@@ -67,7 +69,9 @@ fn kind(trigger: &Trigger) -> (&'static str, &'static str) {
         ),
         _ => (
             tr("Automation"),
-            tr("Runs after something happens in Download Engine, such as a download finishing. It sees and controls downloads, but can't read web pages."),
+            tr(
+                "Runs after something happens in Download Engine, such as a download finishing. It sees and controls downloads, but can't read web pages.",
+            ),
         ),
     }
 }
@@ -149,14 +153,10 @@ fn row(
     ui.horizontal_top(|ui| {
         let (rect, _) = ui.allocate_exact_size(vec2(18.0, 18.0), Sense::hover());
         view::icon(ui, rect.center(), glyph, 15.0, p.muted);
-        ui.allocate_ui_with_layout(
-            vec2(width, 18.0),
-            Layout::left_to_right(Align::Min),
-            |ui| {
-                ui.set_width(width);
-                ui.label(RichText::new(title).strong());
-            },
-        );
+        ui.allocate_ui_with_layout(vec2(width, 18.0), Layout::left_to_right(Align::Min), |ui| {
+            ui.set_width(width);
+            ui.label(RichText::new(title).strong());
+        });
         ui.vertical(|ui| {
             ui.set_width(ui.available_width());
             content(ui);
@@ -187,8 +187,14 @@ fn downloads(package: &Package) -> Vec<&'static str> {
     if package.jobs.iter().any(PackageJob::is_automation) {
         lines.push(tr("Sees their names, folders and status, never their addresses. Can pause, resume and retry them, manage queues and show notifications."));
     }
-    if package.jobs.iter().any(|job| job.trigger == Trigger::Provider) {
-        lines.push(tr("Handles only the downloads you add with it, including their contents."));
+    if package
+        .jobs
+        .iter()
+        .any(|job| job.trigger == Trigger::Provider)
+    {
+        lines.push(tr(
+            "Handles only the downloads you add with it, including their contents.",
+        ));
     }
     if lines.is_empty() {
         lines.push(tr("Can't see or change them."));
@@ -228,13 +234,20 @@ pub(super) fn access(
             .iter()
             .any(|s| matches!(s, Setting::AesKey { .. }))
         {
-            ui.add(egui::Label::new(RichText::new(tr("Use a key you save in Settings")).color(p.muted)).wrap());
+            ui.add(
+                egui::Label::new(
+                    RichText::new(tr("Use a key you save in Settings")).color(p.muted),
+                )
+                .wrap(),
+            );
         }
         ui.add(
             egui::Label::new(
-                RichText::new(tr("Never: your browser logins or cookies, or other programs."))
-                    .small()
-                    .color(p.muted),
+                RichText::new(tr(
+                    "Never: your browser logins or cookies, or other programs.",
+                ))
+                .small()
+                .color(p.muted),
             )
             .wrap(),
         );
@@ -262,7 +275,12 @@ pub(super) fn overview_files(ui: &mut egui::Ui, entry: &Entry, p: Palette) -> Op
     let package = &entry.installed.package;
     let jobs = asking(package);
     if jobs.is_empty() {
-        ui.add(egui::Label::new(RichText::new(tr("Can't rename, move or delete them.")).color(p.muted)).wrap());
+        ui.add(
+            egui::Label::new(
+                RichText::new(tr("Can't rename, move or delete them.")).color(p.muted),
+            )
+            .wrap(),
+        );
         return None;
     }
     let mut act = None;
@@ -270,9 +288,18 @@ pub(super) fn overview_files(ui: &mut egui::Ui, entry: &Entry, p: Palette) -> Op
         let allowed = entry
             .jobs
             .iter()
-            .find(|line| line.script.extension.as_ref().is_some_and(|l| l.job == job.id))
+            .find(|line| {
+                line.script
+                    .extension
+                    .as_ref()
+                    .is_some_and(|l| l.job == job.id)
+            })
             .is_some_and(|line| line.script.change_files);
-        let action = if allowed { tr("Take back") } else { tr("Allow…") };
+        let action = if allowed {
+            tr("Take back")
+        } else {
+            tr("Allow…")
+        };
         let font = egui::TextStyle::Button.resolve(ui.style());
         let button = ui
             .painter()
@@ -318,10 +345,20 @@ pub(super) fn overview_files(ui: &mut egui::Ui, entry: &Entry, p: Palette) -> Op
 }
 
 /// The files row in an install review: a box per job that asks.
-pub(super) fn review_files(ui: &mut egui::Ui, pending: &mut Pending, package: &Package, p: Palette) {
+pub(super) fn review_files(
+    ui: &mut egui::Ui,
+    pending: &mut Pending,
+    package: &Package,
+    p: Palette,
+) {
     let jobs = asking(package);
     if jobs.is_empty() {
-        ui.add(egui::Label::new(RichText::new(tr("Can't rename, move or delete them.")).color(p.muted)).wrap());
+        ui.add(
+            egui::Label::new(
+                RichText::new(tr("Can't rename, move or delete them.")).color(p.muted),
+            )
+            .wrap(),
+        );
         return;
     }
     for job in &jobs {
@@ -356,7 +393,11 @@ pub(super) fn review_files(ui: &mut egui::Ui, pending: &mut Pending, package: &P
 
 impl Desktop {
     /// Asks before letting a job change files after its extension is installed.
-    pub(in crate::desktop) fn extension_file_access_dialog(&mut self, ctx: &egui::Context, p: Palette) {
+    pub(in crate::desktop) fn extension_file_access_dialog(
+        &mut self,
+        ctx: &egui::Context,
+        p: Palette,
+    ) {
         let Some((id, job)) = self.extensions.granting.clone() else {
             self.dialog = None;
             return;

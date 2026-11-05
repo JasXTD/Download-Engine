@@ -23,14 +23,20 @@ fn cards() -> [Card; 3] {
         Card {
             glyph: "\u{e774}",
             title: tr("Get files from a website"),
-            text: tr("A site reader extension reads a page you open and lists its files. You choose what to download."),
-            hint: tr("For example: Internet Archive items, Wikimedia Commons originals, GitHub releases."),
+            text: tr(
+                "A site reader extension reads a page you open and lists its files. You choose what to download.",
+            ),
+            hint: tr(
+                "For example: Internet Archive items, Wikimedia Commons originals, GitHub releases.",
+            ),
             buttons: vec![(tr("See examples"), Goal::Examples)],
         },
         Card {
             glyph: "\u{e945}",
             title: tr("Do something after a download"),
-            text: tr("An automation runs when a download or a queue finishes: sort files into folders, show a notification, start the next queue."),
+            text: tr(
+                "An automation runs when a download or a queue finishes: sort files into folders, show a notification, start the next queue.",
+            ),
             hint: tr("Install one, or write your own in Lua."),
             buttons: vec![
                 (tr("See examples"), Goal::Examples),
@@ -40,7 +46,9 @@ fn cards() -> [Card; 3] {
         Card {
             glyph: "\u{e8fd}",
             title: tr("Send downloads to the right queue"),
-            text: tr("A rule picks a queue by site or file type, and can start a queue when another finishes. No code."),
+            text: tr(
+                "A rule picks a queue by site or file type, and can start a queue when another finishes. No code.",
+            ),
             hint: tr("Rules live on the Rules tab."),
             buttons: vec![(tr("+ New rule"), Goal::Rule)],
         },
@@ -62,7 +70,8 @@ fn card(ui: &mut egui::Ui, card: &Card, p: Palette) -> Option<Goal> {
                 // small window.
                 ui.horizontal_top(|ui| {
                     let (rect, _) = ui.allocate_exact_size(vec2(28.0, 28.0), Sense::hover());
-                    ui.painter().rect_filled(rect, 7, p.accent.gamma_multiply(0.14));
+                    ui.painter()
+                        .rect_filled(rect, 7, p.accent.gamma_multiply(0.14));
                     view::icon(ui, rect.center(), card.glyph, 15.0, p.accent);
                     ui.add(egui::Label::new(RichText::new(card.title).size(15.0).strong()).wrap());
                 });

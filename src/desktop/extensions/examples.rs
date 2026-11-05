@@ -28,7 +28,10 @@ fn reach(package: &Package) -> (String, bool) {
         (String::new(), false)
     } else {
         (
-            tf!("Reads {hosts}", hosts = package.permissions.network.join(", ")),
+            tf!(
+                "Reads {hosts}",
+                hosts = package.permissions.network.join(", ")
+            ),
             false,
         )
     }
@@ -80,8 +83,7 @@ pub(super) fn package_row(
                 }
             }
             ui.add(
-                egui::Label::new(RichText::new(&package.description).small().color(p.muted))
-                    .wrap(),
+                egui::Label::new(RichText::new(&package.description).small().color(p.muted)).wrap(),
             );
             for (note, color) in notes {
                 ui.add(egui::Label::new(RichText::new(note).small().color(*color)).wrap());
@@ -122,7 +124,11 @@ impl Desktop {
         self.dialog = Some(Dialog::ExtensionExamples);
     }
 
-    pub(in crate::desktop) fn extension_examples_dialog(&mut self, ctx: &egui::Context, p: Palette) {
+    pub(in crate::desktop) fn extension_examples_dialog(
+        &mut self,
+        ctx: &egui::Context,
+        p: Palette,
+    ) {
         // An example installed at its version or newer has nothing left to review.
         let installed: BTreeMap<&str, (u64, u64, u64)> = self
             .extensions

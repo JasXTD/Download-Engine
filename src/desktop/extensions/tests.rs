@@ -69,7 +69,10 @@ fn the_page_opens_on_installed_and_keeps_scripts_and_rules_as_tabs() {
     text_rect(&output, "What do you want Download Engine to do?");
     click(&mut app, &ctx, "Scripts");
     let output = frame(&mut app, &ctx, size(), vec![]);
-    assert!(!has_text(&output, "What do you want Download Engine to do?"));
+    assert!(!has_text(
+        &output,
+        "What do you want Download Engine to do?"
+    ));
     click(&mut app, &ctx, "Rules (0)");
     let output = frame(&mut app, &ctx, size(), vec![]);
     text_rect(&output, "+ New rule");
@@ -91,7 +94,10 @@ fn installing_goes_through_a_review_and_starts_turned_off() {
     text_rect(&output, "Runs when you open one of these pages:");
     text_rect(&output, "videohost.example/watch/*");
     text_rect(&output, "Runs when any download finishes.");
-    text_rect(&output, "Let it rename, move and delete any downloaded file");
+    text_rect(
+        &output,
+        "Let it rename, move and delete any downloaded file",
+    );
     text_rect(
         &output,
         "It installs turned off. Turn it on after you review it.",
@@ -115,7 +121,10 @@ fn installing_goes_through_a_review_and_starts_turned_off() {
     text_rect(&output, "Turned off");
     text_rect(&output, "Turned off. Nothing runs until you turn it on.");
     text_rect(&output, "What it does");
-    text_rect(&output, "Never: your browser logins or cookies, or other programs.");
+    text_rect(
+        &output,
+        "Never: your browser logins or cookies, or other programs.",
+    );
     text_rect(&output, "Tidy finished files");
     text_rect(&output, "Not allowed");
 
@@ -123,7 +132,10 @@ fn installing_goes_through_a_review_and_starts_turned_off() {
     assert!(app.store.extension(ID).unwrap().enabled);
     frame(&mut app, &ctx, size(), vec![]);
     let output = frame(&mut app, &ctx, size(), vec![]);
-    assert!(!has_text(&output, "Turned off. Nothing runs until you turn it on."));
+    assert!(!has_text(
+        &output,
+        "Turned off. Nothing runs until you turn it on."
+    ));
     text_rect(&output, "Turned on");
 }
 
@@ -298,7 +310,10 @@ fn an_example_opens_the_normal_review_and_installs_turned_off() {
     ] {
         text_rect(&output, name);
     }
-    assert!(app.store.extensions().unwrap().is_empty(), "nothing installs from the list");
+    assert!(
+        app.store.extensions().unwrap().is_empty(),
+        "nothing installs from the list"
+    );
 
     // With a dialog open, a click goes to the top-most match: the last
     // example's Review…, Queue finished.
@@ -622,7 +637,13 @@ fn the_page_fits_the_smallest_window() {
     let small = egui::vec2(860.0, 600.0);
     frame(&mut app, &ctx, small, vec![]);
     let output = frame(&mut app, &ctx, small, vec![]);
-    for label in ["Enabled", "Remove", "Turn on", "Examples…", "Install from file…"] {
+    for label in [
+        "Enabled",
+        "Remove",
+        "Turn on",
+        "Examples…",
+        "Install from file…",
+    ] {
         let rect = text_rect(&output, label);
         assert!(rect.right() <= small.x, "{label}: {rect:?}");
     }
@@ -667,7 +688,11 @@ fn german_labels_fit_the_smallest_window() {
     let taller = egui::vec2(860.0, 900.0);
     frame(&mut app, &ctx, taller, vec![]);
     let output = frame(&mut app, &ctx, taller, vec![]);
-    fits(&output, taller, &["See examples", "Write a script", "+ New rule"]);
+    fits(
+        &output,
+        taller,
+        &["See examples", "Write a script", "+ New rule"],
+    );
 
     // The Examples list.
     app.open_extension_examples();
@@ -783,7 +808,10 @@ fn a_file_in_the_folder_is_only_listed_until_reviewed_and_installs_turned_off() 
     frame(&mut app, &ctx, size(), vec![]);
     let output = frame(&mut app, &ctx, size(), vec![]);
     text_rect(&output, "Install VideoHost?");
-    text_rect(&output, "Let it rename, move and delete any downloaded file");
+    text_rect(
+        &output,
+        "Let it rename, move and delete any downloaded file",
+    );
     click(&mut app, &ctx, "Install");
     let installed = app.store.extension(ID).unwrap();
     assert!(!installed.enabled);
@@ -910,7 +938,10 @@ fn a_file_removed_after_listing_says_why_it_cant_be_reviewed() {
     assert_eq!(app.dialog, Some(Dialog::ExtensionFolder));
     // The listing that starts right after must not wipe the reason.
     let output = settled(&mut app, &ctx);
-    text_containing(&output, "Can't read this file: videohost.de-extension.json:");
+    text_containing(
+        &output,
+        "Can't read this file: videohost.de-extension.json:",
+    );
     text_rect(&output, "No extension files in this folder yet.");
     assert!(app.store.extensions().unwrap().is_empty());
 }
@@ -960,7 +991,10 @@ fn the_folder_list_creates_the_folder_and_scan_now_finds_a_new_file() {
         &package("1.2.0", &["videohost.example"]),
     );
     let output = settled(&mut app, &ctx);
-    assert!(!has_text(&output, "VideoHost"), "nothing watches the folder");
+    assert!(
+        !has_text(&output, "VideoHost"),
+        "nothing watches the folder"
+    );
     click(&mut app, &ctx, "Scan now");
     let output = settled(&mut app, &ctx);
     text_rect(&output, "VideoHost");
@@ -989,7 +1023,10 @@ fn coming_back_to_the_installed_tab_looks_in_the_folder_again() {
         &package("1.2.0", &["videohost.example"]),
     );
     let output = settled(&mut app, &ctx);
-    assert!(!has_text(&output, ONE_TO_REVIEW), "nothing watches the folder");
+    assert!(
+        !has_text(&output, ONE_TO_REVIEW),
+        "nothing watches the folder"
+    );
 
     app.view = View::Downloads;
     frame(&mut app, &ctx, size(), vec![]);
@@ -1044,7 +1081,10 @@ fn german_header_strip_and_folder_list_fit_the_smallest_window() {
         &german("Install extensions, write your own scripts and route downloads with rules."),
     );
     let buttons = text_rect(&output, &german("Examples…"));
-    assert!(subtitle.right() < buttons.left(), "{subtitle:?} {buttons:?}");
+    assert!(
+        subtitle.right() < buttons.left(),
+        "{subtitle:?} {buttons:?}"
+    );
 
     app.open_extension_folder();
     frame(&mut app, &ctx, small, vec![]);

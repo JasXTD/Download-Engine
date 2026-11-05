@@ -50,7 +50,11 @@ fn fixture() -> (tempfile::TempDir, Store) {
 
 /// Installs an example, turns it on and returns its job's code with the
 /// context the app gives that job's worker.
-fn installed(name: &str, reach: Reach, grants: &Grants) -> (tempfile::TempDir, Store, Script, Context) {
+fn installed(
+    name: &str,
+    reach: Reach,
+    grants: &Grants,
+) -> (tempfile::TempDir, Store, Script, Context) {
     let (temp, store) = fixture();
     let installed = store.install_extension(&packed(name), grants).unwrap();
     let id = installed.package.id.clone();
@@ -153,7 +157,10 @@ fn every_example_installs_turned_off_through_the_normal_review() {
         assert_eq!(package.publisher, "Download Engine examples", "{name}");
         assert_eq!(package.version, "1.0.0", "{name}");
         assert!(
-            package.jobs.iter().all(|job| job.trigger != Trigger::Provider),
+            package
+                .jobs
+                .iter()
+                .all(|job| job.trigger != Trigger::Provider),
             "{name}: the starter pack has no provider jobs"
         );
         assert!(package.settings.iter().all(|s| !s.protected()), "{name}");
@@ -171,7 +178,10 @@ fn every_example_installs_turned_off_through_the_normal_review() {
         for job in &package.jobs {
             let script = store.extension_job(&package.id, &job.id).unwrap();
             assert!(!script.enabled, "{name}");
-            assert!(!script.change_files, "{name}: file access stays off unless ticked");
+            assert!(
+                !script.change_files,
+                "{name}: file access stays off unless ticked"
+            );
         }
         hosts.insert(name, package.permissions.network.clone());
     }
@@ -264,12 +274,19 @@ fn internet_archive_can_also_list_copies_and_reports_failures() {
     let (_temp, store, _script, _context) =
         installed("internet-archive", Reach::Web, &Grants::default());
     store
-        .set_extension_setting("examples.internet-archive", "include_derivatives", &json!(true))
+        .set_extension_setting(
+            "examples.internet-archive",
+            "include_derivatives",
+            &json!(true),
+        )
         .unwrap();
     let script = store
         .extension_job("examples.internet-archive", "item-files")
         .unwrap();
-    let context = store.extension_context(&script, Reach::Web).unwrap().unwrap();
+    let context = store
+        .extension_context(&script, Reach::Web)
+        .unwrap()
+        .unwrap();
     let api = "https://archive.org/metadata/example-public-domain-film";
     let page = "https://archive.org/details/example-public-domain-film";
     let (reading, _) = read(&script, &context, page, &[(api, 200, ARCHIVE)]);
@@ -291,10 +308,13 @@ fn internet_archive_can_also_list_copies_and_reports_failures() {
     );
 
     let (reading, _) = read(&script, &context, page, &[(api, 503, "")]);
-    assert!(
-        format!("{:#}", reading.unwrap_err()).contains("archive.org answered with HTTP 503")
+    assert!(format!("{:#}", reading.unwrap_err()).contains("archive.org answered with HTTP 503"));
+    let (reading, requests) = read(
+        &script,
+        &context,
+        "https://archive.org/search?query=film",
+        &[],
     );
-    let (reading, requests) = read(&script, &context, "https://archive.org/search?query=film", &[]);
     assert!(format!("{:#}", reading.unwrap_err()).contains("Open an archive.org item page"));
     assert!(requests.is_empty());
 }
@@ -362,7 +382,10 @@ fn github_releases_lists_a_releases_files_by_tag_or_the_latest_one() {
             "application/vnd.github+json".to_owned()
         )]
     );
-    assert_eq!(reading.title.as_deref(), Some("example-tool Example Tool 2.1"));
+    assert_eq!(
+        reading.title.as_deref(),
+        Some("example-tool Example Tool 2.1")
+    );
     let download = format!("{repo}/releases/download/v2.1.0");
     assert_eq!(
         items(&reading),
@@ -375,7 +398,12 @@ fn github_releases_lists_a_releases_files_by_tag_or_the_latest_one() {
              "label": null, "filename": "empty-placeholder.txt", "size": null}
         ])
     );
-    for page in ["releases", "releases/", "releases/latest", "releases/latest/"] {
+    for page in [
+        "releases",
+        "releases/",
+        "releases/latest",
+        "releases/latest/",
+    ] {
         let (reading, requests) = read(
             &script,
             &context,
@@ -389,7 +417,10 @@ fn github_releases_lists_a_releases_files_by_tag_or_the_latest_one() {
     store
         .set_extension_setting("examples.github-releases", "include_source", &json!(true))
         .unwrap();
-    let context = store.extension_context(&script, Reach::Web).unwrap().unwrap();
+    let context = store
+        .extension_context(&script, Reach::Web)
+        .unwrap()
+        .unwrap();
     let (reading, _) = read(
         &script,
         &context,
@@ -427,7 +458,10 @@ fn github_releases_keeps_a_large_release_within_the_app_limit() {
     store
         .set_extension_setting("examples.github-releases", "include_source", &json!(true))
         .unwrap();
-    let context = store.extension_context(&script, Reach::Web).unwrap().unwrap();
+    let context = store
+        .extension_context(&script, Reach::Web)
+        .unwrap()
+        .unwrap();
     let assets: Vec<Value> = (0..1001)
         .map(|i| {
             json!({
@@ -479,7 +513,10 @@ fn sort_finished_files_moves_known_types_into_folders_and_skips_the_rest() {
     });
     let (result, commands) = run(&script, &context, event, |args| {
         // A move outside the download folders fails; the rest must still run.
-        anyhow::ensure!(args[1] != "h", "Choose a folder inside your download folders");
+        anyhow::ensure!(
+            args[1] != "h",
+            "Choose a folder inside your download folders"
+        );
         Ok(json!({"ok": true}))
     });
     result.unwrap();
@@ -520,11 +557,18 @@ fn sort_finished_files_needs_its_file_access_granted_to_move_anything() {
     let saved = store.clone();
     let (result, commands) = run(&script, &context, event, move |_| {
         let script = saved.script(&id)?;
-        anyhow::ensure!(script.change_files, "This script can't change downloaded files.");
+        anyhow::ensure!(
+            script.change_files,
+            "This script can't change downloaded files."
+        );
         Ok(json!({"ok": true}))
     });
     result.unwrap();
-    assert_eq!(commands.len(), 2, "every move was tried and refused: {commands:?}");
+    assert_eq!(
+        commands.len(),
+        2,
+        "every move was tried and refused: {commands:?}"
+    );
 }
 
 #[test]
@@ -567,7 +611,10 @@ fn queue_finished_notifies_and_starts_the_next_queue_when_set() {
     };
     let strings = |items: &[&str]| items.iter().map(|s| (*s).to_owned()).collect::<Vec<_>>();
 
-    let context = store.extension_context(&script, Reach::Automation).unwrap().unwrap();
+    let context = store
+        .extension_context(&script, Reach::Automation)
+        .unwrap()
+        .unwrap();
     assert_eq!(context.settings["next_queue"], json!(""));
     let (result, commands) = run(&script, &context, event.clone(), answers.clone());
     result.unwrap();
@@ -576,14 +623,21 @@ fn queue_finished_notifies_and_starts_the_next_queue_when_set() {
         [
             strings(&["queues"]),
             strings(&["list"]),
-            strings(&["notify", "Queue finished: Nightly", "2 downloads are complete"]),
+            strings(&[
+                "notify",
+                "Queue finished: Nightly",
+                "2 downloads are complete"
+            ]),
         ]
     );
 
     store
         .set_extension_setting("examples.queue-finished", "next_queue", &json!("Morning"))
         .unwrap();
-    let context = store.extension_context(&script, Reach::Automation).unwrap().unwrap();
+    let context = store
+        .extension_context(&script, Reach::Automation)
+        .unwrap()
+        .unwrap();
     let (result, commands) = run(&script, &context, event, answers);
     result.unwrap();
     assert_eq!(commands[3], strings(&["queue", "start", "Morning"]));
@@ -627,8 +681,13 @@ fn only_the_shipped_files_can_use_an_examples_id() {
             .install_extension(&changed("1.0.1"), &Grants::default())
             .is_err()
     );
-    let job = store.extension_job("examples.sort-by-type", "sort").unwrap();
-    assert!(job.body.contains("folder_for"), "the example's own code stays");
+    let job = store
+        .extension_job("examples.sort-by-type", "sort")
+        .unwrap();
+    assert!(
+        job.body.contains("folder_for"),
+        "the example's own code stays"
+    );
     assert!(job.change_files);
 
     // Under the author's own id, the same change is an ordinary package.
@@ -667,7 +726,10 @@ fn file_access_can_be_granted_after_install_and_taken_back() {
     assert_eq!(cursor(&store), saved_cursor, "pending events are kept");
     // Granting again changes nothing.
     store.set_extension_file_access(id, "sort", true).unwrap();
-    assert_eq!(store.extension_job(id, "sort").unwrap().revision, granted.revision);
+    assert_eq!(
+        store.extension_job(id, "sort").unwrap().revision,
+        granted.revision
+    );
 
     // An update that still asks keeps the grant without asking again.
     let next = own_copy("sort-by-type", |value| value["version"] = json!("1.0.1"));
@@ -707,7 +769,13 @@ fn file_access_is_never_granted_to_a_job_that_does_not_ask() {
     store
         .set_extension_file_access("examples.queue-finished", "notify", false)
         .unwrap();
-    for (id, job) in [("examples.queue-finished", "missing"), ("examples.none", "notify")] {
-        assert!(store.set_extension_file_access(id, job, true).is_err(), "{id} {job}");
+    for (id, job) in [
+        ("examples.queue-finished", "missing"),
+        ("examples.none", "notify"),
+    ] {
+        assert!(
+            store.set_extension_file_access(id, job, true).is_err(),
+            "{id} {job}"
+        );
     }
 }

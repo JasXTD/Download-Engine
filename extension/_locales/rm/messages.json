@@ -15,7 +15,7 @@
     "message": "Ina nova colliaziun spetga gia la verificaziun en Download Engine."
   },
   "m_acca29cca3e064e3": {
-    "message": "Ina transmissiun basegna attenziun. Dovra Cuntinuar en la glista da telechargiadas dal navigatur sch'ella è en pausa. "
+    "message": "Ina transmissiun basegna attenziun. Duvrai Cuntinuar en la glista da telechargiadas dal navigatur sch'ella è en pausa. "
   },
   "m_da5cba54ff645402": {
     "message": "In'analisa da pagina è gia en curs."
@@ -33,7 +33,7 @@
     "message": "Ina verificaziun da video vegn gia averta."
   },
   "m_f2ca785fd206a095": {
-    "message": "Ina verificaziun da video spetga conferma. Dovra l'emprim Opziuns dal navigatur → Recuperar transmissiuns."
+    "message": "Ina verificaziun da video spetga conferma. Duvrai l'emprim Opziuns dal navigatur → Recuperar transmissiuns."
   },
   "m_0e9839b644120fa4": {
     "message": "Agiuntar {0} datoteca(s){1}"
@@ -42,7 +42,7 @@
     "message": "Agiuntar ina URL da datoteca"
   },
   "m_d852059dca4ba30a": {
-    "message": "Agiuntescha almain in tip da datoteca u endatescha * per registrar tut ils tips."
+    "message": "Agiuntai almain in tip da datoteca u endatai * per registrar tut ils tips."
   },
   "m_fba811a83d244b75": {
     "message": "Agiuntar las datotecas tschernidas"
@@ -63,16 +63,16 @@
     "message": "Tut las funtaunas"
   },
   "m_79c625de4b9fd500": {
-    "message": "Permetta l'access a cookies da quest website per duvrar sia annunzia."
+    "message": "Permettai l'access a cookies da quest website per duvrar sia annunzia."
   },
   "m_26f0b4e0ff1f898e": {
-    "message": "Permetta l'access a telechargiadas per activar la registraziun automatica."
+    "message": "Permettai l'access a telechargiadas per activar la registraziun automatica."
   },
   "m_5b94fcf971c23dee": {
-    "message": "Permetta l'access a telechargiadas per chattar ina nova colliaziun per {0}. La registraziun automatica po restar deactivada."
+    "message": "Permettai l'access a telechargiadas per chattar ina nova colliaziun per {0}. La registraziun automatica po restar deactivada."
   },
   "m_2e62efd7ab18a82d": {
-    "message": "Permetta la scuverta da medias e l'access a websites per observar las dumondas da medias."
+    "message": "Permettai la scuverta da medias e l'access a websites per observar las dumondas da medias."
   },
   "m_48cc22965b91eff2": {
     "message": "Permetter l'access per la recuperaziun"
@@ -84,7 +84,7 @@
     "message": "Permetter quest website"
   },
   "m_9ee4b5b0cf00b360": {
-    "message": "Permetta l'access a quest website per mussar ses buttun da video."
+    "message": "Permettai l'access a quest website per mussar ses buttun da video."
   },
   "m_9f46b4f2f671c116": {
     "message": "Mintga grondezza"
@@ -111,13 +111,13 @@
     "message": "Registraziun automatica deactivada."
   },
   "m_ca4588908fe682ee": {
-    "message": "Registraziun automatica deactivada. Sche ina telechargiada è en pausa, dovra Cuntinuar en la glista da telechargiadas dal navigatur."
+    "message": "Registraziun automatica deactivada. Sche ina telechargiada è en pausa, duvrai Cuntinuar en la glista da telechargiadas dal navigatur."
   },
   "m_dbcbd988532e58f3": {
     "message": "Registraziun automatica activada per telechargiadas directas da datotecas."
   },
   "m_a4885ab1c22dbeb0": {
-    "message": "La registraziun automatica resta deactivada. Avra Download Engine → Utensils → Configuraziun dal navigatur, tscherna tes navigatur e Colliar il navigatur. Emprova lura danovamain qua. "
+    "message": "La registraziun automatica resta deactivada. Avri Download Engine → Utensils → Configuraziun dal navigatur, tscherni Voss navigatur e Colliar il navigatur. Empruvai lura danovamain qua. "
   },
   "m_bdf26652484911a4": {
     "message": "Registraziun automatica da telechargiadas"
@@ -135,13 +135,13 @@
     "message": "Lingua dal navigatur"
   },
   "m_9a06933b478415e9": {
-    "message": "Access a l’annunzia allontanà per tut las paginas. Telechargiadas existentas mantegnan las datas criptadas fin che ti las stizzas en Download Engine."
+    "message": "Access a l’annunzia allontanà per tut las paginas. Telechargiadas existentas mantegnan las datas criptadas fin che Vus las stizzais en Download Engine."
   },
   "m_776802e7061330f7": {
-    "message": "Impussibel da trametter l'annunzia dal navigatur. Controlla l'access al website e la connexiun cun l'app da desktop."
+    "message": "Impussibel da trametter l'annunzia dal navigatur. Controllai l'access al website e la connexiun cun l'app da desktop."
   },
   "m_31eb4316301f4815": {
-    "message": "L'annunzia dal navigatur basegna HTTPS. Avra ina colliaziun directa segira ad ina datoteca."
+    "message": "L'annunzia dal navigatur basegna HTTPS. Avri ina colliaziun directa segira ad ina datoteca."
   },
   "m_0017e5fbb9fd5905": {
     "message": "Opziuns dal navigatur"
@@ -153,7 +153,7 @@
     "message": "Reglas da registraziun"
   },
   "m_720995cec7bccf29": {
-    "message": "Reglas da registraziun betg disponiblas. Rechargia l'extensiun."
+    "message": "Reglas da registraziun betg disponiblas. Rechargiai l'extensiun."
   },
   "m_8f326a402a36befc": {
     "message": "Reglas da registraziun memorisadas."
@@ -162,10 +162,10 @@
     "message": "Verifitgar la connexiun"
   },
   "m_c29aa06c2ddb8076": {
-    "message": "Controllescha quests tips da datoteca: {0}"
+    "message": "Controllai quests tips da datoteca: {0}"
   },
   "m_8151d4ddeed81415": {
-    "message": "Controllescha quests websites: {0}"
+    "message": "Controllai quests websites: {0}"
   },
   "m_d6fdbb314af454a1": {
     "message": "Verifitgar la gruppa originala…"
@@ -174,10 +174,10 @@
     "message": "Verifitgar…"
   },
   "m_ddec030e83b025f5": {
-    "message": "Tscherna in video HLS u DASH da la glista."
+    "message": "Tscherni in video HLS u DASH da la glista."
   },
   "m_a0f311dfdcbbc7c9": {
-    "message": "Tscherna ina colonna ed in ordinatur da destinaziun memorisads."
+    "message": "Tscherni ina colonna ed in ordinatur da destinaziun memorisads."
   },
   "m_9b02ef3f495e64ef": {
     "message": "Tscherner datotecas da questa pagina"
@@ -201,7 +201,7 @@
     "message": "Allontanar la selecziun"
   },
   "m_652c67c42dba3909": {
-    "message": "Serra l'emprim in auter selectur da colliaziuns. Dovra Recuperar transmissiuns per gruppas pendentas."
+    "message": "Serrai l'emprim in auter selectur da colliaziuns. Duvrai Recuperar transmissiuns per gruppas pendentas."
   },
   "m_b9ce2241762a7a45": {
     "message": "Colliar cun Download Engine…"
@@ -213,16 +213,16 @@
     "message": "Memoria da cookies na correspunda betg"
   },
   "m_101bd5ad093f5552": {
-    "message": "Impussibel d'allontanar l'access al website. Dovra ils parameters d'extensiuns dal navigatur."
+    "message": "Impussibel d'allontanar l'access al website. Duvrai ils parameters d'extensiuns dal navigatur."
   },
   "m_4a8c2b313a136fa4": {
-    "message": "Impussibel da cuntinuar la telechargiada dal navigatur. Dovra Cuntinuar en sia glista da telechargiadas. "
+    "message": "Impussibel da cuntinuar la telechargiada dal navigatur. Duvrai Cuntinuar en sia glista da telechargiadas. "
   },
   "m_50746138b9d24c2b": {
     "message": "Impussibel da turnar al popup da l'extensiun:"
   },
   "m_936628cc4a394ede": {
-    "message": "Standards restaurads. Tscherna Memorisar las reglas per als mantegnair."
+    "message": "Standards restaurads. Tscherni Memorisar las reglas per als mantegnair."
   },
   "m_0690f959c9689317": {
     "message": "Chattar medias durant navigar"
@@ -231,13 +231,13 @@
     "message": "Medias chattadas"
   },
   "m_ee71fa5ff80ee155": {
-    "message": "Scuverta activada. Reproducescha medias per actualisar questa glista."
+    "message": "Scuverta activada. Reproduci medias per actualisar questa glista."
   },
   "m_c46c657680c1fb6a": {
     "message": "Protocol da diagnosa"
   },
   "m_da1e00181e6edfc0": {
-    "message": "Protocol da diagnosa betg disponibel. Rechargia l'extensiun."
+    "message": "Protocol da diagnosa betg disponibel. Rechargiai l'extensiun."
   },
   "m_97a6661033069fb1": {
     "message": "Datotecas directas e previstas HLS / DASH betg criptadas."
@@ -249,13 +249,13 @@
     "message": "Documents"
   },
   "m_4b20f1e564f08418": {
-    "message": "L'access a telechargiadas è midà. Activescha danovamain la registraziun automatica cura che ti es pront."
+    "message": "L'access a telechargiadas è midà. Activai danovamain la registraziun automatica cura che Vus vulais."
   },
   "m_de82471b8e92e8c9": {
     "message": "Access a telechargiadas betg permess. La registraziun automatica resta deactivada."
   },
   "m_26e9086fb67e1171": {
-    "message": "Access a telechargiadas betg permess. Ti pos tuttina encollar ina nova colliaziun en Download Engine."
+    "message": "Access a telechargiadas betg permess. Vus pudais tuttina encollar ina nova colliaziun en Download Engine."
   },
   "m_86237283243c5c06": {
     "message": "Destinaziun da telechargiada"
@@ -264,13 +264,13 @@
     "message": "Download Engine"
   },
   "m_67061b40bd1fc990": {
-    "message": "Download Engine ha questa datoteca en colonna, ma la copia dal navigatur n'ha betg pudì vegnir fermada. Controlla omaduas glistas da telechargiadas."
+    "message": "Download Engine ha questa datoteca en colonna, ma la copia dal navigatur n'ha betg pudì vegnir fermada. Controllai omaduas glistas da telechargiadas."
   },
   "m_ad28de051651de0a": {
     "message": "Download Engine è collià."
   },
   "m_b5ee50a47681c17b": {
-    "message": "Download Engine ha actualisà la telechargiada existenta. La copia dal navigatur resta era; controlla omaduas glistas."
+    "message": "Download Engine ha actualisà la telechargiada existenta. La copia dal navigatur resta era; controllai omaduas glistas."
   },
   "m_55cff9fa827ef904": {
     "message": "Download Engine copiescha ils cookies d'annunzia correspundents dal tab original, inclus ses container Firefox. La datoteca sto esser sin il medem server."
@@ -300,13 +300,13 @@
     "message": "Telechargiar cun Download Engine"
   },
   "m_cc5c7b4f90b18c40": {
-    "message": "Activar la scuverta cun access a websites. Na dovra betg tias datas d'annunzia."
+    "message": "Activar la scuverta cun access a websites. Na dovra betg Vossas datas d'annunzia."
   },
   "m_e2d9eaba91bf0037": {
-    "message": "Endatescha ina URL cumpletta HTTP u HTTPS d'ina datoteca."
+    "message": "Endatai ina URL cumpletta HTTP u HTTPS d'ina datoteca."
   },
   "m_6e42641a11a1c04e": {
-    "message": "Endatescha ina grondezza minimala tranter 0 ed 1 TB."
+    "message": "Endatai ina grondezza minimala tranter 0 ed 1 TB."
   },
   "m_4eb6084d5e196685": {
     "message": "Telechargiada existenta actualisada en Download Engine."
@@ -318,7 +318,7 @@
     "message": "Datoteca / colliaziun"
   },
   "m_fb6219471a55d640": {
-    "message": "Las telechargiadas vegnan surpigliadas automaticamain. Collia l’app desktop en la configuraziun dal navigatur."
+    "message": "Las telechargiadas vegnan surpigliadas automaticamain. Colliai l’app desktop en la configuraziun dal navigatur."
   },
   "m_95b44f14672ddf20": {
     "message": "Num da datoteca, text da colliaziun u URL"
@@ -342,22 +342,22 @@
     "message": "Chattar videos cun Download Engine"
   },
   "m_c14ae1090e852370": {
-    "message": "Terminescha la dumonda da permissiun averta avant midar in auter parameter."
+    "message": "Terminai la dumonda da permissiun averta avant midar in auter parameter."
   },
   "m_3b36902cb433c0af": {
     "message": "Ils ordinaturs vegnan administrads en ils Parameters da Download Engine."
   },
   "m_fb1c8ed06249aced": {
-    "message": "Chattà {0} {1}. Verifitga els en il nov tab."
+    "message": "Chattà {0} {1}. Verifitgai els en il nov tab."
   },
   "m_dac55102f2a6291b": {
     "message": "Chattà en"
   },
   "m_cf58b80fa579dabc": {
-    "message": "Nova colliaziun chattada. Verifitga la controlla da datas memorisadas en Download Engine e conferma lura da cuntinuar."
+    "message": "Nova colliaziun chattada. Verifitgai la controlla da datas memorisadas en Download Engine e confermai lura da cuntinuar."
   },
   "m_23b41d51987507df": {
-    "message": "HLS / DASH avra ina prevista da desktop; streams live u criptads n'èn betg sustegnids. Activescha la scuverta da medias avant la reproducziun per chattar dapli streams."
+    "message": "HLS / DASH avra ina prevista da desktop; streams live u criptads n'èn betg sustegnids. Activai la scuverta da medias avant la reproducziun per chattar dapli streams."
   },
   "m_1aa4cb0bcca76e92": {
     "message": "Maletg"
@@ -402,10 +402,10 @@
     "message": "Website nunvalid per il buttun da video."
   },
   "m_c2e9a31124f7d0f7": {
-    "message": "Lascha avert il tab original dal website cun l'annunzia activa."
+    "message": "Laschai avert il tab original dal website cun l'annunzia activa."
   },
   "m_019e66b1bd219970": {
-    "message": "Lascha avert il tab original cun l'annunzia activa. Navigaziun privata n'è betg sustegnida."
+    "message": "Laschai avert il tab original cun l'annunzia activa. Navigaziun privata n'è betg sustegnida."
   },
   "m_251452cbeaef4875": {
     "message": "Las pli grondas l'emprim"
@@ -426,19 +426,19 @@
     "message": "Scuverta da medias"
   },
   "m_d7b80c91cf6b7aa5": {
-    "message": "L'access a la scuverta da medias è midà. Activescha el danovamain cura che ti es pront."
+    "message": "L'access a la scuverta da medias è midà. Activai el danovamain cura che Vus vulais."
   },
   "m_36fb507d0e7b32e8": {
     "message": "Scuverta da medias deactivada. Sia glista è vegnida stizzada."
   },
   "m_63cfe215acef08ce": {
-    "message": "Scuverta da medias activada. Avia la reproducziun u rechargia la pagina."
+    "message": "Scuverta da medias activada. Aviai la reproducziun u rechargiai la pagina."
   },
   "m_05dc18f8ce93981b": {
-    "message": "Scuverta da medias betg disponibla. Rechargia l'extensiun per empruvar danovamain."
+    "message": "Scuverta da medias betg disponibla. Rechargiai l'extensiun per empruvar danovamain."
   },
   "m_7a05c2c962505cdb": {
-    "message": "Impussibel d'actualisar la glista da medias. Deactivescha ed activescha danovamain la scuverta per empruvar."
+    "message": "Impussibel d'actualisar la glista da medias. Deactivai ed activai danovamain la scuverta per empruvar."
   },
   "m_667d5d5489d7fc17": {
     "message": "elements da medias"
@@ -471,7 +471,7 @@
     "message": "Chargià naginas colliaziuns"
   },
   "m_507f9ea8cb63e18e": {
-    "message": "Nagina colliaziun correspunda a tes filters."
+    "message": "Nagina colliaziun correspunda a Voss filters."
   },
   "m_7eaa329a40093924": {
     "message": "Naginas datotecas correspundentas"
@@ -483,31 +483,31 @@
     "message": "Nagina resposta dal process davosvart da l'extensiun."
   },
   "m_47788a2327f83840": {
-    "message": "Impussibel da leger datas d'annunzia sustegnidas dal navigatur. T'annunzia tar quest website ed emprova danovamain. Sessiuns privatas u partiziunadas n'èn betg sustegnidas."
+    "message": "Impussibel da leger datas d'annunzia sustegnidas dal navigatur. As annunziai tar quest website ed empruvai danovamain. Sessiuns privatas u partiziunadas n'èn betg sustegnidas."
   },
   "m_1e9601e1e54c4d5a": {
-    "message": "Nagins cookies d'annunzia sustegnids correspundan a questa datoteca. T'annunzia l'emprim sin quest website. Sessiuns privatas, partiziunadas ed isoladas tenor l'emprima partida n'èn betg sustegnidas."
+    "message": "Nagins cookies d'annunzia sustegnids correspundan a questa datoteca. As annunziai l'emprim sin quest website. Sessiuns privatas, partiziunadas ed isoladas tenor l'emprima partida n'èn betg sustegnidas."
   },
   "m_3e86480851090d8e": {
-    "message": "Deactivà sco standard. Activescha per chattar dumondas da video ed audio durant navigar."
+    "message": "Deactivà sco standard. Activai per chattar dumondas da video ed audio durant navigar."
   },
   "m_841fa2784ee46d5c": {
-    "message": "Deactivà per quest website. Tia tscherna è memorisada."
+    "message": "Deactivà per quest website. Vossa tscherna è memorisada."
   },
   "m_b6d42710b782d638": {
-    "message": "Activà sco standard. Permetta quest website per mussar ils buttuns da video."
+    "message": "Activà sco standard. Permettai quest website per mussar ils buttuns da video."
   },
   "m_48ff08561347ceb3": {
-    "message": "Activà sco standard. Avra in website per midar ses parameter."
+    "message": "Activà sco standard. Avri in website per midar ses parameter."
   },
   "m_718a1c9b01954136": {
-    "message": "Activà sco standard. Fa ir in video per al chattar, lura tscherna tge telechargiar."
+    "message": "Activà sco standard. Faschai ir in video per al chattar, lura tscherni tge telechargiar."
   },
   "m_a5796db85ba454a2": {
-    "message": "Activà sco standard. Deactivescha per zuppentar ils buttuns da video sin quest website."
+    "message": "Activà sco standard. Deactivai per zuppentar ils buttuns da video sin quest website."
   },
   "m_b7e24a07e6b998ce": {
-    "message": "Activà sco standard. Tia tscherna vegn memorisada per quest website."
+    "message": "Activà sco standard. Vossa tscherna vegn memorisada per quest website."
   },
   "m_18aa46ba0236a241": {
     "message": "In website per lingia, inclus sias sutdominas; * correspunda a mintga part dal num."
@@ -519,25 +519,25 @@
     "message": "Mo las colliaziuns tschernidas vegnan transmessas a Download Engine. Colliaziuns pon manar a paginas web; ils tips da datoteca sa basan sin nums e metadatas disponiblas."
   },
   "m_8bee84e594e99e34": {
-    "message": "Avra in tab dal navigatur ed avra danovamain Download Engine."
+    "message": "Avri in tab dal navigatur ed avri danovamain Download Engine."
   },
   "m_c66ff2b172c3b834": {
-    "message": "Avra ina pagina web normala per configurar ses buttun da video."
+    "message": "Avri ina pagina web normala per configurar ses buttun da video."
   },
   "m_aa4c148abfa53385": {
-    "message": "Avra ina pagina web normala per chattar sias medias."
+    "message": "Avri ina pagina web normala per chattar sias medias."
   },
   "m_215a54029c2b4b91": {
-    "message": "Avra ina pagina web normala per verifitgar sias medias."
+    "message": "Avri ina pagina web normala per verifitgar sias medias."
   },
   "m_a9a64a3ba1e37620": {
-    "message": "Avra ina pagina web HTTP u HTTPS e clicca lura sin l'extensiun sin quella pagina."
+    "message": "Avri ina pagina web HTTP u HTTPS e cliccai lura sin l'extensiun sin quella pagina."
   },
   "m_5d404dc8daf23871": {
-    "message": "Avra l'extensiun Download Engine ed emprova danovamain."
+    "message": "Avri l'extensiun Download Engine ed empruvai danovamain."
   },
   "m_1c911c28ea089770": {
-    "message": "Avra il website cun l'annunzia activa en in tab normal e tscherna lura ina datoteca sin il medem server."
+    "message": "Avri il website cun l'annunzia activa en in tab normal e tscherni lura ina datoteca sin il medem server."
   },
   "m_b4c5fc73a947b6af": {
     "message": "Avert en l'app"
@@ -621,19 +621,19 @@
     "message": "Recuperar transmissiuns"
   },
   "m_c73c9c73104c4316": {
-    "message": "Access per la recuperaziun activà. Clicca sin la medema datoteca sin sia pagina e verifitga ella lura en Download Engine."
+    "message": "Access per la recuperaziun activà. Cliccai sin la medema datoteca sin sia pagina e verifitgai ella lura en Download Engine."
   },
   "m_acfeb89bc6c13696": {
     "message": "Recuperaziun interrutta. La telechargiada resta en il navigatur."
   },
   "m_d662ba072dd18ac7": {
-    "message": "Recuperaziun verifitgada. Guarda la glista da telechargiadas dal navigatur per datotecas en pausa."
+    "message": "Recuperaziun verifitgada. Guardai la glista da telechargiadas dal navigatur per datotecas en pausa."
   },
   "m_ad787fd387d7b9ad": {
     "message": "Impussibel d'aviar la recuperaziun: "
   },
   "m_24cedb972410650c": {
-    "message": "La recuperaziun basegna attenziun. Dovra Cuntinuar en la glista da telechargiadas dal navigatur sche necessari. "
+    "message": "La recuperaziun basegna attenziun. Duvrai Cuntinuar en la glista da telechargiadas dal navigatur sche necessari. "
   },
   "m_5273e2f102fe7c0d": {
     "message": "Recuperaziun fermada: "
@@ -645,7 +645,7 @@
     "message": "Rechargiar las destinaziuns"
   },
   "m_9202490cb35dbda0": {
-    "message": "Rechargia l'extensiun Download Engine per terminar l'actualisaziun."
+    "message": "Rechargiai l'extensiun Download Engine per terminar l'actualisaziun."
   },
   "m_b330cbc172cf1e68": {
     "message": "Allontanar l’access a l’annunzia dal navigatur"
@@ -654,19 +654,19 @@
     "message": "Allontanar l'access da l'extensiun a quest website"
   },
   "m_45a4092662eb386c": {
-    "message": "L’allontanament ferma la lectura da cookies sin tut las paginas. La detecziun da videos cuntinuescha. Stizza las datas en Download Engine → Autentificaziun → Nagina."
+    "message": "L’allontanament ferma la lectura da cookies sin tut las paginas. La detecziun da videos cuntinuescha. Stizzai las datas en Download Engine → Autentificaziun → Nagina."
   },
   "m_22799a32fabd0898": {
-    "message": "Allontanar l'access al website ferma futuras lecturas da cookies. Per stizzar ina copia existenta, allontana la telechargiada en Download Engine u tscherna Autentificaziun → Nagin."
+    "message": "Allontanar l'access al website ferma futuras lecturas da cookies. Per stizzar ina copia existenta, allontanai la telechargiada en Download Engine u tscherni Autentificaziun → Nagin."
   },
   "m_5923e8de81d8741b": {
-    "message": "Avra danovamain l'extensiun ed emprova danovamain."
+    "message": "Avri danovamain l'extensiun ed empruvai danovamain."
   },
   "m_20a3253602a7fcee": {
     "message": "Grondezza annunziada da la datoteca"
   },
   "m_3e536eb4562fe176": {
-    "message": "Schlia la gruppa pendenta avant mussar la prevista d'in video."
+    "message": "Schliai la gruppa pendenta avant mussar la prevista d'in video."
   },
   "m_602f8e637002a585": {
     "message": "Restaurar ils standards"
@@ -675,10 +675,10 @@
     "message": "Empruvar danovamain la medema gruppa"
   },
   "m_60d03e7404e40486": {
-    "message": "Emprova danovamain la gruppa pendenta avant midar sia selecziun."
+    "message": "Empruvai danovamain la gruppa pendenta avant midar sia selecziun."
   },
   "m_de8cfa0e6bb6d592": {
-    "message": "Emprova danovamain la medema gruppa per verifitgar sia retschavida."
+    "message": "Empruvai danovamain la medema gruppa per verifitgar sia retschavida."
   },
   "m_70786ccffcb091cd": {
     "message": "Verifitgar "
@@ -687,25 +687,25 @@
     "message": "Verifitgar ↗"
   },
   "m_8c76a4f01cdeec77": {
-    "message": "Verifitga las colliaziuns e resursas da questa pagina ed agiunta lura las datotecas giavischadas a tia colonna."
+    "message": "Verifitgai las colliaziuns e resursas da questa pagina ed agiuntai lura las datotecas giavischadas a Vossa colonna."
   },
   "m_3f21ed22e0fcea7e": {
-    "message": "Verifitga las colliaziuns sin questa pagina ed agiunta lura las datotecas giavischadas a tia colonna."
+    "message": "Verifitgai las colliaziuns sin questa pagina ed agiuntai lura las datotecas giavischadas a Vossa colonna."
   },
   "m_1ee0fc616e9e22a3": {
     "message": "Verifitgar il video en Download Engine"
   },
   "m_3bc941f7f11d1ac7": {
-    "message": "Verifitga il video en Download Engine. Nagut è vegnì telechargià."
+    "message": "Verifitgai il video en Download Engine. Nagut è vegnì telechargià."
   },
   "m_41b3d85b43f47094": {
-    "message": "Verifitga l'annunzia dal navigatur per quest website en il nov tab."
+    "message": "Verifitgai l'annunzia dal navigatur per quest website en il nov tab."
   },
   "m_193df65a5f826122": {
     "message": "Clic dretg → Telechargiar cun Download Engine trametta adina la colliaziun, independentamain da questas reglas."
   },
   "m_852bfbb688dd15da": {
-    "message": "Clicca cun la tasta dretga sin ina colliaziun a datoteca per la trametter a l'app, u activescha la registraziun automatica."
+    "message": "Cliccai cun la tasta dretga sin ina colliaziun a datoteca per la trametter a l'app, u activai la registraziun automatica."
   },
   "m_c071cf5f5ed6f884": {
     "message": "activ"
@@ -732,13 +732,13 @@
     "message": "Tscherner tut las datotecas correspundentas sin tut las paginas"
   },
   "m_dea1a3e66e47d981": {
-    "message": "Tscherna dad 1 fin 1'000 colliaziuns da la glista."
+    "message": "Tscherni dad 1 fin 1'000 colliaziuns da la glista."
   },
   "m_b908effe1a7c133b": {
-    "message": "Tscherna datotecas directas da video u mussa la prevista d'in stream HLS / DASH per tscherner qualitad ed audio en Download Engine."
+    "message": "Tscherni datotecas directas da video u mussai la prevista d'in stream HLS / DASH per tscherner qualitad ed audio en Download Engine."
   },
   "m_ead5d68c99cc77a8": {
-    "message": "Tscherna damain colliaziuns per questa gruppa."
+    "message": "Tscherni damain colliaziuns per questa gruppa."
   },
   "m_e1ce37067ddc2ab5": {
     "message": "Tscherner il protocol"
@@ -747,10 +747,10 @@
     "message": "Tscherner las correspundentas"
   },
   "m_87a73c5380c6c916": {
-    "message": "Tscherna las datotecas che ti vuls agiuntar."
+    "message": "Tscherni las datotecas che Vus vulais agiuntar."
   },
   "m_12576160b98349a6": {
-    "message": "Tscherna il protocol e smatga lura Ctrl+C per al copiar."
+    "message": "Tscherni il protocol e smatgai lura Ctrl+C per al copiar."
   },
   "m_3ac5caf9518d7822": {
     "message": "Trametter colliaziuns a datotecas u colliaziuns tschernidas d'ina pagina a Download Engine, cun registraziun automatica facultativa da telechargiadas."
@@ -759,16 +759,16 @@
     "message": "Trametter…"
   },
   "m_9fa4fffd6b2390aa": {
-    "message": "Separescha cun spazis. * correspunda a tuts caracters, per exempel r0*. Endatescha mo * per registrar tut ils tips."
+    "message": "Separai cun spazis. * correspunda a tuts caracters, per exempel r0*. Endatai mo * per registrar tut ils tips."
   },
   "m_818cd8d91aea3a16": {
     "message": "Parameter"
   },
   "m_64d28781ada09e2e": {
-    "message": "Access al website allontanà. Telechargiadas existentas conservan lur copia criptada fin che ti l'allontanas en Download Engine."
+    "message": "Access al website allontanà. Telechargiadas existentas conservan lur copia criptada fin che Vus l'allontanais en Download Engine."
   },
   "m_b1dc42771ae048ea": {
-    "message": "Access al website betg permess. Permetta quest website per mussar buttuns da video."
+    "message": "Access al website betg permess. Permettai quest website per mussar buttuns da video."
   },
   "m_683653872b36eaa7": {
     "message": "Access al website betg permess. Tramess naginas datas d'annunzia."
@@ -789,7 +789,7 @@
     "message": "Grondezza nunenconuschenta"
   },
   "m_80b858ffa465e189": {
-    "message": "Datotecas pli pitschnas restan en il navigatur. Lascha vid per mintga grondezza."
+    "message": "Datotecas pli pitschnas restan en il navigatur. Laschai vid per mintga grondezza."
   },
   "m_bec69036aa27e7fa": {
     "message": "Zavrar"
@@ -798,16 +798,16 @@
     "message": "Pagina d'origin"
   },
   "m_329c0763bd9ec092": {
-    "message": "Avia la reproducziun cun la scuverta activada u dovra Chattar videos per analisar questa pagina."
+    "message": "Aviai la reproducziun cun la scuverta activada u duvrai Chattar videos per analisar questa pagina."
   },
   "m_febbea5fb07c20c8": {
-    "message": "L'app n'ha betg pudì confermar l'interrupziun. La copia dal navigatur è restada; controlla l'app avant empruvar danovamain."
+    "message": "L'app n'ha betg pudì confermar l'interrupziun. La copia dal navigatur è restada; controllai l'app avant empruvar danovamain."
   },
   "m_fbb00942fda85125": {
     "message": "L'app n'ha betg confermà la nova colliaziun"
   },
   "m_ec379e9b433646d8": {
-    "message": "L'app n'ha betg confermà la transmissiun. La telechargiada dal navigatur è restada; controlla era Download Engine sche ina copia cumpara là."
+    "message": "L'app n'ha betg confermà la transmissiun. La telechargiada dal navigatur è restada; controllai era Download Engine sche ina copia cumpara là."
   },
   "m_903e073f9cd11362": {
     "message": "La copia dal navigatur è terminada u ha cuntinuà durant l'interrupziun"
@@ -816,13 +816,13 @@
     "message": "Il navigatur n'ha betg pudì metter en pausa questa telechargiada"
   },
   "m_eed9387ac150e8fe": {
-    "message": "Il navigatur n'ha betg pudì leger questa pagina. Emprova ina pagina web normala."
+    "message": "Il navigatur n'ha betg pudì leger questa pagina. Empruvai ina pagina web normala."
   },
   "m_f3cfbd4cbe900742": {
-    "message": "La telechargiada è restada en il navigatur e Download Engine l'ha era retschavida. Controlla omaduas glistas da telechargiadas."
+    "message": "La telechargiada è restada en il navigatur e Download Engine l'ha era retschavida. Controllai omaduas glistas da telechargiadas."
   },
   "m_d69c84ad2351aa26": {
-    "message": "La transmissiun da l'annunzia dal navigatur n'è betg confermada. Controlla la connexiun cun l'app da desktop ed emprova lura danovamain la medema dumonda."
+    "message": "La transmissiun da l'annunzia dal navigatur n'è betg confermada. Controllai la connexiun cun l'app da desktop ed empruvai lura danovamain la medema dumonda."
   },
   "m_55e44ceeae345baf": {
     "message": "L'app da desktop n'ha betg pudì agiuntar questa telechargiada."
@@ -831,19 +831,19 @@
     "message": "L'app da desktop n'ha betg confermà ina telechargiada memorisada."
   },
   "m_2b3a9305582ef2d1": {
-    "message": "L'app da desktop n'ha betg confermà la recuperaziun dal navigatur. Actualisescha Download Engine ed emprova danovamain."
+    "message": "L'app da desktop n'ha betg confermà la recuperaziun dal navigatur. Actualisai Download Engine ed empruvai danovamain."
   },
   "m_e6c0313fd505b718": {
     "message": "L'app da desktop n'ha betg confermà la transmissiun dal navigatur."
   },
   "m_bedea1012885305a": {
-    "message": "L'app da desktop n'ha betg confermà l'entira gruppa memorisada. Emprova danovamain la medema gruppa."
+    "message": "L'app da desktop n'ha betg confermà l'entira gruppa memorisada. Empruvai danovamain la medema gruppa."
   },
   "m_390e7750e59f2870": {
-    "message": "L'app da desktop n'ha betg confermà la prevista da video. Actualisescha Download Engine u emprova danovamain."
+    "message": "L'app da desktop n'ha betg confermà la prevista da video. Actualisai Download Engine u empruvai danovamain."
   },
   "m_1947644923407952": {
-    "message": "L'app da desktop n'ha betg confermà la verificaziun da video. Actualisescha Download Engine e dovra lura Recuperar transmissiuns."
+    "message": "L'app da desktop n'ha betg confermà la verificaziun da video. Actualisai Download Engine e duvrai lura Recuperar transmissiuns."
   },
   "m_088826a3e5e4e204": {
     "message": "L'app da desktop n'ha betg respundì ad ura."
@@ -858,25 +858,25 @@
     "message": "L'extensiun n'ha betg respundì."
   },
   "m_306540f92d0513e3": {
-    "message": "L'extensiun n'ha betg respundì. Rechargia quest tab per empruvar danovamain."
+    "message": "L'extensiun n'ha betg respundì. Rechargiai quest tab per empruvar danovamain."
   },
   "m_d122305531039ccd": {
-    "message": "L'extensiun n'ha betg respundì. Emprova danovamain la medema dumonda."
+    "message": "L'extensiun n'ha betg respundì. Empruvai danovamain la medema dumonda."
   },
   "m_30289712f9fad302": {
-    "message": "L'ultima gruppa n'ha nagina resposta confermada. Empruvar danovamain trametta la medema gruppa senza l'agiuntar duas giadas. Lascha avert il navigatur fin che quai è schlià."
+    "message": "L'ultima gruppa n'ha nagina resposta confermada. Empruvar danovamain trametta la medema gruppa senza l'agiuntar duas giadas. Laschai avert il navigatur fin che quai è schlià."
   },
   "m_e72a03f673ade934": {
-    "message": "Il tab original è vegnì serrà. Avra il website ed emprova danovamain."
+    "message": "Il tab original è vegnì serrà. Avri il website ed empruvai danovamain."
   },
   "m_290b216afbebe4b2": {
-    "message": "La pagina è midada. Clicca danovamain sin ses buttun da video."
+    "message": "La pagina è midada. Cliccai danovamain sin ses buttun da video."
   },
   "m_110b363e52b4a6d5": {
-    "message": "La pagina è midada. Avra danovamain l'extensiun ed emprova danovamain."
+    "message": "La pagina è midada. Avri danovamain l'extensiun ed empruvai danovamain."
   },
   "m_9ade37e9a32e749d": {
-    "message": "La pagina è midada. Avra danovamain l'extensiun."
+    "message": "La pagina è midada. Avri danovamain l'extensiun."
   },
   "m_f314de530158f111": {
     "message": "La pagina ha returnà ina glista da colliaziuns nunvalida."
@@ -894,28 +894,28 @@
     "message": "Questa gruppa vegn gia transmessa."
   },
   "m_604518b6a7b13e73": {
-    "message": "Quest selectur da colliaziuns è scadì. Rimna danovamain las colliaziuns da la pagina cun l'extensiun."
+    "message": "Quest selectur da colliaziuns è scadì. Rimnai danovamain las colliaziuns da la pagina cun l'extensiun."
   },
   "m_68fd909eec66f301": {
-    "message": "Questa dumonda d'annunzia è scadida. Controlla la colonna Download Engine avant trametter danovamain la datoteca."
+    "message": "Questa dumonda d'annunzia è scadida. Controllai la colonna Download Engine avant trametter danovamain la datoteca."
   },
   "m_14204d3bb3d2fc5e": {
-    "message": "Quest element da medias è scadì. Reproducescha el danovamain per al chattar."
+    "message": "Quest element da medias è scadì. Reproduci el danovamain per al chattar."
   },
   "m_d5993dba7abddfa4": {
-    "message": "Questa pagina cuntegna memia bleras datas da colliaziuns. Emprova ina pagina pli pitschna."
+    "message": "Questa pagina cuntegna memia bleras datas da colliaziuns. Empruvai ina pagina pli pitschna."
   },
   "m_359c18c81b3a8742": {
-    "message": "Questa pagina cuntegna memia bleras datas da video. Emprova ina pagina pli pitschna."
+    "message": "Questa pagina cuntegna memia bleras datas da video. Empruvai ina pagina pli pitschna."
   },
   "m_601ed5513a7de1ff": {
-    "message": "Questa pagina è gronda. Mo ina selecziun limitada da colliaziuns vegn mussada; avra ina pagina pli pitschna per rimnar dapli."
+    "message": "Questa pagina è gronda. Mo ina selecziun limitada da colliaziuns vegn mussada; avri ina pagina pli pitschna per rimnar dapli."
   },
   "m_f35a9682d7be0bd2": {
-    "message": "Las datas d'annunzia dal navigatur per quest website èn memia grondas. Telechargia questa datoteca en il navigatur."
+    "message": "Las datas d'annunzia dal navigatur per quest website èn memia grondas. Telechargiai questa datoteca en il navigatur."
   },
   "m_a13331f2e442016c": {
-    "message": "Ils cookies da quest website na pon betg vegnir transferids segir. Telechargia questa datoteca en il navigatur."
+    "message": "Ils cookies da quest website na pon betg vegnir transferids segir. Telechargiai questa datoteca en il navigatur."
   },
   "m_d8b8392e2c542950": {
     "message": "Empruvar danovamain"
@@ -933,25 +933,25 @@
     "message": "Pagina senza titel"
   },
   "m_24f3b0891ed85ed6": {
-    "message": "Actualisescha l'app da desktop per duvrar gruppas da colliaziuns da pagina."
+    "message": "Actualisai l'app da desktop per duvrar gruppas da colliaziuns da pagina."
   },
   "m_239bbb679e8b5ed9": {
-    "message": "Actualisescha l'app da desktop Download Engine avant activar la registraziun automatica."
+    "message": "Actualisai l'app da desktop Download Engine avant activar la registraziun automatica."
   },
   "m_edfcdbe6f4310523": {
-    "message": "Actualisescha l'app da desktop Download Engine avant duvrar l'annunzia dal navigatur."
+    "message": "Actualisai l'app da desktop Download Engine avant duvrar l'annunzia dal navigatur."
   },
   "m_6ef631778917843c": {
     "message": "Duvrar l'annunzia dal navigatur · Download Engine"
   },
   "m_a84b376c126bf400": {
-    "message": "Dovra Chattar videos per analisar questa pagina u activescha la scuverta ed avia la reproducziun."
+    "message": "Duvrai Chattar videos per analisar questa pagina u activai la scuverta ed aviai la reproducziun."
   },
   "m_a1426ad7784ebbbc": {
-    "message": "Dovra Prevista HLS u Prevista DASH per tscherner ina qualitad avant agiuntar in stream."
+    "message": "Duvrai Prevista HLS u Prevista DASH per tscherner ina qualitad avant agiuntar in stream."
   },
   "m_244ef0cdc79df596": {
-    "message": "Dovra Cuntinuar en la glista da telechargiadas dal navigatur; la recuperaziun n'ha betg pudì deliberar sia copia en pausa."
+    "message": "Duvrai Cuntinuar en la glista da telechargiadas dal navigatur; la recuperaziun n'ha betg pudì deliberar sia copia en pausa."
   },
   "m_acfe566ca2e566e7": {
     "message": "Duvrar l'annunzia da quest website"
@@ -960,10 +960,10 @@
     "message": "Duvrar l'annunzia da quest website (l'emprim verifitgar)"
   },
   "m_d4aa36ffd2cc2537": {
-    "message": "Utilisescha maximalmain {0} tips da datoteca."
+    "message": "Utilisai maximalmain {0} tips da datoteca."
   },
   "m_850e8821a631dd82": {
-    "message": "Utilisescha maximalmain {0} websites."
+    "message": "Utilisai maximalmain {0} websites."
   },
   "m_27eb9ee5a85d401e": {
     "message": "Dovra las reglas automaticas d'ordinaturs en ils Parameters da Download Engine."
@@ -990,7 +990,7 @@
     "message": "Buttuns da video deactivads per quest website."
   },
   "m_4fcff88a23263c1d": {
-    "message": "Buttuns da video activads per quest website. Clicca sin in buttun per verifitgar ils videos disponibels."
+    "message": "Buttuns da video activads per quest website. Cliccai sin in buttun per verifitgar ils videos disponibels."
   },
   "m_33a6de083bd3b681": {
     "message": "Telechargiadas da video"
@@ -1011,13 +1011,13 @@
     "message": "Stream da video"
   },
   "m_991cf9db508be663": {
-    "message": "Spetgar {0}. Clicca sin sia colliaziun da telechargiada sin la pagina originala e verifitga lura en Download Engine."
+    "message": "Spetgar {0}. Cliccai sin sia colliaziun da telechargiada sin la pagina originala e verifitgai lura en Download Engine."
   },
   "m_487420533636d10c": {
     "message": "Access a websites betg permess. La scuverta da medias resta deactivada."
   },
   "m_11fcf7333cfe5a60": {
-    "message": "Windows criptescha questa copia per tes conto. Ella vegn duvrada mo per questa telechargiada, fin a 24 uras, ed allontanada cura che la telechargiada finescha u vegn allontanada. Sa deconnectar en il navigatur na stizza betg la copia memorisada."
+    "message": "Windows criptescha questa copia per Voss conto. Ella vegn duvrada mo per questa telechargiada, fin a 24 uras, ed allontanada cura che la telechargiada finescha u vegn allontanada. Sa deconnectar en il navigatur na stizza betg la copia memorisada."
   },
   "extensionName": {
     "message": "Integraziun Download Engine"

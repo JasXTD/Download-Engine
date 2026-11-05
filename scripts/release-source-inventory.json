@@ -1419,7 +1419,10 @@
     "src/desktop/download_status/torrent_tests.rs",
     "src/torrent/details.rs",
     "torrent/src/details.rs",
-    "torrent/src/details_tests.rs"
+    "torrent/src/details_tests.rs",
+    "src/torrent/limits.rs",
+    "torrent/src/reason.rs",
+    "torrent/src/router.rs"
   ],
   "exceptions": [
     {

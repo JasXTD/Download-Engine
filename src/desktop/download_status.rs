@@ -1408,6 +1408,9 @@ impl Window {
                         ui.label(RichText::new(tr("Uploaded")).small().color(p.muted));
                         ui.label(bytes(torrent.uploaded));
                     });
+                    if let Some(sharing) = torrent.sharing.filter(|_| seeding) {
+                        draw_sharing_limits(ui, p, sharing);
+                    }
                 }
                 ui.horizontal_wrapped(|ui| {
                     ui.label(RichText::new(tr("Size")).small().color(p.muted));
@@ -1681,6 +1684,64 @@ impl Window {
             });
         next_watch
     }
+}
+
+/// A shared torrent's ratio, how long it has shared, and when it stops on its own.
+fn draw_sharing_limits(
+    ui: &mut egui::Ui,
+    p: Palette,
+    sharing: download_engine::transfer_activity::SharingView,
+) {
+    let ratio = share_ratio(sharing.ratio_hundredths);
+    let ratio = match sharing.limit_ratio {
+        Some(limit) => tf!("{} of {}", ratio, share_ratio(u64::from(limit))),
+        None => ratio,
+    };
+    ui.horizontal_wrapped(|ui| {
+        ui.label(RichText::new(tr("Ratio")).small().color(p.muted));
+        ui.label(ratio);
+        ui.add_space(12.0);
+        ui.label(
+            RichText::new(tf!("{time} shared", time = duration(sharing.shared_secs)))
+                .small()
+                .color(p.muted),
+        );
+    });
+    // The bar follows whichever limit is closer.
+    let progress = [
+        sharing
+            .limit_ratio
+            .map(|limit| sharing.ratio_hundredths as f64 / f64::from(limit)),
+        sharing
+            .limit_seconds
+            .map(|limit| sharing.shared_secs as f64 / f64::from(limit)),
+    ]
+    .into_iter()
+    .flatten()
+    .reduce(f64::max);
+    if let Some(progress) = progress {
+        let (bar, _) = ui.allocate_exact_size(vec2(ui.available_width(), 6.0), Sense::hover());
+        ui.painter().rect_filled(bar, 3, p.track);
+        let done = bar.width() * progress.clamp(0.0, 1.0) as f32;
+        if done > 0.0 {
+            let filled = Rect::from_min_size(bar.min, vec2(done, bar.height()));
+            ui.painter().rect_filled(filled, 3, p.blue);
+        }
+    }
+    let rule = match (sharing.limit_ratio, sharing.limit_seconds) {
+        (Some(ratio), Some(seconds)) => tf!(
+            "Stops at ratio {ratio} or after {time}",
+            ratio = share_ratio(u64::from(ratio)),
+            time = sharing_time(seconds)
+        ),
+        (Some(ratio), None) => tf!(
+            "Stops at ratio {ratio}",
+            ratio = share_ratio(u64::from(ratio))
+        ),
+        (None, Some(seconds)) => tf!("Stops after {time}", time = sharing_time(seconds)),
+        (None, None) => tr("Shares until you stop it").into(),
+    };
+    ui.label(RichText::new(rule).small().color(p.muted));
 }
 
 fn exact_bytes(n: u64) -> String {

@@ -1554,14 +1554,19 @@ impl Desktop {
                 ui.close();
             }
             let sharing = self.store.torrent_sharing(&job.id).unwrap_or(false);
-            if ui
-                .button(tr(if sharing {
-                    "Stop sharing"
-                } else {
-                    "Start sharing"
-                }))
-                .clicked()
-            {
+            // After a limit stopped it, sharing again keeps going until someone stops it.
+            let limit = (!sharing)
+                .then(|| self.store.torrent_sharing_totals(&job.id).ok())
+                .flatten()
+                .and_then(|totals| totals.stopped);
+            let label = if sharing {
+                tr("Stop sharing")
+            } else if limit.is_some() {
+                tr("Share again")
+            } else {
+                tr("Start sharing")
+            };
+            if ui.button(label).clicked() {
                 self.command(if sharing {
                     Command::StopSharing(job.id.clone())
                 } else {
@@ -1571,6 +1576,14 @@ impl Desktop {
             }
             if let Ok(Some(error)) = self.store.torrent_sharing_error(&job.id) {
                 ui.label(RichText::new(error).small());
+            }
+            if let Some(limit) = limit {
+                use download_engine::torrent::limits::Reached;
+                let reason = match limit {
+                    Reached::Ratio => tr("Sharing stopped at the ratio limit."),
+                    Reached::Time => tr("Sharing stopped at the time limit."),
+                };
+                ui.label(RichText::new(reason).small());
             }
         }
         if job.torrent.is_some()

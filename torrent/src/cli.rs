@@ -37,6 +37,9 @@ enum Command {
         file_name: Option<String>,
         #[serde(default)]
         trackers: Vec<String>,
+        /// The person's yes to looking up this magnet on the DHT. See `session::magnet_discovery`.
+        #[serde(default)]
+        dht_search: bool,
     },
     Select {
         name: String,
@@ -66,6 +69,9 @@ enum Command {
         upload_limit: Option<u32>,
         #[serde(default)]
         no_upload: bool,
+        /// Turns router setup on or off while running. Absent leaves it as it is.
+        #[serde(default)]
+        upnp: Option<bool>,
     },
     Allow {
         name: String,
@@ -167,6 +173,7 @@ async fn handle(session: &Arc<Session>, command: Command) -> Result<Value> {
             seed_only,
             file_name,
             trackers,
+            dht_search,
         } => {
             let add = AddOptions {
                 output,
@@ -176,6 +183,7 @@ async fn handle(session: &Arc<Session>, command: Command) -> Result<Value> {
                 seed_only,
                 file_name,
                 trackers,
+                dht_search,
             };
             let info_hash = match (torrent, magnet) {
                 (Some(path), None) => {
@@ -215,14 +223,21 @@ async fn handle(session: &Arc<Session>, command: Command) -> Result<Value> {
         Command::Configure {
             upload_limit,
             no_upload,
+            upnp,
         } => {
             session.configure(upload_limit, no_upload);
+            if let Some(on) = upnp {
+                session.set_upnp(on).await;
+            }
             Ok(json!({}))
         }
         Command::Allow { name, until } => Ok(json!({ "received": session.allow(&name, until)? })),
         Command::Stats { name: None } => Ok(serde_json::to_value(session.stats())?),
         Command::Stats { name: Some(name) } => {
-            Ok(serde_json::to_value(session.torrent(&name)?.stats())?)
+            let mut stats = serde_json::to_value(session.torrent(&name)?.stats())?;
+            // Every worker asks for its torrent often, so router setup rides along.
+            stats["router"] = serde_json::to_value(session.router_status())?;
+            Ok(stats)
         }
         Command::Pause { name } => {
             session.pause(&name).await?;
@@ -261,7 +276,11 @@ async fn serve(options: SessionOptions) -> Result<()> {
         };
         let reply = match reply {
             Ok(result) => json!({ "ok": true, "result": result }),
-            Err(error) => json!({ "ok": false, "error": format!("{error:#}") }),
+            Err(error) => json!({
+                "ok": false,
+                "error": format!("{error:#}"),
+                "code": crate::reason::code_of(&error),
+            }),
         };
         let mut stdout = std::io::stdout().lock();
         writeln!(stdout, "{reply}")?;
@@ -295,6 +314,7 @@ fn options_from(arguments: &[String]) -> Result<SessionOptions> {
             "--no-upload" => options.no_upload = true,
             "--trackers" => options.use_trackers = true,
             "--dht" => options.use_dht = true,
+            "--upnp" => options.upnp = true,
             other => bail!("unknown option {other}"),
         }
     }

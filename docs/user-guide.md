@@ -149,7 +149,15 @@ For an externally opened magnet, choose **Load file list** to allow the metadata
 
 Magnet metadata is fetched through the link's trackers first, so a private torrent's hash
 does not reach public DHT before its privacy flag is known. If the link has no usable
-tracker and its metadata is not already cached, open its `.torrent` file instead.
+tracker and its metadata is not already cached, Add download explains this and asks
+first. **Search the DHT** looks up that one magnet on the public DHT: computers there see
+which torrent you want and your IP address, but nothing announces your computer until the
+file list confirms a public torrent. If the file list says the torrent is private, the
+search stops; open the site's `.torrent` file instead. A search with no file list stops
+after 10 minutes, and **Search again** starts another. The yes counts only for that magnet
+and is kept with it if you choose Add and choose later. Nothing searches while **Find peers
+without a tracker (DHT)** is off, and links from browsers, the clipboard or Explorer never
+search on their own.
 
 Profiles containing torrents, or saving sharing or incoming-connection options, now require Download Engine 3.9.0 or newer. Keep a profile backup before upgrading if you need to return to an older build. Simply enabling torrents without adding one or enabling those options does not itself upgrade the profile.
 
@@ -173,9 +181,13 @@ Drop local `.torrent` files on the window or floating drop box. Copying a valid 
 
 Both options start **off** in **Preferences → Torrents**. Enable completed-torrent sharing, with uploading enabled, to share newly completed torrents. For an older completed torrent, use its menu → **Start sharing**. The app checks the saved pieces first and opens the payload read-only. Partial selections share only whole verified pieces available in the saved files; skipped files are never fetched. A selection with no complete piece cannot be shared.
 
-Sharing uses up to four separate workers and leaves downloads marked Completed. The status window shows **Seeding**, upload speed, peers and uploaded bytes. **Stop sharing**, **Stop** and **Stop all** end sharing while keeping the files. Explicitly stopped shares remain stopped after reopening. Otherwise, sharing resumes when the app reopens and the settings still allow it. A failed helper stops sharing and reports an error; use Start sharing after addressing it. No ratio or time-based seeding stop is configured automatically.
+Sharing uses up to four separate workers and leaves downloads marked Completed. The status window shows **Seeding**, upload speed, peers and uploaded bytes. **Stop sharing**, **Stop** and **Stop all** end sharing while keeping the files. Explicitly stopped shares remain stopped after reopening. Otherwise, sharing resumes when the app reopens and the settings still allow it. A failed helper stops sharing and reports an error; use Start sharing after addressing it.
 
-Incoming connections are a separate option. Choose a TCP port from 1024–65535. The helper listens only while it is needed and the option is on. Download Engine does not change Windows Firewall rules or configure your router; accepting connections from the internet depends on your firewall, router and network. Private torrents stay off public DHT/PEX. Private-tracker rules still apply to your account.
+Sharing stops on its own at a share ratio (uploaded ÷ size of the chosen files) or after a sharing time, whichever comes first. The defaults are ratio 2.0 or one week; change or turn off either limit under **Seed completed torrents**. Uploads while downloading count toward the ratio, and only time spent sharing counts toward the time limit. The counts are kept across restarts. The status window shows the ratio and when sharing stops. A torrent stopped by a limit keeps its files, and its menu offers **Share again**, which then shares it until you stop it.
+
+Incoming connections are a separate option. Choose a TCP port from 1024–65535. The helper listens only while it is needed and the option is on. Download Engine does not change Windows Firewall rules; accepting connections from the internet depends on your firewall, router and network. Private torrents stay off public DHT/PEX. Private-tracker rules still apply to your account.
+
+**Set up my router (UPnP)** is off by default and needs incoming connections on. Turning off incoming connections turns it off too. When on, the app asks only the router your system uses as its default gateway to forward the incoming TCP port to this computer, for one hour at a time. It renews that while torrents run and removes it when they stop; after a crash, the router drops it within the hour. It never replaces a rule another device uses, refuses routers that only keep permanent rules, and says when your provider shares one public address between customers, because a router rule can't help then. The line under the switch shows what the router answered. Router setup works on Windows and Linux; on macOS it reports itself unavailable.
 
 Torrent metadata is retained for later sharing and removed when that history entry is cleared or deleted. Removing history stops sharing and keeps the downloaded payload.
 

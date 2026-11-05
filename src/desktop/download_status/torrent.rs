@@ -1200,7 +1200,7 @@ impl Desktop {
     /// settings and the queue stays paused, so nothing here can start the helper.
     pub(super) fn torrent_status_sample(&mut self, mode: &str) {
         use download_engine::torrent::{File, Peer, Pieces, Tracker};
-        use download_engine::transfer_activity::TorrentSnapshot;
+        use download_engine::transfer_activity::{SharingView, TorrentSnapshot};
         const MIB: u64 = 1024 * 1024;
         let files: [(&str, u64, f64, bool); 6] = [
             (
@@ -1486,6 +1486,13 @@ impl Desktop {
                     upload_speed: if sharing { 410 * 1024 } else { 253_000 },
                     uploaded: 310 * MIB,
                     file_progress: progress.clone(),
+                    // Ratio 1.42 of 2.00 after 9 h 12 min, as in the approved mockup.
+                    sharing: sharing.then_some(SharingView {
+                        ratio_hundredths: 142,
+                        shared_secs: 9 * 3600 + 12 * 60,
+                        limit_ratio: Some(200),
+                        limit_seconds: Some(86_400),
+                    }),
                 },
                 Some(details.clone()),
             );

@@ -31,8 +31,34 @@ pub fn is_local_address(ip: IpAddr) -> bool {
     }
 }
 
+/// Well-known ports of services that are not torrent clients. Strangers' peer and node lists
+/// can name them to turn torrent clients against someone else's server, such as an
+/// internet-phone server on 5060, so they are never contacted.
+const SERVICE_PORTS: [u16; 12] = [
+    1433,  // SQL Server
+    1900,  // SSDP device discovery
+    3306,  // MySQL
+    3389,  // Remote Desktop
+    5060,  // SIP, internet phones
+    5061,  // SIP over TLS
+    5353,  // mDNS
+    5432,  // PostgreSQL
+    5900,  // VNC remote screens
+    6379,  // Redis
+    11211, // memcached
+    27017, // MongoDB
+];
+
+/// Ports a torrent client never listens on: everything below 1024, which belongs to system
+/// services such as web, mail and name servers, and the well-known ports above.
+pub fn is_service_port(port: u16) -> bool {
+    port < 1024 || SERVICE_PORTS.contains(&port)
+}
+
+/// Whether a peer or DHT node a stranger named may be contacted: a public address, on a port
+/// that no other kind of service uses.
 pub fn is_public_endpoint(addr: SocketAddr) -> bool {
-    addr.port() != 0 && !is_local_address(addr.ip())
+    !is_service_port(addr.port()) && !is_local_address(addr.ip())
 }
 
 #[cfg(test)]
@@ -50,6 +76,20 @@ mod tests {
             let ip = address.parse().unwrap();
             assert!(is_local_address(ip), "{address}");
             assert!(!is_public_endpoint(SocketAddr::new(ip, 6881)), "{address}");
+        }
+    }
+
+    #[test]
+    fn service_ports_are_never_contacted_even_on_public_addresses() {
+        let public: IpAddr = "93.184.216.34".parse().unwrap();
+        for port in [0, 1, 22, 25, 53, 80, 123, 443, 1023, 1900, 3389, 5060, 5061, 11211] {
+            assert!(is_service_port(port), "{port}");
+            assert!(!is_public_endpoint(SocketAddr::new(public, port)), "{port}");
+        }
+        // Ordinary peer ports stay usable, including the ones of the blocked popups.
+        for port in [1024, 3491, 3751, 6881, 6889, 25401, 51413, 65535] {
+            assert!(!is_service_port(port), "{port}");
+            assert!(is_public_endpoint(SocketAddr::new(public, port)), "{port}");
         }
     }
 

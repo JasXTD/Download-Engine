@@ -15,6 +15,21 @@ pub(super) fn modal(id: &'static str, p: Palette) -> egui::Modal {
     egui::Modal::new(egui::Id::new(id)).frame(frame(p))
 }
 
+/// Whether Esc or a click outside dismissed the modal. While `unsaved` edits would be
+/// lost, a click outside is ignored: it is easy to make by accident. Esc still counts.
+pub(super) fn dismissed<T>(response: &egui::ModalResponse<T>, unsaved: bool) -> bool {
+    if !unsaved || !response.backdrop_response.clicked() {
+        return response.should_close();
+    }
+    // egui's own test for Esc, without the click outside.
+    response.is_top_modal
+        && !response.any_popup_open
+        && response
+            .response
+            .ctx
+            .input_mut(|input| input.consume_key(egui::Modifiers::NONE, egui::Key::Escape))
+}
+
 /// The same card can also be hosted in a non-modal native status window.
 pub(super) fn frame(p: Palette) -> egui::Frame {
     egui::Frame::new()
@@ -87,8 +102,9 @@ pub(super) fn footer(ui: &mut egui::Ui, action: &str, hint: Option<&str>, p: Pal
 }
 
 /// Right-aligned footer; put the primary action first, then secondary actions.
-/// Ordinary forms dismiss through the header ×. A destructive confirmation can
-/// also offer an explicit Cancel action alongside its primary action.
+/// Ordinary forms dismiss through the header × only, with no Cancel beside it. A
+/// destructive confirmation can also offer an explicit Cancel action, and a yes-or-no
+/// question can name its answer (Not now, Later).
 pub(super) fn controls<R>(ui: &mut egui::Ui, content: impl FnOnce(&mut egui::Ui) -> R) -> R {
     ui.add_space(2.0);
     ui.separator();

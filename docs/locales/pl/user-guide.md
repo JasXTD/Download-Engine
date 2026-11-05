@@ -6,7 +6,7 @@
 
 Domyślnie włączone: jedno sprawdzenie przy każdym otwarciu aplikacji. Nowa wersja pozwala wybrać aktualizację lub odłożyć ją. Błędy sieci nie otwierają okna. Opcję można wyłączyć w Preferencjach. Pobierz i zainstaluj aktualizacje z oficjalnej strony wydań GitHub.
 
-Preferencje otwierają się w oknie z kategoriami. Zapisz stosuje zmiany; Anuluj, × lub Escape odrzuca niezapisane zmiany. Motyw można podejrzeć, a Reset przywraca tylko bieżącą kategorię. Edytory zaawansowane zapisują osobno i po zamknięciu wracają do Preferencji.
+Preferencje otwierają się w oknie z kategoriami. Zapisz stosuje zmiany; × lub Escape odrzuca niezapisane zmiany; dopóki są niezapisane zmiany, kliknięcie poza oknem go nie zamyka. Motyw można podejrzeć, a Reset przywraca tylko bieżącą kategorię. Edytory zaawansowane zapisują osobno i po zamknięciu wracają do Preferencji.
 
 ### Pierwsze kroki
 

@@ -6,7 +6,7 @@
 
 Bật theo mặc định và kiểm tra một lần mỗi khi mở ứng dụng. Khi có phiên bản mới, bạn chọn tải bản cập nhật hoặc để sau. Lỗi ngoại tuyến không mở hộp thoại. Có thể tắt trong Tùy chọn. Tải xuống và cài đặt bản cập nhật từ trang phát hành GitHub chính thức.
 
-Tùy chọn mở trong cửa sổ chia theo danh mục. Lưu để áp dụng; Hủy, × hoặc Escape để bỏ thay đổi chưa lưu. Có thể xem trước giao diện; Đặt lại chỉ ảnh hưởng danh mục hiện tại. Trình chỉnh sửa nâng cao lưu riêng và quay lại Tùy chọn khi đóng.
+Tùy chọn mở trong cửa sổ chia theo danh mục. Lưu để áp dụng; × hoặc Escape để bỏ thay đổi chưa lưu; khi còn thay đổi chưa lưu, nhấp ra ngoài cửa sổ sẽ không đóng nó. Có thể xem trước giao diện; Đặt lại chỉ ảnh hưởng danh mục hiện tại. Trình chỉnh sửa nâng cao lưu riêng và quay lại Tùy chọn khi đóng.
 
 ### Bắt đầu
 

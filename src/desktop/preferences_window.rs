@@ -355,7 +355,7 @@ impl Desktop {
                 ui.label(RichText::new(error).color(p.warning));
             }
             if state.advanced_saved {
-                ui.label(RichText::new(tr("Advanced settings saved. Cancel will not undo those changes.")).color(p.success));
+                ui.label(RichText::new(tr("Advanced settings saved. Closing Preferences will not undo those changes.")).color(p.success));
             }
             ui.separator();
             ui.add_space(8.0);
@@ -447,8 +447,9 @@ impl Desktop {
             });
             ui.add_space(8.0);
             ui.separator();
-            ui.label(RichText::new(tr("Save and Cancel apply to edits in this window. Separate dialogs save independently.")).size(11.0).color(p.muted));
-            // Explicit Save / Cancel / Reset order matches the approved mockup.
+            ui.label(RichText::new(tr("Save applies to edits in this window. Separate dialogs save independently.")).size(11.0).color(p.muted));
+            // Save and Reset, as in the approved mockups. The header × closes without
+            // saving, like every other form, so there is no Cancel beside it.
             ui.horizontal(|ui| {
                 ui.label(
                     RichText::new(if state.dirty() {
@@ -470,7 +471,6 @@ impl Desktop {
                     {
                         state.reset_category();
                     }
-                    cancel |= form_dialog::secondary_button(ui, tr("Cancel")).clicked();
                     let response = form_dialog::primary_enabled(ui, state.dirty() && !self.theme_assets.importing(), tr("Save"));
                     save = if state.dirty() {
                         response
@@ -481,8 +481,10 @@ impl Desktop {
                 });
             });
         });
+        let unsaved = state.dirty();
         self.preferences_window = Some(state);
-        if cancel || response.should_close() {
+        // A stray click outside must not throw away unsaved edits; × and Esc still do.
+        if cancel || form_dialog::dismissed(&response, unsaved) {
             self.close_preferences_window(ctx);
         } else if save {
             self.save_preferences_window(ctx);

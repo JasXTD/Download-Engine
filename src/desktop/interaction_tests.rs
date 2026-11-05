@@ -591,7 +591,7 @@ fn toolbar_pages_remain_reachable_without_changing_the_download_selection() {
         click(&mut app, &ctx, "Preferences");
         assert_eq!(app.view, View::Logs);
         assert_eq!(app.dialog, Some(Dialog::PreferencesWindow));
-        click(&mut app, &ctx, "Cancel");
+        click(&mut app, &ctx, "×");
         click(&mut app, &ctx, "Extensions");
         assert_eq!(app.view, View::Automation);
         assert_eq!(app.selected, selected);
@@ -1821,7 +1821,7 @@ fn preferences_fit_minimum_window_in_both_themes() {
             app.preferences_window.as_mut().unwrap().category = category;
             frame(&mut app, &ctx, size, vec![]);
             let output = frame(&mut app, &ctx, size, vec![]);
-            for label in ["Save", "Cancel", "Reset", "×"] {
+            for label in ["Save", "Reset", "×"] {
                 assert!(
                     egui::Rect::from_min_size(egui::Pos2::ZERO, size)
                         .contains_rect(text_rect(&output, label)),
@@ -2275,8 +2275,8 @@ fn startup_rows_follow_the_entry_and_save_without_the_run_key() {
     app.open_preferences_window();
     app.preferences_window.as_mut().unwrap().category = preferences_window::Category::Startup;
     click(&mut app, &ctx, "Start with Windows");
-    click(&mut app, &ctx, "Cancel");
-    assert!(app.startup.enabled(), "Cancel must leave startup unchanged");
+    click(&mut app, &ctx, "×");
+    assert!(app.startup.enabled(), "Closing leaves startup unchanged");
     app.open_preferences_window();
     app.preferences_window.as_mut().unwrap().category = preferences_window::Category::Startup;
     click(&mut app, &ctx, "Start with Windows");

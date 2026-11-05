@@ -101,6 +101,8 @@ impl Desktop {
             };
         }
         match mode {
+            // The arm below catches every other torrent mode, so this one is named first.
+            "torrent-choice" => self.torrent_preview(mode),
             mode if mode.starts_with("torrent-") => self.torrent_sample(mode),
             mode if mode.starts_with("status-") => self.status_sample(mode),
             "proxy" | "proxy-enterprise" => self.proxy_sample(mode == "proxy-enterprise"),

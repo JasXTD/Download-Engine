@@ -176,13 +176,20 @@ fn cancelling_a_review_changes_nothing() {
     let (_temp, mut app, ctx) = fixture();
     open(&mut app);
     review(&mut app, package("1.2.0", &["videohost.example"]));
-    click(&mut app, &ctx, "Cancel");
+    frame(&mut app, &ctx, size(), vec![]);
+    let output = frame(&mut app, &ctx, size(), vec![]);
+    text_rect(&output, "Install");
+    assert!(
+        !has_text(&output, "Cancel"),
+        "The header × already closes it"
+    );
+    click(&mut app, &ctx, "×");
     assert!(app.dialog.is_none());
     assert!(app.store.extensions().unwrap().is_empty());
 }
 
 #[test]
-fn an_update_shows_new_access_and_not_now_keeps_the_old_version() {
+fn an_update_shows_new_access_and_closing_keeps_the_old_version() {
     let (_temp, mut app, ctx) = fixture();
     app.store
         .install_extension(
@@ -199,7 +206,16 @@ fn an_update_shows_new_access_and_not_now_keeps_the_old_version() {
     text_rect(&output, "New access");
     text_rect(&output, "Read api.vh-media.example");
     text_rect(&output, "Approve and update");
-    click(&mut app, &ctx, "Not now");
+    text_rect(
+        &output,
+        "Closing this keeps the installed version exactly as it is.",
+    );
+    assert!(
+        !has_text(&output, "Not now"),
+        "The header × already closes it"
+    );
+    click(&mut app, &ctx, "×");
+    assert!(app.dialog.is_none());
     assert_eq!(app.store.extension(ID).unwrap().package.version, "1.2.0");
 
     review(&mut app, next);

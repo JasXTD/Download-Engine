@@ -109,7 +109,6 @@ impl Desktop {
                     tr(if draft.rename { "Save name" } else { "Move" }),
                 )
                 .clicked();
-                cancel |= form_dialog::secondary_button(ui, tr("Cancel")).clicked();
             });
         });
         if submit {
@@ -193,10 +192,15 @@ mod tests {
             "Current location",
             "New name",
             "Save name",
-            "Cancel",
+            "×",
         ] {
             assert!(ctx.content_rect().contains_rect(text_rect(&output, label)));
         }
+        assert!(
+            !output.shapes.iter().any(|shape| matches!(&shape.shape,
+                egui::Shape::Text(text) if text.galley.job.text.trim() == "Cancel")),
+            "The header × already closes it"
+        );
         app.torrents.location.as_mut().unwrap().name = "bad:name".into();
         click(&mut app, &ctx, "Save name");
         assert_eq!(app.dialog, Some(Dialog::TorrentLocation));
@@ -206,7 +210,8 @@ mod tests {
                 .unwrap()
                 .contains("reserved characters")
         );
-        click(&mut app, &ctx, "Cancel");
+        click(&mut app, &ctx, "×");
+        assert!(app.dialog.is_none() && app.form_error.is_none());
         app.open_torrent_location(&job, false);
         app.folder_picker.response = Some(Ok(Some(dir.path().display().to_string())));
         click(&mut app, &ctx, "Browse…");
@@ -214,7 +219,7 @@ mod tests {
             app.torrents.location.as_ref().unwrap().folder.as_deref(),
             Some(dir.path())
         );
-        click(&mut app, &ctx, "Cancel");
+        click(&mut app, &ctx, "×");
         assert!(app.dialog.is_none());
         assert_eq!(std::fs::read(root.join("sample.bin")).unwrap(), b"harmless");
         assert_eq!(

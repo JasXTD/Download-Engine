@@ -78,7 +78,9 @@ fn sharing_auto_start_stop_all_rename_and_history_cleanup_keep_completed_data() 
     bench.scheduler.send(Command::PauseAll).unwrap();
     wait_sharing(&bench, &job.id, false);
     bench.wait_for_helper_to_stop();
-    assert!(!bench.store.torrent_sharing(&job.id).unwrap());
+    // Stop all cancels first and saves "off" while the run saves its totals, so the
+    // saved state can land just after the helper stops.
+    wait_sharing_saved(&bench, &job.id, false);
     assert_eq!(
         bench.store.get(&job.id).unwrap().unwrap().status,
         Status::Complete

@@ -8,7 +8,7 @@ Release notes are available offline in Help → Changelog. Newest releases appea
 
 - The Extensions page discovers `.de-extension.json` packages in the application's `plugins` folder at launch, when opening Installed, and on Refresh. Installed and portable copies use their own application resources; no profile or working-directory plugin folder is scanned.
 - Found packages appear for permission review. New installs start disabled, updates require review, and replacing a source file never silently changes installed code. Duplicate IDs, changed packages with an unchanged version, invalid files and scan limits are reported.
-- Bundled the offline episode demo, its generated encrypted media, launcher and author guide in Windows and native package recipes. It demonstrates quality/language selection, multiple tracks and muxing without contacting a commercial service. The sample server starts only when the user runs its launcher.
+- Bundled a Lua episode downloader extension based on the workflow of CuteTenshii/crunchyroll-downloader, with adapted language and segment-template helpers under MIT. The package includes quality/language selection, encrypted segment processing, multiple tracks and MKV/MP4 muxing, plus generated media, a launcher and an author guide. It has been tested with offline samples only; the bundled extension handles the local sample URL and does not implement Crunchyroll login or license requests. The sample server starts only when the user runs its launcher.
 - Discovery reads bounded regular files on a background worker. It ignores nested folders, rejects linked packages and retains the exact reviewed bytes through installation. Removing a source file leaves the reviewed installed copy intact.
 
 ### Unix media merger security

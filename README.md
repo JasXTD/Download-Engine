@@ -47,12 +47,14 @@ Looking for a free **IDM alternative**? The familiar layout is inspired by
 not affiliated with IDM, and does not claim complete IDM feature parity.
 
 > **In this build, v3.12.0:** Lua extensions placed in the app's `plugins` folder
-> appear automatically for permission review. The offline episode demo is bundled;
+> appear automatically for permission review. A **Lua episode downloader extension**
+> based on the crunchyroll-downloader workflow is **bundled in `plugins`**;
 > nothing installs or runs until you approve it. Lua providers can download ordered media segments,
 > process encrypted bytes with supplied keys, and mux video, multiple audio tracks
 > and subtitles into MKV or MP4. See the [media-provider guide](docs/lua-media-providers.md).
-> This is a generic API tested with offline fixtures, not a commercial DRM integration.
-> Try the [offline episode extension example](examples/offline-episode/README.md).
+> Tested with offline encrypted samples only. The bundled extension handles the local
+> sample URL; Crunchyroll login and license requests are not implemented.
+> See [how to use the bundled extension](examples/offline-episode/README.md).
 > Find published [desktop packages and extensions](https://github.com/JasXTD/Download-Engine/releases),
 > or read the [changelog](CHANGELOG.md).
 

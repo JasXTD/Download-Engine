@@ -1500,7 +1500,8 @@ impl Window {
             });
         });
 
-        if let Some(error) = &job.error {
+        // The app's own messages are translated; a server's text stays as sent.
+        if let Some(error) = job.error.as_deref().map(tr) {
             ui.add_space(2.0);
             if let Some(retry) = retry_description(job, self.queue_running) {
                 ui.colored_label(p.blue, retry);

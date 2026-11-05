@@ -162,6 +162,36 @@ impl MagnetStop {
             _ => None,
         }
     }
+    /// What a download that stopped for this reason says, in the app's own words. The window
+    /// translates it like any label, and the engine's English is never shown.
+    pub fn download_error(self) -> &'static str {
+        match self {
+            Self::NeedsConsent => {
+                "This magnet link has no tracker, and the DHT wasn't searched for it. Open its .torrent file instead."
+            }
+            Self::DhtOff => {
+                "This magnet link has no tracker, and finding peers without a tracker (DHT) is off in Preferences. Open its .torrent file instead."
+            }
+            Self::Private => {
+                "This is a private torrent. It may only use its own site's tracker, so the search stopped. Open the .torrent file from that site."
+            }
+            Self::NothingFound => {
+                "No one shared this torrent's file list. The DHT search stopped after 10 minutes. Try again later, or open the .torrent file."
+            }
+        }
+    }
+}
+
+/// A download that stopped for one of the reasons above keeps the app's words for it, so its
+/// error shows in the person's language. Every other error is left as it is.
+fn explained(error: anyhow::Error) -> anyhow::Error {
+    let Some(stop) = MagnetStop::of(&error) else {
+        return error;
+    };
+    let code = error
+        .downcast_ref::<HelperError>()
+        .and_then(|error| error.code.clone());
+    HelperError::new(code.as_deref(), stop.download_error()).into()
 }
 
 fn magnet_name(link: &str) -> Option<String> {
@@ -662,7 +692,7 @@ pub(crate) async fn transfer(
     if store.torrent_dht_consent(job)? {
         add["dht_search"] = json!(true);
     }
-    lease.call(add).await?;
+    lease.call(add).await.map_err(explained)?;
     let id = job.id.clone();
     let mut uploads = UploadTally::default();
     let outcome = tokio::select! {
@@ -678,7 +708,7 @@ pub(crate) async fn transfer(
         .await
         .map(|_| ());
     drop(lease);
-    let outcome = outcome?;
+    let outcome = outcome.map_err(explained)?;
     counted?;
     match outcome {
         Outcome::Stopped | Outcome::NeedsChoice => Ok(None),
@@ -1061,6 +1091,41 @@ mod tests {
                 )
                 .is_err()
         );
+    }
+
+    #[test]
+    fn a_download_stopped_for_a_dht_reason_keeps_words_every_language_has() {
+        use crate::i18n::{self, Language};
+        for (code, stop) in [
+            ("needs_dht_consent", MagnetStop::NeedsConsent),
+            ("dht_off", MagnetStop::DhtOff),
+            ("private_from_dht", MagnetStop::Private),
+            ("dht_search_timeout", MagnetStop::NothingFound),
+        ] {
+            let error = explained(HelperError::new(Some(code), "The engine's English").into());
+            // What the download keeps, as `retry::failed` writes it, and the reason still reads.
+            assert_eq!(format!("{error:#}"), stop.download_error());
+            assert_eq!(MagnetStop::of(&error), Some(stop));
+            for language in Language::ALL {
+                if matches!(language, Language::System | Language::English) {
+                    continue;
+                }
+                let _scope = i18n::scope(language);
+                assert_ne!(
+                    i18n::tr(stop.download_error()),
+                    stop.download_error(),
+                    "{language:?} has no words for {code}"
+                );
+            }
+        }
+        for other in [
+            anyhow::Error::from(HelperError::new(None, "The torrent helper failed")),
+            anyhow::Error::from(HelperError::new(Some("something_new"), "Something new")),
+            anyhow::anyhow!("Disk full"),
+        ] {
+            let before = format!("{other:#}");
+            assert_eq!(format!("{:#}", explained(other)), before);
+        }
     }
 
     #[test]

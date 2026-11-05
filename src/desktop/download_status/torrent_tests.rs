@@ -290,6 +290,37 @@ fn a_private_torrent_offers_no_way_to_add_a_tracker() {
 }
 
 #[test]
+fn a_torrent_stopped_by_its_dht_search_says_so_in_the_chosen_language() {
+    use download_engine::i18n::Language;
+    let (_temp, mut app, ctx) = fixture();
+    app.interface.language = Language::German;
+    let _german = download_engine::i18n::scope(Language::German);
+    let mut job = paused_torrent(&mut app);
+    job.status = Status::Failed;
+    job.error = Some(
+        download_engine::torrent::MagnetStop::NothingFound
+            .download_error()
+            .into(),
+    );
+    app.store.save(&job).unwrap();
+    let german = "Niemand hat die Dateiliste dieses Torrents geteilt. Die DHT-Suche wurde nach 10 Minuten beendet. Versuchen Sie es später erneut oder öffnen Sie die .torrent-Datei.";
+
+    app.download_status
+        .windows
+        .insert(job.id.clone(), Window::new(job.clone()));
+    draw(&mut app, &ctx, &job.id, vec![]);
+    text_rect(&draw(&mut app, &ctx, &job.id, vec![]), german);
+
+    app.jobs = vec![job];
+    let size = egui::vec2(860.0, 600.0);
+    crate::desktop::interaction_tests::frame(&mut app, &ctx, size, vec![]);
+    text_rect(
+        &crate::desktop::interaction_tests::frame(&mut app, &ctx, size, vec![]),
+        german,
+    );
+}
+
+#[test]
 fn ticking_a_file_of_a_paused_torrent_saves_the_choice_and_keeps_it_paused() {
     let (_temp, mut app, ctx) = fixture();
     let job = paused_torrent(&mut app);

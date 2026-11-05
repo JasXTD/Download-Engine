@@ -1110,7 +1110,8 @@ impl Desktop {
                         } else if job.status == Status::Queued && !queue_running {
                             ui.label(tr("Waiting for this queue to start."));
                         }
-                        if let Some(error) = &job.error {
+                        // The app's own messages are translated; a server's text stays as sent.
+                        if let Some(error) = job.error.as_deref().map(tr) {
                             ui.label(error);
                         }
                     });
@@ -1889,7 +1890,7 @@ impl Desktop {
                                 .unwrap_or_else(|| bytes(job.downloaded)),
                         );
                     });
-                    if let Some(error) = &job.error {
+                    if let Some(error) = job.error.as_deref().map(tr) {
                         if let Some(retry) = retry_description(
                             job,
                             self.queues
@@ -1993,7 +1994,7 @@ impl Desktop {
                                     .color(p.muted),
                             );
                         }
-                        if let Some(error) = &job.error {
+                        if let Some(error) = job.error.as_deref().map(tr) {
                             egui::ScrollArea::vertical()
                                 .id_salt("download-error")
                                 .max_height(60.0)

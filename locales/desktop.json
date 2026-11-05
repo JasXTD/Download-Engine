@@ -971,6 +971,7 @@
     "儲存在 Windows 認證管理員中，僅用於此下載和伺服器。下載完成或移除時刪除。",
     "Disimpan dalam Pengurus Kelayakan Windows untuk muat turun dan pelayan ini. Dibuang apabila muat turun selesai atau dibuang."
   ],
+  "Saved in your system keyring for this download and server. Removed when the download completes or you remove it.": ["保存在系统密钥环中，仅用于此下载和服务器。下载完成或移除时删除。","儲存在系統鑰匙圈中，僅用於此下載和伺服器。下載完成或移除時刪除。","Disimpan dalam rantai kunci sistem anda untuk muat turun dan pelayan ini. Dibuang apabila muat turun selesai atau dibuang."],
   "FTPS encrypts your login and file data. The server certificate must be valid.": [
     "FTPS 会加密登录信息和文件数据。服务器证书必须有效。",
     "FTPS 會加密登入資訊和檔案資料。伺服器憑證必須有效。",
@@ -4218,6 +4219,7 @@
     "儲存在 Windows 認證管理員中，與網站登入資訊分開。",
     "Disimpan dalam Pengurus Kelayakan Windows, berasingan daripada log masuk laman."
   ],
+  "Saved in your system keyring, separately from website logins.": ["保存在系统密钥环中，与网站登录信息分开。","儲存在系統鑰匙圈中，與網站登入資訊分開。","Disimpan dalam rantai kunci sistem anda, berasingan daripada log masuk laman."],
   "This proxy sends the login without encryption. Use only a trusted proxy.": [
     "此代理会明文发送登录信息。仅使用可信代理。",
     "此 Proxy 會以明文傳送登入資訊。僅使用可信任的 Proxy。",
@@ -4803,6 +4805,7 @@
     "跟隨 Windows 或選擇固定佈景主題。",
     "Ikut Windows atau pilih tema tetap."
   ],
+  "Follow the system or pick a fixed theme.": ["跟随系统或选择固定主题。","跟隨系統或選擇固定佈景主題。","Ikut sistem atau pilih tema tetap."],
   "Compact rows": [
     "紧凑行",
     "緊湊列",
@@ -5098,6 +5101,7 @@
     "擷取工具",
     "Pengumpul"
   ],
+  "MCP": ["MCP","MCP","MCP"],
   "Find website files or save an offline website": [
     "查找网站文件或保存离线网站",
     "尋找網站檔案或儲存離線網站",

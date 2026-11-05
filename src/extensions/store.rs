@@ -204,7 +204,7 @@ fn stale_settings(conn: &Connection, old: &Package, new: &Package) -> Result<Vec
 
 /// Decodes a package file, and refuses an `examples.` id on anything but the
 /// examples that come with the app, which could otherwise be impersonated.
-fn checked(bytes: &[u8]) -> Result<Package> {
+pub(super) fn checked(bytes: &[u8]) -> Result<Package> {
     let package = Package::decode(bytes)?;
     ensure!(
         !super::examples::reserved(&package.id) || super::examples::is_example(bytes),

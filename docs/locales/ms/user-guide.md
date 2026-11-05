@@ -70,7 +70,7 @@ Sambungan menambah sokongan laman dan automasi dalam satu pakej. Sambungan berja
 
 1. Buka Sambungan pada bar alat atas. Tab Dipasang menyenaraikan sambungan yang anda ada.
 
-2. Pilih Pasang daripada fail… dan pilih fail .de-extension.json. Untuk mencuba dahulu, pilih Contoh… sebaliknya: lima contoh kecil disertakan dengan aplikasi.
+2. Pilih Pasang daripada fail… dan pilih fail .de-extension.json. Untuk mencuba dahulu, pilih Contoh… sebaliknya: lima contoh kecil disertakan dengan aplikasi. Anda juga boleh menyimpan fail dalam folder sambungan anda: Folder sambungan… menyenaraikannya untuk disemak, dan Buka folder menunjukkan lokasinya.
 
 3. Baca tetingkap semakan. Ia menunjukkan penerbit, perkara yang boleh dilakukan oleh sambungan dan tugasnya. Belum ada apa-apa yang dijalankan.
 

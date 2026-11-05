@@ -56,7 +56,7 @@ Le estensioni aggiungono supporto per i siti e automazione in un unico pacchetto
 
 1. Apri Estensioni nella barra degli strumenti in alto. La scheda Installate elenca ciò che hai.
 
-2. Scegli Installa da file… e seleziona un file .de-extension.json. Per provarne prima uno, scegli invece Esempi…: con l’app sono inclusi cinque piccoli esempi.
+2. Scegli Installa da file… e seleziona un file .de-extension.json. Per provarne prima uno, scegli invece Esempi…: con l’app sono inclusi cinque piccoli esempi. Puoi anche salvare i file nella cartella delle estensioni: Cartella estensioni… li elenca da controllare e Apri cartella mostra dove si trova.
 
 3. Leggi la finestra di verifica. Mostra il produttore, cosa può fare l’estensione e le sue attività. Non viene ancora eseguito nulla.
 

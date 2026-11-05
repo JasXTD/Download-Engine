@@ -56,7 +56,7 @@ Tiện ích mở rộng bổ sung hỗ trợ trang và tự động hóa trong m
 
 1. Mở Tiện ích mở rộng trên thanh công cụ phía trên. Thẻ Đã cài đặt liệt kê các tiện ích mở rộng bạn có.
 
-2. Chọn Cài đặt từ tệp… rồi chọn một tệp .de-extension.json. Để thử trước, hãy chọn Ví dụ… thay vào đó: ứng dụng có sẵn năm ví dụ nhỏ.
+2. Chọn Cài đặt từ tệp… rồi chọn một tệp .de-extension.json. Để thử trước, hãy chọn Ví dụ… thay vào đó: ứng dụng có sẵn năm ví dụ nhỏ. Bạn cũng có thể lưu tệp vào thư mục tiện ích mở rộng: Thư mục tiện ích mở rộng… liệt kê chúng để bạn xem xét, còn Mở thư mục cho biết vị trí của thư mục.
 
 3. Đọc cửa sổ xem xét. Cửa sổ này cho biết nhà phát hành, những việc tiện ích mở rộng có thể làm và các tác vụ của nó. Chưa có gì chạy.
 

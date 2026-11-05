@@ -723,3 +723,336 @@ fn the_access_list_fits_the_smallest_window() {
     let panel = text_rect(&output, "Runs when any download finishes.");
     assert!(allow.right() < small.x - 24.0, "{allow:?} {panel:?}");
 }
+
+/// Draws the page, waits for any folder listing that started, and draws what it found.
+fn settled(app: &mut Desktop, ctx: &egui::Context) -> egui::FullOutput {
+    frame(app, ctx, size(), vec![]);
+    app.wait_for_io();
+    frame(app, ctx, size(), vec![]);
+    frame(app, ctx, size(), vec![])
+}
+fn text_containing(output: &egui::FullOutput, part: &str) -> egui::Rect {
+    output
+        .shapes
+        .iter()
+        .find_map(|shape| match &shape.shape {
+            egui::Shape::Text(text) if text.galley.job.text.contains(part) => {
+                Some(text.galley.rect.translate(text.pos.to_vec2()))
+            }
+            _ => None,
+        })
+        .unwrap_or_else(|| panic!("No rendered text containing: {part}"))
+}
+fn save_in_folder(app: &Desktop, name: &str, bytes: &[u8]) -> std::path::PathBuf {
+    let folder = app.store.paths.extensions();
+    std::fs::create_dir_all(&folder).unwrap();
+    std::fs::write(folder.join(name), bytes).unwrap();
+    folder
+}
+const ONE_TO_REVIEW: &str = "Your extensions folder has 1 extension to review.";
+
+#[test]
+fn a_file_in_the_folder_is_only_listed_until_reviewed_and_installs_turned_off() {
+    let (_temp, mut app, ctx) = fixture();
+    save_in_folder(
+        &app,
+        "videohost.de-extension.json",
+        &package("1.2.0", &["videohost.example"]),
+    );
+    open(&mut app);
+    let output = settled(&mut app, &ctx);
+    text_rect(&output, ONE_TO_REVIEW);
+    assert!(
+        app.store.extensions().unwrap().is_empty(),
+        "nothing installs from the folder by itself"
+    );
+
+    click(&mut app, &ctx, "Review…");
+    assert_eq!(app.dialog, Some(Dialog::ExtensionFolder));
+    let output = settled(&mut app, &ctx);
+    text_rect(&output, "VideoHost");
+    text_rect(&output, "1.2.0 · Example");
+    text_rect(&output, "Asks to change files");
+    text_rect(
+        &output,
+        "Nothing in this folder runs until you review it, and it installs turned off.",
+    );
+    // The top-most Review… is the row's, above the strip behind the list.
+    click(&mut app, &ctx, "Review…");
+    assert_eq!(app.dialog, Some(Dialog::ExtensionReview));
+    frame(&mut app, &ctx, size(), vec![]);
+    let output = frame(&mut app, &ctx, size(), vec![]);
+    text_rect(&output, "Install VideoHost?");
+    text_rect(&output, "Let it rename, move and delete any downloaded file");
+    click(&mut app, &ctx, "Install");
+    let installed = app.store.extension(ID).unwrap();
+    assert!(!installed.enabled);
+    assert!(
+        !app.store.extension_job(ID, "tidy").unwrap().change_files,
+        "file access stays off unless ticked"
+    );
+
+    let output = settled(&mut app, &ctx);
+    assert!(!has_text(&output, ONE_TO_REVIEW));
+    click(&mut app, &ctx, "Extensions folder…");
+    let output = settled(&mut app, &ctx);
+    text_rect(&output, "Installed");
+    assert!(!has_text(&output, "Review…"));
+}
+
+#[test]
+fn a_newer_file_in_the_folder_is_an_update_that_asks_for_new_access() {
+    let (_temp, mut app, ctx) = fixture();
+    app.store
+        .install_extension(
+            &package("1.2.0", &["videohost.example"]),
+            &Grants::default(),
+        )
+        .unwrap();
+    save_in_folder(
+        &app,
+        "videohost-1.3.0.de-extension.json",
+        &package("1.3.0", &["videohost.example", "api.vh-media.example"]),
+    );
+    open(&mut app);
+    let output = settled(&mut app, &ctx);
+    text_rect(&output, ONE_TO_REVIEW);
+    click(&mut app, &ctx, "Extensions folder…");
+    let output = settled(&mut app, &ctx);
+    text_rect(&output, "You have 1.2.0. This file is newer.");
+    click(&mut app, &ctx, "Review update…");
+    assert_eq!(app.dialog, Some(Dialog::ExtensionReview));
+    frame(&mut app, &ctx, size(), vec![]);
+    let output = frame(&mut app, &ctx, size(), vec![]);
+    text_rect(&output, "Update VideoHost?");
+    text_rect(&output, "Read api.vh-media.example");
+    text_rect(&output, "Approve and update");
+    assert_eq!(
+        app.store.extension(ID).unwrap().package.version,
+        "1.2.0",
+        "nothing updates before the approval"
+    );
+    click(&mut app, &ctx, "Approve and update");
+    assert_eq!(app.store.extension(ID).unwrap().package.version, "1.3.0");
+    let output = settled(&mut app, &ctx);
+    assert!(!has_text(&output, ONE_TO_REVIEW));
+}
+
+#[test]
+fn a_changed_file_without_a_newer_version_cannot_update() {
+    let (_temp, mut app, ctx) = fixture();
+    let installed = package("1.2.0", &["videohost.example"]);
+    app.store
+        .install_extension(&installed, &Grants::default())
+        .unwrap();
+    let mut changed: Value = serde_json::from_slice(&installed).unwrap();
+    changed["description"] = json!("Changed, but still 1.2.0.");
+    save_in_folder(
+        &app,
+        "a-changed.de-extension.json",
+        &serde_json::to_vec(&changed).unwrap(),
+    );
+    save_in_folder(
+        &app,
+        "b-older.de-extension.json",
+        &package("1.1.0", &["videohost.example"]),
+    );
+    save_in_folder(&app, "c-same.de-extension.json", &installed);
+    open(&mut app);
+    let output = settled(&mut app, &ctx);
+    assert!(!has_text(&output, ONE_TO_REVIEW));
+
+    app.open_extension_folder();
+    let output = settled(&mut app, &ctx);
+    text_rect(
+        &output,
+        "Differs from the 1.2.0 you installed. Raise its version to update.",
+    );
+    text_rect(&output, "Older than the 1.2.0 you installed.");
+    text_rect(&output, "Installed");
+    assert!(!has_text(&output, "Review…"));
+    assert!(!has_text(&output, "Review update…"));
+}
+
+#[test]
+fn two_files_of_one_new_extension_count_once() {
+    let (_temp, mut app, ctx) = fixture();
+    save_in_folder(
+        &app,
+        "videohost-1.2.0.de-extension.json",
+        &package("1.2.0", &["videohost.example"]),
+    );
+    save_in_folder(
+        &app,
+        "videohost-1.3.0.de-extension.json",
+        &package("1.3.0", &["videohost.example"]),
+    );
+    open(&mut app);
+    let output = settled(&mut app, &ctx);
+    text_rect(&output, ONE_TO_REVIEW);
+}
+
+#[test]
+fn a_file_removed_after_listing_says_why_it_cant_be_reviewed() {
+    let (_temp, mut app, ctx) = fixture();
+    let folder = save_in_folder(
+        &app,
+        "videohost.de-extension.json",
+        &package("1.2.0", &["videohost.example"]),
+    );
+    open(&mut app);
+    app.open_extension_folder();
+    let output = settled(&mut app, &ctx);
+    text_rect(&output, "VideoHost");
+    std::fs::remove_file(folder.join("videohost.de-extension.json")).unwrap();
+
+    click(&mut app, &ctx, "Review…");
+    assert_eq!(app.dialog, Some(Dialog::ExtensionFolder));
+    // The listing that starts right after must not wipe the reason.
+    let output = settled(&mut app, &ctx);
+    text_containing(&output, "Can't read this file: videohost.de-extension.json:");
+    text_rect(&output, "No extension files in this folder yet.");
+    assert!(app.store.extensions().unwrap().is_empty());
+}
+
+#[test]
+fn broken_files_and_unpacked_folders_are_explained_and_never_reviewed() {
+    let (_temp, mut app, ctx) = fixture();
+    let folder = save_in_folder(&app, "broken.de-extension.json", b"{");
+    std::fs::create_dir(folder.join("my-reader")).unwrap();
+    std::fs::write(folder.join("my-reader").join("manifest.json"), b"{}").unwrap();
+    std::fs::write(folder.join("notes.txt"), b"not an extension").unwrap();
+    open(&mut app);
+    let output = settled(&mut app, &ctx);
+    assert!(!has_text(&output, ONE_TO_REVIEW));
+
+    app.open_extension_folder();
+    let output = settled(&mut app, &ctx);
+    text_rect(&output, "broken.de-extension.json");
+    text_containing(
+        &output,
+        "Can't read this file: This is not a valid extension file",
+    );
+    text_rect(&output, &format!("my-reader{}", std::path::MAIN_SEPARATOR));
+    text_rect(
+        &output,
+        "Folders aren't read. Pack it into a file with de-cli extensions pack first.",
+    );
+    text_rect(&output, "Skipped 1 other file.");
+    assert!(!has_text(&output, "Review…"));
+}
+
+#[test]
+fn the_folder_list_creates_the_folder_and_scan_now_finds_a_new_file() {
+    let (_temp, mut app, ctx) = fixture();
+    open(&mut app);
+    click(&mut app, &ctx, "Extensions folder…");
+    assert_eq!(app.dialog, Some(Dialog::ExtensionFolder));
+    let output = settled(&mut app, &ctx);
+    let folder = app.store.paths.extensions();
+    assert!(folder.is_dir(), "listing creates the folder");
+    text_rect(&output, &folder.display().to_string());
+    text_rect(&output, "No extension files in this folder yet.");
+
+    save_in_folder(
+        &app,
+        "videohost.de-extension.json",
+        &package("1.2.0", &["videohost.example"]),
+    );
+    let output = settled(&mut app, &ctx);
+    assert!(!has_text(&output, "VideoHost"), "nothing watches the folder");
+    click(&mut app, &ctx, "Scan now");
+    let output = settled(&mut app, &ctx);
+    text_rect(&output, "VideoHost");
+
+    click(&mut app, &ctx, "Open folder");
+    assert_eq!(
+        app.extensions.folder.opened.as_deref(),
+        Some(folder.as_path())
+    );
+    assert_eq!(
+        app.dialog,
+        Some(Dialog::ExtensionFolder),
+        "the list stays open"
+    );
+}
+
+#[test]
+fn coming_back_to_the_installed_tab_looks_in_the_folder_again() {
+    let (_temp, mut app, ctx) = fixture();
+    open(&mut app);
+    let output = settled(&mut app, &ctx);
+    assert!(!has_text(&output, ONE_TO_REVIEW));
+    save_in_folder(
+        &app,
+        "videohost.de-extension.json",
+        &package("1.2.0", &["videohost.example"]),
+    );
+    let output = settled(&mut app, &ctx);
+    assert!(!has_text(&output, ONE_TO_REVIEW), "nothing watches the folder");
+
+    app.view = View::Downloads;
+    frame(&mut app, &ctx, size(), vec![]);
+    app.view = View::Automation;
+    let output = settled(&mut app, &ctx);
+    text_rect(&output, ONE_TO_REVIEW);
+}
+
+#[test]
+fn german_header_strip_and_folder_list_fit_the_smallest_window() {
+    use download_engine::i18n::Language;
+    let german = |text: &str| {
+        let _scope = download_engine::i18n::scope(Language::German);
+        tr(text).to_owned()
+    };
+    let small = egui::vec2(860.0, 600.0);
+    let fits = |output: &egui::FullOutput, labels: &[&str]| {
+        for label in labels {
+            let rect = text_rect(output, &german(label));
+            assert!(
+                rect.right() <= small.x && rect.bottom() <= small.y,
+                "{label}: {rect:?}"
+            );
+        }
+    };
+    let (_temp, mut app, ctx) = fixture();
+    app.interface.language = Language::German;
+    save_in_folder(
+        &app,
+        "videohost.de-extension.json",
+        &package("1.2.0", &["videohost.example"]),
+    );
+    open(&mut app);
+    frame(&mut app, &ctx, small, vec![]);
+    app.wait_for_io();
+    frame(&mut app, &ctx, small, vec![]);
+    let output = frame(&mut app, &ctx, small, vec![]);
+    fits(
+        &output,
+        &[
+            "Examples…",
+            "Extensions folder…",
+            "Install from file…",
+            ONE_TO_REVIEW,
+            "Review…",
+        ],
+    );
+    // Three buttons leave the title less room: its subtitle wraps instead of
+    // running under them.
+    let subtitle = text_rect(
+        &output,
+        &german("Install extensions, write your own scripts and route downloads with rules."),
+    );
+    let buttons = text_rect(&output, &german("Examples…"));
+    assert!(subtitle.right() < buttons.left(), "{subtitle:?} {buttons:?}");
+
+    app.open_extension_folder();
+    frame(&mut app, &ctx, small, vec![]);
+    app.wait_for_io();
+    frame(&mut app, &ctx, small, vec![]);
+    let output = frame(&mut app, &ctx, small, vec![]);
+    fits(
+        &output,
+        &["Open folder", "Scan now", "Your extensions folder"],
+    );
+}

@@ -56,7 +56,7 @@ Erweiterungen ergänzen die App um Website-Unterstützung und Automatisierung, g
 
 1. „Erweiterungen“ in der oberen Symbolleiste öffnen. Die Registerkarte „Installiert“ zeigt, was vorhanden ist.
 
-2. „Aus Datei installieren…“ wählen und eine .de-extension.json-Datei auswählen. Um zuerst etwas auszuprobieren, stattdessen „Beispiele…“ wählen: Fünf kleine Beispiele werden mit der App geliefert.
+2. „Aus Datei installieren…“ wählen und eine .de-extension.json-Datei auswählen. Um zuerst etwas auszuprobieren, stattdessen „Beispiele…“ wählen: Fünf kleine Beispiele werden mit der App geliefert. Dateien lassen sich auch im Erweiterungsordner speichern: „Erweiterungsordner…“ listet sie zur Prüfung auf, und „Ordner öffnen“ zeigt, wo er liegt.
 
 3. Den Prüfdialog lesen. Er zeigt den Herausgeber, was die Erweiterung kann, und ihre Aufträge. Noch läuft nichts.
 

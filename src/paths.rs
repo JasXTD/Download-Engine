@@ -144,6 +144,10 @@ impl AppPaths {
         std::fs::create_dir_all(self.data.join("parts"))?;
         Ok(())
     }
+    /// Extension files saved here are listed on the Extensions page to review.
+    pub fn extensions(&self) -> PathBuf {
+        self.data.join("Extensions")
+    }
     pub fn parts(&self, id: &str) -> Result<PathBuf> {
         crate::model::validate_job_id(id)?;
         Ok(self.data.join("parts").join(id))

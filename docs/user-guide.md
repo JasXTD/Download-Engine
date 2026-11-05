@@ -320,7 +320,7 @@ Extensions add site support and automation as one package. They run on the same 
 
 1. Open Extensions in the top toolbar. The Installed tab lists what you have.
 
-2. Choose Install from file… and pick a .de-extension.json file. To try one first, choose Examples… instead: five small examples come with the app.
+2. Choose Install from file… and pick a .de-extension.json file. To try one first, choose Examples… instead: five small examples come with the app. You can also save files in your extensions folder: Extensions folder… lists them for review, and Open folder shows where it is.
 
 3. Read the review. It shows the publisher, what the extension can do and its jobs. Nothing runs yet.
 

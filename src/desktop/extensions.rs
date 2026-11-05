@@ -13,6 +13,7 @@ use std::{
 
 mod access;
 mod examples;
+mod folder;
 mod goals;
 
 const PUZZLE: &str = "\u{ea86}";
@@ -90,6 +91,8 @@ pub(super) struct State {
     added: bool,
     /// The extension and job waiting for the person to allow file access.
     granting: Option<(String, String)>,
+    /// Extension files saved in the extensions folder.
+    folder: folder::Folder,
 }
 
 impl State {
@@ -720,6 +723,11 @@ impl Desktop {
                 }
             }
             "automation-installed-examples" => self.open_extension_examples(),
+            "automation-installed-folder" => {
+                self.list_extension_folder_now();
+                self.dialog = Some(Dialog::ExtensionFolder);
+            }
+            "automation-installed-strip" => self.list_extension_folder_now(),
             "automation-installed-allow" => {
                 let asking = self.extensions.entries.iter().find_map(|entry| {
                     let job = access::asking(&entry.installed.package).first()?.id.clone();
@@ -738,9 +746,36 @@ impl Desktop {
         if ui.add(primary(tr("Install from file…"), p)).clicked() {
             self.pick_extension_file();
         }
+        if ui.button(tr("Extensions folder…")).clicked() {
+            self.open_extension_folder();
+        }
         if ui.button(tr("Examples…")).clicked() {
             self.open_extension_examples();
         }
+    }
+
+    /// The width [`Self::extension_actions`] takes, so the page title beside
+    /// them wraps instead of running under them.
+    pub(super) fn extension_actions_width(ui: &egui::Ui) -> f32 {
+        let font = egui::TextStyle::Button.resolve(ui.style());
+        let spacing = ui.spacing();
+        [
+            tr("Install from file…"),
+            tr("Extensions folder…"),
+            tr("Examples…"),
+        ]
+        .into_iter()
+        .map(|label| {
+            ui.painter()
+                .layout_no_wrap(label.to_owned(), font.clone(), Color32::WHITE)
+                .size()
+                .x
+                + 2.0 * spacing.button_padding.x
+                + spacing.item_spacing.x
+        })
+        .sum::<f32>()
+            // The primary button's extra room, and a gap before the title.
+            + 24.0
     }
 
     pub(super) fn pick_extension_file(&mut self) {
@@ -808,6 +843,7 @@ impl Desktop {
             });
             ui.add_space(6.0);
         }
+        self.extension_folder_strip(ui, p);
         if self.extensions.entries.is_empty() {
             self.goals(ui, p);
             return;

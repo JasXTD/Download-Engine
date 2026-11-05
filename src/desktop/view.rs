@@ -581,6 +581,7 @@ impl Desktop {
             Some(Dialog::ExtensionRemove) => self.extension_remove_dialog(&ctx, p),
             Some(Dialog::ExtensionExamples) => self.extension_examples_dialog(&ctx, p),
             Some(Dialog::ExtensionFileAccess) => self.extension_file_access_dialog(&ctx, p),
+            Some(Dialog::ExtensionFolder) => self.extension_folder_dialog(&ctx, p),
             Some(Dialog::Confirm) => self.confirmation_dialog(&ctx, p),
             Some(Dialog::About) => self.about_dialog(&ctx),
             Some(Dialog::CheckUpdates) => self.updates_dialog(&ctx, p),

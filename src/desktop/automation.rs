@@ -384,8 +384,12 @@ impl Desktop {
             self.refresh_automation();
         }
         ui.horizontal(|ui| {
+            let actions = match self.automation.tab {
+                Tab::Installed => Self::extension_actions_width(ui),
+                _ => 128.0,
+            };
             ui.vertical(|ui| {
-                ui.set_width((ui.available_width() - 128.0).max(260.0));
+                ui.set_width((ui.available_width() - actions).max(260.0));
                 ui.label(RichText::new(tr("Extensions")).size(18.5).strong());
                 ui.label(
                     RichText::new(tr("Install extensions, write your own scripts and route downloads with rules."))

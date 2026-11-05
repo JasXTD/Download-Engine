@@ -56,7 +56,7 @@ Les extensions ajoutent la prise en charge de sites et l’automatisation en un 
 
 1. Ouvrez Extensions dans la barre d’outils supérieure. L’onglet Installées liste vos extensions.
 
-2. Choisissez Installer depuis un fichier… et sélectionnez un fichier .de-extension.json. Pour essayer d’abord, choisissez plutôt Exemples… : cinq petits exemples sont fournis avec l’application.
+2. Choisissez Installer depuis un fichier… et sélectionnez un fichier .de-extension.json. Pour essayer d’abord, choisissez plutôt Exemples… : cinq petits exemples sont fournis avec l’application. Vous pouvez aussi enregistrer des fichiers dans votre dossier d’extensions : Dossier des extensions… les liste pour vérification, et Ouvrir le dossier montre où il se trouve.
 
 3. Lisez la fenêtre de vérification. Elle indique l’éditeur, ce que l’extension peut faire et ses tâches. Rien ne s’exécute pour l’instant.
 

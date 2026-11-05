@@ -170,6 +170,7 @@ enum Dialog {
     ExtensionRemove,
     ExtensionExamples,
     ExtensionFileAccess,
+    ExtensionFolder,
     TorrentChoice,
     TorrentLocation,
 }
@@ -546,6 +547,9 @@ impl Desktop {
             _lock: lock,
         };
         app.initialize_snapshot();
+        // Listed once at startup, so the Extensions page can show what is new
+        // right away. Nothing found there runs or installs.
+        app.scan_extension_folder();
         #[cfg(feature = "screenshot")]
         if std::env::var_os("IDM_EX_SCREENSHOT_TO").is_some()
             && let Ok(state) = std::env::var("IDM_EX_TEST_LINK_DIALOG")
@@ -654,6 +658,8 @@ impl Desktop {
                     | "automation-installed-review"
                     | "automation-installed-examples"
                     | "automation-installed-allow"
+                    | "automation-installed-folder"
+                    | "automation-installed-strip"
                     | "automation-scripts"
                     | "automation-scripts-empty"
                     | "automation-scripts-error"

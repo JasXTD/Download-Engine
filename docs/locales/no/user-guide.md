@@ -56,7 +56,7 @@ Utvidelser gir nettstedstøtte og automatisering i én pakke. De kjører i de sa
 
 1. Åpne Utvidelser i verktøylinjen øverst. Fanen Installert viser hva du har.
 
-2. Velg Installer fra fil… og velg deretter en .de-extension.json-fil. Vil du prøve først, kan du i stedet velge Eksempler…: fem små eksempler følger med appen.
+2. Velg Installer fra fil… og velg deretter en .de-extension.json-fil. Vil du prøve først, kan du i stedet velge Eksempler…: fem små eksempler følger med appen. Du kan også lagre filer i utvidelsesmappen: Utvidelsesmappe… viser dem for gjennomgang, og Åpne mappe viser hvor den ligger.
 
 3. Les gjennomgangsvinduet. Det viser utgiveren, hva utvidelsen kan gjøre, og jobbene dens. Ingenting kjører ennå.
 

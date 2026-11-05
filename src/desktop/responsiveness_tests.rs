@@ -18,6 +18,7 @@ impl Desktop {
             if self.browser_requests_pending() {
                 self.poll_browser_video_requests(&ctx);
             }
+            self.poll_extension_folder();
             let pending = self.background_io.pending()
                 || self.status_refresh_pending()
                 || self.add_request.is_some()
@@ -28,7 +29,8 @@ impl Desktop {
                     .is_some_and(browser_video::State::saving)
                 || self.hls_requests_pending()
                 || self.browser_requests_pending();
-            let pending = pending || self.antivirus_report_pending();
+            let pending =
+                pending || self.antivirus_report_pending() || self.extension_folder_pending();
             if !pending {
                 break;
             }

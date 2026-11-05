@@ -56,7 +56,7 @@ Rozszerzenia dodają obsługę witryn i automatyzację w jednym pakiecie. Dział
 
 1. Otwórz Rozszerzenia na górnym pasku narzędzi. Karta Zainstalowane pokazuje, co masz.
 
-2. Wybierz Zainstaluj z pliku… i wskaż plik .de-extension.json. Aby najpierw coś wypróbować, wybierz zamiast tego Przykłady…: z aplikacją dostarczanych jest pięć małych przykładów.
+2. Wybierz Zainstaluj z pliku… i wskaż plik .de-extension.json. Aby najpierw coś wypróbować, wybierz zamiast tego Przykłady…: z aplikacją dostarczanych jest pięć małych przykładów. Pliki możesz też zapisać w folderze rozszerzeń: Folder rozszerzeń… wyświetla je do sprawdzenia, a Otwórz folder pokazuje, gdzie się znajduje.
 
 3. Przeczytaj okno przeglądu. Pokazuje wydawcę, możliwości rozszerzenia i jego zadania. Na razie nic się nie uruchamia.
 

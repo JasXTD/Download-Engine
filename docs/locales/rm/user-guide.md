@@ -56,7 +56,7 @@ Extensiuns agiuntan sustegn per websites ed automatisaziun en in sulet pachet. E
 
 1. Avra Extensiuns en la glista d’utensils sura. Il tab Installadas mussa quai che ti has.
 
-2. Tscherna Installar da datoteca… e tscherna lura ina datoteca .de-extension.json. Per empruvar l’emprim ina, tscherni empè Exempels…: tschintg pitschens exempels vegnan cun l’app.
+2. Tscherna Installar da datoteca… e tscherna lura ina datoteca .de-extension.json. Per empruvar l’emprim ina, tscherni empè Exempels…: tschintg pitschens exempels vegnan cun l’app. Vus pudais era memorisar datotecas en Voss ordinatur d’extensiuns: Ordinatur d'extensiuns… las mussa per verifitgar, ed Avrir ordinatur mussa nua ch’el sa chatta.
 
 3. Legia la fanestra da verificaziun. Ella mussa il producent, quai che l’extensiun po far e sias incumbensas. Anc na vegn nagut exequì.
 

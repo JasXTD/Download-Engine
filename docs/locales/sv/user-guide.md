@@ -56,7 +56,7 @@ Tillägg ger webbplatsstöd och automatisering i ett enda paket. De körs i samm
 
 1. Öppna Tillägg i verktygsfältet högst upp. Fliken Installerade visar vad du har.
 
-2. Välj Installera från fil… och välj sedan en .de-extension.json-fil. Om du vill prova först kan du i stället välja Exempel…: fem små exempel följer med appen.
+2. Välj Installera från fil… och välj sedan en .de-extension.json-fil. Om du vill prova först kan du i stället välja Exempel…: fem små exempel följer med appen. Du kan också spara filer i din tilläggsmapp: Tilläggsmapp… listar dem för granskning, och Öppna mapp visar var den finns.
 
 3. Läs granskningsrutan. Den visar utgivaren, vad tillägget kan göra och dess jobb. Inget körs ännu.
 

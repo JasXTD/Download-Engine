@@ -56,7 +56,7 @@ Erweiterungen fügen Website-Unterstützung und Automatisierung in einem Paket h
 
 1. Öffnen Sie „Erweiterungen“ in der oberen Symbolleiste. Die Registerkarte „Installiert“ listet Ihre Erweiterungen auf.
 
-2. Wählen Sie „Aus Datei installieren…“ und dann eine .de-extension.json-Datei. Um zuerst etwas auszuprobieren, wählen Sie stattdessen „Beispiele…“: Fünf kleine Beispiele werden mit der App geliefert.
+2. Wählen Sie „Aus Datei installieren…“ und dann eine .de-extension.json-Datei. Um zuerst etwas auszuprobieren, wählen Sie stattdessen „Beispiele…“: Fünf kleine Beispiele werden mit der App geliefert. Sie können Dateien auch in Ihrem Erweiterungsordner speichern: „Erweiterungsordner…“ listet sie zur Prüfung auf, und „Ordner öffnen“ zeigt, wo er liegt.
 
 3. Lesen Sie den Prüfdialog. Er zeigt den Herausgeber, was die Erweiterung kann, und ihre Aufträge. Noch läuft nichts.
 

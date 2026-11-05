@@ -34,6 +34,27 @@ Get-Content .\key.txt | .\de-cli.exe extensions set-secret example.videohost con
 
 `extensions install` takes `--allow-files` to grant requested file access, `--queue NAME` to choose the queue for Queue completed jobs, and `--approve` to accept an update that needs approval. An update that adds a job requires `--approve` even if the extension already has that kind of job or is currently turned off. `extensions review` shows what an update changes without saving anything. Scripts cannot run these commands.
 
+### Your extensions folder
+
+You can also save extension files in your extensions folder, the `Extensions` folder inside Download Engine's data folder:
+
+| Copy | Folder |
+| --- | --- |
+| Installed on Windows | `%LOCALAPPDATA%\Download Engine\Extensions` |
+| Portable | `Extensions` in the portable copy's data folder |
+| macOS | `~/Library/Application Support/Download Engine/Extensions` |
+| Linux | `$XDG_DATA_HOME/Download Engine/Extensions`, or `~/.local/share/Download Engine/Extensions` |
+
+A profile chosen with `DOWNLOAD_ENGINE_HOME` uses `data\Extensions` inside it. This is not the `examples\extensions` folder where Download Engine is installed.
+
+Choose **Extensions folder…** to see what the folder holds, **Open folder** to go there and **Scan now** to look again. Download Engine looks in the folder when it starts, each time you open the Installed tab or this list, and when you choose **Scan now**. It doesn't watch the folder in between. When the folder holds an extension you don't have, or a newer version of one you do, a strip on the Installed tab says how many, and its **Review…** opens the list.
+
+- Nothing in the folder runs, installs or updates by itself. **Review…** opens the same review as **Install from file…**, for the file as it is at that moment. A new extension installs turned off, and an update needs the same approval as any other.
+- Only packed `.de-extension.json` files are read. A folder holding a `manifest.json` gets a hint to pack it with `de-cli extensions pack`. Links and junctions inside the folder are skipped, hidden files are ignored, other files are counted but not read, a file over 1 MiB is refused, and only the first 100 entries are listed, in name order.
+- A file that has the same version as the one you installed, but different content, can't update it. Raise its `version` first. An older file is only listed.
+- Download Engine keeps its own copy of what you install. Changing or deleting the file afterwards changes nothing, and deleting it doesn't uninstall the extension.
+- The examples that come with the app stay under **Examples…**. This list shows only the files saved in your folder.
+
 ## What each job can do
 
 | Job | Sees downloads | Reaches the web | `xd.store` | Changes files | Secrets and keys |

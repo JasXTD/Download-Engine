@@ -136,6 +136,8 @@ Change the `id` in your copy's `manifest.json` first, then pack the folder:
 
 In Download Engine, open **Extensions**, choose **Install from file…** and pick your file. The review shows what each job does and what it can reach. Choose **Install**. It installs turned off, so choose **Turn on** when you are ready.
 
+You can also pack straight into your [extensions folder](extensions.md#your-extensions-folder), with `--out "$env:LOCALAPPDATA\Download Engine\Extensions\my-commons-1.0.0.de-extension.json"`. Download Engine creates that folder when it starts, and `pack` never replaces a file, so give each version its own name. Open **Extensions**, and the Installed tab shows a strip with **Review…**, which opens the same review.
+
 ## 5. Try it
 
 Open a Commons file page, such as `https://commons.wikimedia.org/wiki/File:Example.jpg`, with **Add URL** or **Find videos on this page**. The list shows the original file. If something goes wrong, find the run on the **Run history** tab and choose **View log**: it shows your `assert` messages and anything the code printed. Site readers need **Preferences › Connection › Proxy › Direct connection**.

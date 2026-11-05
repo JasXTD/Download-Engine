@@ -13,7 +13,8 @@ static EXAMPLES: LazyLock<Vec<(Package, &'static [u8])>> = LazyLock::new(|| {
         .collect()
 });
 
-/// What an example can reach, in a few words for the list.
+/// What a package can reach, in a few words for a list. True when it asks to
+/// change files.
 fn reach(package: &Package) -> (String, bool) {
     if package.jobs.iter().any(|job| job.change_files) {
         (tr("Asks to change files").into(), true)
@@ -31,6 +32,88 @@ fn reach(package: &Package) -> (String, bool) {
             false,
         )
     }
+}
+
+/// What a list row offers at its right edge.
+pub(super) enum Offer<'a> {
+    Button(&'a str),
+    Note(&'a str),
+    Nothing,
+}
+
+/// One package in a list: its name, an optional `title` beside the name, the
+/// description, any `notes`, then its kind and reach. True when the offered
+/// button was clicked.
+pub(super) fn package_row(
+    ui: &mut egui::Ui,
+    package: &Package,
+    title: Option<&str>,
+    notes: &[(String, Color32)],
+    offer: Offer<'_>,
+    p: Palette,
+) -> bool {
+    let reserved = match offer {
+        Offer::Button(text) | Offer::Note(text) => {
+            let font = egui::TextStyle::Button.resolve(ui.style());
+            ui.painter()
+                .layout_no_wrap(text.to_owned(), font, p.text)
+                .size()
+                .x
+                + 2.0 * ui.spacing().button_padding.x
+                + 2.0 * ui.spacing().item_spacing.x
+        }
+        Offer::Nothing => 0.0,
+    };
+    let mut clicked = false;
+    ui.horizontal_top(|ui| {
+        ui.vertical(|ui| {
+            ui.set_width((ui.available_width() - reserved).max(160.0));
+            match title {
+                Some(title) => {
+                    ui.horizontal_wrapped(|ui| {
+                        ui.label(RichText::new(&package.name).strong());
+                        ui.label(RichText::new(title).small().color(p.muted));
+                    });
+                }
+                None => {
+                    ui.add(egui::Label::new(RichText::new(&package.name).strong()).wrap());
+                }
+            }
+            ui.add(
+                egui::Label::new(RichText::new(&package.description).small().color(p.muted))
+                    .wrap(),
+            );
+            for (note, color) in notes {
+                ui.add(egui::Label::new(RichText::new(note).small().color(*color)).wrap());
+            }
+            ui.horizontal_wrapped(|ui| {
+                let kind = package.jobs.first().map_or("", job_kind);
+                egui::Frame::new()
+                    .fill(p.track)
+                    .corner_radius(5)
+                    .inner_margin(egui::Margin::symmetric(6, 0))
+                    .show(ui, |ui| {
+                        ui.add(egui::Label::new(RichText::new(kind).small().strong()).extend());
+                    });
+                let (text, asks) = reach(package);
+                if !text.is_empty() {
+                    ui.label(RichText::new(text).small().color(if asks {
+                        p.orange
+                    } else {
+                        p.muted
+                    }));
+                }
+            });
+        });
+        ui.with_layout(Layout::right_to_left(Align::Min), |ui| match offer {
+            Offer::Button(text) => clicked = ui.button(text).clicked(),
+            Offer::Note(text) => {
+                ui.label(RichText::new(text).small().color(p.muted));
+            }
+            Offer::Nothing => {}
+        });
+    });
+    clicked
 }
 
 impl Desktop {
@@ -71,53 +154,14 @@ impl Desktop {
                     let current = installed
                         .get(package.id.as_str())
                         .is_some_and(|at| version(&package.version).is_ok_and(|v| *at >= v));
-                    let action = tr("Review…");
-                    let font = egui::TextStyle::Button.resolve(ui.style());
-                    let button = ui
-                        .painter()
-                        .layout_no_wrap(action.to_owned(), font, p.text)
-                        .size()
-                        .x
-                        + 2.0 * ui.spacing().button_padding.x
-                        + 2.0 * ui.spacing().item_spacing.x;
-                    ui.horizontal_top(|ui| {
-                        ui.vertical(|ui| {
-                            ui.set_width((ui.available_width() - button).max(160.0));
-                            ui.add(egui::Label::new(RichText::new(&package.name).strong()).wrap());
-                            ui.add(
-                                egui::Label::new(RichText::new(&package.description).small().color(p.muted))
-                                    .wrap(),
-                            );
-                            ui.horizontal_wrapped(|ui| {
-                                let kind = package.jobs.first().map_or("", job_kind);
-                                egui::Frame::new()
-                                    .fill(p.track)
-                                    .corner_radius(5)
-                                    .inner_margin(egui::Margin::symmetric(6, 0))
-                                    .show(ui, |ui| {
-                                        ui.add(
-                                            egui::Label::new(RichText::new(kind).small().strong())
-                                                .extend(),
-                                        );
-                                    });
-                                let (text, asks) = reach(package);
-                                if !text.is_empty() {
-                                    ui.label(RichText::new(text).small().color(if asks {
-                                        p.orange
-                                    } else {
-                                        p.muted
-                                    }));
-                                }
-                            });
-                        });
-                        ui.with_layout(Layout::right_to_left(Align::Min), |ui| {
-                            if current {
-                                ui.label(RichText::new(tr("Installed")).small().color(p.muted));
-                            } else if ui.button(action).clicked() {
-                                chosen = Some(index);
-                            }
-                        });
-                    });
+                    let offer = if current {
+                        Offer::Note(tr("Installed"))
+                    } else {
+                        Offer::Button(tr("Review…"))
+                    };
+                    if package_row(ui, package, None, &[], offer, p) {
+                        chosen = Some(index);
+                    }
                 }
                 ui.add_space(6.0);
                 ui.separator();

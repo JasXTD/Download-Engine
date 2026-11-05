@@ -348,6 +348,28 @@ fn an_example_opens_the_normal_review_and_installs_turned_off() {
     text_rect(&output, "Installed");
 }
 
+/// Reviewed as a new install that starts turned off. If another program installs
+/// and turns on an older copy meanwhile, Install must not quietly update it.
+#[test]
+fn installing_after_the_extension_changed_elsewhere_asks_for_a_new_review() {
+    let (_temp, mut app, ctx) = fixture();
+    open(&mut app);
+    review(&mut app, package("1.3.0", &["videohost.example"]));
+    app.store
+        .install_extension(
+            &package("1.2.0", &["videohost.example"]),
+            &Grants::default(),
+        )
+        .unwrap();
+    app.store.set_extension_enabled(ID, true).unwrap();
+    click(&mut app, &ctx, "Install");
+    assert_eq!(app.dialog, Some(Dialog::ExtensionReview));
+    frame(&mut app, &ctx, size(), vec![]);
+    let output = frame(&mut app, &ctx, size(), vec![]);
+    text_containing(&output, "This extension changed after you reviewed it");
+    assert_eq!(app.store.extension(ID).unwrap().package.version, "1.2.0");
+}
+
 #[test]
 fn cancelling_a_review_changes_nothing() {
     let (_temp, mut app, ctx) = fixture();
@@ -800,7 +822,7 @@ fn a_file_in_the_folder_is_only_listed_until_reviewed_and_installs_turned_off() 
     text_rect(&output, "Asks to change files");
     text_rect(
         &output,
-        "Nothing in this folder runs until you review it, and it installs turned off.",
+        "Nothing in this folder runs until you review it. A new extension installs turned off, and an update stays on or off as it was.",
     );
     // The top-most Review… is the row's, above the strip behind the list.
     click(&mut app, &ctx, "Review…");

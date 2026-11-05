@@ -12,7 +12,7 @@ New to extensions? [Make your first extension](first-extension.md) walks through
 
 Open **Extensions** in the top toolbar, then choose **Install from file…** and pick a `.de-extension.json` file. To try one first, choose **Examples…**. Five small examples come with the app: three site readers, for Internet Archive items, Wikimedia Commons file pages and GitHub releases, and two automations, which sort finished files into folders and show a notification when a queue finishes. Each one goes through the same review as a file.
 
-- **Install.** The review shows the publisher, what each job does and when it runs, and what the extension can reach: the web, your downloads and your files. Nothing runs yet. It installs turned off, so choose **Turn on** or tick **Enabled** when you are ready. File access is only a request, and stays off unless you tick it. You can allow it later with **Allow…** on the Overview tab, which asks you to confirm, and take it back there with **Take back**. Only a job whose package asks for file access can get it.
+- **Install.** The review shows the publisher, what each job does and when it runs, and what the extension can reach: the web, your downloads and your files. Nothing runs yet. It installs turned off, so choose **Turn on** or tick **Enabled** when you are ready. File access is only a request, and stays off unless you tick it. You can allow it later with **Allow…** on the Overview tab, which asks you to confirm, and take it back there with **Take back**. Only a job whose package asks for file access can get it. If the extension changes while the review is open, for example because the CLI installed it, the install is refused: review the file again.
 - **Update.** Open a newer file with the same ID. The review shows what changed. You must approve new access, a new publisher, every added job, and any job that now runs at other times, on other pages or from another file. This includes replacing a job's ID, even when its name and kind stay the same. **Not now** leaves the installed version exactly as it was. Settings, keys, stored values and run history are kept, except a saved value the new version can't use, which the review names. Downloads already running keep the code they started with. Going back to an older version means removing the extension first.
 - **Turn off.** Untick **Enabled**. Its running jobs stop and its running downloads pause. Nothing it owns starts until you turn it back on, so a waiting download fails with a message saying so.
 - **Remove.** Its settings, keys and stored values are deleted. Run history stays, and files you downloaded are kept. Removing is refused while unfinished downloads still use it.
@@ -49,7 +49,7 @@ A profile chosen with `DOWNLOAD_ENGINE_HOME` uses `data\Extensions` inside it. T
 
 Choose **Extensions folder…** to see what the folder holds, **Open folder** to go there and **Scan now** to look again. Download Engine looks in the folder when it starts, each time you open the Installed tab or this list, and when you choose **Scan now**. It doesn't watch the folder in between. When the folder holds an extension you don't have, or a newer version of one you do, a strip on the Installed tab says how many, and its **Review…** opens the list.
 
-- Nothing in the folder runs, installs or updates by itself. **Review…** opens the same review as **Install from file…**, for the file as it is at that moment. A new extension installs turned off, and an update needs the same approval as any other.
+- Nothing in the folder runs, installs or updates by itself. **Review…** opens the same review as **Install from file…**, for the file as it is at that moment. A new extension installs turned off. An update needs the same approval as any other, and stays on or off as it was.
 - Only packed `.de-extension.json` files are read. A folder holding a `manifest.json` gets a hint to pack it with `de-cli extensions pack`. Links and junctions inside the folder are skipped, hidden files are ignored, other files are counted but not read, a file over 1 MiB is refused, and only the first 100 entries are listed, in name order.
 - A file that has the same version as the one you installed, but different content, can't update it. Raise its `version` first. An older file is only listed.
 - Download Engine keeps its own copy of what you install. Changing or deleting the file afterwards changes nothing, and deleting it doesn't uninstall the extension.
@@ -153,7 +153,7 @@ In a folder, `manifest.json` holds everything except `files`.
 
 ### Manifest fields
 
-Unknown fields are refused.
+Unknown fields are refused. The name, publisher, description and license, job names and setting labels can't hold line breaks, tabs or text-direction controls (U+202A to U+202E and U+2066 to U+2069), which could make the review show something other than what the file says.
 
 | Field | Required | Rule |
 | --- | --- | --- |

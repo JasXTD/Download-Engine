@@ -271,7 +271,7 @@ impl Desktop {
                     let looked = tf!("Looked at {time}. It also looks when Download Engine starts and each time you open Extensions.", time = clock(at));
                     ui.add(egui::Label::new(RichText::new(looked).small().color(p.muted)).wrap());
                 }
-                let promise = tr("Nothing in this folder runs until you review it, and it installs turned off.");
+                let promise = tr("Nothing in this folder runs until you review it. A new extension installs turned off, and an update stays on or off as it was.");
                 ui.add(egui::Label::new(RichText::new(promise).small().color(p.muted)).wrap());
                 for error in [&state.problem, &state.error].into_iter().flatten() {
                     ui.add_space(4.0);

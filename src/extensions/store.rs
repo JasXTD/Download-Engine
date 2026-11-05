@@ -58,6 +58,25 @@ pub struct Installed {
 pub struct Review {
     pub package: Package,
     pub update: Option<Changes>,
+    /// What was installed when the review was made.
+    #[serde(skip)]
+    shown_against: Option<Shown>,
+}
+
+/// The installed copy a review was made against. A fresh install gets a new
+/// key scope, and an update a new version, so either shows it changed.
+#[derive(Clone, Debug, PartialEq, Eq)]
+struct Shown {
+    version: String,
+    key_scope: uuid::Uuid,
+}
+impl Shown {
+    fn of(installed: Option<&Installed>) -> Option<Self> {
+        installed.map(|installed| Self {
+            version: installed.package.version.clone(),
+            key_scope: installed.key_scope,
+        })
+    }
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize)]
@@ -296,7 +315,9 @@ impl Store {
     pub fn review_extension(&self, bytes: &[u8]) -> Result<Review> {
         let package = checked(bytes)?;
         let conn = self.connect()?;
-        let update = read(&conn, &package.id)?
+        let installed = read(&conn, &package.id)?;
+        let shown_against = Shown::of(installed.as_ref());
+        let update = installed
             .map(|old| {
                 let mut changes = compare(&old.package, &package);
                 changes.dropped_settings = stale_settings(&conn, &old.package, &package)?
@@ -310,15 +331,45 @@ impl Store {
                 Ok::<_, anyhow::Error>(changes)
             })
             .transpose()?;
-        Ok(Review { package, update })
+        Ok(Review {
+            package,
+            update,
+            shown_against,
+        })
     }
 
     /// Installs a new extension turned off, or updates an installed one.
     pub fn install_extension(&self, bytes: &[u8], grants: &Grants) -> Result<Installed> {
+        self.install(bytes, grants, None)
+    }
+
+    /// Installs what `review` showed the person. It is refused if the installed
+    /// extension changed after the review was made, for example from the CLI,
+    /// because the review would no longer say what installing does.
+    pub fn install_reviewed(
+        &self,
+        bytes: &[u8],
+        grants: &Grants,
+        review: &Review,
+    ) -> Result<Installed> {
+        self.install(bytes, grants, Some(review))
+    }
+
+    fn install(&self, bytes: &[u8], grants: &Grants, review: Option<&Review>) -> Result<Installed> {
         let package = checked(bytes)?;
         let mut conn = self.connect()?;
         let tx = conn.transaction_with_behavior(TransactionBehavior::Immediate)?;
         let old = read(&tx, &package.id)?;
+        if let Some(review) = review {
+            ensure!(
+                review.package == package,
+                "This is not the file that was reviewed. Review it again"
+            );
+            ensure!(
+                review.shown_against == Shown::of(old.as_ref()),
+                "This extension changed after you reviewed it. Review it again"
+            );
+        }
         if let Some(old) = &old {
             ensure!(
                 version(&package.version)? > version(&old.package.version)?,

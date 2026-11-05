@@ -1120,7 +1120,10 @@ impl Desktop {
                 queues: pending.queues.clone(),
                 approved: true,
             };
-            match self.store.install_extension(&pending.bytes, &grants) {
+            match self
+                .store
+                .install_reviewed(&pending.bytes, &grants, &pending.review)
+            {
                 Ok(installed) => {
                     self.extensions.pending = None;
                     self.dialog = None;

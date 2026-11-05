@@ -7999,7 +7999,7 @@
   "Scan now": ["立即扫描","立即掃描","Imbas sekarang"],
   "Looking in the folder…": ["正在查看文件夹…","正在查看資料夾…","Sedang melihat dalam folder…"],
   "Looked at {time}. It also looks when Download Engine starts and each time you open Extensions.": ["上次查看时间：{time}。Download Engine 启动时以及每次打开“扩展”时也会查看。","上次查看時間：{time}。Download Engine 啟動時以及每次開啟「擴充功能」時也會查看。","Dilihat pada {time}. Folder ini juga dilihat apabila Download Engine bermula dan setiap kali anda membuka Sambungan."],
-  "Nothing in this folder runs until you review it, and it installs turned off.": ["此文件夹中的内容在你检查之前不会运行，安装后也默认关闭。","此資料夾中的內容在你檢查之前不會執行，安裝後也預設為關閉。","Tiada apa-apa dalam folder ini berjalan sehingga anda menyemaknya, dan ia dipasang dalam keadaan dimatikan."],
+  "Nothing in this folder runs until you review it. A new extension installs turned off, and an update stays on or off as it was.": ["此文件夹中的内容在你检查之前不会运行。新扩展安装后默认关闭，更新则保持原来的开启或关闭状态。","此資料夾中的內容在你檢查之前不會執行。新擴充功能安裝後預設為關閉，更新則保持原本的開啟或關閉狀態。","Tiada apa-apa dalam folder ini berjalan sehingga anda menyemaknya. Sambungan baharu dipasang dalam keadaan dimatikan, dan kemas kini kekal hidup atau mati seperti sebelumnya."],
   "No extension files in this folder yet.": ["此文件夹中还没有扩展文件。","此資料夾中還沒有擴充功能檔案。","Belum ada fail sambungan dalam folder ini."],
   "Review update…": ["检查此更新…","檢查此更新…","Semak kemas kini…"],
   "You have {version}. This file is newer.": ["你安装的是 {version}，此文件的版本更新。","你安裝的是 {version}，此檔案的版本較新。","Anda mempunyai {version}. Fail ini lebih baharu."],

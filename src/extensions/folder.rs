@@ -81,6 +81,35 @@ fn extension_file(name: &str) -> bool {
     name.to_lowercase().ends_with(FILE_SUFFIX)
 }
 
+/// Opens a plain file without following a link and without waiting on a pipe
+/// or a device. Its name was checked before, but what the name points to could
+/// have been swapped since, so the file that was opened is checked too.
+pub(super) fn open_plain(path: &Path) -> Result<fs::File> {
+    let mut options = fs::OpenOptions::new();
+    options.read(true);
+    #[cfg(windows)]
+    {
+        use std::os::windows::fs::OpenOptionsExt;
+        // Opens a link or junction itself, so the check below refuses it.
+        options.custom_flags(windows_sys::Win32::Storage::FileSystem::FILE_FLAG_OPEN_REPARSE_POINT);
+    }
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::OpenOptionsExt;
+        // A link fails to open, and a pipe opens at once so the check can refuse
+        // it. Regular files are unaffected by O_NONBLOCK.
+        options.custom_flags(libc::O_NOFOLLOW | libc::O_NONBLOCK | libc::O_CLOEXEC);
+    }
+    let file = options.open(path)?;
+    let metadata = file.metadata()?;
+    ensure!(
+        !link(&metadata) && metadata.is_file(),
+        "{} is not a plain file",
+        path.display()
+    );
+    Ok(file)
+}
+
 /// Reads one extension file from the folder, without following links, and
 /// checks it as an install would. `name` must be a plain file name.
 pub fn read(folder: &Path, name: &str) -> Result<(Package, Vec<u8>)> {
@@ -94,9 +123,7 @@ pub fn read(folder: &Path, name: &str) -> Result<(Package, Vec<u8>)> {
         !link(&metadata) && metadata.is_file(),
         "Only files saved in the extensions folder are read. {name} is a link or a folder"
     );
-    let file = fs::File::open(&path).with_context(|| format!("Can't read {name}"))?;
-    // It could have been swapped for something else since the check above.
-    ensure!(file.metadata()?.is_file(), "{name} is not a file");
+    let file = open_plain(&path).with_context(|| format!("Can't read {name}"))?;
     let mut bytes = Vec::new();
     file.take(MAX_PACKAGE_BYTES as u64 + 1)
         .read_to_end(&mut bytes)

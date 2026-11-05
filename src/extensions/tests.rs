@@ -193,6 +193,46 @@ fn every_broken_package_is_refused_for_the_right_reason() {
             "Invalid extension name",
         ),
         (
+            "name with a trailing line break",
+            |p| p["name"] = json!("VideoHost\n"),
+            "extension name can't hold",
+        ),
+        (
+            "name with a direction override",
+            |p| p["name"] = json!("Video\u{202E}tsoH"),
+            "extension name can't hold",
+        ),
+        (
+            "publisher with a line break",
+            |p| p["publisher"] = json!("Example\nInstalled"),
+            "Publisher must be",
+        ),
+        (
+            "description with a tab",
+            |p| p["description"] = json!("Adds pages.\tInstalled"),
+            "Description must be",
+        ),
+        (
+            "description with a direction isolate",
+            |p| p["description"] = json!("Adds \u{2067}pages\u{2069}."),
+            "Description must be",
+        ),
+        (
+            "license with a line break",
+            |p| p["license"] = json!("MIT\nVerified"),
+            "License must be",
+        ),
+        (
+            "job name with a direction override",
+            |p| p["jobs"][0]["name"] = json!("Pages \u{202D}x"),
+            "its name can't hold",
+        ),
+        (
+            "setting label with a line break",
+            |p| p["settings"][0]["label"] = json!("Quality\nInstalled"),
+            "needs a label",
+        ),
+        (
             "http homepage",
             |p| p["homepage"] = json!("http://example.com"),
             "https://",
@@ -422,13 +462,67 @@ fn every_broken_package_is_refused_for_the_right_reason() {
             "not a valid extension file",
         ),
     ];
-    assert_eq!(cases.len(), 50);
+    assert_eq!(cases.len(), 58);
     for (title, change, expected) in cases {
         let mut package = example();
         change(&mut package);
         let error = format!("{:#}", decode(&package).expect_err(title));
         assert!(error.contains(expected), "{title}: {error}");
     }
+}
+
+/// A review describes what was installed when it was made. If another program,
+/// such as the CLI, installs, reinstalls or updates the extension meanwhile,
+/// installing from that review is refused instead of doing something unseen.
+#[test]
+fn installing_from_a_review_is_refused_once_the_extension_changed() {
+    let (_temp, store) = fixture();
+    let id = "example.videohost";
+    let older = bytes(&example());
+    let mut value = example();
+    value["version"] = json!("1.3.0");
+    let newer = bytes(&value);
+    let approved = Grants {
+        approved: true,
+        ..Default::default()
+    };
+
+    // Reviewed as a new install, then installed elsewhere and turned on.
+    let review = store.review_extension(&newer).unwrap();
+    assert!(review.update.is_none());
+    store.install_extension(&older, &Grants::default()).unwrap();
+    store.set_extension_enabled(id, true).unwrap();
+    let error = store
+        .install_reviewed(&newer, &approved, &review)
+        .unwrap_err();
+    assert!(
+        format!("{error:#}").contains("changed after you reviewed it"),
+        "{error:#}"
+    );
+    assert_eq!(store.extension(id).unwrap().package.version, "1.2.0");
+
+    // Reviewed as an update, then removed and installed again at that version.
+    let review = store.review_extension(&newer).unwrap();
+    store.set_extension_enabled(id, false).unwrap();
+    store.remove_extension(id).unwrap();
+    store.install_extension(&older, &Grants::default()).unwrap();
+    assert!(store.install_reviewed(&newer, &approved, &review).is_err());
+
+    // Only the reviewed file installs from a review.
+    let review = store.review_extension(&newer).unwrap();
+    let mut other = value.clone();
+    other["description"] = json!("Not what was reviewed.");
+    let error = store
+        .install_reviewed(&bytes(&other), &approved, &review)
+        .unwrap_err();
+    assert!(
+        format!("{error:#}").contains("not the file that was reviewed"),
+        "{error:#}"
+    );
+
+    // Nothing changed since the review: it installs.
+    store.install_reviewed(&newer, &approved, &review).unwrap();
+    assert_eq!(store.extension(id).unwrap().package.version, "1.3.0");
 }
 
 #[test]

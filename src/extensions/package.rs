@@ -180,8 +180,10 @@ impl Setting {
             "Setting id {id:?} must be up to 32 lower-case letters, digits or underscores"
         );
         ensure!(
-            !self.label().trim().is_empty() && self.label().chars().count() <= 128,
-            "Setting {id} needs a label of up to 128 characters"
+            !self.label().trim().is_empty()
+                && self.label().chars().count() <= 128
+                && plain(self.label()),
+            "Setting {id} needs a label of up to 128 characters, without line breaks, tabs or text-direction controls"
         );
         match self {
             Self::String {
@@ -285,14 +287,22 @@ impl Package {
         );
         ensure!(valid_id(&self.id), "Invalid extension id {:?}", self.id);
         crate::queue::queue_name(&self.name).context("Invalid extension name")?;
+        ensure!(
+            plain(&self.name),
+            "The extension name can't hold line breaks, tabs or text-direction controls"
+        );
         version(&self.version)?;
         ensure!(
-            !self.publisher.trim().is_empty() && self.publisher.chars().count() <= 64,
-            "Publisher must be 1 to 64 characters"
+            !self.publisher.trim().is_empty()
+                && self.publisher.chars().count() <= 64
+                && plain(&self.publisher),
+            "Publisher must be 1 to 64 characters, without line breaks, tabs or text-direction controls"
         );
         ensure!(
-            !self.description.trim().is_empty() && self.description.chars().count() <= 200,
-            "Description must be 1 to 200 characters"
+            !self.description.trim().is_empty()
+                && self.description.chars().count() <= 200
+                && plain(&self.description),
+            "Description must be 1 to 200 characters, without line breaks, tabs or text-direction controls"
         );
         if let Some(homepage) = &self.homepage {
             let url = reqwest::Url::parse(homepage).context("Invalid homepage")?;
@@ -304,8 +314,8 @@ impl Package {
         ensure!(
             self.license
                 .as_ref()
-                .is_none_or(|l| l.chars().count() <= 64),
-            "License must be at most 64 characters"
+                .is_none_or(|l| l.chars().count() <= 64 && plain(l)),
+            "License must be at most 64 characters, without line breaks, tabs or text-direction controls"
         );
         ensure!(
             self.api_version == api::VERSION,
@@ -387,6 +397,11 @@ impl Package {
                 job.id
             );
             ensure!(ids.insert(&job.id), "Job {} is listed twice", job.id);
+            ensure!(
+                plain(&job.name),
+                "Job {}: its name can't hold line breaks, tabs or text-direction controls",
+                job.id
+            );
             let body = self
                 .files
                 .get(&job.entry)
@@ -487,6 +502,15 @@ fn valid_id(id: &str) -> bool {
                 .all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'-')
     };
     id.len() <= 64 && id.contains('.') && id.split('.').all(word)
+}
+
+/// Text people read in the review and the lists. A line break or tab could
+/// draw a line that looks like part of the app, and a direction override can
+/// show the letters in another order than they are stored.
+fn plain(text: &str) -> bool {
+    !text
+        .chars()
+        .any(|c| c.is_control() || matches!(c, '\u{202A}'..='\u{202E}' | '\u{2066}'..='\u{2069}'))
 }
 
 /// `MAJOR.MINOR.PATCH`, compared as numbers.

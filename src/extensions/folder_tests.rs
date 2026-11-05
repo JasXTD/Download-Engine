@@ -245,6 +245,46 @@ fn links_are_skipped_and_never_read() {
     assert!(read(&folder, "linked.de-extension.json").is_err());
 }
 
+/// A pipe swapped in after the name was checked is refused without waiting
+/// for someone to write to it.
+#[cfg(unix)]
+#[test]
+fn a_pipe_is_refused_without_blocking_the_listing() {
+    use std::os::unix::{ffi::OsStrExt, fs::OpenOptionsExt};
+    let temp = tempfile::tempdir().unwrap();
+    let pipe = temp.path().join("pipe.de-extension.json");
+    let c_path = std::ffi::CString::new(pipe.as_os_str().as_bytes()).unwrap();
+    assert_eq!(unsafe { libc::mkfifo(c_path.as_ptr(), 0o600) }, 0);
+    let listing = scan(temp.path()).unwrap();
+    assert!(listing.found.is_empty(), "{listing:?}");
+    assert_eq!(listing.skipped, 1);
+    let (tx, rx) = std::sync::mpsc::channel();
+    let opening = pipe.clone();
+    let worker = std::thread::spawn(move || {
+        tx.send(super::folder::open_plain(&opening).is_err())
+            .unwrap()
+    });
+    let refused = rx.recv_timeout(std::time::Duration::from_secs(2));
+    if refused.is_err() {
+        // Release a reader that regressed to blocking, including one that has
+        // not reached open() yet, before failing. Never leave a hung thread.
+        let _reader = fs::OpenOptions::new()
+            .read(true)
+            .custom_flags(libc::O_NONBLOCK)
+            .open(&pipe)
+            .unwrap();
+        let _writer = fs::OpenOptions::new()
+            .write(true)
+            .custom_flags(libc::O_NONBLOCK)
+            .open(&pipe)
+            .unwrap();
+        worker.join().unwrap();
+        panic!("opening a pipe blocked");
+    }
+    worker.join().unwrap();
+    assert_eq!(refused, Ok(true), "opening a pipe must fail");
+}
+
 /// Any account can make a junction, so this runs where links can't be made.
 #[cfg(windows)]
 #[test]

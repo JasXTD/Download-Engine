@@ -1,12 +1,17 @@
 //! Torrent downloads. The engine is a separate program, `de-torrent.exe`, because everything
 //! it reads comes from strangers. Nothing here starts it unless the user turned torrents on,
 //! and it only runs while a torrent needs it. `torrent/README.md` describes its side.
+mod details;
 mod helper;
 mod publish;
 pub(crate) mod seeding;
 mod settings;
 
-pub use helper::Host;
+pub use details::{
+    ADD_WHILE_RUNNING, PRIVATE_TRACKERS_TEXT, Peer, Pieces, RECHECK_LATER, Request, Source,
+    SourceState, TorrentDetails, Tracker, TrackerState, check_tracker,
+};
+pub use helper::{Host, RequestOutcome};
 pub use settings::{OFF_MESSAGE, PROXY_MESSAGE, Settings};
 
 pub(crate) use publish::{delete_saved, discard};
@@ -540,6 +545,7 @@ pub(crate) async fn transfer(
         .await
         .context("Cannot create the download folder")?;
     let files = store.torrent_files(&job.id)?;
+    let trackers = store.torrent_added_trackers(&job.id)?;
     let lease = store.torrents.lease(store)?;
     let mut add = json!({
         "cmd": "add",
@@ -547,6 +553,7 @@ pub(crate) async fn transfer(
         "magnet": job.url,
         "output": staging,
         "peers": store.torrents.test_peers(),
+        "trackers": trackers,
     });
     match stage {
         Stage::Chosen => add["only"] = json!(files.chosen),
@@ -558,6 +565,7 @@ pub(crate) async fn transfer(
         outcome = follow(store, job, &lease, limiter, cancel) => outcome,
         error = share_speed_limits(&id, &lease, limiter, cancel) => Err(error),
     };
+    details::abandon(store, &id);
     // Whatever happened, the engine must let go of the files before anyone touches them.
     let removed = lease
         .call(json!({"cmd": "remove", "name": id}))
@@ -652,6 +660,7 @@ async fn follow(
                 file_progress: stats.file_progress.as_slice().into(),
             },
         );
+        details::serve(store, lease, &job.id).await?;
         if stats.state == "ready" {
             let details =
                 Details::parse(lease.call(json!({"cmd": "files", "name": job.id})).await?)?;

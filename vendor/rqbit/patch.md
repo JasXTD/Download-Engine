@@ -137,6 +137,16 @@ All of these come from data that strangers control, and each has a regression te
   has no empty value. Private torrents must leave out peer exchange, so absent ids are now
   skipped when writing.
 
+### Added
+
+- Tracker reports: `TrackerObserver` in `librqbit-tracker-comms/src/tracker_comms.rs` hears
+  when each tracker is asked, what it answered (`TrackerAnswer`: peers given, seeds and
+  leechers when the tracker says, and the wait until the next announce) and when it failed,
+  with the wait before the next try. `TrackerComms::start` takes the observer as its last
+  argument. The engine shows these reports in the status window. HTTP `complete` and
+  `incomplete` are now optional, so a tracker that leaves them out does not read as having
+  no seeds. The tests use a tracker on 127.0.0.1 and a closed port there, never a network.
+
 ### Moved test files
 
 Tests read `ubuntu-21.04-desktop-amd64.iso.torrent` from `librqbit-core/src/resources/test/`

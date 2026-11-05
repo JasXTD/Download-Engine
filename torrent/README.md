@@ -22,6 +22,7 @@ The formats and network protocols come from the crates copied into `../vendor/rq
 | `src/metadata.rs` | Fetches a magnet link's details from a peer. |
 | `src/discovery.rs` | Finds peers through trackers and the DHT. |
 | `src/resume.rs` | Remembers finished pieces between runs. |
+| `src/details.rs` | What the status window shows: the piece map, peers, and each tracker's last answer. |
 | `src/session.rs` | All torrents, the listener, and what they share. |
 | `src/cli.rs` | The `de-torrent` program. The app builds it as `src/bin/de-torrent.rs`. |
 
@@ -43,6 +44,10 @@ The formats and network protocols come from the crates copied into `../vendor/rq
   does this, so that a lost peer can't leave chunks stuck as requested.
 - Tests must never reach a network. Torrents only connect out when `connect_out` is set,
   which test helpers leave off, and on Windows `connect` panics in a test build.
+- Client names and tracker messages are a stranger's text. `details::clean_text` removes
+  control, hidden and direction characters and cuts them short before anyone sees them.
+- A tracker the user adds follows the rules for trackers in torrent files, and is only ever
+  asked about a torrent known to be public. Private torrents refuse added trackers.
 
 ## Resource limits
 
@@ -76,8 +81,11 @@ Each line on stdin is a JSON object with a `cmd`, and gets one reply line: `{"ok
 | Command | Fields | Result |
 | --- | --- | --- |
 | `files` | `torrent` (path) or `name` | The file list and info hash. |
-| `add` | `name`, `output`, then `torrent` (path) or `magnet`, and optional `only`, `peers`, `choose_later`, `seed_only`, `file_name` | The info hash. |
+| `add` | `name`, `output`, then `torrent` (path) or `magnet`, and optional `only`, `peers`, `choose_later`, `seed_only`, `file_name`, `trackers` | The info hash. |
 | `select` | `name`, `only` | Changes the chosen files at any time. |
+| `details` | `name` | `private`, `pieces` (counts and a `map` of up to 1,024 cells), `peers`, `trackers`, and `dht` and `pex` with the peers each found. |
+| `recheck` | `name` | Stops the swarm, forgets saved progress, and reads every chosen piece again. A running torrent starts again by itself. |
+| `add_tracker`, `remove_tracker` | `name`, `url` | Adds a tracker the user typed, or removes one they added. Refused for private torrents. |
 | `import` | `torrent` (path) | Saves the torrent's details, so its magnet link needs nothing else. Returns the same as `files`, with a `magnet`. |
 | `remove` | `name` | Stops a torrent and lets go of its files, which stay on disk. |
 | `configure` | `upload_limit`, `no_upload` | Changes uploading for every torrent at once. |
@@ -89,6 +97,11 @@ Each line on stdin is a JSON object with a `cmd`, and gets one reply line: `{"ok
 
 A torrent's `state` is one of `metadata`, `ready`, `initializing`, `live`, `finished`,
 `paused` or `error`.
+
+In a piece `map`, each character covers an equal run of pieces: `-` when none of them is
+wanted, `*` when a wanted one has started but isn't finished, and `0` to `9` for how much of
+the wanted ones is finished, with `9` only when all are. A tracker's `state` is `waiting`,
+`asking`, `working`, `failed`, `refused` (it leads to this computer or its network) or `off`.
 
 Options: `--port`, `--upload-limit`, `--download-limit`, `--state-dir`, `--no-seed`,
 `--no-upload`, `--trackers`, `--dht`. Trackers, the DHT and incoming connections are off unless asked for.

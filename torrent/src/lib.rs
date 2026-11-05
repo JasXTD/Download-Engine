@@ -3,6 +3,7 @@
 mod admission;
 pub mod bitfield;
 pub mod cli;
+pub mod details;
 pub mod discovery;
 pub mod meta;
 mod metadata;
@@ -14,6 +15,8 @@ pub mod session;
 pub mod storage;
 pub mod torrent;
 
+#[cfg(test)]
+mod details_tests;
 #[cfg(test)]
 mod hard_tests;
 #[cfg(all(test, unix))]

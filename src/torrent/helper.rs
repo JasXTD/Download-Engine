@@ -215,6 +215,11 @@ fn wait(mut answer: oneshot::Receiver<Result<Value>>, timeout: Duration) -> Resu
     }
 }
 
+/// How long a status window's interest in a torrent's details lasts without being renewed.
+const WATCH_FOR: Duration = Duration::from_secs(3);
+/// What a request came to: a message to show when it worked, or why it failed.
+pub type RequestOutcome = std::result::Result<Option<&'static str>, String>;
+
 #[derive(Default)]
 struct Shared {
     helper: Option<Arc<Helper>>,
@@ -222,6 +227,10 @@ struct Shared {
     selections: HashMap<String, Vec<usize>>,
     test_peers: Vec<SocketAddr>,
     network: Option<(bool, Option<u16>)>,
+    watched: HashMap<String, Instant>,
+    requests: HashMap<String, Vec<(u64, super::Request)>>,
+    outcomes: HashMap<String, (u64, RequestOutcome)>,
+    tickets: u64,
 }
 
 /// The torrent helper as all of a store's clones see it. Costs nothing until it is used.
@@ -293,6 +302,54 @@ impl Host {
 
     pub(super) fn take_selection(&self, id: &str) -> Option<Vec<usize>> {
         self.shared().selections.remove(id)
+    }
+
+    /// A status window shows this torrent's details. Asking again keeps them coming; they
+    /// stop a few seconds after the last time.
+    pub fn watch(&self, id: &str) {
+        self.shared().watched.insert(id.into(), Instant::now());
+    }
+
+    pub(super) fn is_watched(&self, id: &str) -> bool {
+        let mut shared = self.shared();
+        shared
+            .watched
+            .retain(|_, since| since.elapsed() < WATCH_FOR);
+        shared.watched.contains_key(id)
+    }
+
+    /// A number for a request, so that its outcome can be found again.
+    pub fn new_ticket(&self) -> u64 {
+        let mut shared = self.shared();
+        shared.tickets += 1;
+        shared.tickets
+    }
+
+    /// Leaves a request for the worker running this torrent.
+    pub(crate) fn queue_request(&self, id: &str, ticket: u64, request: super::Request) {
+        self.shared()
+            .requests
+            .entry(id.into())
+            .or_default()
+            .push((ticket, request));
+    }
+
+    pub(super) fn take_requests(&self, id: &str) -> Vec<(u64, super::Request)> {
+        self.shared().requests.remove(id).unwrap_or_default()
+    }
+
+    /// Records what a request came to. Only the latest outcome per torrent is kept.
+    pub(crate) fn settle(&self, id: &str, ticket: u64, outcome: RequestOutcome) {
+        self.shared().outcomes.insert(id.into(), (ticket, outcome));
+    }
+
+    /// What this request came to, once it has.
+    pub fn outcome(&self, id: &str, ticket: u64) -> Option<RequestOutcome> {
+        self.shared()
+            .outcomes
+            .get(id)
+            .filter(|(settled, _)| *settled == ticket)
+            .map(|(_, outcome)| outcome.clone())
     }
 
     /// Lets tests name a peer on this computer. There's no other way to add one.

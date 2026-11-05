@@ -1,5 +1,5 @@
 // Modified by Download Engine: replaced rand, backon and async-stream, and added public-only
-// name lookups and bounded tracker resources. See ../../patch.md.
+// name lookups, bounded tracker resources and announce reports. See ../../patch.md.
 use std::collections::HashSet;
 use std::net::SocketAddr;
 use std::net::SocketAddrV4;
@@ -105,6 +105,27 @@ impl Stream for TrackerPeers {
     }
 }
 
+/// What one tracker said in one announce. Added by Download Engine, which shows it.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct TrackerAnswer {
+    /// Peers in this answer, after the cap of `MAX_TRACKER_PEERS`.
+    pub peers: usize,
+    /// Only when the tracker says. HTTP trackers may leave these out.
+    pub seeders: Option<u64>,
+    pub leechers: Option<u64>,
+    /// How long until the next announce to this tracker.
+    pub next: Duration,
+}
+
+/// Hears about every announce, one tracker at a time. Added by Download Engine. The calls
+/// come from the tracker tasks, so they must return quickly and never wait.
+pub trait TrackerObserver: Send + Sync {
+    fn asking(&self, tracker: &Url);
+    fn answered(&self, tracker: &Url, answer: TrackerAnswer);
+    /// `error` may hold text the tracker sent, so it comes from a stranger.
+    fn failed(&self, tracker: &Url, error: &str, retry_in: Duration);
+}
+
 pub struct TrackerComms {
     info_hash: Id20,
     peer_id: Id20,
@@ -116,6 +137,7 @@ pub struct TrackerComms {
     reqwest_client: reqwest::Client,
     key: u32,
     requests: Arc<Semaphore>,
+    observer: Option<Arc<dyn TrackerObserver>>,
 }
 
 #[derive(Default)]
@@ -231,6 +253,7 @@ impl TrackerComms {
         announce_port: u16,
         reqwest_client: reqwest::Client,
         udp_client: UdpTrackerClient,
+        observer: Option<Arc<dyn TrackerObserver>>,
     ) -> Option<BoxStream<'static, SocketAddr>> {
         // Callers validate at ingress too. Refuse an oversized set before spawning anything.
         if trackers.len() > MAX_TRACKERS
@@ -272,6 +295,7 @@ impl TrackerComms {
                 reqwest_client,
                 key: librqbit_core::random::random_u32(),
                 requests: Arc::new(Semaphore::new(MAX_TRACKER_REQUESTS)),
+                observer,
             });
             let mut futures = FuturesUnordered::new();
             for tracker in trackers {
@@ -335,18 +359,38 @@ impl TrackerComms {
         }
     }
 
+    fn report_asking(&self, tracker: &Url) {
+        if let Some(observer) = &self.observer {
+            observer.asking(tracker);
+        }
+    }
+
+    fn report_answered(&self, tracker: &Url, answer: TrackerAnswer) {
+        if let Some(observer) = &self.observer {
+            observer.answered(tracker, answer);
+        }
+    }
+
+    fn report_failed(&self, tracker: &Url, error: &anyhow::Error, retry_in: Duration) {
+        if let Some(observer) = &self.observer {
+            observer.failed(tracker, &format!("{error:#}"), retry_in);
+        }
+    }
+
     async fn task_single_tracker_monitor_http(&self, tracker_url: Url) -> anyhow::Result<()> {
         trace!(url=%tracker_url, "starting monitor");
         let mut event = Some(tracker_comms_http::TrackerRequestEvent::Started);
 
         loop {
             let mut backoff = Backoff::new(Duration::from_secs(10), Duration::from_secs(600));
-            let interval = loop {
+            let mut answer = loop {
+                self.report_asking(&tracker_url);
                 match self.tracker_one_request_http(&tracker_url, event).await {
-                    Ok(interval) => break interval,
+                    Ok(answer) => break answer,
                     Err(err) => {
                         let retry_in = backoff.next_delay();
                         debug!(?retry_in, "error calling tracker: {err:#}");
+                        self.report_failed(&tracker_url, &err, retry_in);
                         tokio::time::sleep(retry_in).await;
                     }
                 }
@@ -355,8 +399,10 @@ impl TrackerComms {
             event = None;
             let interval = self
                 .force_tracker_interval
-                .unwrap_or(interval)
+                .unwrap_or(answer.next)
                 .max(MIN_TRACKER_INTERVAL);
+            answer.next = interval;
+            self.report_answered(&tracker_url, answer);
             debug!("sleeping for {:?} after calling tracker", interval);
             tokio::time::sleep(interval).await;
         }
@@ -366,7 +412,7 @@ impl TrackerComms {
         &self,
         tracker_url: &Url,
         event: Option<tracker_comms_http::TrackerRequestEvent>,
-    ) -> anyhow::Result<Duration> {
+    ) -> anyhow::Result<TrackerAnswer> {
         let stats = self.stats.get();
         let request = tracker_comms_http::TrackerRequest {
             info_hash: &self.info_hash,
@@ -415,10 +461,17 @@ impl TrackerComms {
 
         // Do not hold a network permit while waiting for the consumer's peer queue.
         drop(permits);
+        let mut peers = 0;
         for peer in response.iter_peers() {
             self.tx.send(peer).await?;
+            peers += 1;
         }
-        Ok(tracker_interval(response.interval, response.min_interval))
+        Ok(TrackerAnswer {
+            peers,
+            seeders: response.complete,
+            leechers: response.incomplete,
+            next: tracker_interval(response.interval, response.min_interval),
+        })
     }
 
     async fn task_single_tracker_monitor_udp(
@@ -445,6 +498,7 @@ impl TrackerComms {
             // This should retry forever until the addrs are resolved.
             let mut backoff = Backoff::new(Duration::from_secs(1), Duration::from_secs(60));
             let addrs = loop {
+                self.report_asking(&url);
                 let permits = self.request_permits().await?;
                 let resolved =
                     udp_tracker_to_socket_addrs(host.clone(), port, client.public_only())
@@ -457,6 +511,7 @@ impl TrackerComms {
                     Err(err) => {
                         let retry_in = backoff.next_delay();
                         debug!(?retry_in, "error resolving tracker: {err:#}");
+                        self.report_failed(&url, &err, retry_in);
                         tokio::time::sleep(retry_in).await;
                     }
                 }
@@ -464,18 +519,11 @@ impl TrackerComms {
 
             prev_addrs = Some(addrs);
 
-            match addrs {
+            let result = match addrs {
                 UdpTrackerResolveResult::One(addr) => {
-                    match self
-                        .tracker_one_request_udp(addr, &client)
+                    self.tracker_one_request_udp(addr, &client)
                         .instrument(trace_span!("udp request", ?addr))
                         .await
-                    {
-                        Ok(sleep) => sleep_interval = Some(sleep),
-                        Err(_) => {
-                            sleep_interval = Some(sleep_interval.unwrap_or(Duration::from_secs(60)))
-                        }
-                    }
                 }
                 UdpTrackerResolveResult::Two(v4, v6) => {
                     let (r4, r6) = tokio::join!(
@@ -484,12 +532,27 @@ impl TrackerComms {
                         self.tracker_one_request_udp(v6.into(), &client)
                             .instrument(trace_span!("udp request", addr=?v6))
                     );
-                    sleep_interval = Some(
-                        r4.or(r6)
-                            .ok()
-                            .or(sleep_interval)
-                            .unwrap_or(Duration::from_secs(60)),
-                    )
+                    match (r4, r6) {
+                        (Ok(four), Ok(six)) => Ok(TrackerAnswer {
+                            peers: four.peers + six.peers,
+                            seeders: four.seeders.max(six.seeders),
+                            leechers: four.leechers.max(six.leechers),
+                            next: four.next,
+                        }),
+                        (Ok(answer), Err(_)) | (Err(_), Ok(answer)) => Ok(answer),
+                        (Err(error), Err(_)) => Err(error),
+                    }
+                }
+            };
+            match result {
+                Ok(answer) => {
+                    sleep_interval = Some(answer.next);
+                    self.report_answered(&url, answer);
+                }
+                Err(error) => {
+                    let retry_in = sleep_interval.unwrap_or(Duration::from_secs(60));
+                    sleep_interval = Some(retry_in);
+                    self.report_failed(&url, &error, retry_in);
                 }
             }
         }
@@ -499,7 +562,7 @@ impl TrackerComms {
         &self,
         addr: SocketAddr,
         client: &UdpTrackerClient,
-    ) -> anyhow::Result<Duration> {
+    ) -> anyhow::Result<TrackerAnswer> {
         use tracker_comms_udp::*;
 
         let stats = self.stats.get();
@@ -531,11 +594,17 @@ impl TrackerComms {
         match response {
             Ok(response) => {
                 trace!(len = response.addrs.len(), "received announce response");
+                let mut peers = 0;
                 for addr in response.addrs.into_iter().take(MAX_TRACKER_PEERS) {
                     self.tx.send(addr).await.context("rx closed")?;
+                    peers += 1;
                 }
-                let sleep = tracker_interval(response.interval as u64, None);
-                Ok(sleep)
+                Ok(TrackerAnswer {
+                    peers,
+                    seeders: Some(u64::from(response.seeders)),
+                    leechers: Some(u64::from(response.leechers)),
+                    next: tracker_interval(response.interval as u64, None),
+                })
             }
             Err(e) => {
                 debug!(?addr, "error reading announce response: {e:#}");
@@ -618,10 +687,124 @@ mod tests {
             force_tracker_interval: None,
             tx: tokio::sync::mpsc::channel(1).0,
             announce_port: 6881,
-            reqwest_client: reqwest::Client::new(),
+            reqwest_client: reqwest::Client::builder().no_proxy().build().unwrap(),
             key: 0,
             requests: Arc::new(Semaphore::new(MAX_TRACKER_REQUESTS)),
+            observer: None,
         }
+    }
+
+    /// Writes down every report, as text, in order.
+    #[derive(Default)]
+    struct Heard(std::sync::Mutex<Vec<String>>);
+
+    impl TrackerObserver for Heard {
+        fn asking(&self, tracker: &Url) {
+            self.0.lock().unwrap().push(format!("asking {tracker}"));
+        }
+        fn answered(&self, tracker: &Url, answer: TrackerAnswer) {
+            self.0.lock().unwrap().push(format!(
+                "answered {tracker} peers={} seeds={:?} leechers={:?} next={}",
+                answer.peers,
+                answer.seeders,
+                answer.leechers,
+                answer.next.as_secs()
+            ));
+        }
+        fn failed(&self, tracker: &Url, _error: &str, retry_in: Duration) {
+            self.0
+                .lock()
+                .unwrap()
+                .push(format!("failed {tracker} retry={}", retry_in.as_secs()));
+        }
+    }
+
+    #[tokio::test]
+    async fn an_answer_is_reported_with_its_peers_seeds_and_next_announce() {
+        // A tracker on this computer that answers one announce with one peer. This crate's
+        // tokio has no io-util feature, so the socket is read and written by readiness.
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let address = listener.local_addr().unwrap();
+        tokio::spawn(async move {
+            let (socket, _) = listener.accept().await.unwrap();
+            let mut request = Vec::new();
+            while !request.windows(4).any(|end| end == b"\r\n\r\n") {
+                socket.readable().await.unwrap();
+                let mut buffer = [0u8; 4096];
+                match socket.try_read(&mut buffer) {
+                    Ok(0) => return,
+                    Ok(count) => request.extend_from_slice(&buffer[..count]),
+                    Err(error) if error.kind() == std::io::ErrorKind::WouldBlock => {}
+                    Err(error) => panic!("{error}"),
+                }
+            }
+            let body: &[u8] =
+                b"d8:completei5e10:incompletei2e8:intervali60e5:peers6:\x01\x02\x03\x04\x1a\xe1e";
+            let head = format!(
+                "HTTP/1.1 200 OK\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
+                body.len()
+            );
+            let reply = [head.as_bytes(), body].concat();
+            let mut sent = 0;
+            while sent < reply.len() {
+                socket.writable().await.unwrap();
+                match socket.try_write(&reply[sent..]) {
+                    Ok(count) => sent += count,
+                    Err(error) if error.kind() == std::io::ErrorKind::WouldBlock => {}
+                    Err(error) => panic!("{error}"),
+                }
+            }
+            // Keep the connection until the client has read the answer and closed its side.
+            let _ = socket.readable().await;
+        });
+        let heard = Arc::new(Heard::default());
+        let (tx, mut found) = tokio::sync::mpsc::channel(4);
+        let comms = TrackerComms {
+            tx,
+            observer: Some(heard.clone()),
+            ..comms()
+        };
+        let url = Url::parse(&format!("http://{address}/announce")).unwrap();
+        let monitor = comms.task_single_tracker_monitor_http(url.clone());
+        tokio::pin!(monitor);
+        tokio::select! {
+            peer = found.recv() => assert_eq!(peer, Some("1.2.3.4:6881".parse().unwrap())),
+            _ = &mut monitor => panic!("the tracker task stopped"),
+        }
+        // The report comes after the peers, before the task sleeps until the next announce.
+        let _ = tokio::time::timeout(Duration::from_millis(500), &mut monitor).await;
+        assert_eq!(
+            *heard.0.lock().unwrap(),
+            [
+                format!("asking {url}"),
+                format!("answered {url} peers=1 seeds=Some(5) leechers=Some(2) next=60"),
+            ]
+        );
+    }
+
+    #[tokio::test]
+    async fn a_tracker_that_cannot_be_reached_is_reported_with_the_wait_before_retrying() {
+        // Nothing listens on port 1 of this computer, so the connection is refused at once.
+        let heard = Arc::new(Heard::default());
+        let comms = TrackerComms {
+            observer: Some(heard.clone()),
+            ..comms()
+        };
+        let url = Url::parse("http://127.0.0.1:1/announce").unwrap();
+        let _ = tokio::time::timeout(
+            Duration::from_secs(5),
+            comms.task_single_tracker_monitor_http(url.clone()),
+        )
+        .await;
+        let heard = heard.0.lock().unwrap().clone();
+        assert_eq!(heard.first(), Some(&format!("asking {url}")), "{heard:?}");
+        let retry: u64 = heard[1]
+            .strip_prefix(&format!("failed {url} retry="))
+            .expect("a failure report")
+            .parse()
+            .unwrap();
+        assert!((10..20).contains(&retry), "{heard:?}");
+        assert_eq!(heard.len(), 2, "no second try before the wait: {heard:?}");
     }
 
     #[tokio::test]

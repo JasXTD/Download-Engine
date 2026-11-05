@@ -189,7 +189,8 @@ impl Runtime {
             | Command::RenameFile { id, .. }
             | Command::MoveFile { id, .. }
             | Command::MoveFileToChosenFolder { id, .. }
-            | Command::ChooseTorrentFiles { id, .. } => {
+            | Command::ChooseTorrentFiles { id, .. }
+            | Command::KeepTorrentFiles { id, .. } => {
                 if let Err(error) = self.seeding.stop(&self.store, Some(id), true).await {
                     self.report(format!("{error:#}"));
                 }
@@ -429,6 +430,23 @@ impl Runtime {
                     request: update.request,
                     result: result.map_err(|e| format!("{e:#}")),
                 });
+            }
+            Command::TorrentRequest {
+                id,
+                ticket,
+                request,
+            } => {
+                // A running worker passes it on to the helper. Otherwise only what needs no
+                // helper is done, so a status window can never start one.
+                if self.active.contains_key(&id) || self.seeding.is_active(&id) {
+                    self.store.torrents.queue_request(&id, ticket, request);
+                } else {
+                    let outcome = self
+                        .store
+                        .torrent_request_while_stopped(&id, &request)
+                        .map_err(|error| format!("{error:#}"));
+                    self.store.torrents.settle(&id, ticket, outcome);
+                }
             }
             Command::Authentication(update) => {
                 let request = update.request;

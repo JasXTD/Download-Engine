@@ -35,10 +35,26 @@ enum Command {
         #[serde(default)]
         seed_only: bool,
         file_name: Option<String>,
+        #[serde(default)]
+        trackers: Vec<String>,
     },
     Select {
         name: String,
         only: Option<Vec<usize>>,
+    },
+    Details {
+        name: String,
+    },
+    Recheck {
+        name: String,
+    },
+    AddTracker {
+        name: String,
+        url: String,
+    },
+    RemoveTracker {
+        name: String,
+        url: String,
     },
     Import {
         torrent: String,
@@ -150,6 +166,7 @@ async fn handle(session: &Arc<Session>, command: Command) -> Result<Value> {
             choose_later,
             seed_only,
             file_name,
+            trackers,
         } => {
             let add = AddOptions {
                 output,
@@ -158,6 +175,7 @@ async fn handle(session: &Arc<Session>, command: Command) -> Result<Value> {
                 choose_later,
                 seed_only,
                 file_name,
+                trackers,
             };
             let info_hash = match (torrent, magnet) {
                 (Some(path), None) => {
@@ -171,6 +189,19 @@ async fn handle(session: &Arc<Session>, command: Command) -> Result<Value> {
         }
         Command::Select { name, only } => {
             session.torrent(&name)?.select(only)?;
+            Ok(json!({}))
+        }
+        Command::Details { name } => Ok(serde_json::to_value(session.torrent(&name)?.details())?),
+        Command::Recheck { name } => {
+            session.torrent(&name)?.recheck().await?;
+            Ok(json!({}))
+        }
+        Command::AddTracker { name, url } => {
+            session.torrent(&name)?.add_tracker(&url)?;
+            Ok(json!({}))
+        }
+        Command::RemoveTracker { name, url } => {
+            session.torrent(&name)?.remove_tracker(&url)?;
             Ok(json!({}))
         }
         Command::Import { torrent } => {

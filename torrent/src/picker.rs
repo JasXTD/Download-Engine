@@ -419,6 +419,32 @@ impl Picker {
             .map(|partial| partial.contributors.into_iter().collect())
             .unwrap_or_default()
     }
+
+    /// Whether some of this piece has arrived or is being checked, but it isn't ours yet.
+    /// A piece waiting for its hash check stays in `partial` until the check ends.
+    pub fn is_in_progress(&self, piece: u32) -> bool {
+        self.partial.contains_key(&piece)
+    }
+
+    /// Wanted pieces started but not finished, including ones waiting for their hash check.
+    /// Skipped files keep their written chunks, and those don't count.
+    pub fn in_progress_count(&self) -> usize {
+        self.partial
+            .keys()
+            .filter(|piece| self.wanted.get(**piece))
+            .count()
+    }
+
+    /// Forgets every finished and half-finished piece, so that only what passes a new check
+    /// of the files counts. Only for a torrent whose swarm has stopped.
+    pub fn forget_progress(&mut self) {
+        self.have = Bitfield::new(self.lengths.total_pieces());
+        self.partial.clear();
+        self.verifying.clear();
+        self.remaining = count_remaining(&self.have, &self.wanted);
+        self.order_dirty = true;
+        self.order_built = None;
+    }
 }
 
 #[cfg(test)]

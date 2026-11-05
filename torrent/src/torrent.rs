@@ -12,6 +12,7 @@ use std::time::Duration;
 use anyhow::{Context as _, Result, anyhow};
 use librqbit_core::hash_id::Id20;
 use librqbit_core::network::is_public_endpoint;
+use librqbit_core::torrent_limits::{MAX_TRACKER_URL_BYTES, MAX_TRACKERS};
 use librqbit_dualstack_sockets::{ConnectOpts, tcp_connect};
 use librqbit_peer_protocol::Request;
 use librqbit_tracker_comms::{TorrentStatsProvider, TrackerCommsStats, TrackerCommsStatsState};
@@ -26,8 +27,12 @@ use url::Url;
 use crate::admission::{Admission, Permit};
 use crate::bitfield::Bitfield;
 use crate::debug_log;
+use crate::details::{
+    MAP_CELLS, PeerDetails, PieceDetails, SourceDetails, SourceState, TorrentDetails, TrackerBoard,
+    piece_map,
+};
 use crate::discovery::{Discovery, PeerCandidates, Search};
-use crate::meta::TorrentMeta;
+use crate::meta::{TorrentMeta, usable_tracker};
 use crate::metadata;
 use crate::peer::{
     BoxedStream, Hello, Out, PeerLink, read_handshake, run_connection, send_handshake,
@@ -131,7 +136,13 @@ pub struct TorrentOptions {
     /// Whether peer lists from strangers may name this computer. Only for local testing.
     pub allow_loopback: bool,
     pub allowance: Arc<Allowance>,
+    /// Trackers the user added. They are only ever asked about a torrent known to be public.
+    pub trackers: Vec<Url>,
 }
+
+/// Refused for private torrents, because asking another tracker would tell it the hash.
+pub const PRIVATE_TRACKERS: &str =
+    "This torrent is private, so it can only use the trackers it came with.";
 
 #[derive(Serialize, Debug, Clone)]
 pub struct TorrentStats {
@@ -151,12 +162,28 @@ pub struct TorrentStats {
     pub name: Option<String>,
 }
 
+/// Speeds in bytes a second, from totals sampled once a second and smoothed a little.
 #[derive(Default)]
-struct Rates {
+pub(crate) struct Rates {
     down: f64,
     up: f64,
     last_down: u64,
     last_up: u64,
+}
+
+impl Rates {
+    pub(crate) fn sample(&mut self, down: u64, up: u64) {
+        let down_now = down.saturating_sub(self.last_down) as f64;
+        let up_now = up.saturating_sub(self.last_up) as f64;
+        self.down = self.down * 0.5 + down_now * 0.5;
+        self.up = self.up * 0.5 + up_now * 0.5;
+        self.last_down = down;
+        self.last_up = up;
+    }
+
+    pub(crate) fn per_second(&self) -> (u64, u64) {
+        (self.down as u64, self.up as u64)
+    }
 }
 
 pub(crate) enum Event {
@@ -185,6 +212,10 @@ pub(crate) struct TorrentCore {
     uploaded: AtomicU64,
     only: Mutex<Option<Vec<usize>>>,
     checked: AtomicBool,
+    /// Set by "check again": the next check ignores saved progress and reads every piece.
+    distrust_saved: AtomicBool,
+    /// Pieces read so far in the current check of the files.
+    checked_pieces: AtomicU32,
     live: Mutex<Option<Arc<Live>>>,
     rates: Mutex<Rates>,
 }
@@ -234,9 +265,25 @@ impl TorrentCore {
             uploaded: AtomicU64::new(0),
             only: Mutex::new(only),
             checked: AtomicBool::new(false),
+            distrust_saved: AtomicBool::new(false),
+            checked_pieces: AtomicU32::new(0),
             live: Mutex::new(None),
             rates: Mutex::default(),
         }))
+    }
+
+    /// Forgets which pieces are done, here and on disk, so that the next start checks every
+    /// file again. Only for a torrent whose swarm has stopped.
+    fn forget_progress(&self) {
+        self.picker.lock().forget_progress();
+        self.checked.store(false, Ordering::Release);
+        self.distrust_saved.store(true, Ordering::Release);
+        if let Some(state_dir) = &self.options.state_dir
+            && let Err(error) = resume::forget(state_dir, self.meta.info_hash)
+        {
+            // The flag above still makes this run read every piece.
+            debug_log!("could not remove saved progress: {error}");
+        }
     }
 
     pub fn count_uploaded(&self, bytes: u64) {
@@ -327,7 +374,10 @@ pub(crate) struct Live {
     pub events: mpsc::UnboundedSender<Event>,
     incoming: mpsc::Sender<Incoming>,
     admission: Arc<Admission>,
+    /// For peer exchange. It counts the new peers that peers tell us about.
     found: PeerCandidates,
+    /// For trackers added while the swarm runs.
+    search_found: PeerCandidates,
     links: Mutex<HashMap<u64, Arc<PeerLink>>>,
     next_key: AtomicU64,
     connecting: AtomicUsize,
@@ -335,7 +385,12 @@ pub(crate) struct Live {
 
 impl Live {
     /// Adds a connected peer, unless it is already connected or is ourselves.
-    pub fn register(&self, peer_id: Id20, addr: Option<SocketAddr>) -> Option<Arc<PeerLink>> {
+    pub fn register(
+        &self,
+        peer_id: Id20,
+        addr: Option<SocketAddr>,
+        incoming: bool,
+    ) -> Option<Arc<PeerLink>> {
         if peer_id == self.core.context.peer_id {
             return None;
         }
@@ -344,9 +399,28 @@ impl Live {
             return None;
         }
         let key = self.next_key.fetch_add(1, Ordering::Relaxed);
-        let link = Arc::new(PeerLink::new(key, peer_id, addr));
+        let link = Arc::new(PeerLink::new(key, peer_id, addr, incoming));
         links.insert(key, link.clone());
         Some(link)
+    }
+
+    fn sample_peer_rates(&self) {
+        for link in self.links() {
+            link.sample_rates();
+        }
+    }
+
+    /// The fastest peers first.
+    fn peer_details(&self) -> Vec<PeerDetails> {
+        let mut peers: Vec<PeerDetails> = self.links().iter().map(|link| link.details()).collect();
+        peers.sort_by(|left, right| {
+            (right.download_bps, right.upload_bps, &left.address).cmp(&(
+                left.download_bps,
+                left.upload_bps,
+                &right.address,
+            ))
+        });
+        peers
     }
 
     pub fn forget(&self, key: u64) {
@@ -558,6 +632,12 @@ struct RunHandle {
     task: JoinHandle<()>,
 }
 
+/// A tracker the user added, and the search asking it while the swarm runs.
+struct AddedTracker {
+    url: Url,
+    search: Option<CancellationToken>,
+}
+
 pub struct Torrent {
     info_hash: Id20,
     context: Context,
@@ -569,6 +649,10 @@ pub struct Torrent {
     selection: Mutex<Option<Vec<usize>>>,
     selected: Notify,
     run: tokio::sync::Mutex<Option<RunHandle>>,
+    board: Arc<TrackerBoard>,
+    added: Mutex<Vec<AddedTracker>>,
+    dht_found: Arc<AtomicUsize>,
+    pex_found: Arc<AtomicUsize>,
 }
 
 impl Torrent {
@@ -579,7 +663,10 @@ impl Torrent {
     ) -> Result<Arc<Self>> {
         meta.wanted_pieces(options.only.as_deref())?;
         let torrent = Self::blank(meta.info_hash, meta.trackers.clone(), options, context);
-        let _ = torrent.meta.set(meta);
+        let _ = torrent.meta.set(meta.clone());
+        if meta.private {
+            torrent.drop_added_trackers();
+        }
         Ok(Arc::new(torrent))
     }
 
@@ -598,6 +685,23 @@ impl Torrent {
         options: TorrentOptions,
         context: Context,
     ) -> Self {
+        let board = TrackerBoard::new(&trackers);
+        let mut added = Vec::new();
+        for url in &options.trackers {
+            if trackers.contains(url)
+                || added
+                    .iter()
+                    .any(|tracker: &AddedTracker| tracker.url == *url)
+                || trackers.len() + added.len() >= MAX_TRACKERS
+            {
+                continue;
+            }
+            board.add(url.clone(), true);
+            added.push(AddedTracker {
+                url: url.clone(),
+                search: None,
+            });
+        }
         Self {
             info_hash,
             context,
@@ -609,6 +713,21 @@ impl Torrent {
             phase: Mutex::new(Phase::Paused),
             selected: Notify::new(),
             run: tokio::sync::Mutex::new(None),
+            board,
+            added: Mutex::new(added),
+            dht_found: Arc::default(),
+            pex_found: Arc::default(),
+        }
+    }
+
+    /// A private torrent's hash must never reach a tracker it didn't come with.
+    fn drop_added_trackers(&self) {
+        for tracker in std::mem::take(&mut *self.added.lock()) {
+            debug_log!("not using {} for a private torrent", tracker.url);
+            if let Some(search) = tracker.search {
+                search.cancel();
+            }
+            self.board.remove(&tracker.url);
         }
     }
 
@@ -761,6 +880,7 @@ impl Torrent {
         }
         let (found_tx, mut found) =
             PeerCandidates::channel(book.peers.keys().copied(), self.options.allow_loopback);
+        // Trackers the user added wait until the details say the torrent is public.
         if let Some(discovery) = &self.context.discovery {
             discovery.start(Search {
                 info_hash: self.info_hash,
@@ -769,6 +889,9 @@ impl Torrent {
                 stats: Box::new(()),
                 found: found_tx.clone(),
                 cancel: cancel.clone(),
+                ask_dht: true,
+                board: Some(self.board.clone()),
+                dht_found: Some(self.dht_found.clone()),
             });
         }
         let allow_loopback = self.options.allow_loopback;
@@ -896,7 +1019,7 @@ impl Torrent {
                 picker.is_finished(),
             )
         };
-        let rates = core.rates.lock();
+        let (download_bps, upload_bps) = core.rates.lock().per_second();
         TorrentStats {
             state: phase.name(),
             error,
@@ -908,12 +1031,183 @@ impl Torrent {
             downloaded_bytes: core.downloaded.load(Ordering::Relaxed),
             uploaded_bytes: core.uploaded.load(Ordering::Relaxed),
             wasted_bytes: core.wasted.load(Ordering::Relaxed),
-            download_bps: rates.down as u64,
-            upload_bps: rates.up as u64,
+            download_bps,
+            upload_bps,
             peers: core.live().map_or(0, |live| live.links.lock().len()),
             name,
         }
     }
+
+    /// The pieces, peers and trackers, for the status window.
+    pub fn details(&self) -> TorrentDetails {
+        let private = self.meta.get().map(|meta| meta.private);
+        let checking = *self.phase.lock() == Phase::Checking;
+        let core = self.core.get();
+        let pieces = core.map(|core| {
+            let picker = core.picker.lock();
+            let have = picker
+                .wanted()
+                .iter_set()
+                .filter(|piece| picker.have().get(*piece))
+                .count() as u32;
+            PieceDetails {
+                total: picker.have().len(),
+                wanted: picker.wanted().count(),
+                have,
+                in_progress: picker.in_progress_count() as u32,
+                checked: checking.then(|| core.checked_pieces.load(Ordering::Relaxed)),
+                map: piece_map(&picker, MAP_CELLS),
+            }
+        });
+        let live = core.and_then(|core| core.live());
+        let discovery = self.context.discovery.as_ref();
+        let trackers_on = discovery.is_some_and(|discovery| discovery.uses_trackers());
+        let dht_on = discovery.is_some_and(|discovery| discovery.uses_dht());
+        let source = |on: bool, running: bool, peers: &AtomicUsize| SourceDetails {
+            state: match (on, private) {
+                (false, _) => SourceState::Off,
+                (true, Some(true)) => SourceState::Private,
+                (true, Some(false)) if running => SourceState::On,
+                _ => SourceState::Waiting,
+            },
+            peers: peers.load(Ordering::Relaxed),
+        };
+        TorrentDetails {
+            private,
+            pieces,
+            peers: live
+                .as_ref()
+                .map(|live| live.peer_details())
+                .unwrap_or_default(),
+            trackers: self.board.snapshot(trackers_on, Instant::now()),
+            dht: source(dht_on, live.is_some(), &self.dht_found),
+            pex: source(true, live.is_some(), &self.pex_found),
+        }
+    }
+
+    /// Reads and hashes every chosen piece again, ignoring saved progress. Only pieces that
+    /// pass count, and the rest download again. The swarm stops for the check, and a torrent
+    /// that was running starts again by itself.
+    pub async fn recheck(self: &Arc<Self>) -> Result<()> {
+        anyhow::ensure!(
+            !self.options.seed_only,
+            "A torrent that is only shared can't be checked again"
+        );
+        let core = self
+            .core
+            .get()
+            .cloned()
+            .context("This torrent's files aren't chosen yet, so there is nothing to check")?;
+        let phase = self.phase.lock().clone();
+        if phase == Phase::Checking {
+            return Ok(());
+        }
+        let running = !matches!(phase, Phase::Paused | Phase::Error(_));
+        self.pause().await;
+        core.forget_progress();
+        if running {
+            self.start().await;
+        }
+        Ok(())
+    }
+
+    /// Adds a tracker the user typed. While the swarm runs it is asked at once. The app keeps
+    /// the list and passes it with `add`, so it survives a restart.
+    pub fn add_tracker(&self, text: &str) -> Result<()> {
+        let meta = self
+            .meta
+            .get()
+            .context("This torrent's details haven't arrived yet. Try again when they have.")?;
+        anyhow::ensure!(!meta.private, PRIVATE_TRACKERS);
+        let url = parse_tracker(text)?;
+        if let Some(discovery) = &self.context.discovery {
+            anyhow::ensure!(
+                discovery.allows_tracker(&url),
+                "That tracker leads to this computer or its network, so it can't be used."
+            );
+        } else {
+            anyhow::ensure!(
+                self.options.allow_loopback || !crate::discovery::stays_local(&url),
+                "That tracker leads to this computer or its network, so it can't be used."
+            );
+        }
+        let mut added = self.added.lock();
+        anyhow::ensure!(
+            !meta.trackers.contains(&url) && !added.iter().any(|tracker| tracker.url == url),
+            "This torrent already uses that tracker."
+        );
+        anyhow::ensure!(
+            meta.trackers.len() + added.len() < MAX_TRACKERS,
+            "This torrent already has {MAX_TRACKERS} trackers."
+        );
+        self.board.add(url.clone(), true);
+        let search = self.ask_added_tracker(&url);
+        added.push(AddedTracker { url, search });
+        Ok(())
+    }
+
+    /// Stops using a tracker the user added. The torrent's own trackers stay.
+    pub fn remove_tracker(&self, text: &str) -> Result<()> {
+        let url = Url::parse(text.trim()).context("That isn't a tracker address.")?;
+        let mut added = self.added.lock();
+        let position = added
+            .iter()
+            .position(|tracker| tracker.url == url)
+            .context("Only trackers you added can be removed.")?;
+        if let Some(search) = added.remove(position).search {
+            search.cancel();
+        }
+        self.board.remove(&url);
+        Ok(())
+    }
+
+    /// Starts asking one added tracker, if the swarm is running.
+    fn ask_added_tracker(&self, url: &Url) -> Option<CancellationToken> {
+        let core = self.core.get()?;
+        let live = core.live()?;
+        let discovery = self.context.discovery.as_ref()?;
+        let cancel = live.cancel.child_token();
+        discovery.start(Search {
+            info_hash: self.info_hash,
+            trackers: vec![url.clone()],
+            private: Some(false),
+            stats: Box::new(CoreStats(core.clone())),
+            found: live.search_found.clone(),
+            cancel: cancel.clone(),
+            ask_dht: false,
+            board: Some(self.board.clone()),
+            dht_found: None,
+        });
+        Some(cancel)
+    }
+
+    /// Each added tracker gets its own search, so that removing one stops only that one.
+    fn ask_added_trackers(&self) {
+        let mut added = self.added.lock();
+        for tracker in added.iter_mut() {
+            tracker.search = self.ask_added_tracker(&tracker.url);
+        }
+    }
+}
+
+/// A tracker address the user typed, checked like the ones in torrent files.
+fn parse_tracker(text: &str) -> Result<Url> {
+    let text = text.trim();
+    anyhow::ensure!(
+        text.len() <= MAX_TRACKER_URL_BYTES,
+        "That tracker address is too long."
+    );
+    let url = usable_tracker(text)
+        .context("Enter a tracker address that starts with http://, https:// or udp://")?;
+    anyhow::ensure!(
+        url.host().is_some(),
+        "That tracker address has no server name."
+    );
+    anyhow::ensure!(
+        url.scheme() != "udp" || url.port().is_some(),
+        "A udp:// tracker address needs a port, such as udp://tracker.example.org:6969"
+    );
+    Ok(url)
 }
 
 async fn connect(addr: SocketAddr) -> Result<BoxedStream> {
@@ -939,6 +1233,8 @@ async fn serve_peer(
 ) -> bool {
     let info_hash = live.core.meta.info_hash;
     let our_id = live.core.context.peer_id;
+    // Only the listener reads a handshake before handing a connection over.
+    let incoming = hello.is_some();
     let handshake = async {
         send_handshake(&mut stream, info_hash, our_id).await?;
         match hello {
@@ -955,7 +1251,7 @@ async fn serve_peer(
         result = handshake => result,
     };
     match shaken {
-        Ok(hello) => run_connection(live, stream, hello, addr).await,
+        Ok(hello) => run_connection(live, stream, hello, addr, incoming).await,
         Err(error) => {
             debug_log!("handshake with {addr:?} failed: {error:#}");
             false
@@ -981,14 +1277,15 @@ async fn connect_and_serve(live: Arc<Live>, addr: SocketAddr, permit: Permit) ->
 
 /// Works out what is already on disk. Returns false if it was stopped before the end.
 async fn check_existing(core: &Arc<TorrentCore>, cancel: &CancellationToken) -> Result<bool> {
+    let trust_saved = !core.distrust_saved.load(Ordering::Acquire);
     let saved = match &core.options.state_dir {
-        Some(state_dir) => {
+        Some(state_dir) if trust_saved => {
             let state_dir = state_dir.clone();
             let meta = core.meta.clone();
             let storage = core.storage.clone();
             tokio::task::spawn_blocking(move || resume::load(&state_dir, &meta, &storage)).await?
         }
-        None => None,
+        _ => None,
     };
     if let Some(have) = saved {
         debug_log!("resume data accepted, {} pieces", have.count());
@@ -999,6 +1296,8 @@ async fn check_existing(core: &Arc<TorrentCore>, cancel: &CancellationToken) -> 
     } else if core.storage.any_file_exists() && !hash_files(core, cancel).await? {
         return Ok(false);
     }
+    // A check that ran to the end makes saved progress trustworthy again.
+    core.distrust_saved.store(false, Ordering::Release);
     let only = core.only.lock().clone();
     core.storage
         .create_empty_files(only.as_deref())
@@ -1016,6 +1315,7 @@ async fn hash_files(core: &Arc<TorrentCore>, cancel: &CancellationToken) -> Resu
     let pieces = core.meta.lengths.total_pieces();
     let next = Arc::new(AtomicU32::new(0));
     let stop = Arc::new(AtomicBool::new(false));
+    core.checked_pieces.store(0, Ordering::Relaxed);
     let mut workers: JoinSet<io::Result<()>> = JoinSet::new();
     for _ in 0..hash_workers() {
         let (core, next, stop) = (core.clone(), next.clone(), stop.clone());
@@ -1028,6 +1328,7 @@ async fn hash_files(core: &Arc<TorrentCore>, cancel: &CancellationToken) -> Resu
                 if core.storage.piece_matches(piece)? {
                     core.picker.lock().piece_passed(piece);
                 }
+                core.checked_pieces.fetch_add(1, Ordering::Relaxed);
             }
             Ok(())
         });
@@ -1067,7 +1368,8 @@ async fn run_swarm(
         events: events_tx,
         incoming: incoming_tx,
         admission: Admission::new(MAX_PEERS),
-        found: found_tx.clone(),
+        found: found_tx.counted(torrent.pex_found.clone()),
+        search_found: found_tx.clone(),
         links: Mutex::default(),
         next_key: AtomicU64::new(0),
         connecting: AtomicUsize::new(0),
@@ -1085,7 +1387,16 @@ async fn run_swarm(
             stats: Box::new(CoreStats(core.clone())),
             found: found_tx.clone(),
             cancel: search_cancel.clone(),
+            ask_dht: true,
+            board: Some(torrent.board.clone()),
+            dht_found: Some(torrent.dht_found.clone()),
         });
+    }
+    // The details of a magnet link only now say whether the torrent is private.
+    if core.meta.private {
+        torrent.drop_added_trackers();
+    } else {
+        torrent.ask_added_trackers();
     }
 
     let mut peers: JoinSet<(Option<SocketAddr>, bool)> = JoinSet::new();
@@ -1135,6 +1446,7 @@ async fn run_swarm(
             _ = tick.tick() => {
                 seconds = seconds.wrapping_add(1);
                 update_rates(&core);
+                live.sample_peer_rates();
                 if seconds.is_multiple_of(RECHOKE_SECONDS) {
                     let seeding = core.picker.lock().is_finished();
                     live.rechoke(&mut uploaded_seen, seeding, seconds / RECHOKE_SECONDS);
@@ -1250,15 +1562,10 @@ fn apply_hash(
 }
 
 fn update_rates(core: &TorrentCore) {
-    let down = core.downloaded.load(Ordering::Relaxed);
-    let up = core.uploaded.load(Ordering::Relaxed);
-    let mut rates = core.rates.lock();
-    let down_now = down.saturating_sub(rates.last_down) as f64;
-    let up_now = up.saturating_sub(rates.last_up) as f64;
-    rates.down = rates.down * 0.5 + down_now * 0.5;
-    rates.up = rates.up * 0.5 + up_now * 0.5;
-    rates.last_down = down;
-    rates.last_up = up;
+    core.rates.lock().sample(
+        core.downloaded.load(Ordering::Relaxed),
+        core.uploaded.load(Ordering::Relaxed),
+    );
 }
 
 #[cfg(test)]
@@ -1597,6 +1904,7 @@ mod tests {
             events,
             incoming,
             admission: Admission::new(MAX_PEERS),
+            search_found: found.clone(),
             found,
             links: Mutex::default(),
             next_key: AtomicU64::new(0),
@@ -1608,9 +1916,9 @@ mod tests {
     fn test_we_do_not_connect_to_ourselves_or_twice_to_one_peer() {
         let folder = TempFolder::new();
         let live = live_for_tests(&folder);
-        assert!(live.register(Id20::new([1; 20]), None).is_none());
-        assert!(live.register(Id20::new([2; 20]), None).is_some());
-        assert!(live.register(Id20::new([2; 20]), None).is_none());
+        assert!(live.register(Id20::new([1; 20]), None, false).is_none());
+        assert!(live.register(Id20::new([2; 20]), None, false).is_some());
+        assert!(live.register(Id20::new([2; 20]), None, false).is_none());
     }
 
     #[test]
@@ -1619,7 +1927,9 @@ mod tests {
         let live = live_for_tests(&folder);
         let links: Vec<Arc<PeerLink>> = (0..7u8)
             .map(|index| {
-                let link = live.register(Id20::new([index + 10; 20]), None).unwrap();
+                let link = live
+                    .register(Id20::new([index + 10; 20]), None, false)
+                    .unwrap();
                 link.mark_interested();
                 // Peer 6 gives the most, and peer 0 the least.
                 link.downloaded
@@ -1656,7 +1966,10 @@ mod tests {
         let folder = TempFolder::new();
         let live = live_for_tests(&folder);
         let links: Vec<Arc<PeerLink>> = (0..5u8)
-            .map(|index| live.register(Id20::new([index + 10; 20]), None).unwrap())
+            .map(|index| {
+                live.register(Id20::new([index + 10; 20]), None, false)
+                    .unwrap()
+            })
             .collect();
         for link in &links {
             live.try_unchoke(link);

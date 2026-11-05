@@ -1,5 +1,5 @@
-// Modified by Download Engine: replaced urlencoding/serde_with and bounded peer results.
-// See ../../patch.md.
+// Modified by Download Engine: replaced urlencoding/serde_with, bounded peer results and
+// made seed and leecher counts optional. See ../../patch.md.
 use crate::tracker_comms::MAX_TRACKER_PEERS;
 use buffers::ByteBuf;
 use itertools::Either;
@@ -143,18 +143,18 @@ pub struct TrackerResponse<'a> {
     #[allow(dead_code)]
     #[serde(rename = "warning message", borrow)]
     pub warning_message: Option<ByteBuf<'a>>,
-    #[allow(dead_code)]
+    /// Seeds, when the tracker says. Left out is not the same as none.
     #[serde(default)]
-    pub complete: u64,
+    pub complete: Option<u64>,
     pub interval: u64,
     #[allow(dead_code)]
     #[serde(rename = "min interval")]
     pub min_interval: Option<u64>,
     #[allow(dead_code)]
     pub tracker_id: Option<ByteBuf<'a>>,
-    #[allow(dead_code)]
+    /// Peers still downloading, when the tracker says.
     #[serde(default)]
-    pub incomplete: u64,
+    pub incomplete: Option<u64>,
     #[serde(borrow)]
     pub peers: Peers<'a, SocketAddrV4>,
     #[serde(default, borrow)]

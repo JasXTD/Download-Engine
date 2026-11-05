@@ -86,6 +86,10 @@ pub(crate) struct Controller {
     allowed_after_failed_stop_all: Option<HashSet<String>>,
 }
 impl Controller {
+    /// Whether a sharing worker runs for this download.
+    pub(crate) fn is_active(&self, id: &str) -> bool {
+        self.active.contains_key(id)
+    }
     pub(crate) fn allow_start(&mut self, id: &str) {
         self.held.remove(id);
         if let Some(allowed) = &mut self.allowed_after_failed_stop_all {
@@ -316,6 +320,7 @@ async fn share(
     if cancel.is_cancelled() {
         return Ok(());
     }
+    let trackers = store.torrent_added_trackers(&job.id)?;
     let lease = store.torrents.lease(store)?;
     let result = async {
     lease
@@ -323,7 +328,7 @@ async fn share(
             json!({"cmd":"add", "name":job.id, "magnet":job.url, "output":output,
         "only":files.chosen, "seed_only":true,
         "file_name":if folder { None } else { saved.file_name().and_then(|name| name.to_str()) },
-        "peers":store.torrents.test_peers()}),
+        "peers":store.torrents.test_peers(), "trackers":trackers}),
         )
         .await?;
         let mut tick = tokio::time::interval(STATS_EVERY);
@@ -338,8 +343,10 @@ async fn share(
             store.activity.set(&job.id, if stats.state == "initializing" { Phase::CheckingSaved } else { Phase::Seeding });
             store.activity.set_torrent(&job.id, TorrentSnapshot { peers:stats.peers, download_speed:0,
                 upload_speed:stats.upload_bps, uploaded:stats.uploaded_bytes, file_progress:stats.file_progress.into() });
+            super::details::serve(store, &lease, &job.id).await?;
         }
     }.await;
+    super::details::abandon(store, &job.id);
     let removed = lease.call(json!({"cmd":"remove","name":job.id})).await;
     if removed.is_err() {
         store.torrents.restart();

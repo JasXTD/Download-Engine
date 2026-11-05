@@ -1414,7 +1414,12 @@
     "vendor/rqbit/librqbit-tracker-comms/src/tracker_comms.rs",
     "vendor/rqbit/librqbit-tracker-comms/src/tracker_comms_http.rs",
     "vendor/rqbit/librqbit-tracker-comms/src/tracker_comms_udp.rs",
-    "vendor/rqbit/patch.md"
+    "vendor/rqbit/patch.md",
+    "src/desktop/download_status/torrent.rs",
+    "src/desktop/download_status/torrent_tests.rs",
+    "src/torrent/details.rs",
+    "torrent/src/details.rs",
+    "torrent/src/details_tests.rs"
   ],
   "exceptions": [
     {

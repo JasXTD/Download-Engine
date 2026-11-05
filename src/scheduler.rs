@@ -71,6 +71,17 @@ pub enum Command {
         id: String,
         chosen: Vec<usize>,
     },
+    /// Records the chosen files of a paused torrent without starting it.
+    KeepTorrentFiles {
+        id: String,
+        chosen: Vec<usize>,
+    },
+    /// Something a status window asked of a torrent. Its outcome is kept under `ticket`.
+    TorrentRequest {
+        id: String,
+        ticket: u64,
+        request: crate::torrent::Request,
+    },
     PauseAll,
     StartQueue(String),
     PauseQueue(String),

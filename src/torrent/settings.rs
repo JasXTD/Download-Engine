@@ -49,6 +49,13 @@ pub(crate) fn initialize(conn: &Connection) -> Result<()> {
         CREATE TABLE IF NOT EXISTS torrent_sharing (
         job_id TEXT PRIMARY KEY REFERENCES jobs(id) ON DELETE CASCADE,
         enabled INTEGER NOT NULL CHECK(enabled IN (0,1)), error TEXT);")?;
+    // Trackers the user added in the status window. Older versions ignore this table.
+    conn.execute_batch(
+        "CREATE TABLE IF NOT EXISTS torrent_trackers (
+        job_id TEXT NOT NULL REFERENCES jobs(id) ON DELETE CASCADE,
+        url TEXT NOT NULL CHECK(length(url) BETWEEN 1 AND 2048),
+        PRIMARY KEY(job_id, url));",
+    )?;
     // Development builds could save torrents before the version guard existed. Upgrade
     // those profiles too, without changing profiles that have never saved a torrent.
     let has_torrents: bool = conn.query_row(

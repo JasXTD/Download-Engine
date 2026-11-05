@@ -42,6 +42,7 @@ struct Row {
     name: String,
     files: Range<usize>,
     size: u64,
+    folder: bool,
 }
 
 /// A torrent's files as a tree of ticks. Every row covers a run of `files`, because sorting
@@ -71,6 +72,7 @@ impl Picker {
                     name: (*folder).into(),
                     files: position..position,
                     size: 0,
+                    folder: true,
                 });
                 open.push(((*folder).into(), rows.len() - 1));
             }
@@ -83,6 +85,7 @@ impl Picker {
                 name: (*name).into(),
                 files: position..position + 1,
                 size: file.len,
+                folder: false,
             });
         }
         let wanted: Option<HashSet<usize>> = chosen.map(|list| list.iter().copied().collect());
@@ -211,7 +214,7 @@ impl Picker {
         });
     }
 
-    fn summary(&self) -> String {
+    pub(super) fn summary(&self) -> String {
         tf!(
             "{chosen} of {total} files · {size} selected",
             chosen = self.chosen_files().count(),
@@ -219,6 +222,63 @@ impl Picker {
             size = bytes(self.chosen_size())
         )
     }
+
+    pub(super) fn row_count(&self) -> usize {
+        self.rows.len()
+    }
+
+    pub(super) fn file_count(&self) -> usize {
+        self.files.len()
+    }
+
+    /// One row of the tree as the status window shows it, with the progress of its chosen
+    /// files. `progress` is the bytes done per torrent file number.
+    pub(super) fn row_view(&self, index: usize, progress: &[u64]) -> RowView<'_> {
+        let row = &self.rows[index];
+        let files = row.files.clone();
+        let picked = self.chosen[files.clone()]
+            .iter()
+            .filter(|chosen| **chosen)
+            .count();
+        let (mut done, mut wanted) = (0u64, 0u64);
+        for (file, chosen) in self.files[files.clone()]
+            .iter()
+            .zip(&self.chosen[files.clone()])
+        {
+            if *chosen {
+                wanted += file.len;
+                done += progress.get(file.index).copied().unwrap_or(0).min(file.len);
+            }
+        }
+        RowView {
+            depth: row.depth,
+            name: &row.name,
+            size: row.size,
+            folder: row.folder,
+            picked,
+            files: files.len(),
+            progress: (wanted > 0).then(|| done as f64 / wanted as f64),
+        }
+    }
+
+    /// Ticks or clears every file under a row.
+    pub(super) fn set_row(&mut self, index: usize, chosen: bool) {
+        let files = self.rows[index].files.clone();
+        self.chosen[files].fill(chosen);
+    }
+}
+
+/// What one row of a torrent's file tree shows in the status window.
+pub(super) struct RowView<'a> {
+    pub(super) depth: usize,
+    pub(super) name: &'a str,
+    pub(super) size: u64,
+    pub(super) folder: bool,
+    /// Chosen files under this row, of `files`.
+    pub(super) picked: usize,
+    pub(super) files: usize,
+    /// How much of the chosen files is done, when any is chosen.
+    pub(super) progress: Option<f64>,
 }
 
 enum Fetched {

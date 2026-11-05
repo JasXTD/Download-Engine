@@ -9,6 +9,7 @@ use std::time::Duration;
 
 use anyhow::{Context as _, Result, bail};
 use librqbit_core::magnet::Magnet;
+use librqbit_core::torrent_limits::{MAX_TRACKER_URL_BYTES, MAX_TRACKERS};
 use librqbit_dualstack_sockets::{BindOpts, TcpListener};
 use parking_lot::Mutex;
 use serde::Serialize;
@@ -53,6 +54,8 @@ pub struct AddOptions {
     pub choose_later: bool,
     pub seed_only: bool,
     pub file_name: Option<String>,
+    /// Trackers the user added earlier. Ones that aren't usable are left out.
+    pub trackers: Vec<String>,
 }
 
 #[derive(Serialize)]
@@ -124,6 +127,13 @@ impl Session {
     }
 
     fn torrent_options(&self, add: AddOptions) -> TorrentOptions {
+        let trackers = add
+            .trackers
+            .iter()
+            .filter(|text| text.len() <= MAX_TRACKER_URL_BYTES)
+            .filter_map(|text| usable_tracker(text.trim()))
+            .take(MAX_TRACKERS)
+            .collect();
         TorrentOptions {
             output: add.output,
             only: add.only,
@@ -141,6 +151,7 @@ impl Session {
             connect_out: true,
             allow_loopback: self.options.allow_loopback_peers,
             allowance: Arc::default(),
+            trackers,
         }
     }
 

@@ -14,6 +14,7 @@
   <a href="#install">Install</a> ·
   <a href="#supported-video-sites-and-formats">Video support</a> ·
   <a href="#torrent-downloads">Torrents</a> ·
+  <a href="#lua-extensions-and-media-providers">Lua extensions</a> ·
   <a href="#quick-start">Quick start</a> ·
   <a href="docs/user-guide.md">User guide</a> ·
   <a href="PRIVACY.md">Privacy</a> ·
@@ -29,130 +30,54 @@
 
 <p align="center"><em>Example desktop layout in dark mode, with sample downloads.</em></p>
 
-Windows, macOS and Linux use the same interface and engine. See the
-[native-platform guide](docs/cross-platform.md) for installation requirements,
-profiles, validation coverage and the integrations that remain Windows-only.
-
 ## What is Download Engine?
 
-Download Engine is a free, open-source download manager for Windows, macOS and Linux. It brings file
-transfers, supported video downloads, schedules, and browser handoffs into one
-desktop app. Add a link, review where it will be saved,
-and manage progress from a download list with queues and individual status windows.
-Use it interactively, run a portable copy, or connect your own scripts, extensions
-and AI client.
+Download Engine brings file transfers, supported video downloads, torrents, schedules and
+browser handoffs into one desktop app. Add a link, review where it will be saved, and follow
+progress in a download list with queues. Windows, macOS and Linux share the same interface and
+engine; a few integrations remain Windows-only, as the
+[native-platform guide](docs/cross-platform.md) explains.
 
 Looking for a free **IDM alternative**? The familiar layout is inspired by
 **Internet Download Manager (IDM)**. Download Engine is an independent project, is
 not affiliated with IDM, and does not claim complete IDM feature parity.
 
-> **In this build, v3.10.2:** Help → Crash reports lets you review, copy and export
-> local panic and unclean-exit reports. New reports are offered on the next launch;
-> nothing is uploaded automatically. All desktop packages include FFmpeg.
-> Find published [desktop packages and extensions](https://github.com/JasXTD/Download-Engine/releases),
-> or read the [changelog](CHANGELOG.md).
+Get published packages from the [releases page](https://github.com/JasXTD/Download-Engine/releases)
+and read the [changelog](CHANGELOG.md) for release and development notes.
 
-See the [diagnostics guide](docs/user-guide.md#read-diagnostics) for crash reports,
-their privacy protections and the limits of unclean-exit detection.
+## Features
+
+- **Files:** HTTP, HTTPS, FTP and FTPS, with parallel connections where the server supports them.
+  Add batches, import and export lists, and use proxies or site logins.
+  [Downloads guide](docs/user-guide.md#downloads--recovery)
+- **Recovery:** pause, resume and retry, recover unfinished downloads after a restart, and replace
+  an expired link. [Pause and recover](docs/user-guide.md#pause-stop-resume-and-recover)
+- **Hosting links:** MEGA public files, public WeTransfer transfers, and exposed file links on
+  other download pages. [MEGA](docs/mega.md) · [WeTransfer](docs/wetransfer.md) ·
+  [Link discovery](docs/user-guide.md#find-files-on-a-website)
+- **Video:** YouTube, TikTok, Bilibili, Twitch and compatible HLS and DASH streams, with a choice of
+  quality and audio. [Supported sites](#supported-video-sites-and-formats)
+- **Torrents:** optional and off by default. [Torrent downloads](#torrent-downloads)
+- **Queues and schedules:** named queues, one-time or recurring schedules, speed limits, data
+  quotas and completion actions. [Queues guide](docs/user-guide.md#queues--schedules)
+- **Browser:** send links and capture downloads from Chrome, Edge, Brave and Firefox, find media on
+  a page, or pick links from it. [Browser integration](#browser-integration)
+- **Web Grabber:** find files on a website, save and schedule scans, or save a static website for
+  offline viewing. [Offline websites](docs/user-guide.md#offline-websites)
+- **Checks:** SHA-256 verification, optional antivirus scans and ZIP contents preview.
+  [Antivirus guide](docs/user-guide.md#antivirus-scanning)
+- **Automation:** routing rules, Lua and PowerShell scripts, Lua site readers and download
+  providers, shareable extensions, a JSON CLI and a local MCP server for AI clients.
+  [Automation and AI clients](#automation-and-ai-clients)
+- **Your workspace:** system, light, dark or custom themes, a customizable toolbar, 19 interface
+  languages and an offline guide on **F1**.
+  [Custom themes](docs/user-guide.md#custom-themes) · [Languages](docs/localization.md)
+- **Crash reports:** review, copy or export local reports from **Help → Crash reports**. Nothing is
+  uploaded automatically. [Diagnostics](docs/user-guide.md#read-diagnostics)
 
 ![A short tour of Download Engine: the download list, adding a link, the browser extension's Download video button and media list, choosing video quality, queues, schedules, the website grabber, app extensions and custom themes](docs/images/download-engine-demo.gif)
 
 <p align="center"><em>A short tour of the real app and browser extension, with sample data.</em></p>
-
-## Features
-
-### File downloads and recovery
-
-- Download over **HTTP, HTTPS, FTP, and FTPS**, with parallel connections where
-  supported by the server.
-- Download **MEGA public file links**, including parallel transfers,
-  pause/resume, local decryption, and mandatory file-integrity verification.
-  Paste the complete link including its `#` key; see [MEGA downloads](docs/mega.md)
-  for supported links and limits.
-- Download **public WeTransfer transfers** by pasting a `we.tl` short link or
-  a `wetransfer.com/downloads/...` link. The complete transfer downloads as
-  supplied by WeTransfer; see [WeTransfer downloads](docs/wetransfer.md) for limits.
-- Pause and resume transfers, retry temporary failures, and recover unfinished
-  downloads after restarting the app. Resume depends on the server and file remaining compatible.
-- Replace an expired link or use browser-assisted recovery while checking whether
-  existing downloaded data can be reused.
-- Add individual links, import batches, organize files into categories and folders,
-  and export download lists.
-- Review a confirmation before clearing completed history; saved files stay in
-  their folders.
-- Set global and per-file speed limits, hourly/daily data quotas, and per-site
-  connection settings. Use proxies or supported site authentication when needed.
-
-### Torrent downloads
-
-> **Use torrents at your own risk.** Downloaded files may contain malware, and peers
-> can see your IP address. Enabling uploads or seeding shares file data with other
-> peers. Only download and share content you are authorized to use. Antivirus scans
-> cannot guarantee that a file is safe. Torrent support is optional; seeding after
-> completion and incoming connections are off by default.
-
-- Open torrent files from your file manager, or drop them on the app. Browser extensions can send clicked magnet links and captured torrent files for review. Windows also offers copied magnet links; its optional registration is under **Preferences → Torrents**. See [native file associations](docs/cross-platform.md) for macOS and Linux.
-
-- Open **Tasks → Open torrent file…**, or paste a magnet link into **Add download**.
-  Enable torrents when prompted, then choose the files or folders to download.
-- Use the usual queue, progress, pause/resume, **Stop** and **Stop all** controls.
-  Verified pieces are kept for recovery, and existing files are never overwritten.
-- **Preferences → Torrents** controls uploading, upload limits and DHT peer discovery.
-  Sharing after completion and incoming connections are separate options, both off by default.
-  Speed limits and quotas apply; quotas count uploads too. **Stop all** also stops sharing.
-- Scan multi-file torrents through **Tools → Antivirus Scan**. Rename or move a completed
-  torrent from its right-click or three-dot menu, with recovery for interrupted copies.
-- Peers can see your IP address. Torrents pause while a proxy is enabled because
-  the app's proxy does not carry torrent traffic. Adding torrents through CLI, scripts
-  or MCP, peer encryption, uTP, web seeds and automatic router port mapping remain
-  unsupported. See the [torrent guide](docs/user-guide.md#download-torrents).
-
-### Queues and scheduling
-
-- Group downloads into named queues with their own order and concurrency limits.
-- Schedule a one-time start or recurring daily/weekday download windows.
-- Use synchronization queues to check supported files for changes.
-- Configure optional completion actions such as exiting the app. Windows also
-  supports tray notifications and shutting down, sleeping or hibernating the computer.
-
-### Browser and website tools
-
-- Send links from **Chrome, Edge, Brave, and Firefox**, capture matching file
-  downloads, or select links from the current page.
-- Discover supported media through the browser extension and review video quality
-  before adding a download.
-- Opt into a reviewed browser-login handoff for compatible authenticated direct
-  file downloads; ordinary capture does not copy your browser cookies.
-- Find files with the website grabber, save and schedule grabber projects, or
-  capture supported static pages and their assets for offline viewing.
-- Automatically inspect unsupported hosting pages for exposed file links: follow
-  one explicit same-site download link, or review the candidates before choosing.
-- Preview the contents of supported ZIP archives before downloading the whole file.
-
-### Desktop controls and automation
-
-- Follow the system theme or pick Light, Dark or a **custom theme**: bundled artwork such as
-  Aurora, Neon Courier, Reactor Night and Moonveil, or your own PNG/JPEG, shown behind the
-  whole window with adjustable strength and accent color. Bright pictures are
-  darkened automatically so text stays readable, and everything works offline.
-- Pin the toolbar actions you use under **More → Customize toolbar**, resize the
-  details panel and customize the download table. Windows can also keep transfers
-  running in the system tray.
-- Choose from **19 interface languages**, with system language detection and
-  English fallback; read the bundled guide offline with **F1**.
-- Verify SHA-256 checksums and optionally scan files with a configured antivirus.
-- On the **Extensions** page, build routing rules or write **Lua or PowerShell**
-  scripts in a focused editor with autocomplete, a searchable core API reference and
-  a full-window mode. Share scripts as packages with their settings, or control the
-  app through its **CLI** and optional local **MCP server**.
-- Create **Lua download providers** that resolve a file and transform its bytes.
-  The core handles transfers, checkpoints, pause/resume and integrity checks.
-  Start with the [provider guide and bundled examples](docs/lua-providers.md).
-- Install **extensions**: one file that packages site readers, download providers
-  and automation jobs. A review shows what it can do before you install it, it
-  starts turned off, and each job keeps its own limits. Extensions install from a
-  local file and publishers are not verified, so use only ones you trust. See the
-  [extension guide](docs/extensions.md).
 
 ## Supported video sites and formats
 
@@ -162,26 +87,52 @@ video page into **Add URL**, open **Tools → Preview video**, or use the browse
 **Download video** / **Find videos on this page** actions. Review the available
 quality and audio choices, then select **Add video to queue**.
 
-| Site or format | Supported workflow | Main limitations |
+| Site or format | Supported workflow | Current built-in limitations |
 | --- | --- | --- |
 | **[YouTube](docs/reference.md#youtube-video-downloads)** | Public, finished videos when YouTube returns a supported HLS response; quality/audio selection and MP4 merging. | No sign-in/private/age-restricted videos, playlists, subtitles, live recording, or JavaScript/proof-of-origin challenges. This is not full yt-dlp compatibility. |
 | **[TikTok](docs/reference.md#tiktok-video-downloads)** | Public video pages with available MP4 qualities, including audio; resumable file downloads. | No private or sign-in-only videos, photo posts, live videos, or `vm.tiktok.com` short links. Browser challenges can prevent extraction. |
 | **[Bilibili](docs/reference.md#bilibili-video-downloads)** | Public `BV`/`av` video pages and a selected part of a multi-part video; DASH video/audio selection and merging. | Anonymous access currently offers up to 480p. Sign-in qualities, paid/region-locked/DRM videos, live pages, and `b23.tv` short links are unsupported. |
-| **[Bilibili Bangumi](docs/reference.md#bilibili-video-downloads)** | Accessible episode links; a season link selects its first main episode. | Members-only previews, region restrictions, and DRM are rejected. This does not download an entire season at once. |
+| **[Bilibili Bangumi](docs/reference.md#bilibili-video-downloads)** | Accessible episode links; a season link selects its first main episode. | No built-in support for members-only previews, region-locked episodes or DRM. This does not download an entire season at once. |
 | **[Twitch](docs/reference.md#twitch-video-downloads)** | Public past broadcasts, highlights, and uploads, with available HLS qualities. | No live channels, clips, subscriber-only videos, or sign-in support. |
 | **[HLS](docs/reference.md#hls-video-downloads)** | Supported finished, unencrypted `.m3u8` streams, with quality/audio selection and supported track merging. | No live recording, encrypted streams, or DRM. Container and playlist limits apply. |
 | **[DASH](docs/reference.md#dash-video-downloads)** | Static, single-period, unencrypted MP4 video/audio in supported `.mpd` manifests, merged without re-encoding. | No dynamic/live or encrypted streams, multiple periods, WebM representations, or subtitles. |
-| **[Custom sites](docs/automation.md#site-readers)** | Add a Lua site reader that resolves a page into supported direct files or streams. | Public internet and Direct connection only; no browser-login cookies. Readers cannot bypass the engine's media restrictions. |
+| **[Custom sites](docs/automation.md#site-readers)** | Add a Lua site reader that resolves a page into supported direct files or streams. | Public-address fetching with no inherited browser-login cookies. Reader results use the engine's supported formats; custom byte processing uses [Lua providers](docs/lua-providers.md). |
 
 Available qualities depend on each site's response. Website changes, region
 restrictions, and access challenges can make an otherwise supported link fail.
 Unsupported responses report an error rather than silently saving the video page
-as a media file. Download only content you are authorized to save.
+as a media file. These are capabilities of the shipped readers, not additional
+[license conditions](#license). Developers can extend the app and its Lua providers.
+
+## Torrent downloads
+
+> **Use torrents at your own risk.** Downloaded files may contain malware, and peers
+> can see your IP address. Enabling uploads or seeding shares file data with other
+> peers. Antivirus scans cannot guarantee that a file is safe. Torrent support is
+> optional; seeding after completion and incoming connections are off by default.
+
+- **Open** a torrent file with **Tasks → Open torrent file…**, from your file manager or by dropping
+  it on the window, or paste a magnet link into **Add download**. Connected browser extensions send
+  clicked magnet links and captured torrent files for review; Windows also offers copied magnets.
+- **Off until you turn it on.** The app asks first, then you choose the files to download. The usual
+  queue, **Stop** and **Stop all** controls apply. Verified pieces are kept, and existing files are
+  never overwritten.
+- **Sharing** settings live in **Preferences → Torrents**: uploads, upload limits and DHT. Sharing
+  after completion and incoming connections are off by default, and data quotas count uploads.
+  Optional UPnP router setup is available on Windows and Linux when incoming connections are on.
+- **Limits:** torrents pause while a proxy is enabled, because the app's proxy does not carry
+  torrent traffic. Adding torrents through the CLI, scripts or MCP, peer encryption, uTP and web
+  seeds are not supported.
+
+The [torrent guide](docs/user-guide.md#download-torrents) covers Windows registration, sharing,
+antivirus scans and moving completed torrents; macOS and Linux file associations are in the
+[native-platform guide](docs/cross-platform.md).
 
 ## Install
 
-Choose the package for your computer from the project's release assets. The desktop app
-is required for browser integration; the browser extension does not download on its own.
+Choose the package for your computer from the
+[releases page](https://github.com/JasXTD/Download-Engine/releases). The desktop app is required
+for browser integration; the browser extension does not download on its own.
 
 | Package | How to use it |
 | --- | --- |
@@ -191,44 +142,28 @@ is required for browser integration; the browser extension does not download on 
 | `DownloadEngine-<version>-macos-x64.zip` | Intel Mac: extract and move `Download Engine.app` to its permanent location. |
 | `DownloadEngine-<version>-linux-x64.tar.gz` | Linux x64: extract into a permanent folder and run `./de`. Requires glibc 2.36+, OpenSSL 3, desktop libraries and a portal backend. |
 
-Every desktop package includes its native **FFmpeg**, matching source and license
-notices. macOS packages are **ad-hoc signed, not Apple-notarized**. See the
-[native-platform guide](docs/cross-platform.md) for Mac opening instructions,
-Linux runtime/keyring requirements, browser setup and platform limitations.
-There is no Android package.
-
-Current Windows packages are **unsigned**. They do not have a verified Authenticode
-publisher signature, and Windows may show an unknown-publisher warning. Check the
-source of the package and compare its SHA-256 hash with the release's
-`SHA256SUMS-<version>` file. A matching hash confirms that the bytes match the
-published checksum; it does not establish publisher identity or guarantee safety.
+- **Windows packages are unsigned**, with no verified Authenticode publisher signature, so Windows
+  may warn about an unknown publisher. Check the source of the package and compare its SHA-256 hash
+  with the release's `SHA256SUMS-<version>` file. A match confirms the bytes match the published
+  checksum; it does not establish publisher identity or guarantee safety.
+- **macOS packages are ad-hoc signed, not Apple-notarized.** See
+  [how to open them](docs/cross-platform.md#macos) and the
+  [Linux runtime and keyring requirements](docs/cross-platform.md#linux).
+- Every desktop package includes its native **FFmpeg**, with matching source and license notices.
+  There is no Android package.
 
 ### Upgrade an existing copy
 
-Close Download Engine through **Tasks → Exit** before upgrading. Stop a separately
-started CLI MCP server as well. Use the installer to upgrade an installed copy,
-or update the same portable folder while preserving its `data` and downloads.
-Keep the application and browser extension versions aligned.
+Close Download Engine through **Tasks → Exit** before upgrading, and stop a separately started CLI
+MCP server. Use the installer to upgrade an installed copy, or update the same portable folder while
+preserving its `data` and downloads. Keep the application and browser extension versions aligned.
+Some upgrades change the profile in a way that older versions refuse, so back up the profile before
+going back to an older version. Versions 3.0 and 3.6 need extra steps; see the
+[upgrade notes by version](docs/reference.md#upgrade-notes-by-version).
 
-**Upgrading to 3.6:** the **Scripting** page is now **Extensions**, and your scripts,
-rules and run history are on its tabs. Installing your first extension upgrades the
-profile, so older versions then refuse it. Back up the profile before going back to
-an older version.
-
-**Upgrading to 3.0:** the Firefox extension now has the identity
-`download-engine@xetro`. Finish any pending browser handoffs, remove the old
-developer-loaded extension, and install the new one, then reconnect it through
-**Tools → Browser setup**. Firefox treats it as
-a different extension, so its settings start fresh; your desktop queues, downloads,
-and profile stay in place. Reload developer-loaded Chromium extensions after
-replacing their files. See the [browser setup guide](docs/reference.md#connect-a-browser).
-
-Download Engine checks for updates when the app opens, enabled by default. A new
-version offers **Get update** or **Later**. Disable **Check for updates on launch**
-in **Preferences → Startup & tray**, or check manually from **Help → Check for updates**.
-Updates are downloaded and installed manually from the official GitHub release page.
-**Help → About → GitHub** opens this repository. Choose the package for your OS
-and CPU architecture on the release page.
+The app checks for updates when it opens; turn this off in **Preferences → Startup & tray**, or
+check manually from **Help → Check for updates**. Updates are downloaded and installed manually
+from the official GitHub release page.
 
 ## Quick start
 
@@ -239,103 +174,91 @@ and CPU architecture on the release page.
 4. Use **Tasks → Add batch** for multiple file links, or create a queue for a
    group you want to schedule together.
 
-Open **Preferences** to adjust appearance, folders, connections, scanning, and tray
-behavior. Change the interface language under **Appearance → Language**, or pick
-**Appearance → Theme → Custom** for a themed background, then select **Save**. Open
-**Help → Guide** or press **F1** for the offline walkthrough.
+Open **Preferences** to change the appearance, language, folders and connections, and press **F1**
+for the offline guide.
 
 ## Browser integration
 
-> **Firefox:** install the approved [Download Engine Extension](https://addons.mozilla.org/en-US/firefox/addon/download-engine-extension/)
-> from Firefox Add-ons. It stays installed after a restart, and Firefox keeps it updated.
->
-> **Chrome, Edge, and Brave:** store approval is pending. For now, these browsers
-> require **Developer mode** and **Load unpacked**. Official store links will be
-> added after approval.
+- **Firefox 142 or newer:** install the approved
+  [Download Engine Extension](https://addons.mozilla.org/en-US/firefox/addon/download-engine-extension/)
+  from Firefox Add-ons. Firefox keeps it updated.
+- **Chrome, Edge and Brave, engine version 128 or newer:** store approval is pending. Until then,
+  turn on **Developer mode** on the browser's extensions page, choose **Load unpacked** and select
+  the folder that **Open extension folder** shows in Download Engine. Keep Developer mode on.
 
-Open **Tools → Browser setup**, select your browser, and follow its connection
-steps. The desktop communicates with the extension through a registered native
-messaging host. Select **Check connection** in the extension popup to verify setup.
+Then open **Tools → Browser setup**, choose your browser and **Connect browser**, and select
+**Check connection** in the extension popup. The [Chromium](docs/reference.md#chrome-edge-and-brave)
+and [Firefox](docs/reference.md#firefox) steps have the details. The extension ZIPs on the releases
+page are for manual loading; Firefox removes the unsigned Firefox ZIP when it restarts.
 
-| Browser | Setup and requirements |
-| --- | --- |
-| **Chrome, Edge, Brave** | Enable **Developer mode** on the browser's extensions page, choose **Load unpacked**, and select the folder shown by **Open extension folder** in Download Engine. Then follow the [Chromium connection steps](docs/reference.md#chrome-edge-and-brave). The Chromium manifest requires version 128 or newer of the underlying browser engine. Brave has its own desktop connection registration. |
-| **Firefox** | Install the add-on from [Firefox Add-ons](https://addons.mozilla.org/en-US/firefox/addon/download-engine-extension/). Then open **Tools → Browser setup**, select **Firefox** and choose **Connect browser**; you can skip the page's first step. Follow the [Firefox connection steps](docs/reference.md#firefox). The extension requires **Firefox 142 or newer**; Firefox/ESR 140 and Firefox 141 are unsupported. |
-
-Keep Developer mode enabled while using the unpacked Chromium extension. The extension
-ZIPs on the releases page are for manual loading. The Firefox ZIP is unsigned, so
-Firefox removes it when it restarts; use Firefox Add-ons for everyday use.
-
-**Capture file downloads** and **Detect media while browsing** default to on once
-installation permissions are accepted. Existing off choices and capture filters
-are preserved when the extension identity stays the same; the Firefox 3.0 identity
-change described above starts with fresh extension settings. You can disable either
-feature in the extension. Video detection does not start a video download: you still
-choose an item and review it. If a file handoff fails, the extension attempts to
-resume the browser download and reports the failure; check the browser's Downloads
-list if it remains paused.
-
-**Browser-login access is separate and optional.** A reviewed, supported direct
-file handoff can copy matching cookies for that download after permission is
-granted. It does not add account access to the built-in video readers. See
-[browser-login behavior](docs/reference.md#downloads-using-your-browser-login) and
-the [security policy](SECURITY.md#browser-permissions-and-native-messaging).
+**Capture file downloads** and **Detect media while browsing** are on by default once the
+extension's permissions are accepted, and either can be turned off. Detecting a video never starts a
+download by itself. Copying your browser login for a download is a separate, optional review; see
+[browser-login behavior](docs/reference.md#downloads-using-your-browser-login) and the
+[security policy](SECURITY.md#browser-permissions-and-native-messaging).
 
 ## Automation and AI clients
 
-Choose the level of automation you need:
-
 | Interface | Use it for |
 | --- | --- |
-| **Routing rules** | Send new files to a queue by site/file type, set a speed limit, or start another queue after completion. |
-| **Lua scripting** | Inspect queues, perform supported app actions, and react to download events using the built-in Lua runtime. |
+| **Routing rules** | Send new files to a queue by site or file type, set a speed limit, or start another queue after completion. |
+| **Lua scripting** | Inspect queues, perform supported app actions and react to download events with the built-in Lua runtime. |
 | **PowerShell scripting** | Run trusted automation under your own account, with normal file and program access. macOS/Linux require an existing PowerShell 7 installation. |
-| **Lua site readers** | Extend file/video-page support in the same editor and core API, with restricted page-fetching permissions. |
-| **Lua download providers** | Resolve a file and apply a same-length byte transformation while the core owns transfers, recovery and verification. [Guide and examples](docs/lua-providers.md). |
-| **Extensions** | Install site support and automation as one reviewed package. Each job keeps its own limits, and the app holds it to the hosts it declares. [Guide](docs/extensions.md). |
-| **`de-cli.exe`** | Inspect and manage downloads from a terminal or existing script, with structured JSON results. |
-| **Local MCP** | Let a compatible AI client inspect or control this app through an authenticated Streamable HTTP connection. |
+| **Lua site readers** | Add support for more file and video pages, with restricted page-fetching permissions. |
+| **Lua download providers** | Resolve files or media segments, process bytes, and mux video, audio and subtitles while the core owns transfers, recovery and verification. [Provider API](docs/lua-providers.md) · [Media API](docs/lua-media-providers.md) |
+| **Extensions** | Install site support and automation as one reviewed package, from a file or the app's `plugins` folder. Publishers are not verified. [Guide](docs/extensions.md) |
+| **`de-cli`** | Inspect and manage downloads from a terminal or script, with structured JSON results. [CLI reference](docs/automation.md#cli-examples) |
+| **Local MCP** | Let a compatible AI client on this computer inspect or control the app. [Setup](docs/mcp.md) · [AI usage guide](docs/mcp-ai-guide.md) |
 
-For a first look at the CLI, open PowerShell beside `de.exe` and run:
+Rules, scripts and extensions live on the **Extensions** page. The desktop MCP server starts
+turned off, with **View only** access. For a read-only terminal server, use
+`de-cli mcp --read-only`; plain `de-cli mcp` allows changes. Keep its access token private.
 
-```powershell
-.\de-cli.exe --help
-.\de-cli.exe list
-.\de-cli.exe queues
-```
+### Lua extensions and media providers
 
-Open **MCP** in the app and start with **View only** if your AI client only needs
-to inspect state. The desktop server starts disabled. For an explicitly read-only
-terminal server, use `de-cli.exe mcp --read-only`; plain `de-cli.exe mcp` allows
-changes. Keep its access token private. See the [MCP setup guide](docs/mcp.md) and
-[AI usage guide](docs/mcp-ai-guide.md) before connecting a client.
+Build custom site readers and download providers in Lua, package them as extensions,
+and install them without recompiling the app. Packages in the app's `plugins` folder
+appear for permission review; they do not install or run automatically.
 
-The scripting editor, on the **Scripts** tab of the **Extensions** page, includes
-syntax checks, line numbers, highlighting, autocomplete and a searchable core API
-reference. Import/export script packages
-with their triggers and settings; imported scripts start disabled for review.
-Read the [automation reference](docs/automation.md#core-api-and-shared-scripts)
-for API helpers, permissions, events, timeouts, cancellation and examples.
+The **3.15.0 [provider APIs](docs/lua-provider-core.md)** support binary HTTP requests,
+authenticated sessions, protected credentials and key handoff, cryptographic helpers,
+segmented downloads, streaming byte processing, multiple tracks and ASS subtitles.
+Lua supplies site authentication, discovery, manifest parsing and license-message logic.
+The core handles transfers, verification, pause/resume, recovery and FFmpeg muxing.
+
+Developers can use these building blocks to create custom encrypted-media workflows
+in Lua, including integrations aimed at services such as **Crunchyroll**. Each
+integration still needs its own site-specific code and compatibility testing.
+
+> **Use custom site integrations at your own risk.** Review their code and requested
+> permissions before supplying credentials. Compatibility and continued operation
+> are not guaranteed, especially when a service changes.
+
+The bundled [episode demo](examples/offline-episode/README.md) uses generated media
+and follows the crunchyroll-downloader workflow. The separate
+[offline CENC lab](examples/offline-cenc/README.md) adds Lua processing for a defined
+AVC/AAC sample-encryption subset and a synthetic license exchange. Its Windows checks
+cover malformed inputs, pause/resume, crash recovery and Stop all, using the existing
+core. **Neither example implements Crunchyroll authentication or the Widevine license
+protocol.** Live-service compatibility and other encryption formats remain unverified.
 
 ## Data and security
 
-Installed profiles normally live in `%LOCALAPPDATA%\Download Engine`. Portable
-copies use their own `data` folder. `DOWNLOAD_ENGINE_HOME` selects a separate
-profile.
+| Profile | Location |
+| --- | --- |
+| Windows, installed | `%LOCALAPPDATA%\Download Engine` |
+| Windows, portable | The copy's own `data` folder |
+| macOS | `~/Library/Application Support/Download Engine` |
+| Linux | `$XDG_DATA_HOME/Download Engine` or `~/.local/share/Download Engine` |
 
-macOS uses `~/Library/Application Support/Download Engine`; Linux uses
-`$XDG_DATA_HOME/Download Engine` or `~/.local/share/Download Engine`. Native archives
-use these normal user profiles unless separate storage is explicitly configured.
+`DOWNLOAD_ENGINE_HOME` selects a separate profile. The queue database is **not encrypted** and can
+contain signed URLs and local file paths. Supported credentials and browser-login snapshots use
+Windows credential protection, macOS Keychain or a Linux Secret Service keyring; other programs
+running as your account are outside that protection. Review scripts and extensions before running
+them, keep MCP local, and treat downloaded files and offline websites as untrusted content.
 
-The queue database is **not encrypted** and can contain signed URLs and local file
-paths. Supported credentials and browser-login snapshots use Windows credential
-protection, macOS Keychain or a Linux Secret Service keyring. Other programs
-running as your account are outside that protection boundary. Review scripts and extensions before running
-them, keep MCP local, and treat downloaded files and offline websites as untrusted
-content.
-
-See [SECURITY.md](SECURITY.md) for private vulnerability reporting, browser
-permissions, data protection, and the limits of these controls.
+See [SECURITY.md](SECURITY.md) for private vulnerability reporting and the limits of these
+controls, and [PRIVACY.md](PRIVACY.md) for data handling.
 
 ## Guides
 
@@ -346,6 +269,7 @@ permissions, data protection, and the limits of these controls.
 | Supported sites, streams, and protocol limits | [Detailed reference](docs/reference.md#youtube-video-downloads) |
 | CLI, rules, and custom scripts | [Automation](docs/automation.md) · [Lua walkthrough](docs/user-guide.md#lua-scripting) |
 | Custom download providers and offline samples | [Provider API](docs/lua-providers.md) · [Offline lab](docs/lua-provider-lab.md) |
+| Segmented media, cryptography and sample processing | [Media API](docs/lua-media-providers.md) · [Core APIs](docs/lua-provider-core.md) · [Offline CENC lab](examples/offline-cenc/README.md) |
 | Install or build extensions | [Extensions](docs/extensions.md) |
 | Connect an AI client | [MCP setup](docs/mcp.md) · [AI usage guide](docs/mcp-ai-guide.md) |
 | Language settings | [Languages](docs/localization.md) |
@@ -358,43 +282,42 @@ permissions, data protection, and the limits of these controls.
 
 ## Build from source
 
-Build on Windows with Rust stable and the MSVC target, Visual Studio C++ build
-tools, and the Windows SDK (including `rc.exe`):
+On Windows, install Rust stable with the MSVC target, the Visual Studio C++ build tools and the
+Windows SDK (including `rc.exe`), then run:
 
 ```powershell
 cargo build --release --locked --bins
 ```
 
-This builds `de.exe`, `de-cli.exe`, `de-host.exe`, and `de-torrent.exe` under
-`target/release`. Keep the torrent helper beside the other executables; the app
-starts it only when a torrent needs it.
-Node.js is needed for JavaScript tests and packaging tools; Inno Setup is needed
-for the installer. Neither is required to run the packaged app.
+This builds `de.exe`, `de-cli.exe`, `de-host.exe` and `de-torrent.exe` in `target/release`; keep
+them together. Video merging also needs the pinned FFmpeg helper, which Git checkouts and source
+ZIPs omit: copy `tools/ffmpeg/ffmpeg.exe` from the matching portable release, or follow the
+[FFmpeg build instructions](tools/ffmpeg/source/README.md). Node.js runs the JavaScript tests and
+packaging tools, and Inno Setup builds the installer; the packaged app needs neither.
 
-For macOS and Linux, follow the [native build instructions](docs/cross-platform.md#build-and-validate).
-The native packages build FFmpeg from the repository's pinned source archives.
-
-Video merging needs the pinned FFmpeg helper. Git checkouts and source ZIPs omit
-`tools/ffmpeg/ffmpeg.exe`; copy it from the matching portable release or follow the
-[FFmpeg build instructions](tools/ffmpeg/source/README.md). The installer and portable
-release include the executable, its corresponding sources, and license notices.
-See [build and verification details](docs/reference.md#build-and-verify) and the
-[release workflow](docs/releases.md) for the full check and packaging sequence.
+- macOS and Linux: [native build instructions](docs/cross-platform.md#build-and-validate)
+- Tests and checks: [build and verification details](docs/reference.md#build-and-verify)
+- Packaging: [release workflow](docs/releases.md) · [GitHub release guide](docs/github-release.md)
 
 ## Help and contributions
 
-For a connection problem, expired link, or stalled queue, start with the
-[troubleshooting guide](docs/user-guide.md#troubleshooting). When reporting an
-ordinary bug, include the app/extension versions, OS/browser versions, steps
-to reproduce, and redacted diagnostics. Use synthetic or public examples instead
-of private download URLs, cookies, tokens, or your profile database.
+For a connection problem, expired link or stalled queue, start with the
+[troubleshooting guide](docs/user-guide.md#troubleshooting). When reporting an ordinary bug,
+include the app and extension versions, OS and browser versions, steps to reproduce and redacted
+diagnostics. Use synthetic or public examples instead of private download URLs, cookies, tokens or
+your profile database.
 
-Suspected vulnerabilities should follow the [private reporting process](SECURITY.md#report-a-vulnerability),
-not a public issue. For source changes, follow the [release workflow](docs/releases.md)
-and run the checks relevant to the behavior you change.
+Report suspected vulnerabilities through the [private reporting process](SECURITY.md#report-a-vulnerability),
+not a public issue. For source changes, follow the [release workflow](docs/releases.md) and run the
+checks relevant to the behavior you change.
 
 ## License
 
-Download Engine's original code is [MIT licensed](LICENSE). Bundled components retain
-their own licenses; see [third-party notices](THIRD-PARTY-NOTICES.md), including
-FFmpeg's license and corresponding source materials.
+Download Engine's original code is [MIT licensed](LICENSE). You may use, modify, fork,
+redistribute and sell it, retaining the copyright and permission notice as the license
+requires. Feature limitations and runtime permission controls describe the current
+implementation; they add no conditions to the MIT license.
+
+Bundled components retain their own licenses; see [third-party notices](THIRD-PARTY-NOTICES.md),
+including FFmpeg's license and corresponding source materials. The software license
+does not grant rights to third-party content or override applicable law.

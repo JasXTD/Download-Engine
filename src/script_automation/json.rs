@@ -9,6 +9,7 @@ const MAX_NODES: usize = 65_536;
 struct Budget {
     remaining: usize,
     nodes: usize,
+    max_nodes: usize,
     parents: HashSet<usize>,
 }
 impl Budget {
@@ -20,7 +21,7 @@ impl Budget {
         Ok(())
     }
     fn visit(&mut self, value: &Value, depth: usize) -> mlua::Result<()> {
-        if depth > MAX_DEPTH || self.nodes >= MAX_NODES {
+        if depth > MAX_DEPTH || self.nodes >= self.max_nodes {
             return Err(mlua::Error::runtime(
                 "JSON value exceeds its depth or item limit",
             ));
@@ -45,7 +46,7 @@ impl Budget {
                 if !self.parents.insert(pointer) {
                     return Err(mlua::Error::runtime("Recursive tables cannot be JSON"));
                 }
-                if table.raw_len() > MAX_NODES {
+                if table.raw_len() > self.max_nodes {
                     return Err(mlua::Error::runtime("JSON array exceeds its item limit"));
                 }
                 self.bytes(2)?;
@@ -71,9 +72,27 @@ impl Budget {
 }
 
 pub(crate) fn from_lua(lua: &Lua, value: Value, limit: usize) -> mlua::Result<serde_json::Value> {
+    bounded(lua, value, limit, MAX_NODES)
+}
+/// A media manifest can have 16,384 segments; keep the larger graph budget local
+/// to this contract instead of widening every automation JSON conversion.
+pub(crate) fn media_from_lua(
+    lua: &Lua,
+    value: Value,
+    limit: usize,
+) -> mlua::Result<serde_json::Value> {
+    bounded(lua, value, limit, 524_288)
+}
+fn bounded(
+    lua: &Lua,
+    value: Value,
+    limit: usize,
+    max_nodes: usize,
+) -> mlua::Result<serde_json::Value> {
     Budget {
         remaining: limit,
         nodes: 0,
+        max_nodes,
         parents: HashSet::new(),
     }
     .visit(&value, 0)?;

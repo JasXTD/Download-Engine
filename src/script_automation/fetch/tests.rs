@@ -1,4 +1,6 @@
 use super::*;
+mod methods;
+mod sessions;
 use std::{
     io::{Read, Write},
     net::TcpListener,
@@ -142,7 +144,7 @@ fn reader_security_post_bodies_are_not_forwarded_to_another_origin() {
     assert!(same.contains("authorization: bearer fixture-secret"));
     for path in ["/cross307", "/cross308"] {
         let error = fetch.fetch(post(path)).unwrap_err().to_string();
-        assert!(error.contains("POST body"), "{error}");
+        assert!(error.contains("request body"), "{error}");
     }
     assert!(target.requests.lock().unwrap().is_empty());
     fetch.fetch(post("/cross-origin")).unwrap();
@@ -182,6 +184,34 @@ fn reader_security_rejects_proxy_routes_before_connecting() {
 
 fn fetcher() -> Fetcher {
     Fetcher::new(crate::proxy::Route::direct()).unwrap()
+}
+
+#[test]
+fn binary_and_text_fetch_share_request_and_body_limits() {
+    let server = Server::start();
+    let mut fetch = fetcher().allowing_local();
+    crate::script_automation::lua::execute_reader(
+        r#"
+        for i=1,50 do
+            local read=(i%2==0) and xd.fetch_bytes or xd.fetch
+            assert(read(event.url).status==200)
+        end
+        local ok,err=pcall(xd.fetch_bytes,event.url)
+        assert(not ok and tostring(err):find('at most 50'))
+        return {items={}}
+    "#,
+        &serde_json::json!({"url":server.url("/page")}),
+        move |request| fetch.fetch(request),
+    )
+    .unwrap();
+    assert_eq!(server.requests.lock().unwrap().len(), 50);
+    let mut fetch = fetcher().allowing_local();
+    crate::script_automation::lua::execute_reader(r#"
+        local ok,err=pcall(xd.fetch_bytes,event.url,{method='POST',body=string.rep(string.char(255),1048577)})
+        assert(not ok and tostring(err):find('at most 1 MiB'))
+        return {items={}}
+    "#, &serde_json::json!({"url":server.url("/page")}), move |request| fetch.fetch(request)).unwrap();
+    assert_eq!(server.requests.lock().unwrap().len(), 50);
 }
 fn get(url: &str) -> FetchRequest {
     FetchRequest {
@@ -229,7 +259,10 @@ fn replies_carry_status_headers_and_body_without_browser_data() {
             ..Default::default()
         })
         .unwrap();
-    assert_eq!((reply.status, reply.body.as_str()), (200, "hello"));
+    assert_eq!(
+        (reply.status, reply.body.as_slice()),
+        (200, b"hello".as_slice())
+    );
     assert_eq!(reply.headers["x-test"], "one, two");
     assert!(!reply.headers.contains_key("set-cookie"));
     let sent = server.last();
@@ -262,9 +295,10 @@ fn methods_headers_redirects_and_limits_are_enforced() {
             method: Some("post".into()),
             headers: vec![("Content-Type".into(), "application/json".into())],
             body: Some(r#"{"q":1}"#.into()),
+            session: None,
         })
         .unwrap();
-    assert_eq!(posted.body, "hello");
+    assert_eq!(posted.body, b"hello");
     let requests = server.requests.lock().unwrap().clone();
     assert!(
         requests[requests.len() - 2].starts_with("POST /form")
@@ -274,17 +308,17 @@ fn methods_headers_redirects_and_limits_are_enforced() {
     for (request, expected) in [
         (
             FetchRequest {
-                method: Some("PUT".into()),
+                method: Some("TRACE".into()),
                 ..get(&server.url("/"))
             },
-            "GET and POST",
+            "Unsupported HTTP method",
         ),
         (
             FetchRequest {
                 body: Some("x".into()),
                 ..get(&server.url("/"))
             },
-            "Only a POST",
+            "GET and HEAD",
         ),
         (
             FetchRequest {
@@ -346,7 +380,7 @@ fn methods_headers_redirects_and_limits_are_enforced() {
 fn live_public_page_is_fetched() {
     let reply = fetcher().fetch(get("https://example.com/")).unwrap();
     assert_eq!(reply.status, 200);
-    assert!(reply.body.contains("Example Domain"));
+    assert!(String::from_utf8_lossy(&reply.body).contains("Example Domain"));
 }
 
 #[test]

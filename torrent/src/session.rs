@@ -9,6 +9,7 @@ use std::time::Duration;
 
 use anyhow::{Context as _, Result, bail};
 use librqbit_core::magnet::Magnet;
+use librqbit_core::torrent_limits::{MAX_TRACKER_URL_BYTES, MAX_TRACKERS};
 use librqbit_dualstack_sockets::{BindOpts, TcpListener};
 use parking_lot::Mutex;
 use serde::Serialize;
@@ -21,7 +22,9 @@ use crate::discovery::{Discovery, DiscoveryOptions};
 use crate::meta::{TorrentMeta, usable_tracker};
 use crate::peer::read_handshake;
 use crate::rate::ByteLimiter;
+use crate::reason::{self, Reason};
 use crate::resume;
+use crate::router::{self, RouterState};
 use crate::torrent::{Context, Torrent, TorrentOptions, TorrentStats, Totals};
 
 /// Connections that haven't said which torrent they want yet.
@@ -43,6 +46,55 @@ pub struct SessionOptions {
     pub allow_loopback_peers: bool,
     /// Sends no torrent data to anyone.
     pub no_upload: bool,
+    /// Asks the router to forward `listen_port` while the session runs. Does nothing
+    /// without a port. See `router`.
+    pub upnp: bool,
+}
+
+/// Router setup while it runs.
+struct RouterTask {
+    cancel: CancellationToken,
+    task: tokio::task::JoinHandle<()>,
+    state: Arc<Mutex<RouterState>>,
+}
+
+/// Removing the rule takes two short requests. Past this, the rule expires by itself.
+const ROUTER_STOP_WAIT: Duration = Duration::from_secs(10);
+
+fn start_router(port: u16) -> RouterTask {
+    let state = Arc::new(Mutex::new(RouterState::Looking));
+    let cancel = CancellationToken::new();
+    let task = tokio::spawn({
+        let (state, cancel) = (state.clone(), cancel.clone());
+        async move {
+            let Some(gateway) = router::default_gateway() else {
+                *state.lock() = RouterState::Unavailable;
+                return;
+            };
+            match router::Network::new() {
+                Ok(network) => router::keep_open(network, gateway, port, state, cancel).await,
+                Err(error) => {
+                    debug_log!("router setup could not start: {error:#}");
+                    *state.lock() = RouterState::Failed;
+                }
+            }
+        }
+    });
+    RouterTask {
+        cancel,
+        task,
+        state,
+    }
+}
+
+async fn stop_router(router: RouterTask) {
+    router.cancel.cancel();
+    if tokio::time::timeout(ROUTER_STOP_WAIT, router.task)
+        .await
+        .is_err()
+    {
+        debug_log!("the router did not answer in time; its rule expires by itself");
+    }
 }
 
 #[derive(Clone, Default)]
@@ -53,6 +105,40 @@ pub struct AddOptions {
     pub choose_later: bool,
     pub seed_only: bool,
     pub file_name: Option<String>,
+    /// Trackers the user added earlier. Ones that aren't usable are left out.
+    pub trackers: Vec<String>,
+    /// The person said yes to looking this magnet up on the DHT. Only used when nothing
+    /// else could find it, and only while the DHT is on.
+    pub dht_search: bool,
+}
+
+/// What a magnet link may use to find its details.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum MagnetDiscovery {
+    /// Its trackers, saved details or given peers, as always.
+    AsToday,
+    /// Only a DHT search, which announces nothing until the details say public.
+    DhtSearchOnly,
+    Refuse(Reason),
+}
+
+/// One decision for every magnet. An unknown hash reaches the DHT only with a yes for this
+/// magnet, and never while the DHT is off.
+pub fn magnet_discovery(
+    usable_trackers: usize,
+    cached: bool,
+    given_peers: bool,
+    dht_on: bool,
+    consent: bool,
+) -> MagnetDiscovery {
+    if usable_trackers > 0 || cached || given_peers {
+        return MagnetDiscovery::AsToday;
+    }
+    match (dht_on, consent) {
+        (false, _) => MagnetDiscovery::Refuse(reason::DHT_OFF),
+        (true, false) => MagnetDiscovery::Refuse(reason::NEEDS_DHT_CONSENT),
+        (true, true) => MagnetDiscovery::DhtSearchOnly,
+    }
 }
 
 #[derive(Serialize)]
@@ -71,6 +157,8 @@ pub struct SessionStats {
     pub torrents: BTreeMap<String, TorrentStats>,
     pub managed: usize,
     pub session: SessionTotals,
+    /// Router setup, while it is on.
+    pub router: Option<RouterState>,
 }
 
 pub struct Session {
@@ -79,6 +167,7 @@ pub struct Session {
     torrents: Mutex<BTreeMap<String, Arc<Torrent>>>,
     cancel: CancellationToken,
     listener: tokio::sync::Mutex<Option<tokio::task::JoinHandle<()>>>,
+    router: Mutex<Option<RouterTask>>,
 }
 
 impl Session {
@@ -115,15 +204,54 @@ impl Session {
             torrents: Mutex::default(),
             cancel,
             listener: tokio::sync::Mutex::new(None),
+            router: Mutex::new(None),
         });
         if let Some(port) = session.options.listen_port {
             let listener = bind(port)?;
             *session.listener.lock().await = Some(tokio::spawn(session.clone().listen(listener)));
+            // Only once something listens, and only when the person turned it on.
+            if session.options.upnp {
+                *session.router.lock() = Some(start_router(port));
+            }
         }
         Ok(session)
     }
 
+    /// Turns router setup on or off while the session runs. Turning it off waits until the
+    /// rule is removed, or until the router had its chance to answer.
+    pub async fn set_upnp(&self, on: bool) {
+        let stopping = {
+            let mut router = self.router.lock();
+            match (on, router.is_some(), self.options.listen_port) {
+                (true, false, Some(port)) if !self.cancel.is_cancelled() => {
+                    *router = Some(start_router(port));
+                    None
+                }
+                (false, true, _) => router.take(),
+                _ => None,
+            }
+        };
+        if let Some(router) = stopping {
+            stop_router(router).await;
+        }
+    }
+
+    /// What router setup has come to, while it is on.
+    pub fn router_status(&self) -> Option<RouterState> {
+        self.router
+            .lock()
+            .as_ref()
+            .map(|router| *router.state.lock())
+    }
+
     fn torrent_options(&self, add: AddOptions) -> TorrentOptions {
+        let trackers = add
+            .trackers
+            .iter()
+            .filter(|text| text.len() <= MAX_TRACKER_URL_BYTES)
+            .filter_map(|text| usable_tracker(text.trim()))
+            .take(MAX_TRACKERS)
+            .collect();
         TorrentOptions {
             output: add.output,
             only: add.only,
@@ -141,6 +269,9 @@ impl Session {
             connect_out: true,
             allow_loopback: self.options.allow_loopback_peers,
             allowance: Arc::default(),
+            trackers,
+            // Only add_magnet turns this on, after its own check.
+            dht_search: false,
         }
     }
 
@@ -197,7 +328,8 @@ impl Session {
             .collect();
         // A link's own `so=` list is ignored, because a stranger's link must not choose
         // what gets downloaded.
-        let options = self.torrent_options(add);
+        let consent = add.dht_search;
+        let mut options = self.torrent_options(add);
         let saved = self
             .options
             .state_dir
@@ -207,13 +339,25 @@ impl Session {
             !options.seed_only || saved.is_some(),
             "Seeding needs saved metadata. Open the original .torrent file again."
         );
-        if saved.is_none()
-            && (trackers.is_empty() || !self.options.use_trackers)
-            && options.peers.is_empty()
-        {
-            bail!(
-                "This magnet has no usable tracker or cached metadata. Open its .torrent file to keep a potentially private hash off the public DHT."
-            );
+        // Only trackers that would really be asked count. One that leads to this computer or
+        // its network is refused later, so it can't stand in for a yes to the DHT.
+        let usable = match &self.context.discovery {
+            Some(discovery) if discovery.uses_trackers() => trackers
+                .iter()
+                .filter(|tracker| discovery.allows_tracker(tracker))
+                .count(),
+            _ => 0,
+        };
+        match magnet_discovery(
+            usable,
+            saved.is_some(),
+            !options.peers.is_empty(),
+            self.options.use_dht,
+            consent,
+        ) {
+            MagnetDiscovery::AsToday => {}
+            MagnetDiscovery::DhtSearchOnly => options.dht_search = true,
+            MagnetDiscovery::Refuse(reason) => return Err(reason.into()),
         }
         let torrent = match saved {
             Some(meta) => Torrent::from_meta(Arc::new(meta), options, self.context.clone())?,
@@ -313,6 +457,7 @@ impl Session {
                     downloaded_bytes: self.context.totals.downloaded.load(Ordering::Relaxed),
                 },
             },
+            router: self.router_status(),
         }
     }
 
@@ -330,6 +475,11 @@ impl Session {
                 debug_log!("listener task ended unexpectedly: {error}");
             }
             *listener = None;
+        }
+        // The port is closed first, so a new helper can use it while the rule goes.
+        let router = self.router.lock().take();
+        if let Some(router) = router {
+            stop_router(router).await;
         }
     }
 
@@ -518,8 +668,40 @@ mod tests {
             .await
             .unwrap_err();
         assert!(error.to_string().contains(".torrent file"));
+        // Damaged details count as none, so the magnet is as unknown as one never seen.
+        assert_eq!(reason::code_of(&error), Some("dht_off"));
         assert!(session.torrent("one").is_err());
         session.shutdown().await;
+    }
+
+    #[test]
+    fn every_magnet_case_has_one_decision() {
+        use MagnetDiscovery::*;
+        // Trackers, saved details or given peers: as always, whatever the DHT and the yes.
+        for (trackers, cached, peers) in [(1, false, false), (0, true, false), (0, false, true)] {
+            for dht in [false, true] {
+                for consent in [false, true] {
+                    assert_eq!(
+                        magnet_discovery(trackers, cached, peers, dht, consent),
+                        AsToday
+                    );
+                }
+            }
+        }
+        assert_eq!(
+            magnet_discovery(0, false, false, false, false),
+            Refuse(reason::DHT_OFF)
+        );
+        assert_eq!(
+            magnet_discovery(0, false, false, false, true),
+            Refuse(reason::DHT_OFF),
+            "a yes never turns the DHT on"
+        );
+        assert_eq!(
+            magnet_discovery(0, false, false, true, false),
+            Refuse(reason::NEEDS_DHT_CONSENT)
+        );
+        assert_eq!(magnet_discovery(0, false, false, true, true), DhtSearchOnly);
     }
 
     #[tokio::test]
@@ -530,6 +712,41 @@ mod tests {
             .add_magnet("one".into(), link, AddOptions::default())
             .await
             .unwrap_err();
+        assert_eq!(reason::code_of(&error), Some("dht_off"));
+        let asked = AddOptions {
+            dht_search: true,
+            ..Default::default()
+        };
+        let error = session
+            .add_magnet("one".into(), link, asked)
+            .await
+            .unwrap_err();
+        assert_eq!(reason::code_of(&error), Some("dht_off"));
+        assert!(session.all().is_empty());
+        session.shutdown().await;
+    }
+
+    #[tokio::test]
+    async fn a_trackerless_magnet_waits_for_a_yes_while_the_dht_is_on() {
+        // Trackers and the DHT start lazily, so refusing here opens no socket.
+        let session = Session::new(SessionOptions {
+            use_trackers: true,
+            use_dht: true,
+            dht_bootstrap: Some(Vec::new()),
+            ..Default::default()
+        })
+        .await
+        .unwrap();
+        let link = "magnet:?xt=urn:btih:0123456789012345678901234567890123456789&tr=http%3A%2F%2F127.0.0.1%2Fannounce";
+        let error = session
+            .add_magnet("one".into(), link, AddOptions::default())
+            .await
+            .unwrap_err();
+        assert_eq!(
+            reason::code_of(&error),
+            Some("needs_dht_consent"),
+            "a tracker on this computer is not a usable tracker"
+        );
         assert!(error.to_string().contains(".torrent file"));
         assert!(session.all().is_empty());
         session.shutdown().await;

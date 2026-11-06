@@ -107,7 +107,7 @@ impl Runtime {
                 let key = block_keys
                     .get(&key_id)
                     .ok_or_else(|| mlua::Error::runtime("Key is not granted"))?;
-                let result = crypto::encrypt_blocks(key, &blocks.as_bytes())
+                let result = crypto::crypt_blocks(key, &blocks.as_bytes(), false)
                     .map_err(mlua::Error::external)?;
                 lua.create_string(result)
             })?,

@@ -325,10 +325,12 @@ impl DownloadClient {
             authenticated: self.authenticated.clone(),
             public_only: self.public_only,
             same_origin: false,
+            provider_session: None,
         })
     }
 }
 pub(crate) struct DownloadRequest {
+    provider_session: Option<crate::script_automation::HttpSession>,
     same_origin: bool,
     public_only: bool,
     route: crate::proxy::Route,
@@ -338,6 +340,11 @@ pub(crate) struct DownloadRequest {
     browser: Option<Arc<crate::browser_login::Session>>,
 }
 impl DownloadRequest {
+    pub(crate) fn http_session(mut self, session: crate::script_automation::HttpSession) -> Self {
+        self.provider_session = Some(session);
+        self.same_origin = true;
+        self
+    }
     pub(crate) fn same_origin(mut self) -> Self {
         self.same_origin = true;
         self
@@ -356,6 +363,18 @@ impl DownloadRequest {
         tokio::time::timeout(std::time::Duration::from_secs(30), async {
             let mut request = self.request.build().map_err(crate::retry::network)?;
             for redirects in 0..=10 {
+                if let Some(session) = &self.provider_session {
+                    session.check_origin(request.url())?;
+                    // Session headers were validated at creation. Apply on the first
+                    // hop only; the same-origin request clone retains them afterward.
+                    if redirects == 0 { session.apply_download_headers(request.headers_mut())?; }
+                    request.headers_mut().remove(reqwest::header::COOKIE);
+                    if let Some(cookie) = session.cookie_header(request.url())? {
+                        let mut value = reqwest::header::HeaderValue::from_str(&cookie)?;
+                        value.set_sensitive(true);
+                        request.headers_mut().insert(reqwest::header::COOKIE, value);
+                    }
+                }
                 if let Some(session) = &self.browser {
                     let header = session.header(request.url())?;
                     request.headers_mut().remove(reqwest::header::COOKIE);
@@ -369,6 +388,11 @@ impl DownloadRequest {
                     crate::network_scope::public_client(request.url(), &self.route).await?
                 } else { self.client.clone() };
                 let response = self.route.execute(&client, request, native).await?;
+                if let Some(session) = &self.provider_session {
+                    let cookies = response.headers().get_all(reqwest::header::SET_COOKIE).iter()
+                        .filter_map(|v| v.to_str().ok().map(str::to_owned)).collect::<Vec<_>>();
+                    session.keep_cookies(response.url(), &cookies)?;
+                }
                 if matches!(response.status().as_u16(), 301 | 302 | 303 | 307 | 308) {
                     ensure!(redirects < 10, "Too many browser download redirects");
                     let location = response

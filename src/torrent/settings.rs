@@ -1,4 +1,5 @@
 //! Torrents start switched off, and only a person can turn them on.
+use super::limits::{self, Limits};
 use crate::store::Store;
 use anyhow::Result;
 use rusqlite::{Connection, params};
@@ -15,6 +16,12 @@ pub struct Settings {
     pub dht: bool,
     pub seed_completed: bool,
     pub incoming_port: Option<u16>,
+    /// Sharing a finished torrent stops at this ratio, in hundredths, if set.
+    pub share_ratio: Option<u32>,
+    /// Sharing a finished torrent stops after this many seconds of sharing, if set.
+    pub share_seconds: Option<u32>,
+    /// Asks the router to forward the incoming port while torrents run. Only with a port.
+    pub upnp: bool,
 }
 impl Default for Settings {
     fn default() -> Self {
@@ -25,8 +32,25 @@ impl Default for Settings {
             dht: true,
             seed_completed: false,
             incoming_port: None,
+            share_ratio: Some(limits::DEFAULT_RATIO),
+            share_seconds: Some(limits::DEFAULT_TIME),
+            upnp: false,
         }
     }
+}
+impl Settings {
+    pub fn sharing_limits(&self) -> Limits {
+        Limits::new(self.share_ratio, self.share_seconds)
+    }
+}
+
+/// `CHECK` lists made from the values Preferences offers, so the two can't drift apart.
+fn allowed(values: &[u32]) -> String {
+    values
+        .iter()
+        .map(u32::to_string)
+        .collect::<Vec<_>>()
+        .join(",")
 }
 
 pub(crate) fn initialize(conn: &Connection) -> Result<()> {
@@ -49,6 +73,39 @@ pub(crate) fn initialize(conn: &Connection) -> Result<()> {
         CREATE TABLE IF NOT EXISTS torrent_sharing (
         job_id TEXT PRIMARY KEY REFERENCES jobs(id) ON DELETE CASCADE,
         enabled INTEGER NOT NULL CHECK(enabled IN (0,1)), error TEXT);")?;
+    // Trackers the user added in the status window. Older versions ignore this table.
+    conn.execute_batch(
+        "CREATE TABLE IF NOT EXISTS torrent_trackers (
+        job_id TEXT NOT NULL REFERENCES jobs(id) ON DELETE CASCADE,
+        url TEXT NOT NULL CHECK(length(url) BETWEEN 1 AND 2048),
+        PRIMARY KEY(job_id, url));",
+    )?;
+    // Sharing limits, what each torrent has shared so far, the router switch and the
+    // person's yes to a DHT search. New tables, so older versions ignore all of them.
+    conn.execute_batch(&format!(
+        "CREATE TABLE IF NOT EXISTS torrent_sharing_limits (
+        id INTEGER PRIMARY KEY CHECK(id=1),
+        ratio INTEGER CHECK(ratio IS NULL OR ratio IN ({ratios})),
+        seconds INTEGER CHECK(seconds IS NULL OR seconds IN ({times})));
+        INSERT OR IGNORE INTO torrent_sharing_limits VALUES(1,{ratio},{time});
+        CREATE TABLE IF NOT EXISTS torrent_sharing_totals (
+        job_id TEXT PRIMARY KEY REFERENCES jobs(id) ON DELETE CASCADE,
+        uploaded INTEGER NOT NULL CHECK(uploaded >= 0),
+        shared_secs INTEGER NOT NULL CHECK(shared_secs >= 0),
+        stopped TEXT CHECK(stopped IS NULL OR stopped IN ('ratio','time')),
+        unlimited INTEGER NOT NULL DEFAULT 0 CHECK(unlimited IN (0,1)));
+        CREATE TABLE IF NOT EXISTS torrent_router_settings (
+        id INTEGER PRIMARY KEY CHECK(id=1),
+        upnp INTEGER NOT NULL CHECK(upnp IN (0,1)));
+        INSERT OR IGNORE INTO torrent_router_settings VALUES(1,0);
+        CREATE TABLE IF NOT EXISTS torrent_dht_consent (
+        job_id TEXT PRIMARY KEY REFERENCES jobs(id) ON DELETE CASCADE,
+        info_hash TEXT NOT NULL CHECK(length(info_hash)=40));",
+        ratios = allowed(&limits::RATIOS),
+        times = allowed(&limits::TIMES),
+        ratio = limits::DEFAULT_RATIO,
+        time = limits::DEFAULT_TIME,
+    ))?;
     // Development builds could save torrents before the version guard existed. Upgrade
     // those profiles too, without changing profiles that have never saved a torrent.
     let has_torrents: bool = conn.query_row(
@@ -75,7 +132,9 @@ pub(super) fn protect_profile(conn: &Connection) -> Result<()> {
 impl Store {
     pub fn torrent_settings(&self) -> Result<Settings> {
         Ok(self.connect()?.query_row(
-            "SELECT enabled,upload,upload_limit,dht,seed_completed,incoming_port FROM torrent_settings JOIN torrent_sharing_settings USING(id) WHERE id=1",
+            "SELECT enabled,upload,upload_limit,dht,seed_completed,incoming_port,ratio,seconds,upnp
+             FROM torrent_settings JOIN torrent_sharing_settings USING(id)
+             JOIN torrent_sharing_limits USING(id) JOIN torrent_router_settings USING(id) WHERE id=1",
             [],
             |row| {
                 Ok(Settings {
@@ -85,6 +144,9 @@ impl Store {
                     dht: row.get(3)?,
                     seed_completed: row.get(4)?,
                     incoming_port: row.get(5)?,
+                    share_ratio: row.get(6)?,
+                    share_seconds: row.get(7)?,
+                    upnp: row.get(8)?,
                 })
             },
         )?)
@@ -98,6 +160,15 @@ impl Store {
             value.incoming_port.is_none_or(|port| port >= 1024),
             "Choose an incoming port between 1024 and 65535"
         );
+        anyhow::ensure!(
+            value
+                .share_ratio
+                .is_none_or(|ratio| limits::RATIOS.contains(&ratio))
+                && value
+                    .share_seconds
+                    .is_none_or(|seconds| limits::TIMES.contains(&seconds)),
+            "Choose a sharing limit from the list"
+        );
         let mut conn = self.connect()?;
         let tx = conn.transaction()?;
         let count = tx.execute(
@@ -108,6 +179,14 @@ impl Store {
         tx.execute(
             "UPDATE torrent_sharing_settings SET seed_completed=?1,incoming_port=?2 WHERE id=1",
             params![value.seed_completed, value.incoming_port],
+        )?;
+        tx.execute(
+            "UPDATE torrent_sharing_limits SET ratio=?1,seconds=?2 WHERE id=1",
+            params![value.share_ratio, value.share_seconds],
+        )?;
+        tx.execute(
+            "UPDATE torrent_router_settings SET upnp=?1 WHERE id=1",
+            [value.upnp],
         )?;
         if value.seed_completed || value.incoming_port.is_some() {
             protect_profile(&tx)?;
@@ -234,5 +313,60 @@ mod sharing_tests {
             !store.torrents.is_running(),
             "saving preferences alone does not start a listener"
         );
+    }
+
+    #[test]
+    fn sharing_limits_default_to_ratio_two_or_a_week_and_only_listed_values_are_saved() {
+        let dir = tempfile::tempdir().unwrap();
+        let store = Store::open(crate::paths::AppPaths {
+            data: dir.path().join("data"),
+            downloads: dir.path().join("downloads"),
+        })
+        .unwrap();
+        let initial = store.torrent_settings().unwrap();
+        assert_eq!(initial, Settings::default());
+        assert_eq!(initial.share_ratio, Some(200));
+        assert_eq!(initial.share_seconds, Some(604_800));
+        assert!(!initial.upnp, "router setup starts off");
+        for bad in [
+            Settings {
+                share_ratio: Some(250),
+                ..initial
+            },
+            Settings {
+                share_ratio: Some(0),
+                ..initial
+            },
+            Settings {
+                share_seconds: Some(1),
+                ..initial
+            },
+            Settings {
+                share_seconds: Some(0),
+                ..initial
+            },
+        ] {
+            assert!(store.save_torrent_settings(bad).is_err(), "{bad:?}");
+            assert_eq!(store.torrent_settings().unwrap(), initial);
+        }
+        let changed = Settings {
+            share_ratio: None,
+            share_seconds: Some(3_600),
+            upnp: true,
+            ..initial
+        };
+        store.save_torrent_settings(changed).unwrap();
+        assert_eq!(store.torrent_settings().unwrap(), changed);
+        assert!(changed.sharing_limits().ratio_hundredths.is_none());
+        // The database refuses what the window never offers, even written directly.
+        let conn = store.connect().unwrap();
+        for sql in [
+            "UPDATE torrent_sharing_limits SET ratio=250 WHERE id=1",
+            "UPDATE torrent_sharing_limits SET seconds=59 WHERE id=1",
+            "UPDATE torrent_router_settings SET upnp=2 WHERE id=1",
+        ] {
+            assert!(conn.execute(sql, []).is_err(), "{sql}");
+        }
+        assert_eq!(store.torrent_settings().unwrap(), changed);
     }
 }

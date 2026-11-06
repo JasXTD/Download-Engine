@@ -6,7 +6,7 @@
 
 Standardmäßig wird bei jedem Öffnen der App einmal geprüft. Bei einer neuen Version können Sie das Update herunterladen oder später fortfahren. Netzwerkfehler öffnen kein Fenster. Die Prüfung lässt sich in den Einstellungen ausschalten. Updates von der offiziellen GitHub-Releaseseite herunterladen und installieren.
 
-Einstellungen öffnen sich jetzt als Popup mit Kategorien. Speichern übernimmt Änderungen; Abbrechen, × oder Escape verwirft ungespeicherte Änderungen. Designs lassen sich vorab ansehen; Zurücksetzen betrifft nur die aktuelle Kategorie. Erweiterte Editoren speichern separat und kehren beim Schließen zu den Einstellungen zurück.
+Einstellungen öffnen sich jetzt als Popup mit Kategorien. Speichern übernimmt Änderungen; × oder Escape verwirft ungespeicherte Änderungen; solange Änderungen ungespeichert sind, schließt ein Klick außerhalb das Popup nicht. Designs lassen sich vorab ansehen; Zurücksetzen betrifft nur die aktuelle Kategorie. Erweiterte Editoren speichern separat und kehren beim Schließen zu den Einstellungen zurück.
 
 ### Erste Schritte
 

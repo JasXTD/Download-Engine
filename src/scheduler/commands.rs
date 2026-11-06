@@ -15,6 +15,8 @@ pub(super) fn job_id(command: &Command) -> Option<&str> {
         | Command::MoveFile { id, .. }
         | Command::MoveFileToChosenFolder { id, .. }
         | Command::ChooseTorrentFiles { id, .. }
+        | Command::KeepTorrentFiles { id, .. }
+        | Command::TorrentRequest { id, .. }
         | Command::MoveJob(id, _)
         | Command::ReorderJob(id, _) => Some(id),
         Command::StartSharing(id) | Command::StopSharing(id) => Some(id),
@@ -108,7 +110,9 @@ pub(super) fn apply(
             }
             return Ok(());
         }
-        Command::ChooseTorrentFiles { id, chosen } => {
+        Command::ChooseTorrentFiles { id, chosen } | Command::KeepTorrentFiles { id, chosen } => {
+            // Choose files starts the download. A status window's ticks never do.
+            let start = matches!(command, Command::ChooseTorrentFiles { .. });
             let files = store.choose_torrent_files(id, chosen.clone())?;
             if active.contains_key(id) {
                 store.torrents.select(id, files.chosen);
@@ -118,7 +122,7 @@ pub(super) fn apply(
             let state = job.torrent.as_mut().context("This is not a torrent")?;
             state.stage = crate::torrent::Stage::Chosen;
             job.total = Some(files.chosen_size());
-            if job.status == Status::Paused {
+            if start && job.status == Status::Paused {
                 job.status = Status::Queued;
                 job.error = None;
                 return store.save_for_start(&job);
@@ -212,6 +216,7 @@ pub(super) fn apply(
             job.plan = None;
             if let Some(provider) = &mut job.provider {
                 provider.plan = None;
+                provider.media = None;
             }
             job.link_fallback = None;
             if let Some(ftp) = &mut job.ftp {

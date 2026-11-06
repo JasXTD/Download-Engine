@@ -1,3 +1,15 @@
+## 3.15.0 — 2026-11-06
+
+### Noyau des fournisseurs Lua et sous-titres ASS
+
+HTTP dans Lua prend désormais en charge HEAD, PUT, PATCH, DELETE et OPTIONS, des corps binaires limités et des sessions fournies explicitement, liées à une seule origine. Les identifiants restent chiffrés hors du résolveur et ne sont ni enregistrés dans les plans ni transmis aux processeurs hors ligne. Les plans multimédias acceptent des segments de taille inconnue ; lua_stream traite des blocs limités avec des points de contrôle vérifiés pour la pause, la reprise, l’arrêt et la récupération.
+
+Ajout de l’import d’identifiants binaires/RSA protégés par le système, d’octets aléatoires, de SHA-1/SHA-256, de HMAC, de la signature et du déchiffrement RSA ainsi que du déchiffrement de blocs AES. Les sous-titres ASS conservent leurs styles et leurs modifications de formatage intégrées dans MKV ; MP4 les convertit en sous-titres texte. Les nouvelles fonctions d’identifiants et de médias nécessitent une application prenant en charge la version d’écriture des profils 9. Les anciens formats de points de contrôle restent compatibles.
+
+Le laboratoire CENC hors ligne pour les auteurs utilise Lua pour analyser un sous-ensemble limité du chiffrement d’échantillons AVC/AAC, simuler un échange de licence signé, transmettre les clés et assembler les pistes déchiffrées avec des sous-titres ASS. L’authentification des sites, les formats de licence et les analyseurs de conteneurs restent à implémenter en Lua. Les tests utilisent des données générées, sans service ni compte réel ; il ne s’agit pas d’une implémentation complète de CENC.
+
+[English details](../../../CHANGELOG.md#3150--2026-11-06)
+
 ## 3.10.2 — 2026-11-04
 
 ### Rapports de plantage locaux

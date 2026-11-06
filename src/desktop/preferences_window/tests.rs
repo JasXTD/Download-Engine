@@ -38,7 +38,7 @@ fn launch_update_preference_saves_cancels_and_resets_without_changing_windows_st
     app.open_preferences_window();
     click(&mut app, &ctx, Category::Startup.label());
     click(&mut app, &ctx, "Check for updates on launch");
-    click(&mut app, &ctx, "Cancel");
+    click(&mut app, &ctx, "×");
     assert!(app.interface.check_updates_on_launch);
     app.open_preferences_window();
     click(&mut app, &ctx, Category::Startup.label());
@@ -62,7 +62,7 @@ fn launch_update_preference_saves_cancels_and_resets_without_changing_windows_st
             .interface
             .check_updates_on_launch
     );
-    click(&mut app, &ctx, "Cancel");
+    click(&mut app, &ctx, "×");
     assert!(!app.interface.check_updates_on_launch);
 }
 
@@ -79,9 +79,9 @@ fn independently_saved_folder_rules_are_reported_and_survive_parent_cancel() {
     assert!(app.preferences_window.as_ref().unwrap().advanced_saved);
     text_rect(
         &output,
-        "Advanced settings saved. Cancel will not undo those changes.",
+        "Advanced settings saved. Closing Preferences will not undo those changes.",
     );
-    click(&mut app, &ctx, "Cancel");
+    click(&mut app, &ctx, "×");
     assert!(!app.interface.compact_rows);
     assert_eq!(app.store.download_folders().unwrap(), saved);
     app.open_preferences_window();
@@ -148,7 +148,7 @@ fn cancel_and_escape_discard_drafts_and_restore_theme_on_the_same_page() {
                 }],
             );
         } else {
-            click(&mut app, &ctx, "Cancel");
+            click(&mut app, &ctx, "×");
         }
         frame(&mut app, &ctx, vec2(1080.0, 800.0), vec![]);
         assert!(app.preferences_window.is_none() && app.dialog.is_none());
@@ -157,7 +157,7 @@ fn cancel_and_escape_discard_drafts_and_restore_theme_on_the_same_page() {
         assert_eq!(
             ctx.theme(),
             egui::Theme::Light,
-            "Cancel should restore saved theme"
+            "Closing should restore the saved theme"
         );
         assert_eq!(app.store.interface_preferences().unwrap(), before);
     }
@@ -189,7 +189,7 @@ fn columns_and_reset_stay_in_the_parent_draft_until_save() {
             .interface
             .compact_rows
     );
-    click(&mut app, &ctx, "Cancel");
+    click(&mut app, &ctx, "×");
     assert_eq!(app.interface, before);
     app.open_preferences_window();
     click(&mut app, &ctx, "Compact rows");
@@ -287,7 +287,7 @@ fn all_languages_categories_and_footer_fit_the_minimum_window() {
             frame(&mut app, &ctx, size, vec![]);
             let output = frame(&mut app, &ctx, size, vec![]);
             let viewport = egui::Rect::from_min_size(egui::Pos2::ZERO, size);
-            for label in [tr("Save"), tr("Cancel"), tr("Reset"), "×"] {
+            for label in [tr("Save"), tr("Reset"), "×"] {
                 assert!(
                     viewport.contains_rect(text_rect(&output, label)),
                     "{language:?} {category:?}: {label}"
@@ -308,4 +308,232 @@ fn all_languages_categories_and_footer_fit_the_minimum_window() {
         }
         app.close_preferences_window(&ctx);
     }
+}
+
+const SIZE: egui::Vec2 = vec2(1080.0, 800.0);
+
+/// Runs one frame at an explicit input time, so a press can be held across frames.
+fn frame_at(
+    app: &mut Desktop,
+    ctx: &egui::Context,
+    time: f64,
+    events: Vec<egui::Event>,
+) -> egui::FullOutput {
+    let mut output = ctx.run_ui(
+        egui::RawInput {
+            screen_rect: Some(egui::Rect::from_min_size(egui::Pos2::ZERO, SIZE)),
+            time: Some(time),
+            events,
+            ..Default::default()
+        },
+        |ui| app.draw(ui),
+    );
+    output.textures_delta.clear();
+    output
+}
+
+/// The dialog's copy of a label, drawn above anything its backdrop covers.
+fn topmost_text(output: &egui::FullOutput, label: &str) -> egui::Rect {
+    output
+        .shapes
+        .iter()
+        .rev()
+        .find_map(|clipped| match &clipped.shape {
+            egui::Shape::Text(text) if text.galley.job.text.trim() == label => {
+                Some(text.galley.rect.translate(text.pos.to_vec2()))
+            }
+            _ => None,
+        })
+        .unwrap_or_else(|| panic!("No rendered text: {label}"))
+}
+
+/// The middle of the dialog's header ×. Its glyph is centred on the button by its
+/// visible shape, so use that rather than the text's line box.
+fn close_button(output: &egui::FullOutput) -> egui::Pos2 {
+    output
+        .shapes
+        .iter()
+        .rev()
+        .find_map(|clipped| match &clipped.shape {
+            egui::Shape::Text(text) if text.galley.job.text == "×" => Some(
+                text.galley
+                    .mesh_bounds
+                    .translate(text.pos.to_vec2())
+                    .center(),
+            ),
+            _ => None,
+        })
+        .expect("No header ×")
+}
+
+/// Presses the header ×, then lets go `held` seconds later and `moved` points to the
+/// right. Returns whether Preferences closed.
+fn cancel_with(held: f64, moved: f32) -> bool {
+    let (_temp, mut app, ctx) = fixture();
+    app.open_preferences_window();
+    frame(&mut app, &ctx, SIZE, vec![]);
+    let output = frame(&mut app, &ctx, SIZE, vec![]);
+    let press = close_button(&output);
+    let start = ctx.input(|input| input.time) + 0.1;
+    for (time, pos, pressed) in [
+        (start, press, true),
+        (start + held, press + vec2(moved, 0.0), false),
+    ] {
+        frame_at(
+            &mut app,
+            &ctx,
+            time,
+            vec![
+                egui::Event::PointerMoved(pos),
+                egui::Event::PointerButton {
+                    pos,
+                    button: egui::PointerButton::Primary,
+                    pressed,
+                    modifiers: egui::Modifiers::NONE,
+                },
+            ],
+        );
+    }
+    app.preferences_window.is_none()
+}
+
+#[test]
+fn slow_and_slightly_moving_clicks_still_cancel() {
+    // egui samples time once per frame, so a busy frame between press and release counts
+    // as holding the button. Dragging well away from the button must still not click it.
+    let failures: Vec<_> = [
+        (0.1, 0.0, true, "an ordinary click"),
+        (1.5, 0.0, true, "a press held for 1.5 s"),
+        (0.1, 8.0, true, "a press that moved 8 points"),
+        (0.1, 40.0, false, "a drag 40 points away"),
+    ]
+    .into_iter()
+    .filter(|&(held, moved, closes, _)| cancel_with(held, moved) != closes)
+    .map(|(.., case)| case)
+    .collect();
+    assert!(failures.is_empty(), "Wrong result for: {failures:?}");
+}
+
+/// The fill of the smallest rectangle drawn under `point`, which is a button's background.
+fn fill_under(output: &egui::FullOutput, point: egui::Pos2) -> egui::Color32 {
+    output
+        .shapes
+        .iter()
+        .filter_map(|clipped| match &clipped.shape {
+            egui::Shape::Rect(shape) if shape.rect.contains(point) => Some(shape),
+            _ => None,
+        })
+        .min_by(|a, b| a.rect.area().total_cmp(&b.rect.area()))
+        .map_or(egui::Color32::TRANSPARENT, |shape| shape.fill)
+}
+
+#[test]
+fn turned_off_save_looks_like_the_other_turned_off_buttons_and_says_why() {
+    let (_temp, mut app, ctx) = fixture();
+    app.open_preferences_window();
+    // Connection has nothing to reset, so Reset is turned off beside an unchanged Save.
+    app.preferences_window.as_mut().unwrap().category = Category::Connection;
+    frame(&mut app, &ctx, SIZE, vec![]);
+    let output = frame(&mut app, &ctx, SIZE, vec![]);
+    let save = topmost_text(&output, "Save").center();
+    let reset = topmost_text(&output, "Reset").center();
+    assert_eq!(fill_under(&output, save), fill_under(&output, reset));
+
+    let start = ctx.input(|input| input.time) + 0.1;
+    frame_at(&mut app, &ctx, start, vec![egui::Event::PointerMoved(save)]);
+    frame_at(&mut app, &ctx, start + 1.0, vec![]);
+    let output = frame_at(&mut app, &ctx, start + 1.1, vec![]);
+    let hints = output
+        .shapes
+        .iter()
+        .filter(|clipped| {
+            matches!(&clipped.shape, egui::Shape::Text(text)
+                if text.galley.job.text.trim() == "No unsaved changes")
+        })
+        .count();
+    assert!(
+        hints >= 2,
+        "The footer note and a hint on Save, found {hints}"
+    );
+    app.close_preferences_window(&ctx);
+
+    // A live Save keeps its own primary look.
+    app.open_preferences_window();
+    click(&mut app, &ctx, "Compact rows");
+    let output = frame(&mut app, &ctx, SIZE, vec![]);
+    let save = topmost_text(&output, "Save").center();
+    let reset = topmost_text(&output, "Reset").center();
+    assert_ne!(fill_under(&output, save), fill_under(&output, reset));
+}
+
+/// A corner of the dimmed area around the dialog.
+const OUTSIDE: egui::Pos2 = egui::pos2(12.0, 788.0);
+
+fn primary(pressed: bool) -> egui::Event {
+    egui::Event::PointerButton {
+        pos: OUTSIDE,
+        button: egui::PointerButton::Primary,
+        pressed,
+        modifiers: egui::Modifiers::NONE,
+    }
+}
+
+/// Presses and lets go outside the dialog in two frames, as a quick click does.
+fn click_outside(app: &mut Desktop, ctx: &egui::Context) {
+    frame(
+        app,
+        ctx,
+        SIZE,
+        vec![egui::Event::PointerMoved(OUTSIDE), primary(true)],
+    );
+    frame(app, ctx, SIZE, vec![primary(false)]);
+}
+
+#[test]
+fn a_click_outside_keeps_unsaved_edits_and_closes_when_nothing_is_unsaved() {
+    let (_temp, mut app, ctx) = fixture();
+    let saved = app.interface;
+    app.open_preferences_window();
+    click(&mut app, &ctx, "Compact rows");
+    click_outside(&mut app, &ctx);
+    frame(&mut app, &ctx, SIZE, vec![]);
+    assert_eq!(
+        app.dialog,
+        Some(Dialog::PreferencesWindow),
+        "A click outside threw away an unsaved edit"
+    );
+    let draft = app.preferences_window.as_ref().unwrap();
+    assert!(draft.dirty() && draft.interface.compact_rows);
+    assert_eq!(app.interface, saved);
+
+    // With the edit undone there is nothing to lose, so a click outside closes it.
+    click(&mut app, &ctx, "Compact rows");
+    assert!(!app.preferences_window.as_ref().unwrap().dirty());
+    click_outside(&mut app, &ctx);
+    assert!(app.preferences_window.is_none() && app.dialog.is_none());
+    assert_eq!(app.interface, saved);
+}
+
+#[test]
+fn esc_still_closes_in_the_same_frame_as_an_ignored_click_outside() {
+    let (_temp, mut app, ctx) = fixture();
+    let saved = app.interface;
+    app.open_preferences_window();
+    click(&mut app, &ctx, "Compact rows");
+    frame(
+        &mut app,
+        &ctx,
+        SIZE,
+        vec![egui::Event::PointerMoved(OUTSIDE), primary(true)],
+    );
+    let escape = egui::Event::Key {
+        key: egui::Key::Escape,
+        physical_key: None,
+        pressed: true,
+        repeat: false,
+        modifiers: egui::Modifiers::NONE,
+    };
+    frame(&mut app, &ctx, SIZE, vec![primary(false), escape]);
+    assert!(app.preferences_window.is_none() && app.dialog.is_none());
+    assert_eq!(app.interface, saved);
 }

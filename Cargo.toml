@@ -1,6 +1,6 @@
 [package]
 name = "download-engine"
-version = "3.10.2"
+version = "3.15.0"
 license = "MIT"
 edition = "2024"
 default-run = "de"
@@ -26,6 +26,11 @@ rusqlite = { version = "0.40.2", features = ["bundled", "functions"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 sha2 = "0.10"
+# Already locked dependencies, also used by the generic Lua APIs.
+sha1 = "=0.10.6"
+hmac = "=0.12.1"
+getrandom = "=0.4.3"
+tempfile = "=3.27.0"
 tokio = { version = "1.53.3", features = ["rt-multi-thread", "macros", "fs", "io-util", "sync", "time", "net"] }
 tokio-util = "0.7"
 uuid = { version = "1", features = ["v4", "serde"] }
@@ -54,10 +59,14 @@ rfd = { version = "=0.17.2", default-features = false, features = ["xdg-portal"]
 keyring-core = { version = "=1.0.1", default-features = false }
 
 [target.'cfg(target_os = "linux")'.dependencies]
+openssl = "=0.10.81"
 eframe = { version = "0.36.2", default-features = false, features = ["x11", "wayland"] }
 dbus-secret-service-keyring-store = { version = "=1.0.1", default-features = false, features = ["crypto-rust"] }
 
 [target.'cfg(target_os = "macos")'.dependencies]
+security-framework = "=3.7.0"
+security-framework-sys = "=2.17.0"
+core-foundation = "=0.10.1"
 apple-native-keyring-store = { version = "=1.0.2", default-features = false, features = ["keychain"] }
 # Reuse the Apple bindings already locked through the GUI dependencies.
 objc2 = "=0.6.5"
@@ -75,7 +84,6 @@ serde_json = "1"
 
 [dev-dependencies]
 tempfile = "3"
-sha1 = "0.10"
 tokio = { version = "1.53.3", features = ["test-util"] }
 
 [profile.release]

@@ -1,5 +1,6 @@
 // Modified by Download Engine: removed a test that contacts a public tracker, replaced rand,
-// added public_only and bounded peer requests/results. See ../../patch.md.
+// added public_only and bounded peer requests/results, and reports seeds and leechers.
+// See ../../patch.md.
 use crate::tracker_comms::MAX_TRACKER_PEERS;
 use std::{
     collections::{HashMap, hash_map::Entry},
@@ -105,9 +106,7 @@ impl Request {
 #[derive(Debug)]
 pub struct AnnounceResponse {
     pub interval: u32,
-    #[allow(dead_code)]
     pub leechers: u32,
-    #[allow(dead_code)]
     pub seeders: u32,
     pub addrs: Vec<SocketAddr>,
 }

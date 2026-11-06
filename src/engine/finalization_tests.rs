@@ -101,6 +101,7 @@ async fn lua_provider_publication_recovers_the_plaintext_anchor_and_checks_its_p
     fixture.job.provider = Some(provider::State {
         api_version: 1,
         script: provider::FrozenScript::new(script).unwrap(),
+        media: None,
         plan: Some(provider::Content {
             size: 1024,
             input_sha256: "a".repeat(64),
@@ -147,6 +148,86 @@ async fn lua_provider_publication_recovers_the_plaintext_anchor_and_checks_its_p
         std::fs::read_dir(&fixture.job.directory).unwrap().count(),
         1
     );
+}
+
+#[tokio::test]
+async fn media_provider_publication_recovers_only_with_its_verified_staging_receipt() {
+    use crate::{
+        provider,
+        script_automation::{Language, Script, Trigger},
+    };
+    let mut fixture = Fixture::new(1, 1024);
+    let script = fixture
+        .store
+        .save_script(&Script {
+            id: uuid::Uuid::new_v4().to_string(),
+            revision: 0,
+            name: "Media recovery".into(),
+            language: Language::Lua,
+            body: provider::EXAMPLE.into(),
+            enabled: false,
+            trigger: Trigger::Provider,
+            timeout_seconds: 5,
+            change_files: false,
+            extension: None,
+        })
+        .unwrap();
+    let content = serde_json::from_value(serde_json::json!({
+        "kind":"media","media_api":1,"content_id":"fixture","container":"mkv",
+        "tracks":[{"id":"video","kind":"video","format":"mp4","segments":[{"id":"part1","size":1024}]}]
+    })).unwrap();
+    fixture.job.provider = Some(provider::State {
+        api_version: 1,
+        script: provider::FrozenScript::new(script).unwrap(),
+        plan: None,
+        media: Some(content),
+    });
+    let root = fixture.store.paths.parts(&fixture.job.id).unwrap();
+    let staging = fixture
+        .job
+        .directory
+        .join(format!(".idm-ex-{}.assembling", fixture.job.id));
+    std::fs::copy(&fixture.sources[0], &staging).unwrap();
+    fixture.job.integrity.actual = Some(fixture.hash.clone());
+    let published = publish_without_overwrite(&fixture.store, &mut fixture.job, &staging)
+        .await
+        .unwrap();
+    let mut pending = fixture.store.get(&fixture.job.id).unwrap().unwrap();
+    let result = finalization::recover(
+        &fixture.store,
+        &mut pending,
+        &root,
+        &CancellationToken::new(),
+    )
+    .await
+    .unwrap()
+    .unwrap();
+    assert_eq!(result.path, published);
+    assert!(same_file::is_same_file(&staging, &published).unwrap());
+    drop(result.guard);
+    pending.integrity.actual = None;
+    let missing = finalization::recover(
+        &fixture.store,
+        &mut pending,
+        &root,
+        &CancellationToken::new(),
+    )
+    .await
+    .err()
+    .unwrap();
+    assert!(missing.to_string().contains("no verification receipt"));
+    pending.integrity.actual = Some(fixture.hash);
+    std::fs::write(&published, vec![0; 1024]).unwrap();
+    let corrupt = finalization::recover(
+        &fixture.store,
+        &mut pending,
+        &root,
+        &CancellationToken::new(),
+    )
+    .await
+    .err()
+    .unwrap();
+    assert!(corrupt.to_string().contains("checksum changed"));
 }
 
 #[tokio::test]

@@ -83,8 +83,21 @@ pub struct TorrentSnapshot {
     pub peers: usize,
     pub download_speed: u64,
     pub upload_speed: u64,
+    /// While sharing, everything this torrent has uploaded, across runs.
     pub uploaded: u64,
     pub file_progress: Arc<[u64]>,
+    /// Only while a finished torrent is shared.
+    pub sharing: Option<SharingView>,
+}
+
+/// How far a shared torrent is from its limits, for the status window.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct SharingView {
+    pub ratio_hundredths: u64,
+    pub shared_secs: u64,
+    /// None when that limit is off, or after the person chose to share again.
+    pub limit_ratio: Option<u32>,
+    pub limit_seconds: Option<u32>,
 }
 
 #[derive(Clone)]
@@ -93,6 +106,8 @@ struct Entry {
     segments: Vec<SegmentSnapshot>,
     media: Vec<MediaSnapshot>,
     torrent: Option<TorrentSnapshot>,
+    /// Only while a status window asks for them.
+    torrent_details: Option<Arc<crate::torrent::TorrentDetails>>,
 }
 
 #[derive(Clone, Default)]
@@ -125,6 +140,7 @@ impl Activity {
                 segments: Vec::new(),
                 media: Vec::new(),
                 torrent: None,
+                torrent_details: None,
             },
         );
         Guard {
@@ -140,6 +156,7 @@ impl Activity {
                 segments,
                 media: Vec::new(),
                 torrent: None,
+                torrent_details: None,
             },
         );
     }
@@ -186,6 +203,34 @@ impl Activity {
     pub(crate) fn set_torrent(&self, id: &str, torrent: TorrentSnapshot) {
         if let Some(entry) = self.entries().get_mut(id) {
             entry.torrent = Some(torrent);
+        }
+    }
+    pub fn torrent_details(&self, id: &str) -> Option<Arc<crate::torrent::TorrentDetails>> {
+        self.entries().get(id)?.torrent_details.clone()
+    }
+    pub(crate) fn set_torrent_details(&self, id: &str, details: crate::torrent::TorrentDetails) {
+        if let Some(entry) = self.entries().get_mut(id) {
+            entry.torrent_details = Some(Arc::new(details));
+        }
+    }
+    pub(crate) fn clear_torrent_details(&self, id: &str) {
+        if let Some(entry) = self.entries().get_mut(id) {
+            entry.torrent_details = None;
+        }
+    }
+    /// Shows a running torrent for screenshots, with no worker or helper.
+    #[cfg(feature = "screenshot")]
+    pub fn seed_torrent_preview(
+        &self,
+        id: &str,
+        phase: Phase,
+        torrent: TorrentSnapshot,
+        details: Option<crate::torrent::TorrentDetails>,
+    ) {
+        self.seed_preview(id, phase, Vec::new());
+        self.set_torrent(id, torrent);
+        if let Some(details) = details {
+            self.set_torrent_details(id, details);
         }
     }
     pub(crate) fn set(&self, id: &str, phase: Phase) {

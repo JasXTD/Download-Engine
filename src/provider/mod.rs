@@ -1,8 +1,11 @@
 //! Lua providers own source resolution and byte transforms; the core owns all files.
 #[cfg(any(windows, unix))]
 mod crypto;
+mod handoff;
 mod keys;
+pub mod media;
 mod persistence;
+pub(crate) mod primitives;
 pub(crate) mod process;
 mod runtime;
 #[cfg(test)]
@@ -30,6 +33,84 @@ pub const EXAMPLE: &str = include_str!("../../examples/download-provider.lua");
 
 const FUNCTIONS: &[crate::script_automation::api::Function] = &[
     crate::script_automation::api::Function {
+        name: "xd.binary_setting",
+        arguments: "id",
+        description: "Extension web jobs only: read an explicitly imported, OS-protected binary credential. No arbitrary filesystem access.",
+        access: crate::script_automation::api::Access::Reader,
+    },
+    crate::script_automation::api::Function {
+        name: "xd.rsa_key_setting",
+        arguments: "id",
+        description: "Extension web jobs only: obtain an opaque handle to an explicitly imported, OS-protected RSA private key.",
+        access: crate::script_automation::api::Access::Reader,
+    },
+    crate::script_automation::api::Function {
+        name: "xd.handoff_session",
+        arguments: "name, session",
+        description: "Resolver only: pass an exact-origin HTTP session to media segments referencing session=name. Encrypted, run-local and never given to processors.",
+        access: crate::script_automation::api::Access::Reader,
+    },
+    crate::script_automation::api::Function {
+        name: "xd.random_bytes",
+        arguments: "count",
+        description: "Return 1-4096 bytes from the operating system's cryptographic random source.",
+        access: crate::script_automation::api::Access::Reader,
+    },
+    crate::script_automation::api::Function {
+        name: "xd.digest",
+        arguments: "algorithm, bytes",
+        description: "Return a binary SHA-1 or SHA-256 digest (sha1 or sha256); input at most 1 MiB.",
+        access: crate::script_automation::api::Access::Reader,
+    },
+    crate::script_automation::api::Function {
+        name: "xd.hmac",
+        arguments: "algorithm, key, bytes",
+        description: "Binary HMAC-SHA1 or HMAC-SHA256. Message at most 1 MiB; key at most 64 KiB.",
+        access: crate::script_automation::api::Access::Reader,
+    },
+    crate::script_automation::api::Function {
+        name: "xd.rsa_private_key",
+        arguments: "bytes",
+        description: "Import an unencrypted 2048-4096-bit RSA private key (PKCS#1/PKCS#8 PEM or DER) as an opaque handle. No filesystem access.",
+        access: crate::script_automation::api::Access::Reader,
+    },
+    crate::script_automation::api::Function {
+        name: "xd.rsa_sign",
+        arguments: "key_handle, algorithm, bytes",
+        description: "Sign a message with pss-sha1, pss-sha256 or pkcs1-sha256. PSS uses a digest-length salt; input at most 1 MiB.",
+        access: crate::script_automation::api::Access::Reader,
+    },
+    crate::script_automation::api::Function {
+        name: "xd.rsa_decrypt",
+        arguments: "key_handle, algorithm, ciphertext",
+        description: "RSA OAEP decryption with oaep-sha1 or oaep-sha256, matching MGF1 digest and empty label. Returns binary plaintext.",
+        access: crate::script_automation::api::Access::Reader,
+    },
+    crate::script_automation::api::Function {
+        name: "xd.aes_decrypt_blocks",
+        arguments: "key_or_handle, blocks",
+        description: "Decrypt complete AES blocks without padding, for modes implemented in Lua. At most 256 KiB plus one block.",
+        access: crate::script_automation::api::Access::Reader,
+    },
+    crate::script_automation::api::Function {
+        name: "xd.media_plan",
+        arguments: "plan",
+        description: "Validate a finite media plan: ordered segments, up to 16 video/audio/subtitle tracks, and MKV or MP4 muxing. Sets kind=media and media_api=1; performs no downloads.",
+        access: crate::script_automation::api::Access::Reader,
+    },
+    crate::script_automation::api::Function {
+        name: "xd.handoff_key",
+        arguments: "name, bytes",
+        description: "During resolve/refresh only: seal a 16, 24 or 32-byte AES key for this run's offline processor. Never adds it to the saved plan. Up to 64 named keys.",
+        access: crate::script_automation::api::Access::Reader,
+    },
+    crate::script_automation::api::Function {
+        name: "xd.session_key",
+        arguments: "name",
+        description: "Processor only: obtain an opaque AES key handle handed off by this run's resolver. Keys are reacquired on resume and are never returned as plaintext.",
+        access: crate::script_automation::api::Access::Reader,
+    },
+    crate::script_automation::api::Function {
         name: "xd.key",
         arguments: "protected_token",
         description: "Processor only: unlock a provider-bound OS-protected AES key as an opaque handle. Key bytes are never returned to Lua.",
@@ -56,6 +137,8 @@ pub fn functions() -> impl Iterator<Item = &'static crate::script_automation::ap
                 f.name,
                 "xd.supports"
                     | "xd.fetch"
+                    | "xd.fetch_bytes"
+                    | "xd.http_session"
                     | "xd.json"
                     | "xd.to_json"
                     | "xd.url_join"
@@ -167,6 +250,8 @@ pub struct State {
     pub api_version: u32,
     pub script: FrozenScript,
     pub plan: Option<Content>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub media: Option<media::Plan>,
 }
 impl State {
     pub fn validate(&self) -> Result<()> {
@@ -183,6 +268,13 @@ impl State {
         );
         if let Some(plan) = &self.plan {
             plan.validate()?;
+        }
+        ensure!(
+            self.plan.is_none() || self.media.is_none(),
+            "Provider cannot contain both file and media plans"
+        );
+        if let Some(media) = &self.media {
+            media.validate(false)?;
         }
         Ok(())
     }
@@ -230,6 +322,7 @@ impl Store {
             api_version: VERSION,
             script: FrozenScript::new(script)?,
             plan: None,
+            media: None,
         };
         state.validate()?;
         let mut job = self.new_download(url, name, None, format!("provider:{request}"))?;
@@ -247,11 +340,32 @@ impl Store {
 }
 
 /// Starts a restricted worker and resolves/refreshes before touching remote bytes.
+pub(crate) enum Source {
+    File(Box<crate::engine::http::Source>),
+    Media(Box<(media::Plan, handoff::Keys)>),
+}
+pub(crate) enum Resolution {
+    File(Plan),
+    Media(media::Plan),
+}
+impl Resolution {
+    pub(crate) fn parse(value: serde_json::Value) -> Result<Self> {
+        if value.get("kind").is_some() {
+            let plan: media::Plan = serde_json::from_value(value)?;
+            plan.validate(true)?;
+            Ok(Self::Media(plan))
+        } else {
+            let plan: Plan = serde_json::from_value(value)?;
+            plan.validate()?;
+            Ok(Self::File(plan))
+        }
+    }
+}
 pub(crate) async fn resolve(
     store: &Store,
     job: &mut Job,
     cancel: &tokio_util::sync::CancellationToken,
-) -> Result<crate::engine::http::Source> {
+) -> Result<Source> {
     let state = job.provider.clone().context("Missing provider")?;
     let extension = store.extension_context(&state.script, crate::extensions::Reach::Web)?;
     let limit = extension
@@ -261,7 +375,7 @@ pub(crate) async fn resolve(
     let paths = store.paths.clone();
     let input = job.url.clone();
     let token = cancel.clone();
-    let plan = tokio::task::spawn_blocking(move || {
+    let (plan, handoff) = tokio::task::spawn_blocking(move || -> Result<_> {
         let mut worker = process::Worker::start(
             &paths,
             &state.script,
@@ -269,9 +383,57 @@ pub(crate) async fn resolve(
             extension.as_ref(),
             &token,
         )?;
-        worker.resolve(&input, state.plan.as_ref(), &token)
+        let previous = if let Some(media) = &state.media {
+            serde_json::to_value(media)?
+        } else {
+            serde_json::to_value(&state.plan)?
+        };
+        let plan = worker.resolve_any(&input, previous, &token)?;
+        Ok((plan, worker.take_handoff()?))
     })
     .await??;
+    let plan = match plan {
+        Resolution::Media(plan) => {
+            ensure!(
+                job.provider.as_ref().unwrap().plan.is_none(),
+                "Provider changed from file to media. Restart this download."
+            );
+            if let Some(previous) = &job.provider.as_ref().unwrap().media {
+                ensure!(
+                    previous == &plan.content(),
+                    "Provider media content changed. Restart this download."
+                );
+            }
+            for segment in plan.tracks.iter().flat_map(|t| &t.segments) {
+                if let Some(hosts) = &limit {
+                    ensure!(
+                        crate::extensions::url_allowed(hosts, &segment.url),
+                        "An extension with a saved secret can only return addresses on its declared hosts"
+                    );
+                }
+                ensure!(
+                    crate::model::validate_url(&job.url)?.scheme() != "https"
+                        || crate::model::validate_url(&segment.url)?.scheme() == "https",
+                    "Media providers cannot downgrade HTTPS to HTTP"
+                );
+            }
+            job.provider.as_mut().unwrap().media = Some(plan.content());
+            let stem = std::path::Path::new(&job.name)
+                .file_stem()
+                .and_then(|s| s.to_str())
+                .unwrap_or("media");
+            job.name = crate::model::safe_filename(&format!("{stem}.{}", plan.extension()));
+            store.checkpoint(job).await?;
+            return Ok(Source::Media(Box::new((plan, handoff))));
+        }
+        Resolution::File(plan) => {
+            ensure!(
+                job.provider.as_ref().unwrap().media.is_none(),
+                "Provider changed from media to file. Restart this download."
+            );
+            plan
+        }
+    };
     if let Some(previous) = &job.provider.as_ref().unwrap().plan {
         ensure!(
             previous == &plan.content(),
@@ -295,5 +457,5 @@ pub(crate) async fn resolve(
     };
     job.provider.as_mut().unwrap().plan = Some(plan.content());
     store.checkpoint(job).await?;
-    Ok(source)
+    Ok(Source::File(Box::new(source)))
 }

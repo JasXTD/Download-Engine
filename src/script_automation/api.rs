@@ -74,6 +74,18 @@ functions![
         Reader
     ),
     (
+        "xd.fetch_bytes",
+        "url, options",
+        "Binary HTTP with exact bytes: GET, HEAD, POST, PUT, PATCH, DELETE or OPTIONS. Same host permissions, size limits and shared request budget as xd.fetch; Direct connection only.",
+        Reader
+    ),
+    (
+        "xd.http_session",
+        "origin, options",
+        "Create a run-local, exact-origin session with supplied cookies and headers. Pass the opaque handle as fetch option session. Extensions must request permissions.http_sessions; no browser cookies are imported.",
+        Reader
+    ),
+    (
         "xd.downloads",
         "",
         "List downloads with their current status.",

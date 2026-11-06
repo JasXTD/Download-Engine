@@ -116,7 +116,7 @@ fn process(
         checkpoint(&root, &saved)?;
         (output, saved, hash)
     };
-    let refreshed = {
+    let (refreshed, handoff) = {
         let extension = store.extension_context(&state.script, crate::extensions::Reach::Web)?;
         let mut resolver = super::process::Worker::start(
             &store.paths,
@@ -125,18 +125,19 @@ fn process(
             extension.as_ref(),
             cancel,
         )?;
-        resolver.resolve(&job.url, Some(plan), cancel)?.content()
+        let refreshed = resolver.resolve(&job.url, Some(plan), cancel)?.content();
+        (refreshed, resolver.take_handoff()?)
     }; // Kill and join the network-capable worker before supplying any file bytes.
     ensure!(
         plan == &refreshed,
         "Provider content changed before processing. Restart this download."
     );
     let extension = store.extension_context(&state.script, crate::extensions::Reach::Processor)?;
-    let mut worker = super::process::Worker::start(
+    let mut worker = super::process::Worker::start_processor(
         &store.paths,
         &state.script,
-        super::process::Role::Processor,
         extension.as_ref(),
+        handoff,
         cancel,
     )?;
     input.seek(SeekFrom::Start(saved.offset))?;

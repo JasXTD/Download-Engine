@@ -1,3 +1,15 @@
+## 3.15.0 — 2026-11-06
+
+### Rdzeń dostawców Lua i napisy ASS
+
+HTTP w Lua obsługuje teraz HEAD, PUT, PATCH, DELETE i OPTIONS, dane binarne o ograniczonym rozmiarze oraz jawnie przekazywane sesje przypisane do jednego źródła. Poświadczenia pozostają zaszyfrowane poza modułem rozwiązywania adresów i nie trafiają do planów ani procesorów offline. Plany multimediów obsługują segmenty o nieznanym rozmiarze, a lua_stream przetwarza ograniczone porcje danych ze zweryfikowanymi punktami kontrolnymi dla pauzy, wznowienia, zatrzymania i odzyskiwania.
+
+Dodano import poświadczeń binarnych/RSA chronionych przez system operacyjny, losowe bajty, SHA-1/SHA-256, HMAC, podpisywanie i odszyfrowywanie RSA oraz odszyfrowywanie bloków AES. Napisy ASS zachowują style i formatowanie wewnątrz wierszy w MKV, a w MP4 są konwertowane na napisy tekstowe. Nowe funkcje poświadczeń i multimediów wymagają aplikacji obsługującej wersję zapisu profilu 9; dotychczasowe formaty punktów kontrolnych pozostają zgodne.
+
+Laboratorium CENC offline dla autorów używa Lua do analizy ograniczonego podzbioru szyfrowania próbek AVC/AAC, symulowanej wymiany podpisanej licencji, przekazywania kluczy i łączenia odszyfrowanych ścieżek z napisami ASS. Uwierzytelnianie witryn, formaty licencji i parsery kontenerów pozostają zadaniem kodu Lua. Testy wykorzystują wygenerowane dane, bez rzeczywistych usług i kont; nie jest to pełna implementacja CENC.
+
+[English details](../../../CHANGELOG.md#3150--2026-11-06)
+
 ## 3.10.2 — 2026-11-04
 
 ### Lokalne raporty awarii

@@ -20,7 +20,7 @@ Drag the top edge of the download details panel to adjust its height. The app re
 
 Open Preferences from the toolbar, Tools → Preferences or the tray menu. The popup has seven categories and leaves your current page in place. Appearance includes the theme, language and table layout; Downloads has status-window, folder and transfer-limit choices; Connection has proxy and per-site connection settings; Browser & AI has browser setup, clipboard capture and MCP; Antivirus selects a scanner; Torrents controls torrent downloads, uploads and DHT; Startup & tray controls Windows startup and notifications.
 
-Use Save to apply pending changes, or Cancel, × or Escape to discard them. Themes preview while you edit. Changing the language takes effect after Save. Reset restores defaults for the current category only and also waits for Save. Table-column edits return to the parent draft. Detailed folder, connection, speed, quota, browser, MCP and antivirus editors have their own explicit saves; closing them returns to Preferences without losing your draft. Cancelling Preferences does not undo a change already saved in one of those editors. A notice in Preferences confirms when an advanced dialog has saved its changes.
+Use Save to apply pending changes, or × or Escape to discard them. While changes are unsaved, a click outside Preferences is ignored, so a stray click cannot discard them. Themes preview while you edit. Changing the language takes effect after Save. Reset restores defaults for the current category only and also waits for Save. Table-column edits return to the parent draft. Detailed folder, connection, speed, quota, browser, MCP and antivirus editors have their own explicit saves; closing them returns to Preferences without losing your draft. Closing Preferences does not undo a change already saved in one of those editors. A notice in Preferences confirms when an advanced dialog has saved its changes.
 
 ### Custom themes
 
@@ -149,7 +149,15 @@ For an externally opened magnet, choose **Load file list** to allow the metadata
 
 Magnet metadata is fetched through the link's trackers first, so a private torrent's hash
 does not reach public DHT before its privacy flag is known. If the link has no usable
-tracker and its metadata is not already cached, open its `.torrent` file instead.
+tracker and its metadata is not already cached, Add download explains this and asks
+first. **Search the DHT** looks up that one magnet on the public DHT: computers there see
+which torrent you want and your IP address, but nothing announces your computer until the
+file list confirms a public torrent. If the file list says the torrent is private, the
+search stops; open the site's `.torrent` file instead. A search with no file list stops
+after 10 minutes, and **Search again** starts another. The yes counts only for that magnet
+and is kept with it if you choose Add and choose later. Nothing searches while **Find peers
+without a tracker (DHT)** is off, and links from browsers, the clipboard or Explorer never
+search on their own.
 
 Profiles containing torrents, or saving sharing or incoming-connection options, now require Download Engine 3.9.0 or newer. Keep a profile backup before upgrading if you need to return to an older build. Simply enabling torrents without adding one or enabling those options does not itself upgrade the profile.
 
@@ -173,9 +181,13 @@ Drop local `.torrent` files on the window or floating drop box. Copying a valid 
 
 Both options start **off** in **Preferences → Torrents**. Enable completed-torrent sharing, with uploading enabled, to share newly completed torrents. For an older completed torrent, use its menu → **Start sharing**. The app checks the saved pieces first and opens the payload read-only. Partial selections share only whole verified pieces available in the saved files; skipped files are never fetched. A selection with no complete piece cannot be shared.
 
-Sharing uses up to four separate workers and leaves downloads marked Completed. The status window shows **Seeding**, upload speed, peers and uploaded bytes. **Stop sharing**, **Stop** and **Stop all** end sharing while keeping the files. Explicitly stopped shares remain stopped after reopening. Otherwise, sharing resumes when the app reopens and the settings still allow it. A failed helper stops sharing and reports an error; use Start sharing after addressing it. No ratio or time-based seeding stop is configured automatically.
+Sharing uses up to four separate workers and leaves downloads marked Completed. The status window shows **Seeding**, upload speed, peers and uploaded bytes. **Stop sharing**, **Stop** and **Stop all** end sharing while keeping the files. Explicitly stopped shares remain stopped after reopening. Otherwise, sharing resumes when the app reopens and the settings still allow it. A failed helper stops sharing and reports an error; use Start sharing after addressing it.
 
-Incoming connections are a separate option. Choose a TCP port from 1024–65535. The helper listens only while it is needed and the option is on. Download Engine does not change Windows Firewall rules or configure your router; accepting connections from the internet depends on your firewall, router and network. Private torrents stay off public DHT/PEX. Private-tracker rules still apply to your account.
+Sharing stops on its own at a share ratio (uploaded ÷ size of the chosen files) or after a sharing time, whichever comes first. The defaults are ratio 2.0 or one week; change or turn off either limit under **Seed completed torrents**. Uploads while downloading count toward the ratio, and only time spent sharing counts toward the time limit. The counts are kept across restarts. The status window shows the ratio and when sharing stops. A torrent stopped by a limit keeps its files, and its menu offers **Share again**, which then shares it until you stop it.
+
+Incoming connections are a separate option. Choose a TCP port from 1024–65535. The helper listens only while it is needed and the option is on. Download Engine does not change Windows Firewall rules; accepting connections from the internet depends on your firewall, router and network. Private torrents stay off public DHT/PEX. Private-tracker rules still apply to your account.
+
+**Set up my router (UPnP)** is off by default and needs incoming connections on. Turning off incoming connections turns it off too. When on, the app asks only the router your system uses as its default gateway to forward the incoming TCP port to this computer, for one hour at a time. It renews that while torrents run and removes it when they stop; after a crash, the router drops it within the hour. It never replaces a rule another device uses, refuses routers that only keep permanent rules, and says when your provider shares one public address between customers, because a router rule can't help then. The line under the switch shows what the router answered. Router setup works on Windows and Linux; on macOS it reports itself unavailable.
 
 Torrent metadata is retained for later sharing and removed when that history entry is cleared or deleted. Removing history stops sharing and keeps the downloaded payload.
 
@@ -320,7 +332,7 @@ Extensions add site support and automation as one package. They run on the same 
 
 1. Open Extensions in the top toolbar. The Installed tab lists what you have.
 
-2. Choose Install from file… and pick a .de-extension.json file.
+2. Under From plugins folder, choose Review install for the bundled demo or another discovered package. Or choose Install from file… and pick a .de-extension.json file anywhere.
 
 3. Read the review. It shows the publisher, what the extension can do and its jobs. Nothing runs yet.
 
@@ -330,11 +342,20 @@ Extensions add site support and automation as one package. They run on the same 
 
 Publishers are not verified, so install extensions only from people you trust.
 
+From 3.12.0, discovery checks only this application's plugins folder: beside de.exe
+on Windows, beside de on Linux, or Contents/Resources/plugins inside the macOS app.
+Open folder shows the exact location. Add packaged .de-extension.json files there
+and choose Refresh; the app also checks at launch and when opening Installed.
+No profile plugin folder is scanned. Discovery never installs, enables or runs
+code automatically. Subfolders are ignored; duplicate IDs and invalid files show
+errors. Keep one package per ID, and increase its version when changing it.
+Deleting the source file leaves the reviewed installed copy intact.
+
 ### Settings, code and updates
 
 Select an extension to see what it can do, what it cannot do and when its jobs last ran. Settings holds its options. Protected values can be replaced or cleared but not shown again. Code shows its files, read-only. Copy to my scripts makes an editable copy as a personal script.
 
-To update, choose Install from file… and pick a newer file. The review shows what changed. If it asks for new access, you must approve it, and Not now leaves the installed version as it was. Settings, keys and stored values are kept, and downloads already running keep the code they started with.
+To update, choose Review update beside a newer discovered package, or Install from file… and pick a newer file. The review shows what changed. If it asks for new access, you must approve it; closing the review leaves the installed version as it was. Settings, keys and stored values are kept, and downloads already running keep the code they started with.
 
 Remove deletes the extension's settings, keys and stored values. Run history stays, and files you downloaded are kept.
 
@@ -672,6 +693,59 @@ return {
 From then on, Download video, Find videos on this page, Add URL and Preview video open matching pages with your reader. One stream goes straight to the quality choice; files or several streams open the Video downloads list. If the reader fails on a page opened from the browser, Download Engine shows what the browser found instead. YouTube, Bilibili, TikTok and Twitch always use the built-in readers.
 
 Site readers can read web pages but cannot see or change your downloads. Their requests and returned downloads reach the public internet only: home-network and local addresses are refused and browser cookies and logins are never sent by the reader. Choose Preferences → Connection → Proxy → Direct connection to use a reader or download its results; System and custom proxies are refused because they cannot guarantee the same address checks. Redirects to another origin drop script-supplied headers and cannot forward a POST body. The full reference is in docs/automation.md.
+
+### Segmented media providers
+
+Download Engine 3.11.0 adds `xd.media_plan(...)` to Lua download providers and
+installed extensions. A media plan contains ordered segments and selected video,
+audio and subtitle tracks. The core downloads and verifies segments, lets Lua
+process encrypted bytes using a supplied key, then muxes the tracks into MKV or
+MP4 with the bundled FFmpeg. Language, title and default-track metadata are kept.
+
+Choose **Download provider** as the script trigger, adapt
+`examples/media-provider.lua`, save it, enter **Source URL** and choose **Add
+provider download**. Pause/Stop keeps completed segments; Resume refreshes links
+and verifies saved bytes. An unfinished segment restarts from its beginning.
+Wrong hashes or incompatible tracks fail without publishing a partial result.
+The core downloads one segment at a time and copies video/audio without re-encoding.
+
+Read `docs/lua-media-providers.md` for fields, callbacks, protected keys and the
+offline test command. The first media job raises profile compatibility to version
+7; older app builds cannot reopen that profile. These APIs were tested with generated
+encrypted samples. The bundled implementation does not currently include Widevine
+license handling or Crunchyroll authentication. These are technical capabilities
+of this build, not additional software license conditions.
+
+From 3.13.0, a provider can make binary HTTP requests with `xd.fetch_bytes` and
+pass a newly received AES key through `xd.handoff_key` to its offline processor,
+which uses `xd.session_key`. Keys are temporary and reacquired on resume; they
+are not saved in a download plan. The media-provider guide explains the API and
+its permission limits. These helpers do not themselves implement a DRM protocol.
+
+From 3.14.0, `xd.http_session` lets a provider or site reader use cookies and headers
+you supply, in a temporary session restricted to one origin. Extensions must request
+this permission in their install/update review; browser logins are not imported.
+Media authors can use `lua_segment`, `prepare_track` and `transform_segment` for
+variable-length processing. Initialization replays after a restart and saved outputs
+are checked by size and hash. See `docs/lua-media-providers.md` for the contracts,
+memory limits and offline examples. Format parsing and service protocols remain
+the extension author's implementation.
+
+From 3.15.0, extension authors can use additional HTTP methods, protected binary
+and RSA-key imports, digest/HMAC/RSA helpers, explicit download sessions and
+stream processing for segments larger than 8 MiB. Unknown segment sizes are
+measured during download. ASS subtitles preserve their styling in MKV; MP4
+converts them to text subtitles. See `docs/lua-provider-core.md` for working API
+examples, limits and offline verification. Imported credential files are chosen
+under the extension's Settings; scripts cannot read arbitrary local files.
+
+For a runnable extension with quality, language and container settings, see
+`plugins/offline-episode/README.md` beside the installed application resources.
+The source archive also includes `examples/offline-episode/README.md`, and a
+companion `Offline-Episode-1.0.0.zip` can be extracted separately. Run its sample
+server, choose Review install for the demo in Extensions, enable it and paste
+the printed local address into Source URL. All media is generated sample content;
+no service account is needed. The server exists only to provide an offline source.
 
 ### Download providers — API 1
 

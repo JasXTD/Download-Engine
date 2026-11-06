@@ -6,7 +6,7 @@
 
 Activà sco standard: ina controlla mintga giada che l’app vegn averta. Ina nova versiun permetta da telechargiar l’actualisaziun u spetgar. Sbagls da rait n’avran nagina fanestra. La controlla po vegnir deactivada en las preferenzas. Telechargiai ed installai actualisaziuns da la pagina uffiziala da versiuns sin GitHub.
 
-Las preferenzas sa avran en ina fanestra cun categorias. Memorisar applitgescha las midadas; Interrumper, × u Escape sbittan midadas betg memorisadas. Il tema po vegnir previsualisà; Restabilir pertutga mo la categoria actuala. Ils editurs avanzads memoriseschan separadamain e returnan a las preferenzas suenter serrar.
+Las preferenzas sa avran en ina fanestra cun categorias. Memorisar applitgescha las midadas; × u Escape sbittan midadas betg memorisadas; cun midadas betg memorisadas na serra in clic ordaifer la fanestra betg ella. Il tema po vegnir previsualisà; Restabilir pertutga mo la categoria actuala. Ils editurs avanzads memoriseschan separadamain e returnan a las preferenzas suenter serrar.
 
 ### Emprims pass
 

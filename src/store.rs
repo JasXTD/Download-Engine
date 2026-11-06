@@ -179,6 +179,17 @@ impl Store {
         job.validate_persisted()?;
         let data = serde_json::to_string(job)?;
         let count = self.with_connection(|conn| {
+            if job.provider.as_ref().is_some_and(|p| p.media.is_some()) {
+                let tx = conn.transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)?;
+                let media = job.provider.as_ref().and_then(|p|p.media.as_ref());
+                let version = if media.is_some_and(|p| p.needs_current_writer()) {9}
+                    else if media.is_some_and(|p|p.uses_segment_callbacks()) {8} else {7};
+                tx.execute("UPDATE profile_format SET data_version=MAX(data_version,?1),min_writer_version=MAX(min_writer_version,?1) WHERE id=1", [version])?;
+                let count = tx.execute("UPDATE jobs SET data=?1 WHERE id=?2", params![data, job.id])?;
+                anyhow::ensure!(count == 1, "Download no longer exists");
+                tx.commit()?;
+                return Ok(count);
+            }
             Ok(conn
                 .prepare_cached("UPDATE jobs SET data=?1 WHERE id=?2")?
                 .execute(params![data, job.id])?)

@@ -1,3 +1,15 @@
+## 3.15.0 — 2026-11-06
+
+### Lua-tilbydere og ASS-undertekster
+
+HTTP i Lua støtter nå HEAD, PUT, PATCH, DELETE og OPTIONS, binære meldingskropper med størrelsesgrenser og uttrykkelig oppgitte økter bundet til én opprinnelse. Innloggingsopplysninger forblir kryptert utenfor adresseløseren og lagres ikke i planer eller sendes til frakoblede prosessorer. Medieplaner tillater segmenter med ukjent størrelse; lua_stream behandler avgrensede datablokker med bekreftede kontrollpunkter for pause, gjenopptakelse, stopp og gjenoppretting.
+
+Lagt til: import av binære/RSA-innloggingsopplysninger beskyttet av operativsystemet, tilfeldige byte, SHA-1/SHA-256, HMAC, RSA-signering og dekryptering samt dekryptering av AES-blokker. ASS-undertekster beholder stiler og innebygde formateringsanvisninger i MKV, mens MP4 konverterer dem til tekstundertekster. Nye funksjoner for innloggingsopplysninger og medier krever en app som støtter profilens skriveversjon 9. Eksisterende kontrollpunktformater er fortsatt kompatible.
+
+CENC-laben for forfattere kjører frakoblet og bruker Lua til å tolke en begrenset del av AVC/AAC-sampelkryptering, simulere en signert lisensutveksling, overføre nøkler og sette sammen dekrypterte spor med ASS-undertekster. Nettstedautentisering, lisensformater og containertolking er fortsatt Lua-kodens ansvar. Testene bruker genererte data uten virkelige tjenester eller kontoer; dette er ikke en fullstendig CENC-implementasjon.
+
+[English details](../../../CHANGELOG.md#3150--2026-11-06)
+
 ## 3.10.2 — 2026-11-04
 
 ### Lokale krasjrapporter

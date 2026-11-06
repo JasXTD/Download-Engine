@@ -393,6 +393,63 @@ mod tests {
     }
 
     #[test]
+    fn translated_current_release_renders_in_both_themes_and_window_sizes() {
+        let (_temp, mut app, ctx) = fixture();
+        app.view = View::Changelog;
+        let languages: serde_json::Value =
+            serde_json::from_str(include_str!("../../locales/languages.json")).unwrap();
+        for code in languages
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|language| language["code"].as_str().unwrap())
+            .filter(|code| *code != "en")
+        {
+            app.interface.language = download_engine::i18n::Language::from_locale(code);
+            let notes = std::fs::read_to_string(format!(
+                "{}/docs/locales/{code}/release-notes.md",
+                env!("CARGO_MANIFEST_DIR")
+            ))
+            .unwrap();
+            let release = notes.lines().next().unwrap().strip_prefix("## ").unwrap();
+            let section = current_release(&notes)
+                .lines()
+                .find_map(|line| line.strip_prefix("### "))
+                .unwrap();
+            for dark in [true, false] {
+                ctx.set_visuals(if dark {
+                    egui::Visuals::dark()
+                } else {
+                    egui::Visuals::light()
+                });
+                for size in [egui::vec2(860.0, 600.0), egui::vec2(1280.0, 860.0)] {
+                    frame(&mut app, &ctx, size, vec![]);
+                    let output = frame(&mut app, &ctx, size, vec![]);
+                    let viewport = egui::Rect::from_min_size(egui::Pos2::ZERO, size);
+                    for label in [release, section] {
+                        assert!(
+                            viewport.contains_rect(text_rect(&output, label)),
+                            "{code}: clipped heading: {label}"
+                        );
+                    }
+                    for clipped in output.shapes {
+                        if let egui::epaint::Shape::Text(text) = clipped.shape {
+                            let rect = text.galley.rect.translate(text.pos.to_vec2());
+                            if rect.intersects(clipped.clip_rect) {
+                                assert!(
+                                    rect.left() >= -1.0 && rect.right() <= size.x + 1.0,
+                                    "{code}: text overflows: {}",
+                                    text.galley.job.text
+                                );
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
     fn changelog_menu_shows_current_release_and_preserves_download_state() {
         let (_temp, mut app, ctx) = fixture();
         app.search = "first".into();

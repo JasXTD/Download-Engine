@@ -8,6 +8,11 @@ use egui::{Align, Color32, Layout, Rect, Sense, Stroke, StrokeKind, pos2, vec2};
 use std::collections::{BTreeMap, HashSet};
 
 mod media;
+mod torrent;
+
+use torrent::{Outgoing, TorrentView};
+
+const MAGNET_COPIED: &str = "Magnet link copied.";
 
 #[derive(Clone, Copy, Default, PartialEq, Eq)]
 pub(super) enum Tab {
@@ -57,11 +62,25 @@ struct Snapshot {
     media: Vec<download_engine::transfer_activity::MediaSnapshot>,
     torrent: Option<download_engine::transfer_activity::TorrentSnapshot>,
     disk_segments: Vec<u64>,
+    torrent_details: Option<std::sync::Arc<download_engine::torrent::TorrentDetails>>,
+    /// Read only when the window asks, because a torrent can have thousands of files.
+    torrent_files: Option<download_engine::torrent::Files>,
+    added_trackers: Vec<String>,
 }
 
 impl Snapshot {
-    fn load(store: &Store, id: &str) -> anyhow::Result<Self> {
+    fn load(store: &Store, id: &str, want_files: bool) -> anyhow::Result<Self> {
         let job = store.get(id)?;
+        let is_torrent = job.as_ref().is_some_and(|job| job.torrent.is_some());
+        // A list that isn't known yet simply isn't shown.
+        let torrent_files = (is_torrent && want_files)
+            .then(|| store.torrent_file_list(id).ok())
+            .flatten();
+        let added_trackers = if is_torrent {
+            store.torrent_added_trackers(id)?
+        } else {
+            Vec::new()
+        };
         let queue_id = store.job_queue(id)?;
         let queue = store
             .queues()?
@@ -97,6 +116,9 @@ impl Snapshot {
             media: store.activity.media_parts(id),
             torrent: store.activity.torrent(id),
             disk_segments,
+            torrent_details: store.activity.torrent_details(id),
+            torrent_files,
+            added_trackers,
         })
     }
 }
@@ -108,7 +130,12 @@ struct Batch {
 }
 
 impl Batch {
-    fn load(store: &Store, mut ids: HashSet<String>, revision: u64) -> Self {
+    fn load(
+        store: &Store,
+        mut ids: HashSet<String>,
+        revision: u64,
+        files_for: HashSet<String>,
+    ) -> Self {
         let receipts = store.take_download_status_requests();
         if let Ok(receipts) = &receipts {
             ids.extend(receipts.iter().cloned());
@@ -119,7 +146,7 @@ impl Batch {
             snapshots: ids
                 .into_iter()
                 .map(|id| {
-                    let snapshot = Snapshot::load(store, &id);
+                    let snapshot = Snapshot::load(store, &id, files_for.contains(&id));
                     (id, snapshot)
                 })
                 .collect(),
@@ -153,6 +180,9 @@ struct Window {
     close_on_complete: bool,
     open_file_on_complete: bool,
     open_folder_on_complete: bool,
+    torrent: TorrentView,
+    /// Set from Preferences before each frame. Checking files needs torrents on.
+    torrents_on: bool,
 }
 
 impl Window {
@@ -183,6 +213,8 @@ impl Window {
             close_on_complete: false,
             open_file_on_complete: false,
             open_folder_on_complete: false,
+            torrent: TorrentView::default(),
+            torrents_on: false,
         }
     }
 
@@ -203,9 +235,17 @@ impl Window {
                 media,
                 torrent,
                 disk_segments,
+                torrent_details,
+                torrent_files,
+                added_trackers,
             }) => {
                 self.phase = phase;
                 self.live_torrent = torrent;
+                if let Some(live) = &self.live_torrent {
+                    self.torrent.progress = Some(live.file_progress.clone());
+                }
+                self.torrent
+                    .apply(torrent_details, torrent_files, added_trackers);
                 self.live_segments = segments;
                 self.live_media_parts = media;
                 self.live_media = self.live_media_parts.first().copied();
@@ -545,10 +585,21 @@ impl Desktop {
             .chain(&self.download_status.added)
             .cloned()
             .collect();
+        // Details cost the worker one extra request a tick, so only open lists ask for them.
+        let now = Instant::now();
+        let mut files_for = HashSet::new();
+        for (id, window) in &self.download_status.windows {
+            if window.details && window.job.as_ref().is_some_and(|job| job.torrent.is_some()) {
+                self.store.torrents.watch(id);
+                if window.torrent.wants_files(now) {
+                    files_for.insert(id.clone());
+                }
+            }
+        }
         let store = self.store.clone();
         let revision = self.download_status.revision;
         match background_io::Task::spawn(self.background_io.context.clone(), move || {
-            Ok(Batch::load(&store, ids, revision))
+            Ok(Batch::load(&store, ids, revision, files_for))
         }) {
             Ok(task) => self.download_status.refresh = Some(task),
             Err(error) => self.notice = Some(Notice::error(error.to_string())),
@@ -655,6 +706,16 @@ impl Desktop {
             {
                 auto_actions.push((id.clone(), action));
             }
+            if let Some(ticket) = window
+                .torrent
+                .pending
+                .as_ref()
+                .map(|pending| pending.ticket)
+            {
+                window
+                    .torrent
+                    .settle(self.store.torrents.outcome(id, ticket));
+            }
         }
         for (id, action) in auto_actions {
             if let Some(mut window) = self.download_status.windows.remove(&id)
@@ -732,11 +793,15 @@ impl Desktop {
                     })
                     .unwrap_or_else(|| tr("Download status — Removed download").into())
             };
+            // A torrent's details hold a piece map and a list, so its window starts taller.
             let initial_size = if is_complete {
                 [520.0, 310.0]
+            } else if window.job.as_ref().is_some_and(|job| job.torrent.is_some()) {
+                [702.0, 640.0]
             } else {
                 [702.0, 495.0]
             };
+            window.torrents_on = self.torrents.settings.enabled;
             let prev_close_on_complete = window.close_on_complete;
             ctx.show_viewport_immediate(
                 viewport,
@@ -825,8 +890,36 @@ impl Desktop {
             return false;
         }
         let Some(job) = window.job.clone().filter(|_| window.error.is_none()) else {
+            window.torrent.outbox.clear();
             return true;
         };
+        for outgoing in std::mem::take(&mut window.torrent.outbox) {
+            let sent = match outgoing {
+                Outgoing::Files(chosen) => self
+                    .scheduler
+                    .send(Command::KeepTorrentFiles {
+                        id: id.into(),
+                        chosen,
+                    })
+                    .map(|()| {
+                        window.torrent.reload_files_at =
+                            Some(Instant::now() + torrent::FILES_SETTLE);
+                    }),
+                Outgoing::Request(request) => {
+                    let ticket = self.store.torrents.new_ticket();
+                    self.scheduler
+                        .send(Command::TorrentRequest {
+                            id: id.into(),
+                            ticket,
+                            request: request.clone(),
+                        })
+                        .map(|()| window.torrent.sent(ticket, request))
+                }
+            };
+            if let Err(error) = sent {
+                window.torrent.message = Some((false, error.to_string()));
+            }
+        }
         if action == Some(Action::Start) && self.open_link_fallback(&job) {
             return false;
         }
@@ -1015,7 +1108,7 @@ impl Window {
                     ui.colored_label(p.warning, error);
                 }
                 if let Some(notice) = &self.notice {
-                    let is_ok = notice.contains("saved and applied");
+                    let is_ok = notice.contains("saved and applied") || notice == MAGNET_COPIED;
                     ui.colored_label(if is_ok { p.success } else { p.warning }, tr(notice));
                 }
                 let Some(job) = self.job.clone() else {
@@ -1265,14 +1358,24 @@ impl Window {
                     .on_hover_text(&status_text);
                 }
                 // Finished pieces arrive in jumps, so the engine's own figure reads better.
-                let speed = self
-                    .live_torrent
-                    .as_ref()
-                    .map_or(self.rate, |torrent| torrent.download_speed as f64);
-                let rate = if job.status == Status::Downloading && speed > 0.0 {
+                // A shared torrent only uploads, so its window shows that speed.
+                let seeding = self.phase == Some(Phase::Seeding);
+                let speed = self.live_torrent.as_ref().map_or(self.rate, |torrent| {
+                    if seeding {
+                        torrent.upload_speed as f64
+                    } else {
+                        torrent.download_speed as f64
+                    }
+                });
+                let rate = if (job.status == Status::Downloading || seeding) && speed > 0.0 {
                     tf!("{}/sec", bytes(speed as u64))
                 } else {
                     "—".into()
+                };
+                let left = if self.live_torrent.is_some() && !seeding {
+                    eta(job, speed)
+                } else {
+                    eta(job, self.rate)
                 };
                 ui.columns(3, |columns| {
                     for (column, (label, value)) in columns.iter_mut().zip([
@@ -1285,7 +1388,7 @@ impl Window {
                             }),
                             rate,
                         ),
-                        (tr("Time left"), eta(job, self.rate)),
+                        (tr("Time left"), left),
                     ]) {
                         column.label(RichText::new(label).size(11.0).color(p.muted));
                         column
@@ -1305,6 +1408,9 @@ impl Window {
                         ui.label(RichText::new(tr("Uploaded")).small().color(p.muted));
                         ui.label(bytes(torrent.uploaded));
                     });
+                    if let Some(sharing) = torrent.sharing.filter(|_| seeding) {
+                        draw_sharing_limits(ui, p, sharing);
+                    }
                 }
                 ui.horizontal_wrapped(|ui| {
                     ui.label(RichText::new(tr("Size")).small().color(p.muted));
@@ -1315,7 +1421,10 @@ impl Window {
                     );
                     ui.add_space(12.0);
                     ui.label(RichText::new(tr("Resume")).small().color(p.muted));
-                    let supported = job.plan.is_some() || job.hls.is_some() || job.ftp.is_some();
+                    let supported = job.plan.is_some()
+                        || job.hls.is_some()
+                        || job.ftp.is_some()
+                        || job.torrent.is_some();
                     ui.label(
                         RichText::new(if supported {
                             tr("Supported")
@@ -1329,10 +1438,27 @@ impl Window {
                     )
                     .on_hover_text(resume_description(job));
                 });
-                ui.add(
-                    egui::Label::new(RichText::new(&job.url).size(11.0).color(p.muted)).truncate(),
-                )
-                .on_hover_text(&job.url);
+                if job.torrent.is_some() {
+                    ui.horizontal(|ui| {
+                        ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+                            if ui.small_button(tr("Copy magnet link")).clicked() {
+                                ui.ctx().copy_text(job.url.clone());
+                                self.notice = Some(MAGNET_COPIED.into());
+                            }
+                            ui.add(
+                                egui::Label::new(RichText::new(&job.url).size(11.0).color(p.muted))
+                                    .truncate(),
+                            )
+                            .on_hover_text(&job.url);
+                        });
+                    });
+                } else {
+                    ui.add(
+                        egui::Label::new(RichText::new(&job.url).size(11.0).color(p.muted))
+                            .truncate(),
+                    )
+                    .on_hover_text(&job.url);
+                }
             });
 
         ui.add_space(4.0);
@@ -1374,7 +1500,8 @@ impl Window {
             });
         });
 
-        if let Some(error) = &job.error {
+        // The app's own messages are translated; a server's text stays as sent.
+        if let Some(error) = job.error.as_deref().map(tr) {
             ui.add_space(2.0);
             if let Some(retry) = retry_description(job, self.queue_running) {
                 ui.colored_label(p.blue, retry);
@@ -1386,6 +1513,10 @@ impl Window {
             ui.add_space(4.0);
             if let Some(download) = &job.hls {
                 self.draw_media_details(ui, job, download, p);
+                return action;
+            }
+            if job.torrent.is_some() {
+                self.draw_torrent_details(ui, job, p);
                 return action;
             }
             let rows = self.connection_rows(job);
@@ -1554,6 +1685,64 @@ impl Window {
             });
         next_watch
     }
+}
+
+/// A shared torrent's ratio, how long it has shared, and when it stops on its own.
+fn draw_sharing_limits(
+    ui: &mut egui::Ui,
+    p: Palette,
+    sharing: download_engine::transfer_activity::SharingView,
+) {
+    let ratio = share_ratio(sharing.ratio_hundredths);
+    let ratio = match sharing.limit_ratio {
+        Some(limit) => tf!("{} of {}", ratio, share_ratio(u64::from(limit))),
+        None => ratio,
+    };
+    ui.horizontal_wrapped(|ui| {
+        ui.label(RichText::new(tr("Ratio")).small().color(p.muted));
+        ui.label(ratio);
+        ui.add_space(12.0);
+        ui.label(
+            RichText::new(tf!("{time} shared", time = duration(sharing.shared_secs)))
+                .small()
+                .color(p.muted),
+        );
+    });
+    // The bar follows whichever limit is closer.
+    let progress = [
+        sharing
+            .limit_ratio
+            .map(|limit| sharing.ratio_hundredths as f64 / f64::from(limit)),
+        sharing
+            .limit_seconds
+            .map(|limit| sharing.shared_secs as f64 / f64::from(limit)),
+    ]
+    .into_iter()
+    .flatten()
+    .reduce(f64::max);
+    if let Some(progress) = progress {
+        let (bar, _) = ui.allocate_exact_size(vec2(ui.available_width(), 6.0), Sense::hover());
+        ui.painter().rect_filled(bar, 3, p.track);
+        let done = bar.width() * progress.clamp(0.0, 1.0) as f32;
+        if done > 0.0 {
+            let filled = Rect::from_min_size(bar.min, vec2(done, bar.height()));
+            ui.painter().rect_filled(filled, 3, p.blue);
+        }
+    }
+    let rule = match (sharing.limit_ratio, sharing.limit_seconds) {
+        (Some(ratio), Some(seconds)) => tf!(
+            "Stops at ratio {ratio} or after {time}",
+            ratio = share_ratio(u64::from(ratio)),
+            time = sharing_time(seconds)
+        ),
+        (Some(ratio), None) => tf!(
+            "Stops at ratio {ratio}",
+            ratio = share_ratio(u64::from(ratio))
+        ),
+        (None, Some(seconds)) => tf!("Stops after {time}", time = sharing_time(seconds)),
+        (None, None) => tr("Shares until you stop it").into(),
+    };
+    ui.label(RichText::new(rule).small().color(p.muted));
 }
 
 fn exact_bytes(n: u64) -> String {
@@ -1768,6 +1957,10 @@ impl Desktop {
 
     pub(super) fn status_sample(&mut self, mode: &str) {
         let _ = self.store.set_queue_running(MAIN_QUEUE, false);
+        if mode.starts_with("status-torrent") {
+            self.torrent_status_sample(mode);
+            return;
+        }
         let mut job = match self.jobs.first().cloned() {
             Some(job) => job,
             None => {
@@ -1924,3 +2117,5 @@ impl Desktop {
 
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod torrent_tests;

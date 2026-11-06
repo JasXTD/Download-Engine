@@ -115,6 +115,7 @@ Download Engine builds a modified copy of librqbit-tracker-comms 9.1.0 (the BitT
 - **harfrust 0.12.0** — MIT. [LICENSE](rust/harfrust-0.12.0/LICENSE).
 - **hashbrown 0.17.1** — MIT OR Apache-2.0. [LICENSE-APACHE](rust/hashbrown-0.17.1/LICENSE-APACHE), [LICENSE-MIT](rust/hashbrown-0.17.1/LICENSE-MIT).
 - **hashlink 0.12.2** — MIT OR Apache-2.0. [LICENSE-APACHE](rust/hashlink-0.12.2/LICENSE-APACHE), [LICENSE-MIT](rust/hashlink-0.12.2/LICENSE-MIT).
+- **hmac 0.12.1** — MIT OR Apache-2.0. [LICENSE-APACHE](rust/hmac-0.12.1/LICENSE-APACHE), [LICENSE-MIT](rust/hmac-0.12.1/LICENSE-MIT).
 - **html5ever 0.39.0** — MIT OR Apache-2.0. [LICENSE-APACHE](rust/html5ever-0.39.0/LICENSE-APACHE), [LICENSE-MIT](rust/html5ever-0.39.0/LICENSE-MIT).
 - **http 1.5.0** — MIT OR Apache-2.0. [LICENSE-APACHE](rust/http-1.5.0/LICENSE-APACHE), [LICENSE-MIT](rust/http-1.5.0/LICENSE-MIT).
 - **http-body 1.1.0** — MIT. [LICENSE](rust/http-body-1.1.0/LICENSE).

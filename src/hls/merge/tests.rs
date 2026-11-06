@@ -23,7 +23,8 @@ async fn packed_aac_remux_preserves_the_transport_timestamp_against_video() {
     let cancel = CancellationToken::new();
     let helper = Helper::checked(&cancel).await.unwrap();
     execute(
-        Command::new(&helper.path)
+        helper
+            .command()
             .args([
                 "-hide_banner",
                 "-nostdin",
@@ -49,7 +50,8 @@ async fn packed_aac_remux_preserves_the_transport_timestamp_against_video() {
             .arg(&video),
     );
     execute(
-        Command::new(&helper.path)
+        helper
+            .command()
             .args([
                 "-hide_banner",
                 "-nostdin",
@@ -114,7 +116,7 @@ async fn packed_aac_remux_preserves_the_transport_timestamp_against_video() {
         .await;
     run(
         &mut command(
-            &helper.path,
+            helper.command(),
             &video,
             &audio,
             &download,
@@ -129,7 +131,8 @@ async fn packed_aac_remux_preserves_the_transport_timestamp_against_video() {
     .unwrap();
     drop(output);
     execute(
-        Command::new(&helper.path)
+        helper
+            .command()
             .args([
                 "-hide_banner",
                 "-nostdin",
@@ -143,7 +146,8 @@ async fn packed_aac_remux_preserves_the_transport_timestamp_against_video() {
     );
     let first_pts = |selector: &str| {
         let data = execute(
-            Command::new(&helper.path)
+            helper
+                .command()
                 .args([
                     "-hide_banner",
                     "-nostdin",

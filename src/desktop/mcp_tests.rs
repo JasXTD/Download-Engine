@@ -532,7 +532,7 @@ fn mcp_popup_returns_to_the_unsaved_preferences_draft() {
     assert_eq!(draft.category, Category::Browser);
     assert_eq!(draft.interface.compact_rows, !saved.compact_rows);
     assert_eq!(app.store.interface_preferences().unwrap(), saved);
-    click(&mut app, &ctx, "Cancel");
+    click(&mut app, &ctx, "×");
     assert!(app.dialog.is_none());
     assert_eq!(app.view, View::Scheduler);
     assert_eq!(app.interface.compact_rows, saved.compact_rows);

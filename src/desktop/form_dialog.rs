@@ -15,6 +15,21 @@ pub(super) fn modal(id: &'static str, p: Palette) -> egui::Modal {
     egui::Modal::new(egui::Id::new(id)).frame(frame(p))
 }
 
+/// Whether Esc or a click outside dismissed the modal. While `unsaved` edits would be
+/// lost, a click outside is ignored: it is easy to make by accident. Esc still counts.
+pub(super) fn dismissed<T>(response: &egui::ModalResponse<T>, unsaved: bool) -> bool {
+    if !unsaved || !response.backdrop_response.clicked() {
+        return response.should_close();
+    }
+    // egui's own test for Esc, without the click outside.
+    response.is_top_modal
+        && !response.any_popup_open
+        && response
+            .response
+            .ctx
+            .input_mut(|input| input.consume_key(egui::Modifiers::NONE, egui::Key::Escape))
+}
+
 /// The same card can also be hosted in a non-modal native status window.
 pub(super) fn frame(p: Palette) -> egui::Frame {
     egui::Frame::new()
@@ -87,8 +102,9 @@ pub(super) fn footer(ui: &mut egui::Ui, action: &str, hint: Option<&str>, p: Pal
 }
 
 /// Right-aligned footer; put the primary action first, then secondary actions.
-/// Ordinary forms dismiss through the header ×. A destructive confirmation can
-/// also offer an explicit Cancel action alongside its primary action.
+/// Ordinary forms dismiss through the header × only, with no Cancel beside it. A
+/// destructive confirmation can also offer an explicit Cancel action, and a yes-or-no
+/// question can name its answer (Not now, Later).
 pub(super) fn controls<R>(ui: &mut egui::Ui, content: impl FnOnce(&mut egui::Ui) -> R) -> R {
     ui.add_space(2.0);
     ui.separator();
@@ -231,7 +247,12 @@ fn mark(ui: &egui::Ui, rect: Rect, icon: Icon) {
 pub(super) fn primary_button(ui: &mut egui::Ui, label: &str) -> egui::Response {
     let custom = theme::custom(ui.ctx()).is_some();
     let p = Palette::for_context(ui.ctx());
-    let ink = if custom {
+    // A turned-off action looks like the other turned-off buttons. Kept green, it read as
+    // a live button that ignored the click.
+    let off = (!ui.is_enabled()).then(|| ui.visuals().widgets.inactive);
+    let ink = if let Some(off) = off {
+        off.fg_stroke.color
+    } else if custom {
         p.accent_text
     } else {
         Color32::WHITE
@@ -244,6 +265,13 @@ pub(super) fn primary_button(ui: &mut egui::Ui, label: &str) -> egui::Response {
     response.widget_info(|| {
         egui::WidgetInfo::labeled(egui::WidgetType::Button, response.enabled(), label)
     });
+    if let Some(off) = off {
+        ui.painter()
+            .rect(rect, 7, off.weak_bg_fill, off.bg_stroke, StrokeKind::Inside);
+        let text_rect = Align2::CENTER_CENTER.anchor_size(rect.center(), text.size());
+        ui.painter().galley(text_rect.min, text, ink);
+        return response;
+    }
     // White label text keeps at least 4.5:1 contrast against every gradient stop.
     let (top, bottom) = if custom {
         let factor = if response.is_pointer_button_down_on() {

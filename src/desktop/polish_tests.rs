@@ -662,10 +662,8 @@ fn dialogs_offer_only_the_header_close_button() {
         let output = frame(&mut app, &ctx, SIZE, vec![]);
         assert!(app.dialog.is_some(), "{name} did not open");
         text_rect(&output, "×");
+        // Choose files, Move torrent and the extension review are checked in their own tests.
         for duplicate in ["Cancel", "Close"] {
-            if name == "Preferences" && duplicate == "Cancel" {
-                continue;
-            }
             assert!(
                 !output.shapes.iter().any(|shape| matches!(&shape.shape,
                     egui::epaint::Shape::Text(text) if text.galley.job.text.trim() == duplicate)),

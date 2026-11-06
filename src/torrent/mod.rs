@@ -1,12 +1,19 @@
 //! Torrent downloads. The engine is a separate program, `de-torrent.exe`, because everything
 //! it reads comes from strangers. Nothing here starts it unless the user turned torrents on,
 //! and it only runs while a torrent needs it. `torrent/README.md` describes its side.
+mod details;
 mod helper;
+pub mod limits;
 mod publish;
 pub(crate) mod seeding;
 mod settings;
 
-pub use helper::Host;
+pub use details::{
+    ADD_WHILE_RUNNING, PRIVATE_TRACKERS_TEXT, Peer, Pieces, RECHECK_LATER, Request, Source,
+    SourceState, TorrentDetails, Tracker, TrackerState, check_tracker,
+};
+pub use helper::{HelperError, Host, RequestOutcome};
+pub use seeding::SharingTotals;
 pub use settings::{OFF_MESSAGE, PROXY_MESSAGE, Settings};
 
 pub(crate) use publish::{delete_saved, discard};
@@ -98,6 +105,93 @@ pub fn info_hash(link: &str) -> Result<String> {
     };
     ensure!(is_hash(&hash), INVALID_LINK);
     Ok(hash)
+}
+
+/// Router setup as the helper reports it: only addresses and a port, never the router's
+/// own text.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize)]
+#[serde(tag = "state", rename_all = "snake_case")]
+pub enum RouterStatus {
+    Looking,
+    Working {
+        gateway: std::net::Ipv4Addr,
+        port: u16,
+    },
+    NoRouter,
+    Taken {
+        port: u16,
+        other: Option<std::net::Ipv4Addr>,
+    },
+    PermanentOnly,
+    Shared {
+        external: std::net::Ipv4Addr,
+    },
+    Refused,
+    Unavailable,
+    Failed,
+}
+
+/// A router report the app doesn't understand counts as none, rather than failing the
+/// torrent it came with.
+fn lenient_router<'de, D: serde::Deserializer<'de>>(
+    deserializer: D,
+) -> std::result::Result<Option<RouterStatus>, D::Error> {
+    let value = Option::<Value>::deserialize(deserializer)?;
+    Ok(value.and_then(|value| serde_json::from_value(value).ok()))
+}
+
+/// Why a magnet with no tracker can't go on, when the Add download window explains it.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum MagnetStop {
+    /// Only a DHT search could find it, and that needs the person's yes for this magnet.
+    NeedsConsent,
+    /// Only a DHT search could find it, and the DHT is off in Preferences.
+    DhtOff,
+    /// A DHT search found its details, and they say the torrent is private.
+    Private,
+    /// A DHT search ran out of time.
+    NothingFound,
+}
+impl MagnetStop {
+    pub fn of(error: &anyhow::Error) -> Option<Self> {
+        match error.downcast_ref::<HelperError>()?.code.as_deref()? {
+            "needs_dht_consent" => Some(Self::NeedsConsent),
+            "dht_off" => Some(Self::DhtOff),
+            "private_from_dht" => Some(Self::Private),
+            "dht_search_timeout" => Some(Self::NothingFound),
+            _ => None,
+        }
+    }
+    /// What a download that stopped for this reason says, in the app's own words. The window
+    /// translates it like any label, and the engine's English is never shown.
+    pub fn download_error(self) -> &'static str {
+        match self {
+            Self::NeedsConsent => {
+                "This magnet link has no tracker, and the DHT wasn't searched for it. Open its .torrent file instead."
+            }
+            Self::DhtOff => {
+                "This magnet link has no tracker, and finding peers without a tracker (DHT) is off in Preferences. Open its .torrent file instead."
+            }
+            Self::Private => {
+                "This is a private torrent. It may only use its own site's tracker, so the search stopped. Open the .torrent file from that site."
+            }
+            Self::NothingFound => {
+                "No one shared this torrent's file list. The DHT search stopped after 10 minutes. Try again later, or open the .torrent file."
+            }
+        }
+    }
+}
+
+/// A download that stopped for one of the reasons above keeps the app's words for it, so its
+/// error shows in the person's language. Every other error is left as it is.
+fn explained(error: anyhow::Error) -> anyhow::Error {
+    let Some(stop) = MagnetStop::of(&error) else {
+        return error;
+    };
+    let code = error
+        .downcast_ref::<HelperError>()
+        .and_then(|error| error.code.clone());
+    HelperError::new(code.as_deref(), stop.download_error()).into()
 }
 
 fn magnet_name(link: &str) -> Option<String> {
@@ -301,10 +395,13 @@ impl Store {
     }
 
     /// Asks other people for a magnet link's file list, until they answer or `cancel` fires.
+    /// `dht_search` is the person's yes, given in the Add download window for this link, to
+    /// looking it up on the DHT when nothing else could find it.
     pub fn fetch_torrent_details(
         &self,
         link: &str,
         cancel: &CancellationToken,
+        dht_search: bool,
     ) -> Result<Option<Details>> {
         if cancel.is_cancelled() {
             return Ok(None);
@@ -321,14 +418,16 @@ impl Store {
             "output": self.paths.data.join("torrents").join(&name),
             "choose_later": true,
             "peers": self.torrents.test_peers(),
+            "dht_search": dht_search,
         }))?;
         let details = (|| -> Result<Option<Details>> {
             while !cancel.is_cancelled() {
                 let stats =
                     Stats::parse(lease.call_blocking(json!({"cmd": "stats", "name": name}))?)?;
                 if let Some(error) = stats.error {
-                    bail!("{error}");
+                    return Err(HelperError::new(stats.error_code.as_deref(), &error).into());
                 }
+                self.torrents.set_router(stats.router);
                 if stats.state == "ready" {
                     let files = lease.call_blocking(json!({"cmd": "files", "name": name}))?;
                     return Details::parse(files).map(Some);
@@ -367,13 +466,27 @@ impl Store {
         Job::new_torrent(link, name, directory, request_id, stage)
     }
 
-    fn enqueue_torrent(&self, job: Job, files: Option<&Files>, queue: &str) -> Result<Job> {
+    fn enqueue_torrent(
+        &self,
+        job: Job,
+        files: Option<&Files>,
+        queue: &str,
+        dht_search: bool,
+    ) -> Result<Job> {
         let mut conn = self.connect()?;
         let tx = conn.transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)?;
         let job =
             crate::queue_store::enqueue_batch_in(&tx, std::slice::from_ref(&job), queue)?.remove(0);
         if let Some(files) = files {
             save_files(&tx, &job.id, files)?;
+        }
+        if dht_search {
+            // The yes belongs to this download and its hash only, never to another magnet.
+            let state = job.torrent.as_ref().context("Missing torrent state")?;
+            tx.execute(
+                "INSERT OR REPLACE INTO torrent_dht_consent(job_id,info_hash) VALUES(?1,?2)",
+                params![job.id, state.info_hash],
+            )?;
         }
         // Commit the new format and its compatibility guard together. An older open
         // connection must not rewrite a torrent as an ordinary download.
@@ -405,23 +518,41 @@ impl Store {
             Stage::Chosen,
         )?;
         job.total = Some(files.chosen_size());
-        self.enqueue_torrent(job, Some(&files), queue)
+        self.enqueue_torrent(job, Some(&files), queue, false)
     }
 
     /// Adds a magnet link whose file list hasn't arrived. The download starts when someone
-    /// has chosen from the list.
+    /// has chosen from the list. `dht_search` keeps the person's yes to a DHT search for
+    /// this magnet, so that it goes on after a restart.
     pub fn add_magnet_for_later(
         &self,
         link: &str,
         folder: Option<&Path>,
         queue: &str,
         request_id: String,
+        dht_search: bool,
     ) -> Result<Job> {
         ensure!(self.torrent_settings()?.enabled, OFF_MESSAGE);
         let hash = info_hash(link)?;
         let name = magnet_name(link).unwrap_or(hash);
         let job = self.new_torrent_job(link, &name, folder, request_id, Stage::Details)?;
-        self.enqueue_torrent(job, None, queue)
+        self.enqueue_torrent(job, None, queue, dht_search)
+    }
+
+    /// Whether the person said yes to a DHT search for this download's own magnet.
+    pub fn torrent_dht_consent(&self, job: &Job) -> Result<bool> {
+        let Some(state) = &job.torrent else {
+            return Ok(false);
+        };
+        let saved: Option<String> = self
+            .connect()?
+            .query_row(
+                "SELECT info_hash FROM torrent_dht_consent WHERE job_id=?1",
+                [&job.id],
+                |row| row.get(0),
+            )
+            .optional()?;
+        Ok(saved.as_deref() == Some(state.info_hash.as_str()))
     }
 
     /// The download for this torrent, if there is one.
@@ -487,6 +618,8 @@ fn save_files(conn: &rusqlite::Connection, job: &str, files: &Files) -> Result<(
 struct Stats {
     state: String,
     error: Option<String>,
+    #[serde(default)]
+    error_code: Option<String>,
     finished: bool,
     progress_bytes: u64,
     total_bytes: u64,
@@ -496,6 +629,8 @@ struct Stats {
     download_bps: u64,
     upload_bps: u64,
     peers: usize,
+    #[serde(default, deserialize_with = "lenient_router")]
+    router: Option<RouterStatus>,
 }
 impl Stats {
     fn parse(value: Value) -> Result<Self> {
@@ -540,6 +675,7 @@ pub(crate) async fn transfer(
         .await
         .context("Cannot create the download folder")?;
     let files = store.torrent_files(&job.id)?;
+    let trackers = store.torrent_added_trackers(&job.id)?;
     let lease = store.torrents.lease(store)?;
     let mut add = json!({
         "cmd": "add",
@@ -547,24 +683,34 @@ pub(crate) async fn transfer(
         "magnet": job.url,
         "output": staging,
         "peers": store.torrents.test_peers(),
+        "trackers": trackers,
     });
     match stage {
         Stage::Chosen => add["only"] = json!(files.chosen),
         _ => add["choose_later"] = json!(true),
     }
-    lease.call(add).await?;
+    if store.torrent_dht_consent(job)? {
+        add["dht_search"] = json!(true);
+    }
+    lease.call(add).await.map_err(explained)?;
     let id = job.id.clone();
+    let mut uploads = UploadTally::default();
     let outcome = tokio::select! {
-        outcome = follow(store, job, &lease, limiter, cancel) => outcome,
+        outcome = follow(store, job, &lease, limiter, cancel, &mut uploads) => outcome,
         error = share_speed_limits(&id, &lease, limiter, cancel) => Err(error),
     };
+    // What went out while downloading counts toward the share ratio.
+    let counted = uploads.save(store, &id);
+    details::abandon(store, &id);
     // Whatever happened, the engine must let go of the files before anyone touches them.
     let removed = lease
         .call(json!({"cmd": "remove", "name": id}))
         .await
         .map(|_| ());
     drop(lease);
-    match outcome? {
+    let outcome = outcome.map_err(explained)?;
+    counted?;
+    match outcome {
         Outcome::Stopped | Outcome::NeedsChoice => Ok(None),
         Outcome::Finished => {
             removed?;
@@ -607,17 +753,35 @@ fn forget_progress(store: &Store, job: &Job) -> Result<()> {
     Ok(())
 }
 
+/// Uploads made while downloading, saved to the torrent's sharing totals now and then.
+#[derive(Default)]
+struct UploadTally {
+    seen: u64,
+    saved: u64,
+}
+impl UploadTally {
+    const SAVE_EVERY: Duration = Duration::from_secs(60);
+
+    fn save(&mut self, store: &Store, id: &str) -> Result<()> {
+        store.add_torrent_uploaded(id, self.seen.saturating_sub(self.saved))?;
+        self.saved = self.seen;
+        Ok(())
+    }
+}
+
 async fn follow(
     store: &Store,
     job: &mut Job,
     lease: &Lease,
     limiter: &Limiter,
     cancel: &CancellationToken,
+    uploads: &mut UploadTally,
 ) -> Result<Outcome> {
     let mut tick = tokio::time::interval(STATS_EVERY);
     tick.set_missed_tick_behavior(MissedTickBehavior::Delay);
     let mut counted = 0u64;
     let mut saved = Instant::now();
+    let mut uploads_saved = Instant::now();
     loop {
         tokio::select! {
             _ = cancel.cancelled() => return Ok(Outcome::Stopped),
@@ -631,8 +795,9 @@ async fn follow(
         }
         let stats = Stats::parse(lease.call(json!({"cmd": "stats", "name": job.id})).await?)?;
         if let Some(error) = stats.error {
-            bail!("{error}");
+            return Err(HelperError::new(stats.error_code.as_deref(), &error).into());
         }
+        store.torrents.set_router(stats.router);
         // Everything that crosses the network counts toward a data quota, in both directions.
         let traffic = stats.downloaded_bytes + stats.uploaded_bytes;
         if traffic > counted {
@@ -640,6 +805,11 @@ async fn follow(
                 .record_payload(usize::try_from(traffic - counted)?)
                 .await?;
             counted = traffic;
+        }
+        uploads.seen = uploads.seen.max(stats.uploaded_bytes);
+        if uploads_saved.elapsed() >= UploadTally::SAVE_EVERY {
+            uploads.save(store, &job.id)?;
+            uploads_saved = Instant::now();
         }
         store.activity.set(&job.id, stats.phase());
         store.activity.set_torrent(
@@ -650,8 +820,10 @@ async fn follow(
                 upload_speed: stats.upload_bps,
                 uploaded: stats.uploaded_bytes,
                 file_progress: stats.file_progress.as_slice().into(),
+                sharing: None,
             },
         );
+        details::serve(store, lease, &job.id).await?;
         if stats.state == "ready" {
             let details =
                 Details::parse(lease.call(json!({"cmd": "files", "name": job.id})).await?)?;
@@ -839,6 +1011,127 @@ mod tests {
     }
 
     #[test]
+    fn router_reports_are_read_and_odd_ones_count_as_none() {
+        let router = |report: Value| {
+            Stats::parse(json!({
+                "state": "live", "error": null, "finished": false, "progress_bytes": 0,
+                "total_bytes": 0, "file_progress": [], "downloaded_bytes": 0,
+                "uploaded_bytes": 0, "download_bps": 0, "upload_bps": 0, "peers": 0,
+                "router": report,
+            }))
+            .unwrap()
+            .router
+        };
+        assert_eq!(
+            router(json!({"state": "working", "gateway": "192.168.1.1", "port": 6881})),
+            Some(RouterStatus::Working {
+                gateway: [192, 168, 1, 1].into(),
+                port: 6881
+            })
+        );
+        assert_eq!(
+            router(json!({"state": "taken", "port": 6881, "other": null})),
+            Some(RouterStatus::Taken {
+                port: 6881,
+                other: None
+            })
+        );
+        // Unknown states and anything that isn't an address are dropped, not shown.
+        assert_eq!(router(json!({"state": "dancing"})), None);
+        assert_eq!(
+            router(json!({"state": "working", "gateway": "<b>router</b>", "port": 6881})),
+            None
+        );
+        assert_eq!(
+            router(json!({"state": "working", "gateway": "192.168.1.1", "port": 70000})),
+            None
+        );
+        assert_eq!(router(Value::Null), None);
+    }
+
+    #[test]
+    fn a_yes_to_a_dht_search_belongs_to_one_download_and_its_own_hash() {
+        let (_temp, store) = profile();
+        let other_hash = "0123456789012345678901234567890123456789";
+        let asked = store
+            .add_magnet_for_later(
+                &format!("magnet:?xt=urn:btih:{HEX}"),
+                None,
+                "main",
+                "asked".into(),
+                true,
+            )
+            .unwrap();
+        let other = store
+            .add_magnet_for_later(
+                &format!("magnet:?xt=urn:btih:{other_hash}"),
+                None,
+                "main",
+                "other".into(),
+                false,
+            )
+            .unwrap();
+        assert!(store.torrent_dht_consent(&asked).unwrap());
+        assert!(!store.torrent_dht_consent(&other).unwrap());
+        // A yes saved under another hash is no yes for this download.
+        store
+            .connect()
+            .unwrap()
+            .execute(
+                "UPDATE torrent_dht_consent SET info_hash=?1 WHERE job_id=?2",
+                params![other_hash, asked.id],
+            )
+            .unwrap();
+        assert!(!store.torrent_dht_consent(&asked).unwrap());
+        // The database keeps only a well-formed hash.
+        assert!(
+            store
+                .connect()
+                .unwrap()
+                .execute(
+                    "UPDATE torrent_dht_consent SET info_hash='short' WHERE job_id=?1",
+                    [&asked.id],
+                )
+                .is_err()
+        );
+    }
+
+    #[test]
+    fn a_download_stopped_for_a_dht_reason_keeps_words_every_language_has() {
+        use crate::i18n::{self, Language};
+        for (code, stop) in [
+            ("needs_dht_consent", MagnetStop::NeedsConsent),
+            ("dht_off", MagnetStop::DhtOff),
+            ("private_from_dht", MagnetStop::Private),
+            ("dht_search_timeout", MagnetStop::NothingFound),
+        ] {
+            let error = explained(HelperError::new(Some(code), "The engine's English").into());
+            // What the download keeps, as `retry::failed` writes it, and the reason still reads.
+            assert_eq!(format!("{error:#}"), stop.download_error());
+            assert_eq!(MagnetStop::of(&error), Some(stop));
+            for language in Language::ALL {
+                if matches!(language, Language::System | Language::English) {
+                    continue;
+                }
+                let _scope = i18n::scope(language);
+                assert_ne!(
+                    i18n::tr(stop.download_error()),
+                    stop.download_error(),
+                    "{language:?} has no words for {code}"
+                );
+            }
+        }
+        for other in [
+            anyhow::Error::from(HelperError::new(None, "The torrent helper failed")),
+            anyhow::Error::from(HelperError::new(Some("something_new"), "Something new")),
+            anyhow::anyhow!("Disk full"),
+        ] {
+            let before = format!("{other:#}");
+            assert_eq!(format!("{:#}", explained(other)), before);
+        }
+    }
+
+    #[test]
     fn saving_a_torrent_blocks_an_already_open_older_writer() {
         let (_temp, store) = profile();
         let old = store.connect().unwrap();
@@ -861,6 +1154,7 @@ mod tests {
                 None,
                 "main",
                 "torrent-compatibility".into(),
+                false,
             )
             .unwrap();
         let error = old
@@ -901,7 +1195,8 @@ mod tests {
                     &format!("magnet:?xt=urn:btih:{HEX}"),
                     None,
                     "missing-queue",
-                    "bad-add".into()
+                    "bad-add".into(),
+                    true,
                 )
                 .is_err()
         );

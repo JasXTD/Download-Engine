@@ -78,7 +78,9 @@ fn sharing_auto_start_stop_all_rename_and_history_cleanup_keep_completed_data() 
     bench.scheduler.send(Command::PauseAll).unwrap();
     wait_sharing(&bench, &job.id, false);
     bench.wait_for_helper_to_stop();
-    assert!(!bench.store.torrent_sharing(&job.id).unwrap());
+    // Stop all cancels first and saves "off" while the run saves its totals, so the
+    // saved state can land just after the helper stops.
+    wait_sharing_saved(&bench, &job.id, false);
     assert_eq!(
         bench.store.get(&job.id).unwrap().unwrap().status,
         Status::Complete
@@ -592,7 +594,10 @@ impl Bench {
             std::thread::sleep(PATIENCE);
             watchdog.cancel();
         });
-        let details = self.store.fetch_torrent_details(link, &cancel).unwrap();
+        let details = self
+            .store
+            .fetch_torrent_details(link, &cancel, false)
+            .unwrap();
         assert!(!cancel.is_cancelled(), "no file list arrived");
         details
     }
@@ -775,7 +780,7 @@ fn torrents_start_switched_off_and_nothing_can_run_until_they_are_on() {
     let cancel = tokio_util::sync::CancellationToken::new();
     let error = bench
         .store
-        .fetch_torrent_details(&magnet(&bench.seeder.sample), &cancel)
+        .fetch_torrent_details(&magnet(&bench.seeder.sample), &cancel, false)
         .unwrap_err();
     assert!(error.to_string().contains(OFF_MESSAGE), "{error}");
     let error = bench
@@ -785,6 +790,7 @@ fn torrents_start_switched_off_and_nothing_can_run_until_they_are_on() {
             Some(&bench.folder),
             MAIN,
             uuid::Uuid::new_v4().to_string(),
+            false,
         )
         .unwrap_err();
     assert!(error.to_string().contains(OFF_MESSAGE), "{error}");
@@ -946,9 +952,14 @@ fn a_magnet_link_added_for_later_waits_for_a_choice_then_downloads_only_that() {
             Some(&bench.folder),
             MAIN,
             uuid::Uuid::new_v4().to_string(),
+            false,
         )
         .unwrap();
     assert_eq!(job.name, "sample");
+    assert!(
+        !bench.store.torrent_dht_consent(&job).unwrap(),
+        "no yes was given"
+    );
 
     let waiting = bench.wait(
         "the file list",
@@ -1015,16 +1026,35 @@ fn the_file_list_of_a_magnet_link_comes_from_peers_and_can_be_cancelled() {
         .fetch_torrent_details(
             &magnet(&unknown),
             &tokio_util::sync::CancellationToken::new(),
+            false,
         )
         .unwrap_err();
     assert!(error.to_string().contains(".torrent file"));
+    // The helper's reason reaches the window, which explains it in the person's language.
+    assert_eq!(
+        download_engine::torrent::MagnetStop::of(&error),
+        Some(download_engine::torrent::MagnetStop::DhtOff)
+    );
+    // A yes doesn't help while the DHT is off, and nothing searches.
+    let error = bench
+        .store
+        .fetch_torrent_details(
+            &magnet(&unknown),
+            &tokio_util::sync::CancellationToken::new(),
+            true,
+        )
+        .unwrap_err();
+    assert_eq!(
+        download_engine::torrent::MagnetStop::of(&error),
+        Some(download_engine::torrent::MagnetStop::DhtOff)
+    );
     bench.wait_for_helper_to_stop();
     let cancel = tokio_util::sync::CancellationToken::new();
     cancel.cancel();
     assert!(
         bench
             .store
-            .fetch_torrent_details(&magnet(&unknown), &cancel)
+            .fetch_torrent_details(&magnet(&unknown), &cancel, false)
             .unwrap()
             .is_none()
     );
@@ -1232,6 +1262,7 @@ fn a_magnet_link_cannot_choose_its_own_files() {
             Some(&bench.folder),
             MAIN,
             uuid::Uuid::new_v4().to_string(),
+            false,
         )
         .unwrap();
     bench.wait(
@@ -1515,4 +1546,108 @@ fn pause_survives_reopening_the_profile_and_resumes_verified_pieces() {
     );
     assert_eq!(bench.store.list().unwrap().len(), 1);
     assert!(bench.leftovers().is_empty());
+}
+
+fn wait_outcome(bench: &Bench, id: &str, ticket: u64) -> download_engine::torrent::RequestOutcome {
+    let deadline = Instant::now() + PATIENCE;
+    loop {
+        if let Some(outcome) = bench.store.torrents.outcome(id, ticket) {
+            return outcome;
+        }
+        assert!(Instant::now() < deadline, "no outcome for request {ticket}");
+        std::thread::sleep(POLL);
+    }
+}
+
+fn ask(
+    bench: &Bench,
+    id: &str,
+    request: download_engine::torrent::Request,
+) -> download_engine::torrent::RequestOutcome {
+    let ticket = bench.store.torrents.new_ticket();
+    bench
+        .scheduler
+        .send(Command::TorrentRequest {
+            id: id.into(),
+            ticket,
+            request,
+        })
+        .unwrap();
+    wait_outcome(bench, id, ticket)
+}
+
+#[test]
+fn a_watched_torrent_shows_its_peer_and_pieces_refuses_a_local_tracker_and_checks_again() {
+    use download_engine::torrent::Request;
+    let bench = Bench::new(sample("watched.bin", &[("watched.bin", 4_000_000)], 15));
+    bench.seeder.gate.hold_after(1024 * 1024);
+    let job = bench.add(&bench.details(), vec![0]);
+    bench.wait("verified progress", |j| j.downloaded >= 256 * 1024, &job.id);
+
+    // Watch the way an open status window does, until the worker has fetched details.
+    let deadline = Instant::now() + PATIENCE;
+    let seen = loop {
+        bench.store.torrents.watch(&job.id);
+        if let Some(seen) = bench
+            .store
+            .activity
+            .torrent_details(&job.id)
+            .filter(|seen| !seen.peers.is_empty())
+        {
+            break seen;
+        }
+        assert!(Instant::now() < deadline, "no details arrived");
+        std::thread::sleep(POLL);
+    };
+    let pieces = seen.pieces.as_ref().expect("pieces");
+    let total = 4_000_000usize.div_ceil(PIECE) as u32;
+    assert_eq!((pieces.total, pieces.wanted), (total, total));
+    assert!(pieces.have > 0 && pieces.have < total, "{pieces:?}");
+    assert_eq!(
+        pieces.map.len() as u32,
+        total,
+        "one cell a piece for a small torrent"
+    );
+    let peer = &seen.peers[0];
+    assert_eq!(
+        peer.address.as_deref(),
+        Some(bench.address.to_string().as_str())
+    );
+    assert_eq!(peer.client, None, "the seeder gives no name");
+    assert_eq!(peer.has_pieces, total);
+    assert!(!peer.incoming);
+    assert_eq!(seen.private, Some(false));
+    assert!(seen.trackers.is_empty(), "the sample has no trackers");
+
+    // The helper refuses a tracker on this computer, and nothing is saved for later.
+    let refused = ask(
+        &bench,
+        &job.id,
+        Request::AddTracker("http://127.0.0.1:9/announce".into()),
+    );
+    assert!(
+        refused
+            .as_ref()
+            .unwrap_err()
+            .contains("this computer or its network"),
+        "{refused:?}"
+    );
+    assert!(
+        bench
+            .store
+            .torrent_added_trackers(&job.id)
+            .unwrap()
+            .is_empty()
+    );
+
+    // Checking again reads the staged file, and the download then carries on to the end.
+    assert_eq!(ask(&bench, &job.id, Request::Recheck), Ok(None));
+    bench.seeder.gate.release();
+    let finished = bench.wait_complete(&job.id);
+    assert_eq!(
+        std::fs::read(finished.saved_path.unwrap()).unwrap(),
+        bench.seeder.sample.data
+    );
+    let errors: Vec<_> = bench.scheduler.errors.try_iter().collect();
+    assert!(errors.is_empty(), "scheduler errors: {errors:?}");
 }

@@ -4,7 +4,7 @@ use serde_json::{Value, json};
 
 const ID: &str = "example.videohost";
 
-fn package(version: &str, hosts: &[&str]) -> Vec<u8> {
+pub(super) fn package(version: &str, hosts: &[&str]) -> Vec<u8> {
     serde_json::to_vec(&json!({
         "format": "download-engine-extension",
         "format_version": 1,
@@ -100,11 +100,32 @@ fn installing_goes_through_a_review_and_starts_turned_off() {
     text_rect(&output, "1.2.0 · Example · Publisher not verified");
     text_rect(&output, "Disabled");
     text_rect(&output, "What it can do");
-    text_rect(&output, "Use your browser logins or cookies");
+    text_rect(&output, "What it can't do");
+    text_rect(&output, "Import logins or cookies from your browser");
+    assert!(!has_text(
+        &output,
+        "Use login cookies and headers you supply, on the declared hosts"
+    ));
     text_rect(&output, "Tidy finished files");
 
     click(&mut app, &ctx, "Enabled");
     assert!(app.store.extension(ID).unwrap().enabled);
+}
+
+#[test]
+fn session_permission_distinguishes_supplied_credentials_from_browser_imports() {
+    let mut data: Value =
+        serde_json::from_slice(&package("1.2.0", &["videohost.example"])).unwrap();
+    let supplied = "Use login cookies and headers you supply, on the declared hosts";
+    let imported = "Import logins or cookies from your browser";
+    for permitted in [false, true] {
+        data["permissions"]["http_sessions"] = json!(permitted);
+        let package = Package::decode(&serde_json::to_vec(&data).unwrap()).unwrap();
+        let (can, cannot) = powers(&package, false);
+        assert_eq!(can.iter().any(|text| text == supplied), permitted);
+        assert!(!can.iter().any(|text| text == imported));
+        assert!(cannot.iter().any(|text| text == imported));
+    }
 }
 
 #[test]
@@ -176,13 +197,20 @@ fn cancelling_a_review_changes_nothing() {
     let (_temp, mut app, ctx) = fixture();
     open(&mut app);
     review(&mut app, package("1.2.0", &["videohost.example"]));
-    click(&mut app, &ctx, "Cancel");
+    frame(&mut app, &ctx, size(), vec![]);
+    let output = frame(&mut app, &ctx, size(), vec![]);
+    text_rect(&output, "Install");
+    assert!(
+        !has_text(&output, "Cancel"),
+        "The header × already closes it"
+    );
+    click(&mut app, &ctx, "×");
     assert!(app.dialog.is_none());
     assert!(app.store.extensions().unwrap().is_empty());
 }
 
 #[test]
-fn an_update_shows_new_access_and_not_now_keeps_the_old_version() {
+fn an_update_shows_new_access_and_closing_keeps_the_old_version() {
     let (_temp, mut app, ctx) = fixture();
     app.store
         .install_extension(
@@ -199,7 +227,16 @@ fn an_update_shows_new_access_and_not_now_keeps_the_old_version() {
     text_rect(&output, "New access");
     text_rect(&output, "Read api.vh-media.example");
     text_rect(&output, "Approve and update");
-    click(&mut app, &ctx, "Not now");
+    text_rect(
+        &output,
+        "Closing this keeps the installed version exactly as it is.",
+    );
+    assert!(
+        !has_text(&output, "Not now"),
+        "The header × already closes it"
+    );
+    click(&mut app, &ctx, "×");
+    assert!(app.dialog.is_none());
     assert_eq!(app.store.extension(ID).unwrap().package.version, "1.2.0");
 
     review(&mut app, next);

@@ -29,8 +29,9 @@ use tokio_util::sync::CancellationToken;
 
 use crate::bitfield::Bitfield;
 use crate::debug_log;
+use crate::details::{MAX_CLIENT_CHARS, PeerDetails, clean_text};
 use crate::picker::{Chunk, Written};
-use crate::torrent::{Event, Live};
+use crate::torrent::{Event, Live, Rates};
 
 const HANDSHAKE_LEN: usize = 68;
 const HANDSHAKE_TIMEOUT: Duration = Duration::from_secs(15);
@@ -136,6 +137,8 @@ pub(crate) struct PeerLink {
     pub key: u64,
     pub peer_id: Id20,
     pub addr: Option<SocketAddr>,
+    /// The peer connected to us.
+    pub incoming: bool,
     outbox: Mutex<Outbox>,
     writer_wake: Notify,
     reader_wake: Notify,
@@ -147,14 +150,21 @@ pub(crate) struct PeerLink {
     pub uploaded: AtomicU64,
     strikes: AtomicU32,
     kicked: CancellationToken,
+    // What the status window shows. The reader keeps these up to date.
+    client: Mutex<Option<String>>,
+    has_pieces: AtomicU32,
+    peer_choking: AtomicBool,
+    am_interested: AtomicBool,
+    rates: Mutex<Rates>,
 }
 
 impl PeerLink {
-    pub fn new(key: u64, peer_id: Id20, addr: Option<SocketAddr>) -> Self {
+    pub fn new(key: u64, peer_id: Id20, addr: Option<SocketAddr>, incoming: bool) -> Self {
         Self {
             key,
             peer_id,
             addr,
+            incoming,
             outbox: Mutex::default(),
             writer_wake: Notify::new(),
             reader_wake: Notify::new(),
@@ -166,6 +176,38 @@ impl PeerLink {
             uploaded: AtomicU64::new(0),
             strikes: AtomicU32::new(0),
             kicked: CancellationToken::new(),
+            client: Mutex::default(),
+            has_pieces: AtomicU32::new(0),
+            peer_choking: AtomicBool::new(true),
+            am_interested: AtomicBool::new(false),
+            rates: Mutex::default(),
+        }
+    }
+
+    /// Takes this second's sample of the transfer speeds.
+    pub fn sample_rates(&self) {
+        self.rates.lock().sample(
+            self.downloaded.load(Ordering::Relaxed),
+            self.uploaded.load(Ordering::Relaxed),
+        );
+    }
+
+    pub fn details(&self) -> PeerDetails {
+        let (download_bps, upload_bps) = self.rates.lock().per_second();
+        PeerDetails {
+            address: self
+                .addr
+                .map(|addr| SocketAddr::new(addr.ip().to_canonical(), addr.port()).to_string()),
+            client: self.client.lock().clone(),
+            has_pieces: self.has_pieces.load(Ordering::Relaxed),
+            download_bps,
+            upload_bps,
+            downloaded_bytes: self.downloaded.load(Ordering::Relaxed),
+            uploaded_bytes: self.uploaded.load(Ordering::Relaxed),
+            incoming: self.incoming,
+            receiving: !self.peer_choking.load(Ordering::Relaxed)
+                && self.am_interested.load(Ordering::Relaxed),
+            sending: !self.is_choking() && self.is_interested(),
         }
     }
 
@@ -257,8 +299,9 @@ pub(crate) async fn run_connection(
     stream: BoxedStream,
     hello: Hello,
     addr: Option<SocketAddr>,
+    incoming: bool,
 ) -> bool {
-    let Some(link) = live.register(hello.peer_id, addr) else {
+    let Some(link) = live.register(hello.peer_id, addr, incoming) else {
         debug_log!("already connected to {:?}", addr);
         return false;
     };
@@ -524,9 +567,13 @@ impl Reader {
             Message::KeepAlive => {}
             Message::Choke => {
                 self.peer_choking = true;
+                self.link.peer_choking.store(true, Ordering::Relaxed);
                 self.release_all();
             }
-            Message::Unchoke => self.peer_choking = false,
+            Message::Unchoke => {
+                self.peer_choking = false;
+                self.link.peer_choking.store(false, Ordering::Relaxed);
+            }
             Message::Interested => {
                 self.link.interested.store(true, Ordering::Release);
                 self.live.try_unchoke(&self.link);
@@ -559,6 +606,7 @@ impl Reader {
         );
         if self.peer_has.set(piece) {
             self.live.core.picker.lock().peer_has_piece(piece);
+            self.link.has_pieces.fetch_add(1, Ordering::Relaxed);
         }
         Ok(())
     }
@@ -570,6 +618,7 @@ impl Reader {
         picker.peer_removed(&self.peer_has);
         picker.peer_added(&field);
         drop(picker);
+        self.link.has_pieces.store(field.count(), Ordering::Relaxed);
         self.peer_has = field;
         Ok(())
     }
@@ -602,6 +651,7 @@ impl Reader {
                 if let Some(client) = &handshake.v {
                     let client = String::from_utf8_lossy(client.as_ref());
                     debug_log!("peer {:?} runs {}", self.link.addr, client.escape_debug());
+                    *self.link.client.lock() = clean_text(&client, MAX_CLIENT_CHARS);
                 }
                 *self.link.extended_ids.lock() = handshake.peer_extended_messages();
                 if let Some(limit) = handshake.reqq {
@@ -733,6 +783,9 @@ impl Reader {
         let interesting = !core.options.seed_only && picker.is_interesting(&self.peer_has);
         if interesting != self.am_interested {
             self.am_interested = interesting;
+            self.link
+                .am_interested
+                .store(interesting, Ordering::Relaxed);
             self.link.push(if interesting {
                 Out::Interested
             } else {

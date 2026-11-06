@@ -42,6 +42,7 @@ struct Row {
     name: String,
     files: Range<usize>,
     size: u64,
+    folder: bool,
 }
 
 /// A torrent's files as a tree of ticks. Every row covers a run of `files`, because sorting
@@ -71,6 +72,7 @@ impl Picker {
                     name: (*folder).into(),
                     files: position..position,
                     size: 0,
+                    folder: true,
                 });
                 open.push(((*folder).into(), rows.len() - 1));
             }
@@ -83,6 +85,7 @@ impl Picker {
                 name: (*name).into(),
                 files: position..position + 1,
                 size: file.len,
+                folder: false,
             });
         }
         let wanted: Option<HashSet<usize>> = chosen.map(|list| list.iter().copied().collect());
@@ -211,7 +214,7 @@ impl Picker {
         });
     }
 
-    fn summary(&self) -> String {
+    pub(super) fn summary(&self) -> String {
         tf!(
             "{chosen} of {total} files · {size} selected",
             chosen = self.chosen_files().count(),
@@ -219,6 +222,63 @@ impl Picker {
             size = bytes(self.chosen_size())
         )
     }
+
+    pub(super) fn row_count(&self) -> usize {
+        self.rows.len()
+    }
+
+    pub(super) fn file_count(&self) -> usize {
+        self.files.len()
+    }
+
+    /// One row of the tree as the status window shows it, with the progress of its chosen
+    /// files. `progress` is the bytes done per torrent file number.
+    pub(super) fn row_view(&self, index: usize, progress: &[u64]) -> RowView<'_> {
+        let row = &self.rows[index];
+        let files = row.files.clone();
+        let picked = self.chosen[files.clone()]
+            .iter()
+            .filter(|chosen| **chosen)
+            .count();
+        let (mut done, mut wanted) = (0u64, 0u64);
+        for (file, chosen) in self.files[files.clone()]
+            .iter()
+            .zip(&self.chosen[files.clone()])
+        {
+            if *chosen {
+                wanted += file.len;
+                done += progress.get(file.index).copied().unwrap_or(0).min(file.len);
+            }
+        }
+        RowView {
+            depth: row.depth,
+            name: &row.name,
+            size: row.size,
+            folder: row.folder,
+            picked,
+            files: files.len(),
+            progress: (wanted > 0).then(|| done as f64 / wanted as f64),
+        }
+    }
+
+    /// Ticks or clears every file under a row.
+    pub(super) fn set_row(&mut self, index: usize, chosen: bool) {
+        let files = self.rows[index].files.clone();
+        self.chosen[files].fill(chosen);
+    }
+}
+
+/// What one row of a torrent's file tree shows in the status window.
+pub(super) struct RowView<'a> {
+    pub(super) depth: usize,
+    pub(super) name: &'a str,
+    pub(super) size: u64,
+    pub(super) folder: bool,
+    /// Chosen files under this row, of `files`.
+    pub(super) picked: usize,
+    pub(super) files: usize,
+    /// How much of the chosen files is done, when any is chosen.
+    pub(super) progress: Option<f64>,
 }
 
 enum Fetched {
@@ -241,6 +301,10 @@ struct Draft {
     picker: Option<Picker>,
     existing: Option<String>,
     error: Option<String>,
+    /// The person clicked "Search the DHT" for this magnet, in this window.
+    dht_search: bool,
+    /// Why this magnet can't go on, when the window explains it in its own words.
+    stop: Option<torrent::MagnetStop>,
     free: Option<u64>,
     free_for: Option<PathBuf>,
     free_task: Option<background_io::Task<(PathBuf, Option<u64>)>>,
@@ -259,6 +323,8 @@ impl Draft {
             picker: None,
             existing: None,
             error: None,
+            dht_search: false,
+            stop: None,
             free: None,
             free_for: None,
             free_task: None,
@@ -271,6 +337,7 @@ impl Draft {
         self.details.is_some()
             || self.existing.is_some()
             || self.error.is_some()
+            || self.stop.is_some()
             || self.awaiting_consent
     }
 }
@@ -285,6 +352,14 @@ impl Drop for Draft {
 enum Question {
     AddWindow,
     Resume(String),
+}
+
+/// What the person chose for a magnet that has no tracker.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum MagnetAction {
+    Search,
+    Preferences,
+    OpenFile,
 }
 
 struct Choice {
@@ -334,7 +409,10 @@ impl Desktop {
         }
         if matches!(
             mode,
-            "torrent-sharing-preferences" | "torrent-sharing-network"
+            "torrent-sharing-preferences"
+                | "torrent-sharing-network"
+                | "torrent-router-preferences"
+                | "torrent-router-working"
         ) {
             self.open_preferences_window();
             let draft = self.preferences_window.as_mut().unwrap();
@@ -342,6 +420,7 @@ impl Desktop {
             draft.torrents.enabled = true;
             draft.torrents.seed_completed = true;
             draft.torrents.incoming_port = Some(6881);
+            draft.torrents.upnp = mode.starts_with("torrent-router");
             return;
         }
         if matches!(mode, "torrent-preferences" | "torrent-windows-preferences") {
@@ -385,6 +464,15 @@ impl Desktop {
                 draft.error = Some(
                     "The torrent file is incomplete. Choose another file and try again.".into(),
                 );
+            } else if let Some(stop) = match mode {
+                "torrent-dht-ask" => Some(torrent::MagnetStop::NeedsConsent),
+                "torrent-dht-off" => Some(torrent::MagnetStop::DhtOff),
+                "torrent-dht-private" => Some(torrent::MagnetStop::Private),
+                "torrent-dht-nothing" => Some(torrent::MagnetStop::NothingFound),
+                _ => None,
+            } {
+                // The sample magnet lists no tracker, like the ones these boxes are for.
+                draft.stop = Some(stop);
             } else {
                 let details = Details {
                     info_hash: "c12fe1c06bba254a9dc9f519b335aa7c1367a88a".into(),
@@ -562,6 +650,7 @@ impl Desktop {
         let source = draft.source.clone();
         let cancel = draft.cancel.clone();
         let metadata_allowed = draft.metadata_allowed;
+        let dht_search = draft.dht_search;
         draft.started = Instant::now();
         let task = background_io::Task::spawn(Some(ctx.clone()), move || {
             let details = match &source {
@@ -573,7 +662,7 @@ impl Desktop {
                     if !metadata_allowed {
                         return Ok(Fetched::AwaitingConsent);
                     }
-                    store.fetch_torrent_details(link, &cancel)?
+                    store.fetch_torrent_details(link, &cancel, dht_search)?
                 }
                 Source::File(path) => Some(store.read_torrent_file(path)?),
             };
@@ -618,7 +707,10 @@ impl Desktop {
                 Ok(Fetched::Existing(id)) => draft.existing = Some(id),
                 Ok(Fetched::AwaitingConsent) => draft.awaiting_consent = true,
                 Ok(Fetched::Cancelled) => {}
-                Err(error) => draft.error = Some(format!("{error:#}")),
+                Err(error) => match torrent::MagnetStop::of(&error) {
+                    Some(stop) => draft.stop = Some(stop),
+                    None => draft.error = Some(format!("{error:#}")),
+                },
             }
         }
         if !enabled {
@@ -678,15 +770,25 @@ impl Desktop {
                     store.add_torrent(&details, chosen, folder.as_deref(), &queue, request)
                 })
             }
-            (_, _, Some(link)) if draft.error.is_none() && draft.existing.is_none() => {
+            (_, _, Some(link))
+                if draft.error.is_none() && draft.existing.is_none() && draft.stop.is_none() =>
+            {
                 // The search must end first, or the new download could start while the
                 // helper still holds this torrent under the search's name.
                 draft.cancel.cancel();
                 draft.cancel = CancellationToken::new();
                 let search = draft.fetch.take();
+                // Only a yes given in this window, for this link, goes with the download.
+                let dht_search = draft.dht_search;
                 background_io::Task::spawn(Some(ctx.clone()), move || {
                     drop(search);
-                    store.add_magnet_for_later(&link, folder.as_deref(), &queue, request)
+                    store.add_magnet_for_later(
+                        &link,
+                        folder.as_deref(),
+                        &queue,
+                        request,
+                        dht_search,
+                    )
                 })
             }
             _ => return,
@@ -714,6 +816,108 @@ impl Desktop {
                 self.force_refresh();
             }
             Err(error) => self.form_error = Some(format!("{error:#}")),
+        }
+    }
+
+    /// Explains why a magnet with no tracker can't go on, and offers what can. Nothing here
+    /// searches: only "Search the DHT" or "Search again", clicked by the person, does.
+    fn magnet_stop(
+        ui: &mut egui::Ui,
+        p: Palette,
+        stop: torrent::MagnetStop,
+    ) -> Option<MagnetAction> {
+        use torrent::MagnetStop;
+        let (title, text, color) = match stop {
+            MagnetStop::NeedsConsent => (
+                tr("This magnet link has no tracker"),
+                tr(
+                    "To find it, the app has to ask the public DHT network. Computers there will see which torrent you want and your IP address. Torrents from private sites must not be found this way: use the site's .torrent file instead.",
+                ),
+                p.blue,
+            ),
+            MagnetStop::DhtOff => (
+                tr("This magnet link has no tracker"),
+                tr(
+                    "Finding peers without a tracker (DHT) is off in Preferences, so this magnet can't be searched.",
+                ),
+                p.blue,
+            ),
+            MagnetStop::Private => (
+                tr("This is a private torrent"),
+                tr(
+                    "It may only use its own site's tracker, so the search stopped. Open the .torrent file from that site.",
+                ),
+                p.warning,
+            ),
+            MagnetStop::NothingFound => (
+                tr("No one shared this torrent's file list"),
+                tr(
+                    "The DHT search stopped after 10 minutes. Try again later, or open the .torrent file.",
+                ),
+                p.warning,
+            ),
+        };
+        let mut action = None;
+        egui::Frame::new()
+            .stroke(egui::Stroke::new(1.0, color))
+            .corner_radius(6)
+            .inner_margin(10)
+            .show(ui, |ui| {
+                ui.set_min_width(ui.available_width());
+                ui.label(RichText::new(title).strong());
+                ui.label(RichText::new(text).small().color(p.muted));
+                ui.add_space(4.0);
+                ui.horizontal_wrapped(|ui| {
+                    match stop {
+                        MagnetStop::NeedsConsent => {
+                            if ui.button(tr("Search the DHT")).clicked() {
+                                action = Some(MagnetAction::Search);
+                            }
+                        }
+                        MagnetStop::NothingFound => {
+                            if ui.button(tr("Search again")).clicked() {
+                                action = Some(MagnetAction::Search);
+                            }
+                        }
+                        MagnetStop::DhtOff => {
+                            if ui.button(tr("Open Preferences")).clicked() {
+                                action = Some(MagnetAction::Preferences);
+                            }
+                        }
+                        MagnetStop::Private => {}
+                    }
+                    if ui.button(tr("Open torrent file…")).clicked() {
+                        action = Some(MagnetAction::OpenFile);
+                    }
+                });
+            });
+        action
+    }
+
+    fn apply_magnet_action(&mut self, action: MagnetAction) {
+        match action {
+            MagnetAction::Search => {
+                if let Some(draft) = &mut self.torrents.draft {
+                    // The next frame starts the search, now with the person's yes.
+                    draft.stop = None;
+                    draft.error = None;
+                    draft.dht_search = true;
+                }
+            }
+            MagnetAction::Preferences => {
+                self.forget_torrent_draft();
+                self.dialog = None;
+                self.open_preferences_window();
+                if let Some(window) = &mut self.preferences_window {
+                    window.category = preferences_window::Category::Torrents;
+                }
+            }
+            MagnetAction::OpenFile => {
+                self.forget_torrent_draft();
+                self.dialog = None;
+                self.url.clear();
+                self.open_torrent_file();
+            }
         }
     }
 
@@ -748,6 +952,7 @@ impl Desktop {
         let (mut cancel, mut submit, mut turn_on, mut proxy, mut load_files) =
             (false, false, false, false, false);
         let mut show = None;
+        let mut magnet_action = None;
         let wide = self
             .torrents
             .draft
@@ -800,6 +1005,8 @@ impl Desktop {
                     if ui.button(tr("Show it")).clicked() {
                         show = Some(id.clone());
                     }
+                } else if let Some(stop) = draft.stop {
+                    magnet_action = Self::magnet_stop(ui, p, stop);
                 } else if let Some(error) = &draft.error {
                     if error.contains(PROXY_MESSAGE) {
                         Self::warning(ui, p, tr("Torrents can't start while a proxy is on"), tr(PROXY_MESSAGE));
@@ -861,21 +1068,27 @@ impl Desktop {
                         );
                     }
                 } else {
+                    let searching = draft.dht_search;
                     ui.horizontal(|ui| {
                         ui.add(egui::Spinner::new().size(14.0));
                         let seconds = draft.started.elapsed().as_secs();
                         ui.label(format!(
                             "{} {}:{:02}",
-                            tr("Getting file list…"),
+                            if searching {
+                                tr("Searching the DHT…")
+                            } else {
+                                tr("Getting file list…")
+                            },
                             seconds / 60,
                             seconds % 60
                         ));
                     });
-                    ui.label(
-                        RichText::new(tr("The file list comes from other people, so it can take a while. You can leave and choose later."))
-                            .small()
-                            .color(p.muted),
-                    );
+                    let note = if searching {
+                        tr("Nothing about you is announced until the file list confirms a public torrent. The search stops after 10 minutes.")
+                    } else {
+                        tr("The file list comes from other people, so it can take a while. You can leave and choose later.")
+                    };
+                    ui.label(RichText::new(note).small().color(p.muted));
                 }
                 ui.add_space(8.0);
                 ui.columns(2, |columns| {
@@ -981,6 +1194,8 @@ impl Desktop {
             self.forget_torrent_draft();
             self.dialog = None;
             self.open_proxy();
+        } else if let Some(action) = magnet_action {
+            self.apply_magnet_action(action);
         } else if let Some(id) = show {
             self.forget_torrent_draft();
             self.url.clear();
@@ -1087,7 +1302,6 @@ impl Desktop {
             ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
                 let enabled = !choice.picker.chosen_indices().is_empty();
                 start = form_dialog::primary_enabled(ui, enabled, tr("Start download")).clicked();
-                cancel |= form_dialog::secondary_button(ui, tr("Cancel")).clicked();
             });
         });
         if start {
@@ -1165,7 +1379,7 @@ mod tests {
                 "magnet:?xt=urn:btih:1111111111111111111111111111111111111111&dn=Offline%20fixture";
             let job = duplicate.then(|| {
                 app.store
-                    .add_magnet_for_later(link, None, "main", Uuid::new_v4().to_string())
+                    .add_magnet_for_later(link, None, "main", Uuid::new_v4().to_string(), false)
                     .unwrap()
             });
             app.store
@@ -1285,8 +1499,26 @@ mod tests {
         click(&mut app, &ctx, "Preferences");
         click(&mut app, &ctx, "Torrents");
         click(&mut app, &ctx, "Torrent downloads");
-        click(&mut app, &ctx, "Cancel");
+        click(&mut app, &ctx, "×");
         assert!(!app.store.torrent_settings().unwrap().enabled);
+    }
+
+    #[test]
+    fn choose_files_closes_through_its_header_without_a_cancel_button() {
+        let (_temp, mut app, ctx) = fixture();
+        app.torrents.choice = Some(Choice {
+            id: "sample".into(),
+            name: "Sample".into(),
+            picker: sample(),
+        });
+        app.dialog = Some(Dialog::TorrentChoice);
+        let size = egui::vec2(1080.0, 800.0);
+        frame(&mut app, &ctx, size, vec![]);
+        let output = frame(&mut app, &ctx, size, vec![]);
+        assert!(shown(&output, "Choose files") && shown(&output, "Start download"));
+        assert!(!shown(&output, "Cancel"), "The header × already closes it");
+        click(&mut app, &ctx, "×");
+        assert!(app.dialog.is_none() && app.torrents.choice.is_none());
     }
 
     #[test]

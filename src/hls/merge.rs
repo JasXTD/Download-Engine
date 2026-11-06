@@ -6,10 +6,13 @@ use crate::{
 };
 use anyhow::{Context, Result, ensure};
 use sha2::{Digest, Sha256};
+#[cfg(windows)]
+use std::io::Read;
+#[cfg(any(windows, debug_assertions, test))]
+use std::path::PathBuf;
 use std::{
     fs::File,
-    io::Read,
-    path::{Path, PathBuf},
+    path::Path,
     process::{Command, Stdio},
     time::{Duration, Instant},
 };
@@ -25,13 +28,32 @@ const FFMPEG_SHA256: &str = match option_env!("DOWNLOAD_ENGINE_FFMPEG_SHA256") {
 };
 const MERGE_TIMEOUT: Duration = Duration::from_secs(30 * 60);
 
-pub(super) struct Helper {
+#[cfg(unix)]
+mod unix_program;
+
+pub(crate) struct Helper {
+    #[cfg(windows)]
     path: PathBuf,
     _folders: Vec<File>,
+    #[cfg(windows)]
     _program: File,
+    #[cfg(unix)]
+    program: std::sync::Arc<unix_program::Program>,
 }
 impl Helper {
-    pub(super) async fn checked(cancel: &CancellationToken) -> Result<Self> {
+    /// Keep this helper alive until the command finishes. Unix commands also
+    /// own their private verified snapshot, including when spawn fails.
+    pub(crate) fn command(&self) -> Command {
+        #[cfg(windows)]
+        {
+            Command::new(&self.path)
+        }
+        #[cfg(unix)]
+        {
+            self.program.command()
+        }
+    }
+    pub(crate) async fn checked(cancel: &CancellationToken) -> Result<Self> {
         let cancel = cancel.clone();
         tokio::task::spawn_blocking(move || {
             #[allow(unused_mut)]
@@ -61,27 +83,38 @@ impl Helper {
         let folders = download_file::guard_parents(path).context(
             "The bundled media merger is missing. Repair or re-extract Download Engine.",
         )?;
-        let mut program = download_file::read_completed(path).context(
+        let program = download_file::read_completed(path).context(
             "The bundled media merger is missing. Repair or re-extract Download Engine.",
         )?;
-        let mut hash = Sha256::new();
-        let mut buffer = vec![0; 256 * 1024];
-        loop {
-            ensure!(!cancel.is_cancelled(), "HLS merge cancelled");
-            let n = program.read(&mut buffer)?;
-            if n == 0 {
-                break;
+        #[cfg(windows)]
+        let mut program = program;
+        #[cfg(windows)]
+        {
+            let mut hash = Sha256::new();
+            let mut buffer = vec![0; 256 * 1024];
+            loop {
+                ensure!(!cancel.is_cancelled(), "HLS merge cancelled");
+                let n = program.read(&mut buffer)?;
+                if n == 0 {
+                    break;
+                }
+                hash.update(&buffer[..n]);
             }
-            hash.update(&buffer[..n]);
+            ensure!(
+                format!("{:x}", hash.finalize()) == FFMPEG_SHA256,
+                "The bundled media merger changed. Repair or re-extract Download Engine before downloading separate tracks."
+            );
         }
-        ensure!(
-            format!("{:x}", hash.finalize()) == FFMPEG_SHA256,
-            "The bundled media merger changed. Repair or re-extract Download Engine before downloading separate tracks."
-        );
+        #[cfg(unix)]
+        let program = unix_program::Program::verified(program, FFMPEG_SHA256, cancel)?;
         Ok(Self {
+            #[cfg(windows)]
             path: path.to_owned(),
             _folders: folders,
+            #[cfg(windows)]
             _program: program,
+            #[cfg(unix)]
+            program,
         })
     }
 }
@@ -154,7 +187,7 @@ async fn finish_inner(
         None
     };
     let mut command = command(
-        &helper.path,
+        helper.command(),
         paths[0],
         paths[1],
         download,
@@ -166,7 +199,7 @@ async fn finish_inner(
         .activity
         .set(&job.id, crate::transfer_activity::Phase::Merging);
     let mut output = tokio::task::spawn_blocking(move || {
-        // These handles prevent replacement/writes until the child has exited.
+        // Retain the verified program and input guards until the child exits.
         let _guards = (helper, video_file, audio_file);
         run(
             &mut command,
@@ -263,14 +296,13 @@ async fn assemble_track(
 }
 
 fn command(
-    executable: &Path,
+    mut cmd: Command,
     video: &Path,
     audio: &Path,
     download: &Download,
     max_output: u64,
     aac_start: Option<u64>,
 ) -> Command {
-    let mut cmd = Command::new(executable);
     cmd.current_dir(video.parent().unwrap())
         .env_remove("FFREPORT")
         .args([
@@ -377,6 +409,28 @@ fn run(
     timeout: Duration,
     max_output: u64,
 ) -> Result<()> {
+    run_inner(command, output, cancel, timeout, max_output, false)
+}
+
+pub(crate) fn run_media(
+    command: &mut Command,
+    output: &File,
+    cancel: &CancellationToken,
+    max_output: u64,
+) -> Result<()> {
+    // FFmpeg diagnostics can contain decrypted bytes. Extension automation can
+    // read job errors, so never expose its stderr from a provider processor.
+    run_inner(command, output, cancel, MERGE_TIMEOUT, max_output, true)
+}
+
+fn run_inner(
+    command: &mut Command,
+    output: &File,
+    cancel: &CancellationToken,
+    timeout: Duration,
+    max_output: u64,
+    redact: bool,
+) -> Result<()> {
     command
         .stdin(Stdio::null())
         .stdout(output.try_clone()?)
@@ -409,6 +463,11 @@ fn run(
     let (message, _) = stderr
         .recv_timeout(Duration::from_secs(2))
         .context("Merger output did not close")??;
+    if !status.success() && redact {
+        anyhow::bail!(
+            "Could not mux the media tracks. They may be damaged or incompatible with the selected container."
+        );
+    }
     ensure!(
         status.success(),
         "Could not merge the selected audio and video. The streams may be damaged or incompatible with MP4. {}",

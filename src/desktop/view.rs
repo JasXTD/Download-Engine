@@ -1110,7 +1110,8 @@ impl Desktop {
                         } else if job.status == Status::Queued && !queue_running {
                             ui.label(tr("Waiting for this queue to start."));
                         }
-                        if let Some(error) = &job.error {
+                        // The app's own messages are translated; a server's text stays as sent.
+                        if let Some(error) = job.error.as_deref().map(tr) {
                             ui.label(error);
                         }
                     });
@@ -1326,6 +1327,7 @@ impl Desktop {
             if let Some(provider) = &mut copy.provider {
                 // Redownload keeps the reviewed code, but resolves a fresh plan.
                 provider.plan = None;
+                provider.media = None;
                 copy.server_name_pending = false;
             }
             copy.ftp.clone_from(&job.ftp);
@@ -1554,14 +1556,19 @@ impl Desktop {
                 ui.close();
             }
             let sharing = self.store.torrent_sharing(&job.id).unwrap_or(false);
-            if ui
-                .button(tr(if sharing {
-                    "Stop sharing"
-                } else {
-                    "Start sharing"
-                }))
-                .clicked()
-            {
+            // After a limit stopped it, sharing again keeps going until someone stops it.
+            let limit = (!sharing)
+                .then(|| self.store.torrent_sharing_totals(&job.id).ok())
+                .flatten()
+                .and_then(|totals| totals.stopped);
+            let label = if sharing {
+                tr("Stop sharing")
+            } else if limit.is_some() {
+                tr("Share again")
+            } else {
+                tr("Start sharing")
+            };
+            if ui.button(label).clicked() {
                 self.command(if sharing {
                     Command::StopSharing(job.id.clone())
                 } else {
@@ -1571,6 +1578,14 @@ impl Desktop {
             }
             if let Ok(Some(error)) = self.store.torrent_sharing_error(&job.id) {
                 ui.label(RichText::new(error).small());
+            }
+            if let Some(limit) = limit {
+                use download_engine::torrent::limits::Reached;
+                let reason = match limit {
+                    Reached::Ratio => tr("Sharing stopped at the ratio limit."),
+                    Reached::Time => tr("Sharing stopped at the time limit."),
+                };
+                ui.label(RichText::new(reason).small());
             }
         }
         if job.torrent.is_some()
@@ -1875,7 +1890,7 @@ impl Desktop {
                                 .unwrap_or_else(|| bytes(job.downloaded)),
                         );
                     });
-                    if let Some(error) = &job.error {
+                    if let Some(error) = job.error.as_deref().map(tr) {
                         if let Some(retry) = retry_description(
                             job,
                             self.queues
@@ -1979,7 +1994,7 @@ impl Desktop {
                                     .color(p.muted),
                             );
                         }
-                        if let Some(error) = &job.error {
+                        if let Some(error) = job.error.as_deref().map(tr) {
                             egui::ScrollArea::vertical()
                                 .id_salt("download-error")
                                 .max_height(60.0)

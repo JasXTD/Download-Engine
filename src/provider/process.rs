@@ -11,9 +11,14 @@ use std::{
 };
 use tokio_util::sync::CancellationToken;
 
-const FRAME_LIMIT: usize = 1024 * 1024;
+const FRAME_LIMIT: usize = 6 * 1024 * 1024;
 /// The first frame can hold a whole extension, and escaping can double its size.
-const INIT_FRAME_LIMIT: usize = 4 * FRAME_LIMIT;
+const INIT_FRAME_LIMIT: usize = 6 * 1024 * 1024;
+struct SegmentRequest {
+    prepare: bool,
+    stream: bool,
+    output_limit: u64,
+}
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub(crate) enum Role {
@@ -65,6 +70,9 @@ pub(crate) struct Worker {
     /// An extension's processor sees file bytes and must not reach the web. Its
     /// jobs that can reach the web read download errors, so its text stops here.
     hide_errors: bool,
+    scope: uuid::Uuid,
+    owner: uuid::Uuid,
+    handoff: Option<super::handoff::Keys>,
 }
 impl Drop for Worker {
     fn drop(&mut self) {
@@ -97,7 +105,50 @@ impl Worker {
         extension: Option<&crate::extensions::Context>,
         cancel: &CancellationToken,
     ) -> Result<Self> {
+        Self::start_inner(cli, paths, script, role, extension, None, cancel)
+    }
+    pub(crate) fn start_processor(
+        paths: &AppPaths,
+        script: &Script,
+        extension: Option<&crate::extensions::Context>,
+        handoff: super::handoff::Keys,
+        cancel: &CancellationToken,
+    ) -> Result<Self> {
+        let cli = std::env::current_exe()?
+            .parent()
+            .context("Missing application directory")?
+            .join(crate::paths::executable_name("de-cli"));
+        Self::start_inner(
+            &cli,
+            paths,
+            script,
+            Role::Processor,
+            extension,
+            Some(handoff),
+            cancel,
+        )
+    }
+    fn start_inner(
+        cli: &std::path::Path,
+        paths: &AppPaths,
+        script: &Script,
+        role: Role,
+        extension: Option<&crate::extensions::Context>,
+        handoff: Option<super::handoff::Keys>,
+        cancel: &CancellationToken,
+    ) -> Result<Self> {
         script.validate()?;
+        let owner = uuid::Uuid::parse_str(&script.id)?;
+        let scope = handoff
+            .as_ref()
+            .map_or_else(uuid::Uuid::new_v4, |keys| keys.scope);
+        if let Some(keys) = &handoff {
+            ensure!(
+                role == Role::Processor,
+                "Resolver cannot receive session keys"
+            );
+            keys.validate(scope, owner)?;
+        }
         let mut command = Command::new(cli);
         command
             .arg("--provider-worker")
@@ -136,9 +187,12 @@ impl Worker {
             timeout: Duration::from_secs(script.timeout_seconds.min(MAX_CALLBACK_SECONDS).into()),
             role,
             hide_errors: role == Role::Processor && extension.is_some(),
+            scope,
+            owner,
+            handoff: None,
         };
         worker.call(
-            serde_json::json!({"op":"init","source":script.body,"role":role,"script_id":script.id,"extension":extension}),
+            serde_json::json!({"op":"init","source":script.body,"role":role,"script_id":script.id,"extension":extension,"handoff_scope":scope,"handoff":handoff}),
             cancel,
         )?;
         Ok(worker)
@@ -183,17 +237,206 @@ impl Worker {
         previous: Option<&Content>,
         cancel: &CancellationToken,
     ) -> Result<Plan> {
+        match self.resolve_any(url, serde_json::to_value(previous)?, cancel)? {
+            super::Resolution::File(plan) => Ok(plan),
+            super::Resolution::Media(_) => {
+                anyhow::bail!("Provider changed from file to media. Restart this download.")
+            }
+        }
+    }
+    pub(crate) fn resolve_any(
+        &mut self,
+        url: &str,
+        previous: serde_json::Value,
+        cancel: &CancellationToken,
+    ) -> Result<super::Resolution> {
         ensure!(
             self.role == Role::Resolver,
             "Processor workers cannot resolve or refresh"
         );
-        let value = self.call(
+        self.handoff = None;
+        let mut value = self.call(
             serde_json::json!({"op":"resolve","url":url,"previous":previous}),
             cancel,
         )?;
-        let plan: Plan = serde_json::from_value(value)?;
-        plan.validate()?;
+        let plan = super::Resolution::parse(value["plan"].take())?;
+        let keys: super::handoff::Keys = serde_json::from_value(value["handoff"].take())?;
+        keys.validate(self.scope, self.owner)?;
+        keys.validate_plan(&plan)?;
+        self.handoff = Some(keys);
         Ok(plan)
+    }
+    pub(crate) fn take_handoff(&mut self) -> Result<super::handoff::Keys> {
+        self.handoff
+            .take()
+            .context("Provider must resolve before handing off keys")
+    }
+    pub(crate) fn transform_media(
+        &mut self,
+        context: &super::media::Chunk,
+        bytes: &[u8],
+        offset: u64,
+        cancel: &CancellationToken,
+    ) -> Result<Vec<u8>> {
+        ensure!(
+            self.role == Role::Processor && bytes.len() <= CHUNK_BYTES,
+            "Invalid media processor request"
+        );
+        let value = self.call(serde_json::json!({"op":"media_transform","context":context,"bytes":STANDARD.encode(bytes),"offset":offset}), cancel)?;
+        let text = value.as_str().context("Invalid provider chunk")?;
+        ensure!(
+            text.len() <= CHUNK_BYTES.div_ceil(3) * 4,
+            "Provider output exceeds 256 KiB"
+        );
+        let output = STANDARD.decode(text)?;
+        ensure!(
+            output.len() == bytes.len(),
+            "Provider must return exactly one output byte per input byte"
+        );
+        Ok(output)
+    }
+    pub(crate) fn finish_media(
+        &mut self,
+        plan: &super::media::Plan,
+        output_size: u64,
+        cancel: &CancellationToken,
+    ) -> Result<()> {
+        ensure!(
+            self.role == Role::Processor,
+            "Resolver workers cannot finish files"
+        );
+        let value = self.call(
+            serde_json::json!({"op":"media_finish","plan":plan,"size":output_size}),
+            cancel,
+        )?;
+        ensure!(value == true, "Provider finish must return true");
+        Ok(())
+    }
+    pub(crate) fn whole_segment(
+        &mut self,
+        context: &super::media::Chunk,
+        input: &mut impl Read,
+        prepare: bool,
+        output_limit: u64,
+        cancel: &CancellationToken,
+    ) -> Result<Vec<u8>> {
+        let mut result = Vec::new();
+        self.segment_to(
+            context,
+            input,
+            &mut result,
+            SegmentRequest {
+                prepare,
+                stream: false,
+                output_limit,
+            },
+            cancel,
+        )?;
+        Ok(result)
+    }
+    pub(crate) fn stream_segment(
+        &mut self,
+        context: &super::media::Chunk,
+        input: &mut impl Read,
+        output: &mut impl Write,
+        output_limit: u64,
+        cancel: &CancellationToken,
+    ) -> Result<u64> {
+        self.segment_to(
+            context,
+            input,
+            output,
+            SegmentRequest {
+                prepare: false,
+                stream: true,
+                output_limit,
+            },
+            cancel,
+        )
+    }
+    fn segment_to(
+        &mut self,
+        context: &super::media::Chunk,
+        input: &mut impl Read,
+        output: &mut impl Write,
+        request: SegmentRequest,
+        cancel: &CancellationToken,
+    ) -> Result<u64> {
+        let SegmentRequest {
+            prepare,
+            stream,
+            output_limit,
+        } = request;
+        context.validate()?;
+        ensure!(
+            self.role == Role::Processor
+                && (stream || context.size <= super::media::MAX_SEGMENT_INPUT as u64),
+            "Invalid whole-segment request"
+        );
+        ensure!(
+            if prepare {
+                output_limit == 0
+            } else {
+                output_limit > 0
+                    && output_limit
+                        <= if stream {
+                            super::media::MAX_STREAM_OUTPUT
+                        } else {
+                            super::media::MAX_SEGMENT_OUTPUT as u64
+                        }
+            },
+            "Invalid segment output allowance"
+        );
+        self.call(
+            serde_json::json!({"op":"segment_begin","context":context,"prepare":prepare,"stream":stream,"output_limit":output_limit}),
+            cancel,
+        )?;
+        let mut buffer = vec![0; CHUNK_BYTES];
+        let mut offset = 0;
+        while offset < context.size {
+            let count = (context.size - offset).min(CHUNK_BYTES as u64) as usize;
+            input.read_exact(&mut buffer[..count])?;
+            self.call(
+                serde_json::json!({"op":"segment_feed","bytes":STANDARD.encode(&buffer[..count])}),
+                cancel,
+            )?;
+            offset += count as u64;
+        }
+        let length = self
+            .call(serde_json::json!({"op":"segment_run"}), cancel)?
+            .as_u64()
+            .context("Missing segment output size")?;
+        ensure!(
+            if prepare {
+                length == 0
+            } else {
+                length > 0 && length <= output_limit
+            },
+            "Invalid segment output size"
+        );
+        let mut written = 0;
+        while written < length {
+            let value = self.call(
+                serde_json::json!({"op":"segment_read","offset":written}),
+                cancel,
+            )?;
+            let encoded = value.as_str().context("Invalid segment output")?;
+            ensure!(
+                encoded.len() <= CHUNK_BYTES.div_ceil(3) * 4,
+                "Segment output chunk exceeds limit"
+            );
+            let bytes = STANDARD.decode(encoded)?;
+            ensure!(
+                !bytes.is_empty()
+                    && bytes.len() <= CHUNK_BYTES
+                    && written + bytes.len() as u64 <= length,
+                "Invalid segment output chunk"
+            );
+            ensure!(!cancel.is_cancelled(), "Provider cancelled");
+            output.write_all(&bytes)?;
+            written += bytes.len() as u64;
+        }
+        Ok(written)
     }
     pub(crate) fn transform(
         &mut self,
@@ -251,6 +494,9 @@ mod tests {
                 timeout: Duration::from_secs(5),
                 role: Role::Processor,
                 hide_errors,
+                scope: uuid::Uuid::new_v4(),
+                owner: uuid::Uuid::new_v4(),
+                handoff: None,
             };
             replies
                 .send(Ok(serde_json::json!({"error":"file bytes"})))

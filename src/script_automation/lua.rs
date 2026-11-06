@@ -295,7 +295,7 @@ pub fn execute_reader_job(
         store.set(name, refuse()?)?;
     }
     xd.set("store", store)?;
-    install_fetch(&lua, &xd, fetch)?;
+    install_fetch(&lua, &xd, extension.is_none_or(|e| e.http_sessions), fetch)?;
     lua.globals().set("xd", xd)?;
     let value: Value = lua
         .load(source)
@@ -312,45 +312,128 @@ pub fn execute_reader_job(
 pub(crate) fn install_fetch(
     lua: &Lua,
     xd: &Table,
-    mut fetch: impl FnMut(FetchRequest) -> Result<FetchReply> + 'static,
+    allow_sessions: bool,
+    fetch: impl FnMut(FetchRequest) -> Result<FetchReply> + 'static,
 ) -> Result<()> {
-    xd.set(
-        "fetch",
-        lua.create_function_mut(move |lua, (url, options): (String, Option<Table>)| {
-            let mut request = FetchRequest {
-                url,
-                ..Default::default()
-            };
-            if let Some(options) = options {
-                for pair in options.pairs::<String, Value>() {
-                    let (key, value) = pair?;
-                    match (key.as_str(), value) {
-                        ("method", Value::String(v)) => {
-                            request.method = Some(v.to_str()?.to_owned())
-                        }
-                        ("body", Value::String(v)) => request.body = Some(v.to_str()?.to_owned()),
-                        ("headers", Value::Table(headers)) => {
-                            for header in headers.pairs::<String, String>() {
-                                request.headers.push(header?);
+    if allow_sessions {
+        let mut created = 0;
+        xd.set(
+            "http_session",
+            lua.create_function_mut(move |lua, (origin, options): (String, Option<Table>)| {
+                if created >= 16 {
+                    return Err(mlua::Error::runtime(
+                        "At most 16 HTTP sessions may be created per run",
+                    ));
+                }
+                let mut cookies = std::collections::BTreeMap::new();
+                let mut headers = std::collections::BTreeMap::new();
+                if let Some(options) = options {
+                    for pair in options.pairs::<String, Table>() {
+                        let (key, values) = pair?;
+                        let (target, limit) = match key.as_str() {
+                            "cookies" => (&mut cookies, 50),
+                            "headers" => (&mut headers, 32),
+                            _ => return Err(mlua::Error::runtime("Unknown HTTP session option")),
+                        };
+                        for pair in values.pairs::<String, String>() {
+                            if target.len() >= limit {
+                                return Err(mlua::Error::runtime("Too many HTTP session values"));
                             }
-                        }
-                        ("method" | "body" | "headers", _) => {
-                            return Err(mlua::Error::runtime(format!(
-                                "xd.fetch option {key} has the wrong type"
-                            )));
-                        }
-                        _ => {
-                            return Err(mlua::Error::runtime(format!(
-                                "Unknown xd.fetch option: {key}"
-                            )));
+                            let (name, value) = pair?;
+                            target.insert(name, value);
                         }
                     }
                 }
-            }
-            let reply = fetch(request).map_err(mlua::Error::external)?;
-            to_lua(lua, &reply)
-        })?,
-    )?;
+                let session = super::HttpSession::new(&origin, cookies, headers)
+                    .map_err(mlua::Error::external)?;
+                created += 1;
+                lua.create_userdata(session)
+            })?,
+        )?;
+    }
+    if let Value::Function(supports) = xd.get::<Value>("supports")? {
+        xd.set(
+            "supports",
+            lua.create_function(move |_, name: String| {
+                if name == "xd.http_session" {
+                    Ok(allow_sessions)
+                } else {
+                    supports.call::<bool>(name)
+                }
+            })?,
+        )?;
+    }
+    // Both entry points share the same host policy, cookies and request budget.
+    let fetch = std::rc::Rc::new(std::cell::RefCell::new(fetch));
+    for (name, binary) in [("fetch", false), ("fetch_bytes", true)] {
+        let fetch = fetch.clone();
+        xd.set(
+            name,
+            lua.create_function_mut(move |lua, (url, options): (String, Option<Table>)| {
+                let mut request = FetchRequest {
+                    url,
+                    ..Default::default()
+                };
+                if let Some(options) = options {
+                    for pair in options.pairs::<String, Value>() {
+                        let (key, value) = pair?;
+                        match (key.as_str(), value) {
+                            ("method", Value::String(v)) => {
+                                request.method = Some(v.to_str()?.to_owned())
+                            }
+                            ("body", Value::String(v)) => {
+                                if !binary {
+                                    v.to_str()?; // Preserve the text API's UTF-8 contract.
+                                }
+                                request.body = Some(v.as_bytes().to_vec());
+                            }
+                            ("headers", Value::Table(headers)) => {
+                                for header in headers.pairs::<String, String>() {
+                                    request.headers.push(header?);
+                                }
+                            }
+                            ("session", Value::UserData(session)) if allow_sessions => {
+                                request.session=Some(session.borrow::<super::HttpSession>()?.clone());
+                            }
+                            ("session", _) => {
+                                return Err(mlua::Error::runtime("An HTTP session requires permission and an xd.http_session handle"));
+                            }
+                            ("method" | "body" | "headers", _) => {
+                                return Err(mlua::Error::runtime(format!(
+                                    "xd.fetch option {key} has the wrong type"
+                                )));
+                            }
+                            _ => {
+                                return Err(mlua::Error::runtime(format!(
+                                    "Unknown xd.fetch option: {key}"
+                                )));
+                            }
+                        }
+                    }
+                }
+                let reply = (fetch.borrow_mut())(request).map_err(mlua::Error::external)?;
+                let result = lua.create_table()?;
+                result.set("status", reply.status)?;
+                result.set("url", reply.url)?;
+                result.set(
+                    "headers",
+                    to_lua(
+                        lua,
+                        &serde_json::to_value(reply.headers).map_err(mlua::Error::external)?,
+                    )?,
+                )?;
+                result.set(
+                    "body",
+                    if binary {
+                        lua.create_string(&reply.body)?
+                    } else {
+                        lua.create_string(String::from_utf8_lossy(&reply.body).as_bytes())?
+                    },
+                )?;
+                Ok(result)
+            })?,
+        )?;
+    }
     Ok(())
 }
 
@@ -449,6 +532,23 @@ mod tests {
         assert_eq!(reading.items.len(), 2);
         assert_eq!(reading.items[0].url, "https://example.com/one.zip");
         assert_eq!(reading.items[1].url, "https://example.com/files/two.pdf");
+    }
+
+    #[test]
+    fn binary_fetch_preserves_bytes_and_text_fetch_retains_utf8_behavior() {
+        let value = execute_reader(r#"
+            local bytes=string.char(0,255,128,1)
+            local response=xd.fetch_bytes(event.url,{method='POST',body=bytes})
+            assert(response.body==bytes and response.headers['x-fixture']=='yes')
+            assert(not pcall(xd.fetch,event.url,{method='POST',body=bytes}))
+            local text=xd.fetch(event.url)
+            assert(text.body==string.char(0)..string.char(239,191,189)..string.char(239,191,189)..string.char(1))
+            return {verified=true}
+        "#, &json!({"url":"https://example.invalid/"}), |request| {
+            if request.method.is_some() { assert_eq!(request.body.unwrap(), [0,255,128,1]); }
+            Ok(FetchReply { status:200,url:request.url,headers:[("x-fixture".into(),"yes".into())].into(),body:vec![0,255,128,1] })
+        }).unwrap();
+        assert_eq!(value, json!({"verified":true}));
     }
     #[test]
     fn lua_supports_functions_loops_events_and_app_commands() {
@@ -693,7 +793,7 @@ mod tests {
             request.headers,
             [("Content-Type".to_string(), "application/json".to_string())]
         );
-        assert_eq!(request.body.as_deref(), Some(r#"{"id":"a1"}"#));
+        assert_eq!(request.body.as_deref(), Some(br#"{"id":"a1"}"#.as_slice()));
         for code in [
             "xd.fetch('https://example.com/', { timeout = 5 })",
             "xd.fetch('https://example.com/', { method = 1 })",

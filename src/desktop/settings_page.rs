@@ -170,6 +170,56 @@ fn navigation(
     response
 }
 
+/// What router setup has come to, in a line under its switch. Only addresses and the port
+/// come from the helper; every word is the app's own.
+fn router_line(
+    status: Option<download_engine::torrent::RouterStatus>,
+    running: bool,
+    port: u16,
+    p: Palette,
+) -> (String, egui::Color32) {
+    use download_engine::torrent::RouterStatus;
+    if !running {
+        return (tr("Set up when the next torrent starts.").into(), p.muted);
+    }
+    match status {
+        None | Some(RouterStatus::Looking) => (tr("Looking for your router…").into(), p.blue),
+        Some(RouterStatus::Working { gateway, port }) => (
+            tf!("Router {gateway} forwards port {port} to this computer. Renewed every 30 minutes.", gateway = gateway, port = port),
+            p.accent,
+        ),
+        Some(RouterStatus::NoRouter) => (
+            tf!("No router answered. Turn on UPnP in your router, or forward port {port} yourself.", port = port),
+            p.orange,
+        ),
+        Some(RouterStatus::Taken { port, other: Some(device) }) => (
+            tf!("Port {port} is already forwarded to another device ({device}). Choose another port.", port = port, device = device),
+            p.warning,
+        ),
+        Some(RouterStatus::Taken { port, other: None }) => (
+            tf!("Port {port} is already forwarded to another device. Choose another port.", port = port),
+            p.warning,
+        ),
+        Some(RouterStatus::PermanentOnly) => (
+            tr("Your router only accepts permanent rules, which would stay open after the app closes. Nothing was changed.").into(),
+            p.orange,
+        ),
+        Some(RouterStatus::Shared { external }) => (
+            tf!("Your internet provider shares one public address between customers ({address}), so a router rule can't help. Nothing was changed.", address = external),
+            p.orange,
+        ),
+        Some(RouterStatus::Refused) => (
+            tr("Your router refused to forward the port. Nothing was changed.").into(),
+            p.warning,
+        ),
+        Some(RouterStatus::Unavailable) => (
+            tr("Router setup isn't available on this network or system.").into(),
+            p.muted,
+        ),
+        Some(RouterStatus::Failed) => (tr("Your router didn't answer properly.").into(), p.warning),
+    }
+}
+
 fn toggle(ui: &mut egui::Ui, p: Palette, title: &str, detail: &str, glyph: &str, value: &mut bool) {
     toggle_with(ui, p, title, (detail, p.muted), glyph, value);
 }
@@ -432,6 +482,25 @@ impl Desktop {
                 });
             }
             Category::Torrents => {
+                // Only read here: nothing in Preferences starts the helper or asks a router.
+                let (router, helper_running) = (
+                    self.store.torrents.router_status(),
+                    self.store.torrents.is_running(),
+                );
+                // A reviewed sample of a working router, for screenshots only.
+                #[cfg(feature = "screenshot")]
+                let (router, helper_running) = if std::env::var("IDM_EX_TEST_FEATURE").as_deref()
+                    == Ok("torrent-router-working")
+                {
+                    let gateway = std::net::Ipv4Addr::new(192, 168, 1, 1);
+                    let working = download_engine::torrent::RouterStatus::Working {
+                        gateway,
+                        port: 6881,
+                    };
+                    (Some(working), true)
+                } else {
+                    (router, helper_running)
+                };
                 let torrents = &mut state.torrents;
                 section(ui, p, tr("TORRENTS"), |ui| {
                     toggle(
@@ -469,6 +538,49 @@ impl Desktop {
                             toggle(ui, p, tr("Seed completed torrents"),
                                 tr("Continue sharing verified files after downloading. Up to four at once."),
                                 "\u{e898}", &mut torrents.seed_completed);
+                        });
+                        ui.add_enabled_ui(torrents.upload && torrents.seed_completed, |ui| {
+                            let ratio = row(ui, p, tr("Stop sharing at ratio"),
+                                tr("Uploaded ÷ size of the chosen files."), "\u{e898}", "");
+                            ui.new_child(egui::UiBuilder::new()
+                                .max_rect(trailing_slot(ratio.rect, 130.0))
+                                .layout(Layout::right_to_left(Align::Center)))
+                                .horizontal(|ui| {
+                                    egui::ComboBox::from_id_salt("torrent-share-ratio")
+                                        .width(130.0)
+                                        .selected_text(share_ratio_choice(torrents.share_ratio))
+                                        .show_ui(ui, |ui| {
+                                            for choice in std::iter::once(None)
+                                                .chain(download_engine::torrent::limits::RATIOS.map(Some))
+                                            {
+                                                ui.selectable_value(&mut torrents.share_ratio,
+                                                    choice, share_ratio_choice(choice));
+                                            }
+                                        });
+                                });
+                            let time = row(ui, p, tr("Stop sharing after"),
+                                tr("Counts only time spent sharing."), "\u{e823}", "");
+                            ui.new_child(egui::UiBuilder::new()
+                                .max_rect(trailing_slot(time.rect, 130.0))
+                                .layout(Layout::right_to_left(Align::Center)))
+                                .horizontal(|ui| {
+                                    egui::ComboBox::from_id_salt("torrent-share-time")
+                                        .width(130.0)
+                                        .selected_text(sharing_time_choice(torrents.share_seconds))
+                                        .show_ui(ui, |ui| {
+                                            for choice in std::iter::once(None)
+                                                .chain(download_engine::torrent::limits::TIMES.map(Some))
+                                            {
+                                                ui.selectable_value(&mut torrents.share_seconds,
+                                                    choice, sharing_time_choice(choice));
+                                            }
+                                        });
+                                });
+                            ui.horizontal(|ui| {
+                                ui.add_space(54.0);
+                                ui.label(RichText::new(tr("Sharing stops at whichever limit comes first. Files are never deleted.")).size(11.0).color(p.muted));
+                            });
+                            ui.add_space(8.0);
                         });
                         let limit = row(
                             ui,
@@ -508,10 +620,18 @@ impl Desktop {
                     });
                     section(ui, p, tr("FINDING PEERS"), |ui| {
                         let mut incoming = torrents.incoming_port.is_some();
-                        toggle(ui, p, tr("Allow incoming connections"),
-                            tr("Let peers connect to this app. Router and firewall rules are not changed."),
-                            "\u{e716}", &mut incoming);
+                        let detail = if torrents.upnp {
+                            tr("Let peers connect to this app. Firewall rules are not changed.")
+                        } else {
+                            tr("Let peers connect to this app. Router and firewall rules are not changed.")
+                        };
+                        toggle(ui, p, tr("Allow incoming connections"), detail, "\u{e716}", &mut incoming);
                         torrents.incoming_port = incoming.then(|| torrents.incoming_port.unwrap_or(6881));
+                        // Turning the port off turns router setup off too, so turning the
+                        // port on later never brings router setup back by itself.
+                        if !incoming {
+                            torrents.upnp = false;
+                        }
                         if let Some(port) = &mut torrents.incoming_port {
                             let port_row = row(ui, p, tr("Incoming TCP port"), "1024–65535", "\u{e716}", "");
                             ui.new_child(egui::UiBuilder::new()
@@ -519,9 +639,24 @@ impl Desktop {
                                 .layout(Layout::right_to_left(Align::Center)))
                                 .add_sized(vec2(130.0, 28.0), egui::DragValue::new(port).range(1024..=65535).speed(1));
                             #[cfg(feature = "screenshot")]
-                            if std::env::var("IDM_EX_TEST_FEATURE").as_deref() == Ok("torrent-sharing-network") {
+                            if std::env::var("IDM_EX_TEST_FEATURE").is_ok_and(|mode| {
+                                matches!(mode.as_str(), "torrent-sharing-network" | "torrent-router-preferences" | "torrent-router-working")
+                            }) {
                                 ui.scroll_to_rect(port_row.rect, Some(Align::Center));
                             }
+                        }
+                        ui.add_enabled_ui(torrents.incoming_port.is_some(), |ui| {
+                            toggle(ui, p, tr("Set up my router (UPnP)"),
+                                tr("Asks your router to forward this port while torrents run, then removes it."),
+                                "\u{e839}", &mut torrents.upnp);
+                        });
+                        if let (Some(port), true) = (torrents.incoming_port, torrents.upnp) {
+                            let (text, color) = router_line(router, helper_running, port, p);
+                            ui.horizontal_wrapped(|ui| {
+                                ui.add_space(54.0);
+                                ui.label(RichText::new(text).size(11.0).color(color));
+                            });
+                            ui.add_space(8.0);
                         }
                         toggle(
                             ui,

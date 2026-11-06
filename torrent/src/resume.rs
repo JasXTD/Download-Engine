@@ -78,6 +78,14 @@ pub fn save(
     fs::rename(&temporary, &path)
 }
 
+/// Removes the record, so that the next start reads every file. A missing record is fine.
+pub fn forget(state_dir: &Path, info_hash: Id20) -> io::Result<()> {
+    match fs::remove_file(path_for(state_dir, info_hash)) {
+        Err(error) if error.kind() != io::ErrorKind::NotFound => Err(error),
+        _ => Ok(()),
+    }
+}
+
 /// Returns the saved pieces, if the record is good and the files haven't changed.
 pub fn load(state_dir: &Path, meta: &TorrentMeta, storage: &Storage) -> Option<Bitfield> {
     let bytes = fs::read(path_for(state_dir, meta.info_hash)).ok()?;

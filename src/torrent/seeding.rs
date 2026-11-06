@@ -1,12 +1,112 @@
 //! Completed jobs keep their completed status. Sharing has its own durable
 //! opt-in and bounded workers, so it never occupies a download queue slot.
+use super::limits::{self, Limits, Reached, Shared};
 use super::*;
+use crate::transfer_activity::SharingView;
 use std::collections::{HashMap, HashSet};
+use std::num::NonZeroU64;
 use tokio::task::JoinSet;
 
 const MAX_SEEDS: usize = 4;
+/// Totals reach the database at least this often while sharing, and at every stop.
+const SAVE_TOTALS_EVERY: Duration = Duration::from_secs(60);
+/// How often a running share looks for changed limits in Preferences.
+const READ_LIMITS_EVERY: Duration = Duration::from_secs(5);
+
+/// What one torrent has shared so far, added up across every run.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct SharingTotals {
+    pub uploaded: u64,
+    pub shared_secs: u64,
+    /// Which limit stopped sharing, until it starts again.
+    pub stopped: Option<Reached>,
+    /// Set by sharing again after a limit stopped it: then only a person stops it.
+    pub unlimited: bool,
+}
+
+fn as_count(value: u64) -> Result<i64> {
+    i64::try_from(value).context("The sharing totals are too large to save")
+}
+
+fn save_totals(
+    conn: &rusqlite::Connection,
+    id: &str,
+    uploaded: u64,
+    shared_secs: u64,
+    stopped: Option<Reached>,
+) -> Result<()> {
+    conn.execute(
+        "INSERT INTO torrent_sharing_totals(job_id,uploaded,shared_secs,stopped) VALUES(?1,?2,?3,?4)
+         ON CONFLICT(job_id) DO UPDATE SET uploaded=excluded.uploaded,
+         shared_secs=excluded.shared_secs, stopped=excluded.stopped",
+        params![
+            id,
+            as_count(uploaded)?,
+            as_count(shared_secs)?,
+            stopped.map(Reached::as_str)
+        ],
+    )?;
+    Ok(())
+}
+
+/// Saves the totals and stops sharing in one step, so a limit can't be reached twice or
+/// leave sharing switched on.
+fn stop_at_limit(store: &Store, id: &str, shared: Shared, reached: Reached) -> Result<()> {
+    let mut conn = store.connect()?;
+    let tx = conn.transaction()?;
+    save_totals(&tx, id, shared.uploaded, shared.shared_secs, Some(reached))?;
+    tx.execute(
+        "UPDATE torrent_sharing SET enabled=0,error=NULL WHERE job_id=?1",
+        [id],
+    )?;
+    tx.commit()?;
+    Ok(())
+}
 
 impl Store {
+    pub fn torrent_sharing_totals(&self, id: &str) -> Result<SharingTotals> {
+        let row = self
+            .connect()?
+            .query_row(
+                "SELECT uploaded,shared_secs,stopped,unlimited FROM torrent_sharing_totals WHERE job_id=?1",
+                [id],
+                |row| {
+                    Ok((
+                        row.get::<_, i64>(0)?,
+                        row.get::<_, i64>(1)?,
+                        row.get::<_, Option<String>>(2)?,
+                        row.get::<_, bool>(3)?,
+                    ))
+                },
+            )
+            .optional()?;
+        let Some((uploaded, shared_secs, stopped, unlimited)) = row else {
+            return Ok(SharingTotals::default());
+        };
+        let invalid = || anyhow::anyhow!("Invalid saved sharing totals");
+        Ok(SharingTotals {
+            uploaded: u64::try_from(uploaded).map_err(|_| invalid())?,
+            shared_secs: u64::try_from(shared_secs).map_err(|_| invalid())?,
+            stopped: stopped
+                .map(|text| Reached::parse(&text).ok_or_else(invalid))
+                .transpose()?,
+            unlimited,
+        })
+    }
+
+    /// Uploads while downloading count toward the share ratio too.
+    pub(crate) fn add_torrent_uploaded(&self, id: &str, bytes: u64) -> Result<()> {
+        if bytes == 0 {
+            return Ok(());
+        }
+        self.connect()?.execute(
+            "INSERT INTO torrent_sharing_totals(job_id,uploaded,shared_secs) VALUES(?1,?2,0)
+             ON CONFLICT(job_id) DO UPDATE SET uploaded=uploaded+excluded.uploaded",
+            params![id, as_count(bytes)?],
+        )?;
+        Ok(())
+    }
+
     pub fn torrent_sharing(&self, id: &str) -> Result<bool> {
         Ok(self
             .connect()?
@@ -54,7 +154,17 @@ impl Store {
                 "The antivirus reported a threat; scan the files again before sharing"
             );
         }
-        self.connect()?.execute("INSERT INTO torrent_sharing(job_id,enabled,error) VALUES(?1,?2,NULL) ON CONFLICT(job_id) DO UPDATE SET enabled=excluded.enabled,error=NULL", params![id,enabled])?;
+        let mut conn = self.connect()?;
+        let tx = conn.transaction()?;
+        tx.execute("INSERT INTO torrent_sharing(job_id,enabled,error) VALUES(?1,?2,NULL) ON CONFLICT(job_id) DO UPDATE SET enabled=excluded.enabled,error=NULL", params![id,enabled])?;
+        if enabled {
+            // Sharing again after a limit stopped it is a person's choice to keep going.
+            tx.execute(
+                "UPDATE torrent_sharing_totals SET stopped=NULL,unlimited=1 WHERE job_id=?1 AND stopped IS NOT NULL",
+                [id],
+            )?;
+        }
+        tx.commit()?;
         Ok(())
     }
 }
@@ -86,6 +196,10 @@ pub(crate) struct Controller {
     allowed_after_failed_stop_all: Option<HashSet<String>>,
 }
 impl Controller {
+    /// Whether a sharing worker runs for this download.
+    pub(crate) fn is_active(&self, id: &str) -> bool {
+        self.active.contains_key(id)
+    }
     pub(crate) fn allow_start(&mut self, id: &str) {
         self.held.remove(id);
         if let Some(allowed) = &mut self.allowed_after_failed_stop_all {
@@ -274,6 +388,26 @@ async fn share(
         .as_ref()
         .context("Missing completed torrent")?;
     let files = store.torrent_files(&job.id)?;
+    let chosen_size =
+        NonZeroU64::new(files.chosen_size()).context("This torrent has nothing to share")?;
+    let totals = store.torrent_sharing_totals(&job.id)?;
+    let read_limits = || -> Result<Limits> {
+        Ok(if totals.unlimited {
+            Limits::default()
+        } else {
+            store.torrent_settings()?.sharing_limits()
+        })
+    };
+    let mut limits = read_limits()?;
+    let before = Shared {
+        uploaded: totals.uploaded,
+        chosen_size,
+        shared_secs: totals.shared_secs,
+    };
+    // A torrent can reach its ratio while it downloads. Then sharing never starts.
+    if let Some(reached) = limits::reached(before, limits) {
+        return stop_at_limit(store, &job.id, before, reached);
+    }
     let paths = completed_files(store, job)?;
     let folder = paths.first().is_some_and(|(path, _)| path != saved);
     let output = if folder {
@@ -316,35 +450,201 @@ async fn share(
     if cancel.is_cancelled() {
         return Ok(());
     }
+    let trackers = store.torrent_added_trackers(&job.id)?;
     let lease = store.torrents.lease(store)?;
+    // What this run adds to the saved totals. Time only counts once the engine shares.
+    let mut uploaded_now = 0u64;
+    let mut started: Option<Instant> = None;
+    let mut limit_stopped = false;
+    let now = |uploaded_now: u64, started: Option<Instant>| Shared {
+        uploaded: totals.uploaded.saturating_add(uploaded_now),
+        chosen_size,
+        shared_secs: totals
+            .shared_secs
+            .saturating_add(started.map_or(0, |at| at.elapsed().as_secs())),
+    };
     let result = async {
     lease
         .call(
             json!({"cmd":"add", "name":job.id, "magnet":job.url, "output":output,
         "only":files.chosen, "seed_only":true,
         "file_name":if folder { None } else { saved.file_name().and_then(|name| name.to_str()) },
-        "peers":store.torrents.test_peers()}),
+        "peers":store.torrents.test_peers(), "trackers":trackers}),
         )
         .await?;
+        started = Some(Instant::now());
         let mut tick = tokio::time::interval(STATS_EVERY);
         let mut counted = 0u64;
+        let (mut saved_at, mut limits_at) = (Instant::now(), Instant::now());
         loop {
             tokio::select! { biased; _ = cancel.cancelled() => return Ok(()), _ = tick.tick() => {} }
             limiter.check_quota().await?;
             let stats = Stats::parse(lease.call(json!({"cmd":"stats","name":job.id})).await?)?;
             if let Some(error) = stats.error { bail!("{error}"); }
+            store.torrents.set_router(stats.router);
             let traffic = stats.uploaded_bytes + stats.downloaded_bytes;
             if traffic > counted { limiter.record_payload(usize::try_from(traffic - counted)?).await?; counted = traffic; }
+            uploaded_now = uploaded_now.max(stats.uploaded_bytes);
+            if limits_at.elapsed() >= READ_LIMITS_EVERY {
+                limits = read_limits()?;
+                limits_at = Instant::now();
+            }
+            let shared = now(uploaded_now, started);
+            if let Some(reached) = limits::reached(shared, limits) {
+                stop_at_limit(store, &job.id, shared, reached)?;
+                limit_stopped = true;
+                return Ok(());
+            }
+            if saved_at.elapsed() >= SAVE_TOTALS_EVERY {
+                save_totals(&store.connect()?, &job.id, shared.uploaded, shared.shared_secs, None)?;
+                saved_at = Instant::now();
+            }
             store.activity.set(&job.id, if stats.state == "initializing" { Phase::CheckingSaved } else { Phase::Seeding });
             store.activity.set_torrent(&job.id, TorrentSnapshot { peers:stats.peers, download_speed:0,
-                upload_speed:stats.upload_bps, uploaded:stats.uploaded_bytes, file_progress:stats.file_progress.into() });
+                upload_speed:stats.upload_bps, uploaded:shared.uploaded, file_progress:stats.file_progress.into(),
+                sharing: Some(SharingView {
+                    ratio_hundredths: limits::ratio_hundredths(shared.uploaded, chosen_size),
+                    shared_secs: shared.shared_secs,
+                    limit_ratio: limits.ratio_hundredths.map(|ratio| ratio.get()),
+                    limit_seconds: limits.seconds.map(|seconds| seconds.get()),
+                }) });
+            super::details::serve(store, &lease, &job.id).await?;
         }
     }.await;
+    super::details::abandon(store, &job.id);
+    // Whatever ended this run, what it shared is kept. If that can't be saved, sharing
+    // stops with an error rather than running on without its count.
+    let kept = if limit_stopped || started.is_none() {
+        Ok(())
+    } else {
+        let shared = now(uploaded_now, started);
+        store
+            .connect()
+            .and_then(|conn| save_totals(&conn, &job.id, shared.uploaded, shared.shared_secs, None))
+    };
     let removed = lease.call(json!({"cmd":"remove","name":job.id})).await;
     if removed.is_err() {
         store.torrents.restart();
     }
     result?;
+    kept?;
     removed?;
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn enable_sharing(store: &Store) {
+        store
+            .save_torrent_settings(Settings {
+                enabled: true,
+                dht: false,
+                seed_completed: true,
+                share_ratio: Some(100),
+                ..Default::default()
+            })
+            .unwrap();
+    }
+
+    #[tokio::test]
+    async fn a_torrent_already_past_its_ratio_stops_without_starting_the_helper() {
+        let (_temp, store, job) = completed_folder_fixture();
+        enable_sharing(&store);
+        store.set_torrent_sharing(&job.id, true).unwrap();
+        // 16 bytes are chosen, and 16 went out while downloading: ratio 1.
+        store.add_torrent_uploaded(&job.id, 16).unwrap();
+        let limiter = Limiter::default();
+        let mut controller = Controller::default();
+        controller.tick(&store, &limiter, |_| false).await.unwrap();
+        let deadline = std::time::Instant::now() + Duration::from_secs(10);
+        while controller.is_active(&job.id) {
+            assert!(
+                std::time::Instant::now() < deadline,
+                "the worker never ended"
+            );
+            tokio::time::sleep(Duration::from_millis(20)).await;
+            controller.tick(&store, &limiter, |_| false).await.unwrap();
+        }
+        assert!(!store.torrent_sharing(&job.id).unwrap());
+        assert_eq!(store.torrent_sharing_error(&job.id).unwrap(), None);
+        assert_eq!(
+            store.torrent_sharing_totals(&job.id).unwrap(),
+            SharingTotals {
+                uploaded: 16,
+                shared_secs: 0,
+                stopped: Some(Reached::Ratio),
+                unlimited: false,
+            }
+        );
+        assert!(
+            !store.torrents.is_running(),
+            "nothing was started to find that out"
+        );
+    }
+
+    #[test]
+    fn sharing_again_after_a_limit_lifts_the_limit_for_that_torrent_only() {
+        let (_temp, store, job) = completed_folder_fixture();
+        enable_sharing(&store);
+        store.add_torrent_uploaded(&job.id, 40).unwrap();
+        stop_at_limit(
+            &store,
+            &job.id,
+            Shared {
+                uploaded: 40,
+                chosen_size: NonZeroU64::new(16).unwrap(),
+                shared_secs: 5,
+            },
+            Reached::Ratio,
+        )
+        .unwrap();
+        store.set_torrent_sharing(&job.id, false).unwrap();
+        assert_eq!(
+            store.torrent_sharing_totals(&job.id).unwrap().stopped,
+            Some(Reached::Ratio),
+            "stopping by hand keeps the reason"
+        );
+        store.set_torrent_sharing(&job.id, true).unwrap();
+        let totals = store.torrent_sharing_totals(&job.id).unwrap();
+        assert_eq!(totals.stopped, None);
+        assert!(totals.unlimited);
+        assert_eq!((totals.uploaded, totals.shared_secs), (40, 5));
+        // Ending and starting again by hand keeps the choice; nothing resets the totals.
+        store.set_torrent_sharing(&job.id, false).unwrap();
+        store.set_torrent_sharing(&job.id, true).unwrap();
+        assert!(store.torrent_sharing_totals(&job.id).unwrap().unlimited);
+    }
+
+    #[test]
+    fn totals_add_up_and_a_damaged_row_is_refused() {
+        let (_temp, store, job) = completed_folder_fixture();
+        assert_eq!(
+            store.torrent_sharing_totals(&job.id).unwrap(),
+            SharingTotals::default()
+        );
+        store.add_torrent_uploaded(&job.id, 7).unwrap();
+        store.add_torrent_uploaded(&job.id, 0).unwrap();
+        store.add_torrent_uploaded(&job.id, 5).unwrap();
+        assert_eq!(store.torrent_sharing_totals(&job.id).unwrap().uploaded, 12);
+        assert!(store.add_torrent_uploaded(&job.id, u64::MAX).is_err());
+        let conn = store.connect().unwrap();
+        assert!(
+            conn.execute(
+                "UPDATE torrent_sharing_totals SET uploaded=-1 WHERE job_id=?1",
+                [&job.id],
+            )
+            .is_err(),
+            "the database refuses negative totals"
+        );
+        assert!(
+            conn.execute(
+                "UPDATE torrent_sharing_totals SET stopped='forever' WHERE job_id=?1",
+                [&job.id],
+            )
+            .is_err()
+        );
+        assert_eq!(store.torrent_sharing_totals(&job.id).unwrap().uploaded, 12);
+    }
 }

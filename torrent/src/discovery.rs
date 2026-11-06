@@ -4,6 +4,7 @@ use std::collections::HashSet;
 use std::net::SocketAddr;
 use std::path::PathBuf;
 use std::sync::Arc;
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::Duration;
 
 use anyhow::Result;
@@ -12,7 +13,7 @@ use librqbit_core::hash_id::Id20;
 use librqbit_core::network::is_public_endpoint;
 use librqbit_dht::{Dht, DhtBuilder, DhtConfig, DhtPersistenceConfig, PersistentDht};
 use librqbit_tracker_comms::{
-    TorrentStatsProvider, TrackerComms, UdpTrackerClient, is_local_address,
+    TorrentStatsProvider, TrackerComms, TrackerObserver, UdpTrackerClient, is_local_address,
 };
 use parking_lot::Mutex;
 use reqwest::dns::{Addrs, Name, Resolve, Resolving};
@@ -21,6 +22,7 @@ use tokio_util::sync::CancellationToken;
 use url::{Host, Url};
 
 use crate::debug_log;
+use crate::details::TrackerBoard;
 use crate::torrent::{MAX_KNOWN_PEERS, can_reach};
 
 /// Trackers refuse an announce without a port, even when nothing is listening on it.
@@ -36,6 +38,8 @@ pub struct PeerCandidates {
     seen: Arc<Mutex<HashSet<SocketAddr>>>,
     limit: usize,
     allow_local: bool,
+    /// Counts the new addresses that came through this copy, for the status window.
+    counter: Option<Arc<AtomicUsize>>,
 }
 
 impl PeerCandidates {
@@ -60,9 +64,18 @@ impl PeerCandidates {
                 seen: Arc::new(Mutex::new(seen)),
                 limit,
                 allow_local,
+                counter: None,
             },
             rx,
         )
+    }
+
+    /// A copy that adds one to `counter` for each new address it delivers.
+    pub(crate) fn counted(&self, counter: Arc<AtomicUsize>) -> Self {
+        Self {
+            counter: Some(counter),
+            ..self.clone()
+        }
     }
 
     fn accepts(&self, addr: SocketAddr) -> bool {
@@ -78,6 +91,9 @@ impl PeerCandidates {
         // Another producer may have queued this address while we waited for space.
         if seen.len() < self.limit && seen.insert(addr) {
             slot.send(addr);
+            if let Some(counter) = &self.counter {
+                counter.fetch_add(1, Ordering::Relaxed);
+            }
         }
     }
 
@@ -151,11 +167,20 @@ pub struct Search {
     pub stats: Box<dyn TorrentStatsProvider>,
     pub found: PeerCandidates,
     pub cancel: CancellationToken,
+    /// Whether to ask the DHT as well, when the torrent allows it.
+    pub ask_dht: bool,
+    /// A magnet the person agreed to look up: the DHT may be asked before the details are
+    /// known, without announcing this computer.
+    pub search_only: bool,
+    /// Where each tracker's answers are written down for the status window.
+    pub board: Option<Arc<TrackerBoard>>,
+    /// Counts the new peers the DHT finds.
+    pub dht_found: Option<Arc<AtomicUsize>>,
 }
 
 /// Whether an address leads to this computer or its own network. A tracker address comes
 /// from a stranger, and must not make us send requests to a router or a local service.
-fn stays_local(url: &Url) -> bool {
+pub(crate) fn stays_local(url: &Url) -> bool {
     // Only web addresses have their hosts read as numbers. A udp:// one keeps plain text,
     // which the system would still read as a number, so read every host as a web address.
     let Some(web) = url
@@ -262,6 +287,20 @@ impl Discovery {
             .clone()
     }
 
+    pub fn uses_trackers(&self) -> bool {
+        self.options.use_trackers
+    }
+
+    pub fn uses_dht(&self) -> bool {
+        self.options.use_dht
+    }
+
+    /// Whether a tracker would be asked, or is refused because it leads to this computer or
+    /// its network.
+    pub(crate) fn allows_tracker(&self, url: &Url) -> bool {
+        self.options.allow_local_trackers || !stays_local(url)
+    }
+
     /// Starts looking. Peers arrive on `found` until `cancel` fires.
     pub fn start(self: &Arc<Self>, search: Search) {
         let Search {
@@ -271,6 +310,10 @@ impl Discovery {
             stats,
             found,
             cancel,
+            ask_dht,
+            search_only,
+            board,
+            dht_found,
         } = search;
         if self.options.use_trackers && !trackers.is_empty() {
             let this = self.clone();
@@ -281,9 +324,16 @@ impl Discovery {
                 };
                 let trackers: HashSet<Url> = trackers
                     .into_iter()
-                    .filter(|url| this.options.allow_local_trackers || !stays_local(url))
+                    .filter(|url| {
+                        let allowed = this.allows_tracker(url);
+                        if let (false, Some(board)) = (allowed, &board) {
+                            board.refuse(url);
+                        }
+                        allowed
+                    })
                     .collect();
                 let port = this.options.listen_port.unwrap_or(PORT_WHEN_NOT_LISTENING);
+                let observer = board.map(|board| board as Arc<dyn TrackerObserver>);
                 let stream = TrackerComms::start(
                     info_hash,
                     this.options.peer_id,
@@ -293,6 +343,7 @@ impl Discovery {
                     port,
                     this.http.clone(),
                     udp,
+                    observer,
                 );
                 if let Some(stream) = stream {
                     tokio::select! {
@@ -303,13 +354,21 @@ impl Discovery {
             });
         }
         // A private torrent's peers may only come from its own trackers.
-        if self.options.use_dht && permits_dht(private) {
+        let plan = dht_plan(private, search_only, self.options.listen_port);
+        if ask_dht
+            && self.options.use_dht
+            && let Some(announce) = plan
+        {
             let this = self.clone();
+            let found = match dht_found {
+                Some(counter) => found.counted(counter),
+                None => found,
+            };
             tokio::spawn(async move {
                 let Some(dht) = this.dht().await else {
                     return;
                 };
-                let stream = dht.get_peers(info_hash, this.options.listen_port);
+                let stream = dht.get_peers(info_hash, announce);
                 tokio::select! {
                     _ = cancel.cancelled() => {}
                     _ = drain_addresses(stream, found) => {}
@@ -323,6 +382,23 @@ fn permits_dht(private: Option<bool>) -> bool {
     private == Some(false)
 }
 
+/// Whether to ask the DHT, and the port to announce there, if any. A public torrent may
+/// announce. A magnet the person agreed to look up may only ask, until its details say
+/// public. Everything else stays off the DHT.
+fn dht_plan(
+    private: Option<bool>,
+    search_only: bool,
+    listen_port: Option<u16>,
+) -> Option<Option<u16>> {
+    if permits_dht(private) {
+        Some(listen_port)
+    } else if search_only && private.is_none() {
+        Some(None)
+    } else {
+        None
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -333,9 +409,10 @@ mod tests {
     async fn discovery_backpressures_before_draining_a_large_source() {
         let (found, mut received) = PeerCandidates::channel(std::iter::empty(), false);
         let polled = AtomicUsize::new(0);
+        // Ports stay above the service ports, which are never queued at all.
         let source = futures_util::stream::iter((1..1000).map(|port| {
             polled.fetch_add(1, Ordering::Relaxed);
-            SocketAddr::from(([1, 2, 3, 4], port))
+            SocketAddr::from(([1, 2, 3, 4], 10_000 + port))
         }));
         let mut pumping = Box::pin(drain_addresses(source, found));
         assert!(pumping.as_mut().now_or_never().is_none());
@@ -388,26 +465,26 @@ mod tests {
     #[tokio::test]
     async fn peer_exchange_drops_overflow_without_spending_the_search_budget() {
         let (found, mut received) = PeerCandidates::channel(std::iter::empty(), false);
-        for port in 1..=129 {
+        for port in 10_001..=10_129 {
             found.try_send(([1, 2, 3, 4], port).into());
         }
         assert_eq!(received.len(), 128);
-        assert_eq!(received.recv().await.unwrap().port(), 1);
-        found.try_send(([1, 2, 3, 4], 129).into());
+        assert_eq!(received.recv().await.unwrap().port(), 10_001);
+        found.try_send(([1, 2, 3, 4], 10_129).into());
         let mut ports = Vec::new();
         while let Ok(addr) = received.try_recv() {
             ports.push(addr.port());
         }
-        assert_eq!(ports, (2..=129).collect::<Vec<_>>());
+        assert_eq!(ports, (10_002..=10_129).collect::<Vec<_>>());
     }
 
     #[tokio::test]
     async fn searches_waiting_for_space_still_deduplicate_against_each_other() {
         let (found, mut received) = PeerCandidates::channel(std::iter::empty(), false);
-        for port in 1..=128 {
+        for port in 10_001..=10_128 {
             found.try_send(([1, 2, 3, 4], port).into());
         }
-        let peer = SocketAddr::from(([1, 2, 3, 4], 129));
+        let peer = SocketAddr::from(([1, 2, 3, 4], 10_129));
         let other = found.clone();
         let mut one = Box::pin(found.send(peer));
         let mut two = Box::pin(other.send(peer));
@@ -437,11 +514,54 @@ mod tests {
         assert!(received.try_recv().is_err());
     }
 
+    #[tokio::test]
+    async fn peers_on_service_ports_are_never_queued() {
+        let (found, mut received) = PeerCandidates::channel(std::iter::empty(), false);
+        // An internet-phone server, a web server and a name server, as poisoned lists name them.
+        for addr in ["66.205.236.7:5060", "93.184.216.34:80", "93.184.216.34:53"] {
+            assert!(found.send(addr.parse().unwrap()).await, "{addr}");
+            found.try_send(addr.parse().unwrap());
+        }
+        assert!(received.try_recv().is_err(), "none of them was queued");
+        // A peer on an ordinary port still is.
+        assert!(found.send("94.228.209.182:3491".parse().unwrap()).await);
+        assert_eq!(received.try_recv().unwrap().port(), 3491);
+    }
+
+    #[tokio::test]
+    async fn a_counted_copy_counts_only_the_new_addresses_it_delivers() {
+        let (found, mut received) = PeerCandidates::channel(std::iter::empty(), false);
+        let counter = Arc::new(AtomicUsize::new(0));
+        let counted = found.counted(counter.clone());
+        counted.try_send("1.2.3.4:6881".parse().unwrap());
+        counted.try_send("1.2.3.4:6881".parse().unwrap());
+        counted.try_send("10.0.0.1:6881".parse().unwrap());
+        assert!(found.send("1.2.3.5:6881".parse().unwrap()).await);
+        assert!(counted.send("1.2.3.6:6881".parse().unwrap()).await);
+        assert_eq!(counter.load(Ordering::Relaxed), 2);
+        assert_eq!(received.len(), 3);
+        received.close();
+    }
+
     #[test]
     fn dht_requires_metadata_confirming_a_public_torrent() {
         assert!(!permits_dht(None));
         assert!(!permits_dht(Some(true)));
         assert!(permits_dht(Some(false)));
+    }
+
+    #[test]
+    fn a_searched_magnet_only_asks_and_a_private_torrent_never_uses_the_dht() {
+        // Without a yes, an unknown hash stays off the DHT.
+        assert_eq!(dht_plan(None, false, Some(6881)), None);
+        // With one, the DHT is asked, but this computer is announced nowhere.
+        assert_eq!(dht_plan(None, true, Some(6881)), Some(None));
+        // Private details end any search, with or without a yes.
+        assert_eq!(dht_plan(Some(true), true, Some(6881)), None);
+        assert_eq!(dht_plan(Some(true), false, None), None);
+        // A public torrent announces its port, when it listens.
+        assert_eq!(dht_plan(Some(false), true, Some(6881)), Some(Some(6881)));
+        assert_eq!(dht_plan(Some(false), false, None), Some(None));
     }
 
     #[test]

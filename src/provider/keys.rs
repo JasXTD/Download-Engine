@@ -25,19 +25,31 @@ pub(crate) fn seal_key(scope: Uuid, hex: &str) -> Result<String> {
     #[cfg(any(windows, unix))]
     {
         let key = Zeroizing::new(super::crypto::unhex(hex)?);
+        seal_bytes(scope, &key)
+    }
+    #[cfg(not(any(windows, unix)))]
+    {
+        let _ = (scope, hex);
+        anyhow::bail!("Provider keys require protected storage")
+    }
+}
+
+pub(super) fn seal_bytes(scope: Uuid, key: &[u8]) -> Result<String> {
+    #[cfg(any(windows, unix))]
+    {
         ensure!(
             matches!(key.len(), 16 | 24 | 32),
             "AES key must be 16, 24 or 32 bytes"
         );
         let mut bytes = Zeroizing::new(PURPOSE.to_vec());
-        bytes.extend_from_slice(&key);
+        bytes.extend_from_slice(key);
         let sealed = crate::protected_data::seal(scope, &mut bytes)?;
         Ok(format!("{PREFIX}{}", STANDARD.encode(&sealed)))
     }
     #[cfg(not(any(windows, unix)))]
     {
-        let _ = (scope, hex);
-        anyhow::bail!("Provider keys require Windows protected storage")
+        let _ = (scope, key);
+        anyhow::bail!("Provider keys require protected storage")
     }
 }
 

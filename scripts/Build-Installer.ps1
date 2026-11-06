@@ -47,6 +47,7 @@ if (-not $Compiler -or -not (Test-Path -LiteralPath $Compiler -PathType Leaf)) {
     throw 'Install the official Inno Setup compiler, then pass -Compiler <absolute path to ISCC.exe>.'
 }
 Push-Location $workspaceRoot
+$pluginStage = $null
 try {
     & (Join-Path $PSScriptRoot 'Prepare-MediaTools.ps1')
     & node (Join-Path $PSScriptRoot 'Build-LicenseBundle.cjs') --check
@@ -56,13 +57,16 @@ try {
         if ($LASTEXITCODE -ne 0) { throw 'Rust release build failed.' }
     }
     Assert-ReleaseBinaryVersions -Root $workspaceRoot -Version $version
+    $pluginStage = Join-Path $workspaceRoot ('artifacts/installer-plugins-' + [Guid]::NewGuid().ToString('N'))
+    & node (Join-Path $PSScriptRoot 'prepare_bundled_plugins.cjs') $pluginStage (Join-Path $workspaceRoot 'target/release/de-cli.exe') (Join-Path $workspaceRoot 'tools/ffmpeg/ffmpeg.exe')
+    if ($LASTEXITCODE -ne 0) { throw 'Bundled extension preparation failed.' }
     if ($signing) {
         foreach ($file in @('de.exe','de-host.exe','de-cli.exe','de-torrent.exe')) {
             Invoke-AuthenticodeSign -Path (Join-Path $workspaceRoot "target\release\$file") -Configuration $signing
         }
     }
     New-Item -ItemType Directory -Path $outputDirectory -Force | Out-Null
-    $compilerArguments = @('/Qp', "/DSourceRoot=$workspaceRoot", "/DAppVersion=$version", "/DReleaseOutputDir=$outputDirectory")
+    $compilerArguments = @('/Qp', "/DSourceRoot=$workspaceRoot", "/DAppVersion=$version", "/DReleaseOutputDir=$outputDirectory", "/DPluginRoot=$pluginStage")
     if ($TestBuild) { $compilerArguments += '/DTestBuild=1' }
     if ($AllowUnsignedRelease) { $compilerArguments += '/DUnsignedRelease=1' }
     if ($signing) {
@@ -79,4 +83,13 @@ try {
     }
     Get-FileHash -Algorithm SHA256 -LiteralPath $output
     Write-Output "Installer: $output"
-} finally { Pop-Location }
+} finally {
+    if ($pluginStage -and (Test-Path -LiteralPath $pluginStage)) {
+        $resolved = [IO.Path]::GetFullPath($pluginStage)
+        if ((Split-Path $resolved -Parent) -ne (Join-Path $workspaceRoot 'artifacts') -or (Split-Path $resolved -Leaf) -notmatch '^installer-plugins-[0-9a-f]{32}$') {
+            throw "Refusing to clean unexpected plugin staging path: $resolved"
+        }
+        Remove-Item -LiteralPath $resolved -Recurse -Force
+    }
+    Pop-Location
+}

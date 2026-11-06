@@ -46,6 +46,8 @@ pub struct Package {
 pub struct Permissions {
     #[serde(default)]
     pub network: Vec<String>,
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub http_sessions: bool,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -99,6 +101,10 @@ pub enum Setting {
     Secret { id: String, label: String },
     /// Sealed when stored. Only a provider processor gets it, as an opaque handle.
     AesKey { id: String, label: String },
+    /// User-imported bytes, sealed at rest and readable only by web jobs.
+    BinarySecret { id: String, label: String },
+    /// User-imported RSA private key; web jobs receive an opaque key handle.
+    RsaPrivateKey { id: String, label: String },
 }
 
 impl Setting {
@@ -109,6 +115,8 @@ impl Setting {
             | Self::Boolean { id, .. }
             | Self::Choice { id, .. }
             | Self::Secret { id, .. }
+            | Self::BinarySecret { id, .. }
+            | Self::RsaPrivateKey { id, .. }
             | Self::AesKey { id, .. } => id,
         }
     }
@@ -119,11 +127,19 @@ impl Setting {
             | Self::Boolean { label, .. }
             | Self::Choice { label, .. }
             | Self::Secret { label, .. }
+            | Self::BinarySecret { label, .. }
+            | Self::RsaPrivateKey { label, .. }
             | Self::AesKey { label, .. } => label,
         }
     }
     pub fn protected(&self) -> bool {
-        matches!(self, Self::Secret { .. } | Self::AesKey { .. })
+        matches!(
+            self,
+            Self::Secret { .. }
+                | Self::AesKey { .. }
+                | Self::BinarySecret { .. }
+                | Self::RsaPrivateKey { .. }
+        )
     }
     /// The value a job sees before anyone changes this setting.
     pub fn default_value(&self) -> serde_json::Value {
@@ -133,7 +149,10 @@ impl Setting {
             }
             Self::Integer { default, .. } => (*default).map_or(serde_json::Value::Null, Into::into),
             Self::Boolean { default, .. } => (*default).map_or(serde_json::Value::Null, Into::into),
-            Self::Secret { .. } | Self::AesKey { .. } => serde_json::Value::Null,
+            Self::Secret { .. }
+            | Self::AesKey { .. }
+            | Self::BinarySecret { .. }
+            | Self::RsaPrivateKey { .. } => serde_json::Value::Null,
         }
     }
     /// Checks a value someone entered. Protected settings are checked where they are sealed.
@@ -163,7 +182,10 @@ impl Setting {
                 );
                 Ok(())
             }
-            Self::Secret { .. } | Self::AesKey { .. } => {
+            Self::Secret { .. }
+            | Self::AesKey { .. }
+            | Self::BinarySecret { .. }
+            | Self::RsaPrivateKey { .. } => {
                 bail!("This setting is stored through its protected field")
             }
         }
@@ -232,7 +254,11 @@ impl Setting {
                     );
                 }
             }
-            Self::Boolean { .. } | Self::Secret { .. } | Self::AesKey { .. } => {}
+            Self::Boolean { .. }
+            | Self::Secret { .. }
+            | Self::AesKey { .. }
+            | Self::BinarySecret { .. }
+            | Self::RsaPrivateKey { .. } => {}
         }
         Ok(())
     }
@@ -450,13 +476,22 @@ impl Package {
             !web || !self.permissions.network.is_empty(),
             "Site reader and provider jobs need permissions.network"
         );
+        ensure!(
+            !self.permissions.http_sessions || web,
+            "HTTP sessions require a site reader or provider job"
+        );
         Ok(())
     }
 
     pub fn has_secret(&self) -> bool {
-        self.settings
-            .iter()
-            .any(|s| matches!(s, Setting::Secret { .. }))
+        self.settings.iter().any(|s| {
+            matches!(
+                s,
+                Setting::Secret { .. }
+                    | Setting::BinarySecret { .. }
+                    | Setting::RsaPrivateKey { .. }
+            )
+        })
     }
     pub fn setting(&self, id: &str) -> Option<&Setting> {
         self.settings.iter().find(|s| s.id() == id)

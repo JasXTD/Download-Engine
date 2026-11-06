@@ -441,7 +441,7 @@ mod tests {
             .unwrap()
             .interface
             .compact_rows = true;
-        click(&mut app, &ctx, "Cancel");
+        click(&mut app, &ctx, "×");
         assert!(!app.interface.toolbar_pins[6]);
         assert!(!app.interface.compact_rows);
     }

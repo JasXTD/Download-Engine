@@ -57,6 +57,7 @@ MCP controls: --no-download-control, --no-queue-control, --allow-lua,
   extensions enable ID | disable ID | remove ID
   extensions set ID KEY VALUE  Save a setting
   extensions set-secret ID KEY Save a protected setting from redirected stdin
+  extensions import-secret ID KEY FILE  Import a protected binary credential or RSA key (up to 64 KiB)
   extensions pack FOLDER [--out FILE]  Build a package from manifest.json and Lua files
 Inside a running script only:
   notify TITLE [TEXT]          Show a Windows notification (at most 5 per run)
@@ -794,6 +795,10 @@ fn extensions(store: &Store, args: &mut Args, words: &[&str]) -> Result<(Value, 
                 .take(4097)
                 .read_to_string(&mut value)?;
             store.set_extension_secret(id, key, value.trim())?;
+            Value::Null
+        }
+        ["import-secret", id, key, file] => {
+            store.import_extension_secret(id, key, std::path::Path::new(file))?;
             Value::Null
         }
         ["enable", id] => {

@@ -43,7 +43,6 @@ mod torrents;
 mod updates;
 use formatting::*;
 use theme::Palette;
-pub use theme::configure;
 use view::SquareCheckbox;
 
 mod antivirus;
@@ -85,6 +84,18 @@ use std::{
 };
 use uuid::Uuid;
 use zeroize::Zeroizing;
+
+/// Sets up a new egui context: fonts and theme, and how presses become clicks.
+pub fn configure(ctx: &egui::Context) {
+    theme::configure(ctx);
+    ctx.options_mut(|options| {
+        // egui drops a press held for 0.8 s or moved 6 points before release, and it reads
+        // the time once per frame, so a busy frame also counts as holding the button. Dialog
+        // buttons missed deliberate clicks. Touch press-and-hold menus now open after 2 s.
+        options.input_options.max_click_duration = 2.0;
+        options.input_options.max_click_dist = 10.0;
+    });
+}
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 enum Filter {
@@ -533,6 +544,7 @@ impl Desktop {
             _lock: lock,
         };
         app.initialize_snapshot();
+        app.start_plugin_discovery();
         #[cfg(feature = "screenshot")]
         if std::env::var_os("IDM_EX_SCREENSHOT_TO").is_some()
             && let Ok(state) = std::env::var("IDM_EX_TEST_LINK_DIALOG")
@@ -863,6 +875,7 @@ impl Desktop {
         let _language = download_engine::i18n::scope(self.interface.language);
         self.poll_theme_assets(ctx);
         self.poll_background_io(ctx);
+        self.poll_plugin_discovery(ctx);
         self.poll_browser_recovery(ctx);
         self.mcp.poll(&self.store, ctx);
         self.poll_diagnostic_export();
@@ -1310,6 +1323,7 @@ impl Desktop {
             file.sync_all().expect("Cannot save test screenshot");
             ctx.send_viewport_cmd_to(egui::ViewportId::ROOT, egui::ViewportCommand::Close);
         } else if !self.screenshot_requested
+            && self.plugin_discovery_capture_ready()
             && self.external_open_capture_ready()
             && !self.theme_assets.busy()
             && (self.view != View::Logs || self.logs.loaded())

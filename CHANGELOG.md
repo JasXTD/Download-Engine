@@ -2,6 +2,65 @@
 
 Release notes are available offline in Help → Changelog. Newest releases appear first.
 
+## 3.15.0 — 2026-11-06
+
+### Lua provider core and ASS subtitles
+
+- Added HEAD, PUT, PATCH, DELETE and OPTIONS to Lua HTTP requests, with bounded binary bodies and the existing network permissions. Providers can explicitly hand exact-origin sessions to media segment downloads; credentials remain encrypted outside the resolver and are never saved in plans or sent to offline processors.
+- Media plans accept unknown segment sizes and up to 16,384 segments / 4 MiB. New `lua_stream` processing reads and writes bounded chunks through temporary handles, supporting inputs up to 256 MiB and outputs up to 512 MiB per segment. Verified checkpoints retain measured sizes and support Pause, Resume, Stop and recovery.
+- Added OS-protected binary/RSA credential imports, random bytes, SHA-1/SHA-256 digests, HMAC, RSA-PSS/PKCS1 signing, RSA-OAEP decryption and AES block decryption. Site authentication, license-message formats and container parsers stay in Lua.
+- Added ASS subtitle tracks. MKV preserves styles and inline overrides; MP4 converts them to text subtitles. Updated the author guide and offline fixtures; no live service or account is used for validation.
+- Profiles using new credential types or media features require writer version 9. Existing fixed-size and whole-segment checkpoint formats remain compatible.
+- Added an offline CENC author lab using the existing core: Lua parses a defined AVC/AAC sample-encryption subset, opens a synthetic signed license exchange, hands off keys, and muxes clear tracks with ASS subtitles. Its isolated checks cover malformed inputs and interrupted processing; it is not a live-service integration or a complete CENC implementation.
+
+## 3.14.0 — 2026-11-06
+
+### Lua sessions and container processing
+
+- Added `xd.http_session(origin, options)` for site readers and provider resolvers. Explicitly supplied cookies and headers stay in an opaque, run-local handle bound to one origin. Requests retain declared-host checks and the shared request budget; cross-origin authenticated redirects are refused. Browser logins are not imported.
+- Extensions must request `permissions.http_sessions`; adding this permission requires update review. Processors and automation jobs cannot receive it. Cookie storage now respects paths, expiry, deletion and Secure attributes while retaining exact-origin isolation.
+- Added `processing: "lua_segment"` for bounded, variable-length media transforms, plus `init_segment` / `prepare_track` to replay verified initialization bytes after pause or restart. The core transfers bounded chunks, verifies processed sizes and hashes, and keeps cancellation and muxing under its control. Existing same-length providers remain compatible.
+- Added offline checks for session isolation, permission changes, segment limits, initialization replay, changed outputs and Stop all. The media fixture uses generated encrypted MP4/audio and verifies preserved media packets. These APIs enable container-processing code in Lua; they do not implement a CENC parser, Widevine protocol or Crunchyroll integration automatically.
+- Updated the author guides. Using the new extension permission or segment callbacks raises profile compatibility to 8 so an older app cannot discard the new metadata.
+
+## 3.13.0 — 2026-11-06
+
+### Lua binary HTTP and session keys
+
+- Added `xd.fetch_bytes` for Lua site readers and provider resolvers. Binary request and response bodies preserve every byte; the text API keeps its existing behavior. Both share the same request budget, declared-host checks, public-address restrictions, redirect rules and size limits.
+- Added resolver-only `xd.handoff_key` and processor-only `xd.session_key`. The core seals named AES keys for one resolver run and passes opaque handles to its offline processor. Keys are absent from saved plans, checkpoints and exports; Resume reacquires them. Existing protected key settings remain supported.
+- Added generated offline checks for binary request bodies, protected key handoff, invalid/cross-run keys, cancellation and recovery. These are general extension APIs; Crunchyroll authentication, Widevine license processing and MP4 sample-encryption support remain unimplemented.
+- Clarified software freedoms and implementation limits in the guides, retaining the standard MIT license and third-party notices. Incorporated the shorter README and moved upgrade details into the reference guide.
+
+## 3.12.0 — 2026-11-05
+
+### Discoverable Lua extensions
+
+- The Extensions page discovers `.de-extension.json` packages in the application's `plugins` folder at launch, when opening Installed, and on Refresh. Installed and portable copies use their own application resources; no profile or working-directory plugin folder is scanned.
+- Found packages appear for permission review. New installs start disabled, updates require review, and replacing a source file never silently changes installed code. Duplicate IDs, changed packages with an unchanged version, invalid files and scan limits are reported.
+- Bundled a Lua episode downloader extension based on the workflow of CuteTenshii/crunchyroll-downloader, with adapted language and segment-template helpers under MIT. The package includes quality/language selection, encrypted segment processing, multiple tracks and MKV/MP4 muxing, plus generated media, a launcher and an author guide. It has been tested with offline samples only; the bundled extension handles the local sample URL and does not implement Crunchyroll login or license requests. The sample server starts only when the user runs its launcher.
+- Discovery reads bounded regular files on a background worker. It ignores nested folders, rejects linked packages and retains the exact reviewed bytes through installation. Removing a source file leaves the reviewed installed copy intact.
+
+### Unix media merger security
+
+- HLS and Lua media providers execute a private, checksum-verified FFmpeg copy through an open directory handle on macOS/Linux. Replacing the original helper or renaming a parent directory after verification cannot redirect the launch. Cancellation and failed launches release the private copy; temporary storage that forbids execution fails without falling back to the original path.
+
+## 3.11.0 — 2026-11-05
+
+### Lua media providers
+
+- Added Media API 1 for Lua scripts and installed extensions: ordered HTTP segments and byte ranges, video/audio/subtitle tracks, optional per-segment verification, and MKV or MP4 output through the bundled FFmpeg.
+- Providers can process encrypted segments with existing AES helpers and protected key settings. Rust owns downloads, checkpoints, track assembly and muxing; scripts cannot pass commands, executable paths or remote inputs to FFmpeg.
+- Pause, Stop and crash recovery preserve verified completed segments. Resuming refreshes links and rejects changed content or corrupt saved bytes. An interrupted segment restarts from its beginning; video/audio are muxed without re-encoding and MP4 subtitles use mov_text.
+- Added a media-provider template, author guide and isolated tests using generated encrypted video, two audio tracks and subtitles. No commercial service, DRM license or real account is involved.
+- Added a buildable offline episode extension example with quality/language settings, generated encrypted fragments, MKV/MP4 output and protected-key demonstrations. Selected language/timeline helpers are adapted from CuteTenshii/crunchyroll-downloader with the original MIT notice; this is not a live-service integration.
+- Single-file provider API 1 remains compatible. Saving a media job raises profile data/writer compatibility to 7 so older versions cannot discard its metadata.
+
+### Interface
+
+- Torrent status now shows pieces, files, peers and trackers.
+- Removed duplicate footer Close actions from four dialogs. Preferences keeps unsaved edits when a click lands outside the popup.
+
 ## 3.10.2 — 2026-11-04
 
 ### Local crash reports

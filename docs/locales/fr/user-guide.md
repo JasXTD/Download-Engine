@@ -6,7 +6,7 @@
 
 Activé par défaut, avec une vérification à chaque ouverture de l’application. Une nouvelle version propose une mise à jour ou un report. Les erreurs réseau n’ouvrent pas de fenêtre. Désactivation possible dans les Préférences. Téléchargez et installez les mises à jour depuis la page officielle des versions GitHub.
 
-Les préférences s’ouvrent dans une fenêtre organisée par catégories. Enregistrer applique les changements ; Annuler, × ou Échap abandonne les modifications non enregistrées. Le thème peut être prévisualisé ; Réinitialiser concerne uniquement la catégorie actuelle. Les éditeurs avancés enregistrent séparément et reviennent aux préférences une fois fermés.
+Les préférences s’ouvrent dans une fenêtre organisée par catégories. Enregistrer applique les changements ; × ou Échap abandonne les modifications non enregistrées ; tant qu’il en reste, un clic en dehors de la fenêtre ne la ferme pas. Le thème peut être prévisualisé ; Réinitialiser concerne uniquement la catégorie actuelle. Les éditeurs avancés enregistrent séparément et reviennent aux préférences une fois fermés.
 
 ### Premiers pas
 

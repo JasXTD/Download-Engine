@@ -74,7 +74,8 @@ impl Program {
                 program.directory.as_raw_fd(),
                 c"ffmpeg".as_ptr(),
                 libc::O_WRONLY | libc::O_CREAT | libc::O_EXCL | libc::O_NOFOLLOW | libc::O_CLOEXEC,
-                0o500 as libc::mode_t,
+                // macOS mode_t is u16; C variadic arguments require promotion.
+                0o500 as libc::c_uint,
             )
         };
         ensure!(

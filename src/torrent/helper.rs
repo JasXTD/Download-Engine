@@ -489,7 +489,10 @@ mod tests {
     fn no_port_opens_and_no_router_is_asked_unless_both_are_switched_on() {
         let has = |list: &[String], flag: &str| list.iter().any(|argument| argument == flag);
         let defaults = args(Settings::default());
-        assert!(!has(&defaults, "--port") && !has(&defaults, "--upnp"), "{defaults:?}");
+        assert!(
+            !has(&defaults, "--port") && !has(&defaults, "--upnp"),
+            "{defaults:?}"
+        );
         let router_only = args(Settings {
             upnp: true,
             ..Default::default()

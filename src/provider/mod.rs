@@ -341,7 +341,7 @@ impl Store {
 
 /// Starts a restricted worker and resolves/refreshes before touching remote bytes.
 pub(crate) enum Source {
-    File(crate::engine::http::Source),
+    File(Box<crate::engine::http::Source>),
     Media(Box<(media::Plan, handoff::Keys)>),
 }
 pub(crate) enum Resolution {
@@ -457,5 +457,5 @@ pub(crate) async fn resolve(
     };
     job.provider.as_mut().unwrap().plan = Some(plan.content());
     store.checkpoint(job).await?;
-    Ok(Source::File(source))
+    Ok(Source::File(Box::new(source)))
 }

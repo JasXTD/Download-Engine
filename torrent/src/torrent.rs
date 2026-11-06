@@ -34,12 +34,12 @@ use crate::details::{
 use crate::discovery::{Discovery, PeerCandidates, Search};
 use crate::meta::{TorrentMeta, usable_tracker};
 use crate::metadata;
-use crate::reason;
 use crate::peer::{
     BoxedStream, Hello, Out, PeerLink, read_handshake, run_connection, send_handshake,
 };
 use crate::picker::{Chunk, Picker};
 use crate::rate::{Allowance, ByteLimiter};
+use crate::reason;
 use crate::resume;
 use crate::storage::Storage;
 
@@ -898,10 +898,7 @@ impl Torrent {
         Ok(())
     }
 
-    async fn fetch_metadata(
-        &self,
-        cancel: &CancellationToken,
-    ) -> Result<Option<Arc<TorrentMeta>>> {
+    async fn fetch_metadata(&self, cancel: &CancellationToken) -> Result<Option<Arc<TorrentMeta>>> {
         // Ending this stage must also end the searches started for it.
         let cancel = cancel.child_token();
         let _stop_search = cancel.clone().drop_guard();

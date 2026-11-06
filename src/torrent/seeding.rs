@@ -518,9 +518,9 @@ async fn share(
         Ok(())
     } else {
         let shared = now(uploaded_now, started);
-        store.connect().and_then(|conn| {
-            save_totals(&conn, &job.id, shared.uploaded, shared.shared_secs, None)
-        })
+        store
+            .connect()
+            .and_then(|conn| save_totals(&conn, &job.id, shared.uploaded, shared.shared_secs, None))
     };
     let removed = lease.call(json!({"cmd":"remove","name":job.id})).await;
     if removed.is_err() {
@@ -560,7 +560,10 @@ mod tests {
         controller.tick(&store, &limiter, |_| false).await.unwrap();
         let deadline = std::time::Instant::now() + Duration::from_secs(10);
         while controller.is_active(&job.id) {
-            assert!(std::time::Instant::now() < deadline, "the worker never ended");
+            assert!(
+                std::time::Instant::now() < deadline,
+                "the worker never ended"
+            );
             tokio::time::sleep(Duration::from_millis(20)).await;
             controller.tick(&store, &limiter, |_| false).await.unwrap();
         }
@@ -575,7 +578,10 @@ mod tests {
                 unlimited: false,
             }
         );
-        assert!(!store.torrents.is_running(), "nothing was started to find that out");
+        assert!(
+            !store.torrents.is_running(),
+            "nothing was started to find that out"
+        );
     }
 
     #[test]

@@ -171,8 +171,9 @@ impl Runtime {
                 "aes_blocks",
                 lua.create_function(|lua, (key, bytes): (Value, mlua::LuaString)| {
                     let key = super::keys::bytes(key)?;
-                    let output = super::crypto::encrypt_blocks(&key, bytes.as_bytes().as_ref())
-                        .map_err(mlua::Error::external)?;
+                    let output =
+                        super::crypto::crypt_blocks(&key, bytes.as_bytes().as_ref(), false)
+                            .map_err(mlua::Error::external)?;
                     lua.create_string(output)
                 })?,
             )?;
@@ -181,7 +182,7 @@ impl Runtime {
                 lua.create_function(|lua, (key, bytes): (Value, mlua::LuaString)| {
                     let key = super::keys::bytes(key)?;
                     lua.create_string(
-                        super::crypto::decrypt_blocks(&key, bytes.as_bytes().as_ref())
+                        super::crypto::crypt_blocks(&key, bytes.as_bytes().as_ref(), true)
                             .map_err(mlua::Error::external)?,
                     )
                 })?,

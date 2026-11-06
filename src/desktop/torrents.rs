@@ -830,22 +830,30 @@ impl Desktop {
         let (title, text, color) = match stop {
             MagnetStop::NeedsConsent => (
                 tr("This magnet link has no tracker"),
-                tr("To find it, the app has to ask the public DHT network. Computers there will see which torrent you want and your IP address. Torrents from private sites must not be found this way: use the site's .torrent file instead."),
+                tr(
+                    "To find it, the app has to ask the public DHT network. Computers there will see which torrent you want and your IP address. Torrents from private sites must not be found this way: use the site's .torrent file instead.",
+                ),
                 p.blue,
             ),
             MagnetStop::DhtOff => (
                 tr("This magnet link has no tracker"),
-                tr("Finding peers without a tracker (DHT) is off in Preferences, so this magnet can't be searched."),
+                tr(
+                    "Finding peers without a tracker (DHT) is off in Preferences, so this magnet can't be searched.",
+                ),
                 p.blue,
             ),
             MagnetStop::Private => (
                 tr("This is a private torrent"),
-                tr("It may only use its own site's tracker, so the search stopped. Open the .torrent file from that site."),
+                tr(
+                    "It may only use its own site's tracker, so the search stopped. Open the .torrent file from that site.",
+                ),
                 p.warning,
             ),
             MagnetStop::NothingFound => (
                 tr("No one shared this torrent's file list"),
-                tr("The DHT search stopped after 10 minutes. Try again later, or open the .torrent file."),
+                tr(
+                    "The DHT search stopped after 10 minutes. Try again later, or open the .torrent file.",
+                ),
                 p.warning,
             ),
         };

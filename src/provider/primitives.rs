@@ -266,13 +266,6 @@ mod tests {
             assert(not pcall(xd.rsa_private_key,'not a key'))
             assert(not pcall(xd.rsa_private_key,string.rep('x',65537)))
         "#).exec().unwrap();
-        let key = crate::provider::crypto::unhex("2b7e151628aed2a6abf7158809cf4f3c").unwrap();
-        let cipher = crate::provider::crypto::unhex("3ad77bb40d7a3660a89ecaf32466ef97").unwrap();
-        assert_eq!(
-            crate::provider::crypto::decrypt_blocks(&key, &cipher).unwrap(),
-            crate::provider::crypto::unhex("6bc1bee22e409f96e93d7e117393172a").unwrap()
-        );
-        assert!(crate::provider::crypto::decrypt_blocks(&key, &[0; 15]).is_err());
         for bad in [
             vec![],
             vec![0x30, 0x80],
@@ -280,6 +273,30 @@ mod tests {
             vec![0x30, 0x81, 3, 2, 1, 0],
         ] {
             assert!(private_der(&bad).is_err());
+        }
+    }
+
+    #[test]
+    fn aes_blocks_match_known_answer_and_enforce_limits_in_both_directions() {
+        use crate::provider::crypto::{MAX_CHUNK, crypt_blocks, unhex};
+
+        // NIST SP 800-38A F.1: AES-128 ECB, no padding.
+        let key = unhex("2b7e151628aed2a6abf7158809cf4f3c").unwrap();
+        let plain = unhex("6bc1bee22e409f96e93d7e117393172a").unwrap();
+        let cipher = unhex("3ad77bb40d7a3660a89ecaf32466ef97").unwrap();
+        assert_eq!(crypt_blocks(&key, &plain, false).unwrap(), cipher);
+        assert_eq!(crypt_blocks(&key, &cipher, true).unwrap(), plain);
+        for decrypt in [false, true] {
+            assert!(crypt_blocks(&[0; 15], &plain, decrypt).is_err());
+            for size in [0, 15, MAX_CHUNK + 32] {
+                assert!(crypt_blocks(&key, &vec![0; size], decrypt).is_err());
+            }
+            assert_eq!(
+                crypt_blocks(&key, &vec![0; MAX_CHUNK + 16], decrypt)
+                    .unwrap()
+                    .len(),
+                MAX_CHUNK + 16
+            );
         }
     }
 }

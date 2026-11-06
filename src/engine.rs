@@ -304,7 +304,7 @@ async fn transfer(
     if job.provider.is_some() {
         return match crate::provider::resolve(store, job, cancel).await? {
             crate::provider::Source::File(source) => {
-                http::transfer(source, store, job, &root, cancel, limiter).await
+                http::transfer(*source, store, job, &root, cancel, limiter).await
             }
             crate::provider::Source::Media(resolved) => {
                 let (plan, keys) = *resolved;

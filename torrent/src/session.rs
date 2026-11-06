@@ -238,7 +238,10 @@ impl Session {
 
     /// What router setup has come to, while it is on.
     pub fn router_status(&self) -> Option<RouterState> {
-        self.router.lock().as_ref().map(|router| *router.state.lock())
+        self.router
+            .lock()
+            .as_ref()
+            .map(|router| *router.state.lock())
     }
 
     fn torrent_options(&self, add: AddOptions) -> TorrentOptions {

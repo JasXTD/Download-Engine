@@ -131,19 +131,13 @@ impl Drop for Aes {
 }
 
 /// Bounded AES primitive for modes implemented by the Lua script itself.
-pub fn encrypt_blocks(secret: &[u8], blocks: &[u8]) -> Result<Vec<u8>> {
+/// Uses ECB without padding; `decrypt` selects decryption instead of encryption.
+pub fn crypt_blocks(secret: &[u8], blocks: &[u8], decrypt: bool) -> Result<Vec<u8>> {
     ensure!(
         blocks.len() <= MAX_CHUNK + 16,
         "AES block input exceeds limit"
     );
-    Ok(Aes::new(secret)?.blocks(blocks)?.to_vec())
-}
-pub fn decrypt_blocks(secret: &[u8], blocks: &[u8]) -> Result<Vec<u8>> {
-    ensure!(
-        blocks.len() <= MAX_CHUNK + 16,
-        "AES block input exceeds limit"
-    );
-    Ok(Aes::new(secret)?.crypt(blocks, true)?.to_vec())
+    Ok(Aes::new(secret)?.crypt(blocks, decrypt)?.to_vec())
 }
 
 /// Full 128-bit, big-endian counter. Offset is in input bytes, not blocks.

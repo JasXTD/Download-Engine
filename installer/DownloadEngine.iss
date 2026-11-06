@@ -366,9 +366,15 @@ Source: "{#SourceRoot}\examples\download-provider.lua"; DestDir: "{app}\examples
 Source: "{#SourceRoot}\examples\download-provider-custom-ctr.lua"; DestDir: "{app}\examples"; Flags: ignoreversion
 Source: "{#SourceRoot}\docs\lua-providers.md"; DestDir: "{app}\docs"; Flags: ignoreversion
 Source: "{#SourceRoot}\docs\lua-media-providers.md"; DestDir: "{app}\docs"; Flags: ignoreversion
+Source: "{#SourceRoot}\docs\lua-provider-core.md"; DestDir: "{app}\docs"; Flags: ignoreversion
 Source: "{#SourceRoot}\examples\media-provider.lua"; DestDir: "{app}\examples"; Flags: ignoreversion
 Source: "{#SourceRoot}\examples\offline-episode\README.md"; DestDir: "{app}\examples\offline-episode"; Flags: ignoreversion
 Source: "{#SourceRoot}\examples\offline-episode\NOTICE.md"; DestDir: "{app}\examples\offline-episode"; Flags: ignoreversion
+Source: "{#SourceRoot}\examples\offline-cenc\README.md"; DestDir: "{app}\examples\offline-cenc"; Flags: ignoreversion
+Source: "{#SourceRoot}\examples\offline-cenc\manifest.json"; DestDir: "{app}\examples\offline-cenc"; Flags: ignoreversion
+Source: "{#SourceRoot}\examples\offline-cenc\provider.lua"; DestDir: "{app}\examples\offline-cenc"; Flags: ignoreversion
+Source: "{#SourceRoot}\examples\offline-cenc\lib\cenc.lua"; DestDir: "{app}\examples\offline-cenc\lib"; Flags: ignoreversion
+Source: "{#SourceRoot}\examples\offline-cenc\lib\license.lua"; DestDir: "{app}\examples\offline-cenc\lib"; Flags: ignoreversion
 ; PluginRoot is a fresh reviewed demo stage, never the user's live plugins folder.
 Source: "{#PluginRoot}\*"; DestDir: "{app}\plugins"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "{#SourceRoot}\docs\lua-provider-lab.md"; DestDir: "{app}\docs"; Flags: ignoreversion

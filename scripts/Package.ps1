@@ -80,6 +80,12 @@ try {
         foreach ($guide in @('README.md','NOTICE.md')) {
             Copy-Item -LiteralPath (Join-Path $workspaceRoot "examples/offline-episode/$guide") -Destination $demoGuideRoot
         }
+        # Ship authored example files only; generated licenses and test keys stay out.
+        foreach ($example in @('README.md','manifest.json','provider.lua','lib/cenc.lua','lib/license.lua')) {
+            $destination = Join-Path $examplesRoot "offline-cenc/$example"
+            New-Item -ItemType Directory -Force -Path (Split-Path $destination -Parent) | Out-Null
+            Copy-Item -LiteralPath (Join-Path $workspaceRoot "examples/offline-cenc/$example") -Destination $destination
+        }
         $mediaRoot = Join-Path $stage 'tools\ffmpeg'
         New-Item -ItemType Directory -Force -Path $mediaRoot | Out-Null
         foreach ($file in @('ffmpeg.exe','LICENSE','README.txt','PROVENANCE.md','media-manifest.json')) {

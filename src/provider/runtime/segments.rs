@@ -9,6 +9,7 @@ enum State {
     Input {
         context: Chunk,
         prepare: bool,
+        output_limit: u64,
         bytes: Vec<u8>,
     },
     Output {
@@ -17,6 +18,7 @@ enum State {
     },
     StreamInput {
         context: Chunk,
+        output_limit: u64,
         spool: super::stream::Spool,
     },
     StreamOutput {
@@ -52,6 +54,27 @@ impl Segments {
             ("segment_begin", State::Idle) => {
                 let context: Chunk = serde_json::from_value(message["context"].clone())?;
                 context.validate()?;
+                let prepare = message["prepare"]
+                    .as_bool()
+                    .context("Missing segment operation")?;
+                let stream = message["stream"] == true;
+                let output_limit = message["output_limit"]
+                    .as_u64()
+                    .context("Missing segment output allowance")?;
+                ensure!(
+                    if prepare {
+                        output_limit == 0
+                    } else {
+                        output_limit > 0
+                            && output_limit
+                                <= if stream {
+                                    crate::provider::media::MAX_STREAM_OUTPUT
+                                } else {
+                                    MAX_SEGMENT_OUTPUT as u64
+                                }
+                    },
+                    "Invalid segment output allowance"
+                );
                 if message["stream"] == true {
                     ensure!(
                         message["prepare"] == false,
@@ -60,6 +83,7 @@ impl Segments {
                     return Ok((
                         State::StreamInput {
                             context,
+                            output_limit,
                             spool: super::stream::Spool::new()?,
                         },
                         json!(true),
@@ -69,19 +93,24 @@ impl Segments {
                     context.size <= MAX_SEGMENT_INPUT as u64,
                     "Whole-segment Lua input exceeds 8 MiB"
                 );
-                let prepare = message["prepare"]
-                    .as_bool()
-                    .context("Missing segment operation")?;
                 Ok((
                     State::Input {
                         context,
                         prepare,
+                        output_limit,
                         bytes: Vec::new(),
                     },
                     json!(true),
                 ))
             }
-            ("segment_feed", State::StreamInput { context, mut spool }) => {
+            (
+                "segment_feed",
+                State::StreamInput {
+                    context,
+                    output_limit,
+                    mut spool,
+                },
+            ) => {
                 let encoded = message["bytes"].as_str().context("Missing stream bytes")?;
                 ensure!(
                     encoded.len() <= CHUNK_BYTES.div_ceil(3) * 4,
@@ -93,11 +122,25 @@ impl Segments {
                     "Invalid stream input"
                 );
                 spool.append(&bytes, context.size)?;
-                Ok((State::StreamInput { context, spool }, json!(true)))
+                Ok((
+                    State::StreamInput {
+                        context,
+                        output_limit,
+                        spool,
+                    },
+                    json!(true),
+                ))
             }
-            ("segment_run", State::StreamInput { context, spool }) => {
+            (
+                "segment_run",
+                State::StreamInput {
+                    context,
+                    output_limit,
+                    spool,
+                },
+            ) => {
                 ensure!(spool.len == context.size, "Incomplete stream input");
-                let spool = super::stream::run(lua, callbacks, &context, spool)?;
+                let spool = super::stream::run(lua, callbacks, &context, spool, output_limit)?;
                 let len = spool.len;
                 Ok((State::StreamOutput { spool, offset: 0 }, json!(len)))
             }
@@ -120,6 +163,7 @@ impl Segments {
                 State::Input {
                     context,
                     prepare,
+                    output_limit,
                     mut bytes,
                 },
             ) => {
@@ -140,6 +184,7 @@ impl Segments {
                     State::Input {
                         context,
                         prepare,
+                        output_limit,
                         bytes,
                     },
                     json!(true),
@@ -150,6 +195,7 @@ impl Segments {
                 State::Input {
                     context,
                     prepare,
+                    output_limit,
                     bytes,
                 },
             ) => {
@@ -179,8 +225,8 @@ impl Segments {
                     };
                     let n = output.as_bytes().len();
                     ensure!(
-                        n > 0 && n <= MAX_SEGMENT_OUTPUT,
-                        "Whole-segment output must contain 1 byte to 16 MiB"
+                        n > 0 && n as u64 <= output_limit,
+                        "Whole-segment output exceeds its allowance or is empty"
                     );
                     Ok((
                         State::Output {

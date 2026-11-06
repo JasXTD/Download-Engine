@@ -1,7 +1,7 @@
 //! Anonymous scratch files owned by the worker. Lua gets bounded byte operations,
 //! never names, raw handles or persistent filesystem access.
 use super::*;
-use crate::provider::media::MAX_STREAM_OUTPUT;
+use crate::provider::media::budget;
 use mlua::{UserData, UserDataMethods};
 use std::{
     cell::RefCell,
@@ -22,12 +22,16 @@ impl Spool {
         })
     }
     pub fn append(&mut self, bytes: &[u8], limit: u64) -> Result<()> {
-        ensure!(
-            self.len + bytes.len() as u64 <= limit,
-            "Stream output exceeds its limit"
-        );
+        let end = self
+            .len
+            .checked_add(bytes.len() as u64)
+            .context("Stream output size overflow")?;
+        ensure!(end <= limit, "Stream output exceeds its limit");
+        budget::check_space(&std::env::temp_dir(), bytes.len() as u64)?;
+        // write_all may write a prefix before failing. Charge the full request
+        // first so a Lua pcall cannot retry failed writes for uncounted disk use.
+        self.len = end;
         self.file.write_all(bytes)?;
-        self.len += bytes.len() as u64;
         Ok(())
     }
     pub fn read(&mut self, offset: u64, count: usize) -> Result<Vec<u8>> {
@@ -44,7 +48,7 @@ impl Spool {
 }
 type Shared = Rc<RefCell<Option<Spool>>>;
 struct Reader(Shared);
-struct Writer(Shared);
+struct Writer(Shared, u64);
 impl UserData for Reader {
     fn add_methods<M: UserDataMethods<Self>>(methods: &mut M) {
         methods.add_method("size", |_, this, ()| {
@@ -74,7 +78,7 @@ impl UserData for Writer {
                 .as_mut()
                 .ok_or_else(|| mlua::Error::runtime("Segment writer expired"))?;
             spool
-                .append(bytes.as_bytes().as_ref(), MAX_STREAM_OUTPUT)
+                .append(bytes.as_bytes().as_ref(), this.1)
                 .map_err(mlua::Error::external)
         });
     }
@@ -91,6 +95,7 @@ pub(super) fn run(
     callbacks: &Table,
     context: &crate::provider::media::Chunk,
     input: Spool,
+    output_limit: u64,
 ) -> Result<Spool> {
     let source = Rc::new(RefCell::new(Some(input)));
     let output = Rc::new(RefCell::new(Some(Spool::new()?)));
@@ -101,7 +106,7 @@ pub(super) fn run(
     let result: Value = callback.call((
         to_lua(lua, context)?,
         Reader(source),
-        Writer(output.clone()),
+        Writer(output.clone(), output_limit),
     ))?;
     ensure!(
         matches!(result, Value::Boolean(true)),
@@ -113,4 +118,28 @@ pub(super) fn run(
         .context("Segment writer expired")?;
     ensure!(result.len > 0, "Stream processor returned no bytes");
     Ok(result)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn failed_disk_writes_still_consume_the_stream_allowance() {
+        let file = tempfile::NamedTempFile::new().unwrap();
+        // A real read-only handle produces a write failure without filling a disk.
+        let mut spool = Spool {
+            file: File::open(file.path()).unwrap(),
+            len: 0,
+        };
+        assert!(spool.append(b"1234", 4).is_err());
+        assert_eq!(spool.file.metadata().unwrap().len(), 0);
+        assert!(
+            spool
+                .append(b"x", 4)
+                .unwrap_err()
+                .to_string()
+                .contains("exceeds its limit")
+        );
+        assert!(spool.read(0, 4).is_err()); // Incomplete bytes cannot be returned as valid output.
+    }
 }

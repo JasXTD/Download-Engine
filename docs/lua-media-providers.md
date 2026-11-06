@@ -195,6 +195,14 @@ refreshes the source URLs, requires unchanged content metadata and verifies save
 segment hashes before reuse. Changed content or corrupted caches require explicit
 Restart. Editing a library script never changes a queued job's frozen code.
 
+Processed output across the whole job may not exceed twice the verified input
+size plus 16 MiB. Saved output counts toward this limit when resuming. The core
+passes the remaining allowance into each segment callback and checks disk space
+for temporary copies and muxing, with 64 MiB of free-space headroom. Processing
+progress counts verified output bytes; its total stays unknown until transforms
+finish. Failed transforms clear their incomplete output while preserving completed
+segments. Free-space checks cannot reserve storage against unrelated processes.
+
 Muxing uses the bundled FFmpeg and a fixed argument list. Lua cannot supply an
 executable, command-line options, local paths or URLs to FFmpeg. Only guarded,
 verified local track files are opened; external MP4 references are disabled.

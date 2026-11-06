@@ -1079,6 +1079,7 @@
     "src/provider/handoff/tests.rs",
     "src/provider/keys.rs",
     "src/provider/media.rs",
+    "src/provider/media/budget.rs",
     "src/provider/media/mux.rs",
     "src/provider/media/tests.rs",
     "src/provider/media/tests/segments.rs",

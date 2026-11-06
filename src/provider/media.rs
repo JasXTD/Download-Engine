@@ -1,5 +1,6 @@
 //! Declarative, finite media plans. URLs exist only in a resolver's live reply;
 //! persisted content and processor messages contain neither URLs nor credentials.
+pub(crate) mod budget;
 mod mux;
 #[cfg(test)]
 mod tests;
@@ -250,6 +251,18 @@ impl Plan {
             .flat_map(|t| &t.segments)
             .map(|s| s.size)
             .sum()
+    }
+    pub(crate) fn output_budget(&self) -> Result<budget::OutputBudget> {
+        let input =
+            self.tracks
+                .iter()
+                .flat_map(|t| &t.segments)
+                .try_fold(0_u64, |total, segment| {
+                    total
+                        .checked_add(segment.size)
+                        .ok_or_else(|| anyhow::anyhow!("Media input size overflow"))
+                })?;
+        budget::OutputBudget::new(input)
     }
     pub fn uses_segment_callbacks(&self) -> bool {
         self.tracks.iter().any(|t| {

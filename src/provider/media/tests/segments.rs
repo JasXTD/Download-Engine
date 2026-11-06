@@ -25,7 +25,7 @@ fn context(size: usize) -> Chunk {
 }
 fn run(runtime: &Runtime, bytes: &[u8], prepare: bool) -> Vec<u8> {
     runtime
-        .handle(json!({"op":"segment_begin","context":context(bytes.len()),"prepare":prepare}))
+        .handle(json!({"op":"segment_begin","context":context(bytes.len()),"prepare":prepare,"output_limit":if prepare { 0 } else { MAX_SEGMENT_OUTPUT }}))
         .unwrap();
     for bytes in bytes.chunks(crate::provider::CHUNK_BYTES) {
         runtime
@@ -67,12 +67,12 @@ fn malformed_segment_messages_reset_buffers_and_reject_wrong_phases() {
     assert!(
         runtime
             .handle(
-                json!({"op":"segment_begin","context":context(MAX_SEGMENT_INPUT+1),"prepare":false})
+                json!({"op":"segment_begin","context":context(MAX_SEGMENT_INPUT+1),"prepare":false,"output_limit":MAX_SEGMENT_OUTPUT})
             )
             .is_err()
     );
     runtime
-        .handle(json!({"op":"segment_begin","context":context(2),"prepare":false}))
+        .handle(json!({"op":"segment_begin","context":context(2),"prepare":false,"output_limit":MAX_SEGMENT_OUTPUT}))
         .unwrap();
     assert!(
         runtime
@@ -81,14 +81,14 @@ fn malformed_segment_messages_reset_buffers_and_reject_wrong_phases() {
     );
     run(&runtime, b"init-data", true);
     runtime
-        .handle(json!({"op":"segment_begin","context":context(10),"prepare":false}))
+        .handle(json!({"op":"segment_begin","context":context(10),"prepare":false,"output_limit":MAX_SEGMENT_OUTPUT}))
         .unwrap();
     assert!(runtime.handle(json!({"op":"segment_run"})).is_err());
     assert!(run(&runtime, b"init-data", true).is_empty());
     let resolver=Runtime::new("return {resolve=function()end,refresh=function()end,transform=function()end,finish=function()end}",Capabilities::Resolver(Box::new(crate::script_automation::Fetcher::new(crate::proxy::Route::direct()).unwrap())),None).unwrap();
     assert!(
         resolver
-            .handle(json!({"op":"segment_begin","context":context(1),"prepare":false}))
+            .handle(json!({"op":"segment_begin","context":context(1),"prepare":false,"output_limit":MAX_SEGMENT_OUTPUT}))
             .is_err()
     );
 }
@@ -117,7 +117,7 @@ fn segment_callback_output_limits_and_initialization_acknowledgement_are_enforce
         let runtime =
             Runtime::new(&source, Capabilities::Processor(uuid::Uuid::new_v4()), None).unwrap();
         runtime
-            .handle(json!({"op":"segment_begin","context":context(1),"prepare":false}))
+            .handle(json!({"op":"segment_begin","context":context(1),"prepare":false,"output_limit":MAX_SEGMENT_OUTPUT}))
             .unwrap();
         runtime
             .handle(json!({"op":"segment_feed","bytes":STANDARD.encode(b"a")}))

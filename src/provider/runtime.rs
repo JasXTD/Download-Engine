@@ -316,6 +316,7 @@ impl Runtime {
                     .map(|s| s.output_limit())
                     .sum();
                 ensure!(size > 0 && size <= maximum, "Invalid media output size");
+                plan.output_budget()?.include(size)?;
                 ensure!(
                     plan.uses_segment_callbacks() || size == plan.size(),
                     "Fixed-size media output changed length"

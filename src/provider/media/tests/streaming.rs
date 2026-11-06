@@ -2,6 +2,83 @@ use super::*;
 use crate::provider::CHUNK_BYTES;
 
 #[test]
+fn streaming_callback_cannot_exceed_the_remaining_job_allowance() {
+    let source = r#"
+        return {resolve=function()end,refresh=function()end,transform=function(_,b)return b end,finish=function()return true end,
+        transform_stream=function(_,_,writer) writer:write('sixteen bytes!!!'); return true end}
+    "#;
+    let runtime =
+        Runtime::new(source, Capabilities::Processor(uuid::Uuid::new_v4()), None).unwrap();
+    let context = json!({"content_id":"budget","track_id":"v","kind":"video",
+        "segment_id":"one","segment_index":0,"track_offset":0,"output_offset":0,"size":1});
+    runtime
+        .handle(json!({"op":"segment_begin","context":context,"prepare":false,"stream":true,"output_limit":5}))
+        .unwrap();
+    runtime
+        .handle(json!({"op":"segment_feed","bytes":STANDARD.encode(b"a")}))
+        .unwrap();
+    let result = runtime.handle(json!({"op":"segment_run"}));
+    assert!(
+        result.is_err(),
+        "stream writer ignored the remaining job allowance"
+    );
+    assert!(
+        result
+            .unwrap_err()
+            .to_string()
+            .contains("Stream output exceeds its limit")
+    );
+    // A failed callback expires both scratch files and returns to the idle state.
+    runtime.handle(json!({"op":"segment_begin","context":context,"prepare":false,"stream":true,"output_limit":16})).unwrap();
+    runtime
+        .handle(json!({"op":"segment_feed","bytes":STANDARD.encode(b"a")}))
+        .unwrap();
+    assert_eq!(runtime.handle(json!({"op":"segment_run"})).unwrap(), 16);
+    let output = runtime
+        .handle(json!({"op":"segment_read","offset":0}))
+        .unwrap();
+    assert_eq!(
+        STANDARD.decode(output.as_str().unwrap()).unwrap(),
+        b"sixteen bytes!!!"
+    );
+}
+
+#[test]
+fn segment_output_allowances_are_required_bounded_and_applied_to_whole_segments() {
+    let source = "return {resolve=function()end,refresh=function()end,transform=function(_,b)return b end,finish=function()return true end,transform_segment=function()return '12345' end}";
+    let runtime =
+        Runtime::new(source, Capabilities::Processor(uuid::Uuid::new_v4()), None).unwrap();
+    let context = json!({"content_id":"budget","track_id":"v","kind":"video",
+        "segment_id":"one","segment_index":0,"track_offset":0,"output_offset":0,"size":1});
+    for limit in [json!(null), json!(0), json!(-1), json!(u64::MAX)] {
+        assert!(runtime.handle(json!({"op":"segment_begin","context":context,"prepare":false,"stream":true,"output_limit":limit})).is_err());
+    }
+    runtime
+        .handle(json!({"op":"segment_begin","context":context,"prepare":false,"output_limit":4}))
+        .unwrap();
+    runtime
+        .handle(json!({"op":"segment_feed","bytes":STANDARD.encode(b"a")}))
+        .unwrap();
+    assert!(
+        runtime
+            .handle(json!({"op":"segment_run"}))
+            .unwrap_err()
+            .to_string()
+            .contains("output exceeds its allowance")
+    );
+    let mut content = plan().content();
+    for segment in content.tracks.iter_mut().flat_map(|t| &mut t.segments) {
+        segment.size = 1;
+        segment.processing = Processing::LuaStream;
+    }
+    assert!(
+        runtime
+            .handle(json!({"op":"media_finish","plan":content,"size":16 * 1024 * 1024 + 5}))
+            .is_err()
+    );
+}
+
+#[test]
 fn unknown_sizes_ass_and_large_plans_keep_validation_and_saved_identity() {
     let mut value = plan();
     value.tracks[0].segments[0].size = 0;
@@ -82,7 +159,7 @@ fn streaming_callbacks_rewrite_more_than_eight_mib_and_expire_retained_handles()
             size: size as u64,
         };
         runtime
-            .handle(json!({"op":"segment_begin","context":context,"prepare":false,"stream":true}))
+            .handle(json!({"op":"segment_begin","context":context,"prepare":false,"stream":true,"output_limit":size}))
             .unwrap();
         for chunk in bytes.chunks(CHUNK_BYTES) {
             runtime

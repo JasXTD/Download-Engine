@@ -34,8 +34,9 @@ async function withWorker(cli, source, files, run, env = process.env) {
     const timer = setTimeout(()=>fail(Error('Provider worker timed out')),30000);
     try { return await reply; } finally { clearTimeout(timer); }
   }
-  async function segment(bytes, {prepare=false,stream=false,track='video',index=1}={}) {
-    await call({op:'segment_begin',prepare,stream,context:{content_id:'owned-fixture',track_id:track,kind:track==='video'?'video':'audio',
+  async function segment(bytes, {prepare=false,stream=false,track='video',index=1,outputLimit}={}) {
+    const output_limit=prepare?0:(outputLimit??Math.min(stream?512*1024*1024:16*1024*1024,2*bytes.length+16*1024*1024));
+    await call({op:'segment_begin',prepare,stream,output_limit,context:{content_id:'owned-fixture',track_id:track,kind:track==='video'?'video':'audio',
       segment_id:'part-'+index,segment_index:index,track_offset:0,output_offset:0,size:bytes.length}});
     for(let p=0;p<bytes.length;p+=256*1024) await call({op:'segment_feed',bytes:bytes.subarray(p,p+256*1024).toString('base64')});
     const size = await call({op:'segment_run'}), chunks=[];

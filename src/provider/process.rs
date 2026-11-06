@@ -14,6 +14,11 @@ use tokio_util::sync::CancellationToken;
 const FRAME_LIMIT: usize = 6 * 1024 * 1024;
 /// The first frame can hold a whole extension, and escaping can double its size.
 const INIT_FRAME_LIMIT: usize = 6 * 1024 * 1024;
+struct SegmentRequest {
+    prepare: bool,
+    stream: bool,
+    output_limit: u64,
+}
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub(crate) enum Role {
@@ -312,10 +317,21 @@ impl Worker {
         context: &super::media::Chunk,
         input: &mut impl Read,
         prepare: bool,
+        output_limit: u64,
         cancel: &CancellationToken,
     ) -> Result<Vec<u8>> {
         let mut result = Vec::new();
-        self.segment_to(context, input, &mut result, prepare, false, cancel)?;
+        self.segment_to(
+            context,
+            input,
+            &mut result,
+            SegmentRequest {
+                prepare,
+                stream: false,
+                output_limit,
+            },
+            cancel,
+        )?;
         Ok(result)
     }
     pub(crate) fn stream_segment(
@@ -323,27 +339,56 @@ impl Worker {
         context: &super::media::Chunk,
         input: &mut impl Read,
         output: &mut impl Write,
+        output_limit: u64,
         cancel: &CancellationToken,
     ) -> Result<u64> {
-        self.segment_to(context, input, output, false, true, cancel)
+        self.segment_to(
+            context,
+            input,
+            output,
+            SegmentRequest {
+                prepare: false,
+                stream: true,
+                output_limit,
+            },
+            cancel,
+        )
     }
     fn segment_to(
         &mut self,
         context: &super::media::Chunk,
         input: &mut impl Read,
         output: &mut impl Write,
-        prepare: bool,
-        stream: bool,
+        request: SegmentRequest,
         cancel: &CancellationToken,
     ) -> Result<u64> {
+        let SegmentRequest {
+            prepare,
+            stream,
+            output_limit,
+        } = request;
         context.validate()?;
         ensure!(
             self.role == Role::Processor
                 && (stream || context.size <= super::media::MAX_SEGMENT_INPUT as u64),
             "Invalid whole-segment request"
         );
+        ensure!(
+            if prepare {
+                output_limit == 0
+            } else {
+                output_limit > 0
+                    && output_limit
+                        <= if stream {
+                            super::media::MAX_STREAM_OUTPUT
+                        } else {
+                            super::media::MAX_SEGMENT_OUTPUT as u64
+                        }
+            },
+            "Invalid segment output allowance"
+        );
         self.call(
-            serde_json::json!({"op":"segment_begin","context":context,"prepare":prepare,"stream":stream}),
+            serde_json::json!({"op":"segment_begin","context":context,"prepare":prepare,"stream":stream,"output_limit":output_limit}),
             cancel,
         )?;
         let mut buffer = vec![0; CHUNK_BYTES];
@@ -365,13 +410,7 @@ impl Worker {
             if prepare {
                 length == 0
             } else {
-                length > 0
-                    && length
-                        <= if stream {
-                            super::media::MAX_STREAM_OUTPUT
-                        } else {
-                            super::media::MAX_SEGMENT_OUTPUT as u64
-                        }
+                length > 0 && length <= output_limit
             },
             "Invalid segment output size"
         );
@@ -393,6 +432,7 @@ impl Worker {
                     && written + bytes.len() as u64 <= length,
                 "Invalid segment output chunk"
             );
+            ensure!(!cancel.is_cancelled(), "Provider cancelled");
             output.write_all(&bytes)?;
             written += bytes.len() as u64;
         }

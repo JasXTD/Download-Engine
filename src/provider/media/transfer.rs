@@ -32,6 +32,36 @@ struct Receipts {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     output_sizes: Vec<Option<u64>>,
 }
+impl Receipts {
+    fn output_budget(&self, content: &Plan) -> Result<budget::OutputBudget> {
+        let input = content
+            .tracks
+            .iter()
+            .flat_map(|t| &t.segments)
+            .enumerate()
+            .try_fold(0_u64, |total, (index, segment)| {
+                let size = if self.input_sizes.is_empty() {
+                    segment.size
+                } else {
+                    self.input_sizes[index].unwrap_or(0)
+                };
+                total.checked_add(size).context("Media input size overflow")
+            })?;
+        let mut budget = budget::OutputBudget::new(input)?;
+        for (index, segment) in content.tracks.iter().flat_map(|t| &t.segments).enumerate() {
+            if self.outputs[index].is_some() {
+                let size = if self.output_sizes.is_empty() {
+                    segment.size
+                } else {
+                    self.output_sizes[index].context("Missing media output size")?
+                };
+                budget.include(size)?;
+            }
+        }
+        Ok(budget)
+    }
+}
+
 fn part(root: &Path, index: usize, output: bool) -> PathBuf {
     root.join(format!(
         "provider-media-{index}.{}",
@@ -213,6 +243,8 @@ fn load(root: &Path, job: &Job, content: &Plan, cancel: &CancellationToken) -> R
             }
         }
     }
+    // A checkpoint cannot reset the allowance or hide output on later tracks.
+    receipts.output_budget(content)?;
     save(root, &receipts)?;
     Ok(receipts)
 }
@@ -307,16 +339,22 @@ pub(crate) async fn download(
     job.total = Some(content.size());
     store.checkpoint(job).await?;
     store.activity.set(&job.id, Phase::Processing);
-    let (s, j, r, c, token) = (
+    let (s, mut j, r, c, token) = (
         store.clone(),
         job.clone(),
         root.to_owned(),
         content.clone(),
         cancel.clone(),
     );
-    let tracks =
-        tokio::task::spawn_blocking(move || process(&s, &j, &r, &c, &mut receipts, keys, &token))
-            .await??;
+    let (result, downloaded, total) = tokio::task::spawn_blocking(move || {
+        let result = process(&s, &mut j, &r, &c, &mut receipts, keys, &token);
+        (result, j.downloaded, j.total)
+    })
+    .await?;
+    // Preserve processing progress even when cancellation or a budget check fails.
+    job.downloaded = downloaded;
+    job.total = total;
+    let tracks = result?;
     mux::finish(store, job, root, &content, tracks, helper, cancel).await
 }
 
@@ -447,13 +485,18 @@ async fn receive(
 
 fn process(
     store: &Store,
-    job: &Job,
+    job: &mut Job,
     root: &Path,
     content: &Plan,
     receipts: &mut Receipts,
     keys: crate::provider::handoff::Keys,
     cancel: &CancellationToken,
 ) -> Result<Vec<File>> {
+    let mut budget = receipts.output_budget(content)?;
+    job.downloaded = budget.used();
+    job.total = None; // The output size is unknown until transforms finish.
+    store.save(job)?;
+    ensure!(!cancel.is_cancelled(), "Media provider cancelled");
     let provider = job.provider.as_ref().context("Missing provider")?;
     let extension =
         store.extension_context(&provider.script, crate::extensions::Reach::Processor)?;
@@ -489,12 +532,27 @@ fn process(
             );
             use std::io::{Seek, SeekFrom};
             input.seek(SeekFrom::Start(0))?;
-            worker.whole_segment(&make_context(segment, 0, 0, 0), &mut input, true, cancel)?;
+            worker.whole_segment(&make_context(segment, 0, 0, 0), &mut input, true, 0, cancel)?;
         }
         let mut track_offset = 0;
         let mut output_offset = 0;
         for (segment_index, segment) in track.segments.iter().enumerate() {
             if receipts.outputs[index].is_none() {
+                ensure!(!cancel.is_cancelled(), "Media provider cancelled");
+                let allowance = budget.allowance(segment.output_limit())?;
+                if matches!(segment.processing, Processing::Copy | Processing::Lua) {
+                    ensure!(
+                        segment.size <= allowance,
+                        "Media output exceeds its job-wide allowance"
+                    );
+                }
+                budget::check_processing_space(
+                    root,
+                    &job.directory,
+                    budget.used(),
+                    allowance,
+                    (segment.processing == Processing::LuaStream).then_some(segment.size),
+                )?;
                 let mut input = download_file::read_part_sync(&part(root, index, false))?;
                 // Recheck the guarded handle immediately before giving bytes to Lua.
                 let actual = hash(&mut input, segment.size, cancel)?;
@@ -509,48 +567,82 @@ fn process(
                     segment.processing == Processing::LuaStream,
                 )?;
                 let context = make_context(segment, segment_index, track_offset, output_offset);
-                let mut offset = 0;
-                let mut digest = Sha256::new();
-                let output_size = if segment.processing == Processing::LuaStream {
-                    worker.stream_segment(&context, &mut input, &mut output, cancel)?
-                } else if segment.processing == Processing::LuaSegment {
-                    let bytes = worker.whole_segment(&context, &mut input, false, cancel)?;
-                    ensure!(!cancel.is_cancelled(), "Media provider cancelled");
-                    output.write_all(&bytes)?;
-                    digest.update(&bytes);
-                    bytes.len() as u64
-                } else {
-                    while offset < segment.size {
+                let result = (|| -> Result<(String, u64)> {
+                    let mut offset = 0;
+                    let mut digest = Sha256::new();
+                    let output_size = if segment.processing == Processing::LuaStream {
+                        worker.stream_segment(
+                            &context,
+                            &mut input,
+                            &mut budget::DiskWriter {
+                                file: &mut output,
+                                directory: root,
+                            },
+                            allowance,
+                            cancel,
+                        )?
+                    } else if segment.processing == Processing::LuaSegment {
+                        let bytes =
+                            worker.whole_segment(&context, &mut input, false, allowance, cancel)?;
                         ensure!(!cancel.is_cancelled(), "Media provider cancelled");
-                        let n = (segment.size - offset).min(CHUNK_BYTES as u64) as usize;
-                        input.read_exact(&mut buffer[..n])?;
-                        let bytes = if segment.processing == Processing::Lua {
-                            worker.transform_media(&context, &buffer[..n], offset, cancel)?
-                        } else {
-                            buffer[..n].to_vec()
-                        };
-                        ensure!(!cancel.is_cancelled(), "Media provider cancelled");
-                        output.write_all(&bytes)?;
+                        budget::DiskWriter {
+                            file: &mut output,
+                            directory: root,
+                        }
+                        .write_all(&bytes)?;
                         digest.update(&bytes);
-                        offset += n as u64;
-                    }
-                    segment.size
-                };
-                let actual = if segment.processing == Processing::LuaStream {
-                    // This branch writes directly to disk, so hash the guarded output.
+                        bytes.len() as u64
+                    } else {
+                        while offset < segment.size {
+                            ensure!(!cancel.is_cancelled(), "Media provider cancelled");
+                            let n = (segment.size - offset).min(CHUNK_BYTES as u64) as usize;
+                            input.read_exact(&mut buffer[..n])?;
+                            let bytes = if segment.processing == Processing::Lua {
+                                worker.transform_media(&context, &buffer[..n], offset, cancel)?
+                            } else {
+                                buffer[..n].to_vec()
+                            };
+                            ensure!(!cancel.is_cancelled(), "Media provider cancelled");
+                            budget::DiskWriter {
+                                file: &mut output,
+                                directory: root,
+                            }
+                            .write_all(&bytes)?;
+                            digest.update(&bytes);
+                            offset += n as u64;
+                        }
+                        segment.size
+                    };
+                    let actual = if segment.processing == Processing::LuaStream {
+                        // This branch writes directly to disk, so hash the guarded output.
+                        output.sync_all()?;
+                        output.seek(SeekFrom::Start(0))?;
+                        hash(&mut output, output_size, cancel)?
+                    } else {
+                        format!("{:x}", digest.finalize())
+                    };
+                    expected(&actual, segment.output_sha256.as_deref(), "plaintext")?;
                     output.sync_all()?;
-                    output.seek(SeekFrom::Start(0))?;
-                    hash(&mut output, output_size, cancel)?
-                } else {
-                    format!("{:x}", digest.finalize())
+                    Ok((actual, output_size))
+                })();
+                let (actual, output_size) = match result {
+                    Ok(value) => value,
+                    Err(error) => {
+                        // Truncate our held file, never a pathname that could be replaced.
+                        output
+                            .set_len(0)
+                            .context("Cannot clear incomplete media output")?;
+                        return Err(error);
+                    }
                 };
-                expected(&actual, segment.output_sha256.as_deref(), "plaintext")?;
-                output.sync_all()?;
+                budget.include(output_size)?;
                 receipts.outputs[index] = Some(actual);
                 if !receipts.output_sizes.is_empty() {
                     receipts.output_sizes[index] = Some(output_size);
                 }
                 save(root, receipts)?;
+                job.downloaded = budget.used();
+                store.save(job)?;
             }
             track_offset += segment.size;
             output_offset += if receipts.output_sizes.is_empty() {
@@ -561,20 +653,14 @@ fn process(
             index += 1;
         }
     }
-    let output_size = if receipts.output_sizes.is_empty() {
-        content.size()
-    } else {
-        receipts
-            .output_sizes
-            .iter()
-            .map(|s| s.context("Missing media output size"))
-            .collect::<Result<Vec<_>>>()?
-            .into_iter()
-            .sum()
-    };
+    let output_size = budget.used();
+    job.downloaded = output_size;
+    job.total = Some(output_size);
+    store.save(job)?;
     worker.finish_media(content, output_size, cancel)?;
     drop(worker);
     store.activity.set(&job.id, Phase::Assembling);
+    budget::check_processing_space(root, &job.directory, output_size, 0, None)?;
     let mut tracks = Vec::new();
     index = 0;
     for (number, track) in content.tracks.iter().enumerate() {
@@ -598,7 +684,11 @@ fn process(
                 count += n as u64;
                 ensure!(count <= expected_size, "Media plaintext grew before muxing");
                 digest.update(&buffer[..n]);
-                output.write_all(&buffer[..n])?;
+                budget::DiskWriter {
+                    file: &mut output,
+                    directory: root,
+                }
+                .write_all(&buffer[..n])?;
             }
             ensure!(
                 count == expected_size
@@ -611,4 +701,43 @@ fn process(
         tracks.push(output);
     }
     Ok(tracks)
+}
+
+#[cfg(test)]
+mod budget_tests {
+    use super::*;
+    #[test]
+    fn resumed_unknown_size_receipts_count_saved_output_on_every_track() {
+        let mut content = super::super::tests::plan().content();
+        for segment in content.tracks.iter_mut().flat_map(|t| &mut t.segments) {
+            segment.size = 0;
+            segment.processing = Processing::LuaStream;
+        }
+        let saved = Receipts {
+            version: API,
+            binding: "fixture".into(),
+            inputs: vec![Some("a".into()), Some("b".into())],
+            outputs: vec![None, Some("saved-on-later-track".into())],
+            input_sizes: vec![Some(1), Some(1)],
+            output_sizes: vec![None, Some(16 * 1024 * 1024)],
+        };
+        let mut restored: Receipts =
+            serde_json::from_slice(&serde_json::to_vec(&saved).unwrap()).unwrap();
+        assert_eq!(
+            restored
+                .output_budget(&content)
+                .unwrap()
+                .allowance(MAX_STREAM_OUTPUT)
+                .unwrap(),
+            4
+        );
+        restored.outputs[0] = Some("new".into());
+        restored.output_sizes[0] = Some(5);
+        assert!(restored.output_budget(&content).is_err());
+        restored.output_sizes[0] = Some(4);
+        assert_eq!(
+            restored.output_budget(&content).unwrap().used(),
+            16 * 1024 * 1024 + 4
+        );
+    }
 }

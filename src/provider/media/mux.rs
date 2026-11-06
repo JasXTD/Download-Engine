@@ -103,10 +103,6 @@ pub(super) async fn finish(
     );
     let staging = job.directory.join(format!(".idm-ex-{}.assembling", job.id));
     let _destination = download_file::guard_parents(&staging)?;
-    let output = download_file::fresh_read_write(&staging)
-        .await?
-        .into_std()
-        .await;
     ensure!(
         tracks.len() == plan.tracks.len(),
         "Missing processed media track"
@@ -125,7 +121,16 @@ pub(super) async fn finish(
         processed_size > 0 && processed_size <= allowed_size,
         "Processed media exceeds its size limit"
     );
-    let max_output = processed_size + processed_size / 2 + 8 * 1024 * 1024;
+    plan.output_budget()?.include(processed_size)?;
+    let max_output = budget::mux_limit(processed_size)?;
+    budget::check_space(&job.directory, max_output)?;
+    job.downloaded = processed_size;
+    job.total = Some(processed_size);
+    store.checkpoint(job).await?;
+    let output = download_file::fresh_read_write(&staging)
+        .await?
+        .into_std()
+        .await;
     let mut cmd = command(helper.command(), root, plan, max_output);
     let token = cancel.clone();
     store.activity.set(&job.id, Phase::Merging);

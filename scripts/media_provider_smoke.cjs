@@ -426,6 +426,38 @@ return {resolve=resolve,refresh=function(request) return resolve(request) end,
   await finished(truncatedJob.id,'failed');
   assert(!job(truncatedJob.id).saved_path);
   mark('A truncated response with an advertised size cannot publish an unknown-size segment');
+
+  // Bounded disk-exhaustion regression: two input bytes, only 16 MiB of output.
+  // A later track must use the same allowance, including after a resumed failure.
+  routes.set('/budget/byte',Buffer.from('a'));unknownPaths.add('/budget/byte');
+  const budgetPlan={kind:'media',media_api:1,content_id:'output-budget',container:'mkv',tracks:
+    ['first','second'].map(id=>({id,kind:id==='first'?'video':'audio',format:'mp4',segments:
+      [{id:'one',url:base+'/budget/byte',processing:'lua_stream'}]}))};
+  const budgetSource=`local function resolve()return xd.media_plan(xd.json([==[${JSON.stringify(budgetPlan)}]==]))end
+    return {resolve=resolve,refresh=resolve,transform=function(_,b)return b end,finish=function()error('budget failure must precede mux')end,
+      transform_stream=function(context,_,output)
+        if context.track_id=='first' then local chunk=string.rep('a',262144);for i=1,64 do output:write(chunk) end
+        else output:write('12345') end
+        return true
+      end}`;
+  const budgetScript=await save(budgetSource);
+  const budgetJob=await cli(['scripts','download',budgetScript.id,base,'--name','output-budget']);
+  let budgetFailed=await finished(budgetJob.id,'failed');
+  assert.match(budgetFailed.error,/Stream output exceeds its limit/);
+  assert.equal(budgetFailed.downloaded,16*1024*1024);assert.equal(budgetFailed.total,null);
+  assert(!budgetFailed.saved_path);
+  const budgetReceipt=receipt(budgetJob.id);
+  assert.deepEqual(budgetReceipt.input_sizes,[1,1]);
+  assert.deepEqual(budgetReceipt.output_sizes,[16*1024*1024,null]);
+  const budgetFolder=path.join(home,'data/parts',budgetJob.id);
+  assert.equal(fs.statSync(path.join(budgetFolder,'provider-media-1.out')).size,0);
+  const budgetRequests=requests.length;
+  await cli(['resume',budgetJob.id]);budgetFailed=await finished(budgetJob.id,'failed');
+  assert.match(budgetFailed.error,/Stream output exceeds its limit/);
+  assert.equal(requests.length,budgetRequests);
+  assert.deepEqual(receipt(budgetJob.id),budgetReceipt);
+  assert.equal(fs.statSync(path.join(budgetFolder,'provider-media-1.out')).size,0);
+  mark('Cross-track output expansion is bounded; resume counts saved output, reports transformed progress, clears failed output and publishes nothing');
   success=true;
 }
 main().catch(error=>{console.error(error);process.exitCode=1;}).finally(async()=>{

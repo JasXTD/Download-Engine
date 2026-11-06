@@ -116,6 +116,12 @@ end
 256 KiB per call; it returns fewer bytes at EOF. It supports random reads within
 the current input. `output:write(bytes)` appends 1 byte–256 KiB at a time, with a
 512 MiB maximum output per segment. Return `true` after writing a nonempty result.
+Across all tracks, processed output is limited to twice the verified input bytes
+plus 16 MiB of job-wide overhead. The writer enforces the remaining allowance
+before writing; resumed segments consume the same budget. This limit also applies
+to `lua_segment` output. Processing checks space for scratch files, assembled
+tracks and the final container, keeping at least 64 MiB free. Space checks are
+repeated during writes; they are not an exclusive operating-system reservation.
 
 The worker owns anonymous temporary files. No path or raw file handle reaches
 Lua. Captured readers/writers expire as soon as the callback returns or fails.

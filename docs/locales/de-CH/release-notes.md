@@ -1,3 +1,15 @@
+## 3.15.0 — 2026-11-06
+
+### Lua-Provider und ASS-Untertitel
+
+Lua-HTTP unterstützt nun HEAD, PUT, PATCH, DELETE und OPTIONS, begrenzte Binärdaten sowie ausdrücklich übergebene Sitzungen für genau einen Ursprung. Zugangsdaten bleiben ausserhalb des Resolvers verschlüsselt und gelangen weder in Pläne noch an Offline-Prozessoren. Medienpläne erlauben unbekannte Segmentgrössen; lua_stream verarbeitet begrenzte Datenblöcke mit geprüften Kontrollpunkten für Pause, Fortsetzen, Stopp und Wiederherstellung.
+
+Hinzu kommen betriebssystemgeschützte Binär-/RSA-Zugangsdatenimporte, Zufallsbytes, SHA-1/SHA-256, HMAC, RSA-Signaturen und -Entschlüsselung sowie AES-Blockentschlüsselung. ASS-Untertitel behalten Stile und Inline-Formatierungen in MKV; MP4 wandelt sie in Textuntertitel um. Neue Zugangsdaten- und Medienfunktionen benötigen eine App mit Unterstützung für die Profil-Schreibversion 9. Bestehende Kontrollpunktformate bleiben kompatibel.
+
+Das Offline-CENC-Labor für Autoren zeigt mit Lua einen begrenzten Teil der AVC/AAC-Sample-Verschlüsselung, einen simulierten signierten Lizenzaustausch, die Schlüsselübergabe und das Zusammenführen entschlüsselter Spuren mit ASS-Untertiteln. Website-Anmeldung, Lizenzformate und Container-Parser bleiben Aufgabe des Lua-Codes. Die Tests nutzen erzeugte Daten ohne echte Dienste oder Konten; dies ist keine vollständige CENC-Implementierung.
+
+[English details](../../../CHANGELOG.md#3150--2026-11-06)
+
 ## 3.10.2 — 2026-11-04
 
 ### Lokale Absturzberichte

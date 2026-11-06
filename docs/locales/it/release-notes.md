@@ -1,3 +1,15 @@
+## 3.15.0 — 2026-11-06
+
+### Nucleo dei provider Lua e sottotitoli ASS
+
+HTTP in Lua supporta ora HEAD, PUT, PATCH, DELETE e OPTIONS, corpi binari con limiti di dimensione e sessioni fornite esplicitamente, vincolate a una sola origine. Le credenziali restano cifrate fuori dal resolver, non vengono salvate nei piani né inviate ai processori offline. I piani multimediali accettano segmenti di dimensione sconosciuta; lua_stream elabora blocchi limitati con punti di controllo verificati per pausa, ripresa, arresto e recupero.
+
+Aggiunti l’importazione di credenziali binarie/RSA protette dal sistema operativo, byte casuali, SHA-1/SHA-256, HMAC, firma e decifratura RSA e decifratura di blocchi AES. I sottotitoli ASS mantengono stili e modifiche di formattazione interne in MKV, mentre MP4 li converte in sottotitoli testuali. Le nuove funzioni per credenziali e contenuti multimediali richiedono un’app che supporti la versione di scrittura del profilo 9. I formati dei punti di controllo esistenti restano compatibili.
+
+Il laboratorio CENC offline per gli autori usa Lua per analizzare un sottoinsieme limitato della cifratura dei campioni AVC/AAC, simulare uno scambio di licenza firmato, trasferire le chiavi e unire le tracce decifrate ai sottotitoli ASS. Autenticazione dei siti, formati delle licenze e parser dei contenitori restano a carico del codice Lua. I test usano dati generati, senza servizi o account reali; non si tratta di un’implementazione CENC completa.
+
+[English details](../../../CHANGELOG.md#3150--2026-11-06)
+
 ## 3.10.2 — 2026-11-04
 
 ### Rapporti di arresto anomalo locali

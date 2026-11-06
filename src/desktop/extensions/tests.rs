@@ -100,11 +100,32 @@ fn installing_goes_through_a_review_and_starts_turned_off() {
     text_rect(&output, "1.2.0 · Example · Publisher not verified");
     text_rect(&output, "Disabled");
     text_rect(&output, "What it can do");
-    text_rect(&output, "Use your browser logins or cookies");
+    text_rect(&output, "What it can't do");
+    text_rect(&output, "Import logins or cookies from your browser");
+    assert!(!has_text(
+        &output,
+        "Use login cookies and headers you supply, on the declared hosts"
+    ));
     text_rect(&output, "Tidy finished files");
 
     click(&mut app, &ctx, "Enabled");
     assert!(app.store.extension(ID).unwrap().enabled);
+}
+
+#[test]
+fn session_permission_distinguishes_supplied_credentials_from_browser_imports() {
+    let mut data: Value =
+        serde_json::from_slice(&package("1.2.0", &["videohost.example"])).unwrap();
+    let supplied = "Use login cookies and headers you supply, on the declared hosts";
+    let imported = "Import logins or cookies from your browser";
+    for permitted in [false, true] {
+        data["permissions"]["http_sessions"] = json!(permitted);
+        let package = Package::decode(&serde_json::to_vec(&data).unwrap()).unwrap();
+        let (can, cannot) = powers(&package, false);
+        assert_eq!(can.iter().any(|text| text == supplied), permitted);
+        assert!(!can.iter().any(|text| text == imported));
+        assert!(cannot.iter().any(|text| text == imported));
+    }
 }
 
 #[test]

@@ -1,3 +1,15 @@
+## 3.15.0 — 2026-11-06
+
+### Lõi trình cung cấp Lua và phụ đề ASS
+
+HTTP trong Lua bổ sung HEAD, PUT, PATCH, DELETE, OPTIONS, phần thân nhị phân có giới hạn và các phiên được cung cấp rõ ràng, ràng buộc với một nguồn gốc. Thông tin xác thực luôn được mã hóa bên ngoài bộ phân giải, không được lưu trong kế hoạch hay gửi đến bộ xử lý ngoại tuyến. Kế hoạch phương tiện hỗ trợ đoạn chưa biết kích thước; lua_stream xử lý các khối có giới hạn với điểm kiểm tra đã xác minh để tạm dừng, tiếp tục, dừng và khôi phục.
+
+Bổ sung nhập thông tin xác thực nhị phân/RSA được hệ điều hành bảo vệ, byte ngẫu nhiên, SHA-1/SHA-256, HMAC, ký và giải mã RSA, cùng giải mã khối AES. Phụ đề ASS giữ kiểu và định dạng ghi đè nội tuyến trong MKV, còn MP4 chuyển thành phụ đề văn bản. Các tính năng xác thực và phương tiện mới yêu cầu ứng dụng hỗ trợ phiên bản ghi hồ sơ 9; định dạng điểm kiểm tra hiện có vẫn tương thích.
+
+Phòng thử nghiệm CENC ngoại tuyến dành cho tác giả dùng Lua để phân tích một phần giới hạn của mã hóa mẫu AVC/AAC, trao đổi giấy phép ký số mô phỏng, chuyển giao khóa và ghép các luồng đã giải mã với phụ đề ASS. Xác thực trang web, định dạng giấy phép và bộ phân tích bộ chứa vẫn do mã Lua đảm nhiệm. Kiểm thử dùng dữ liệu tạo sẵn, không dùng dịch vụ hay tài khoản thực; đây không phải bản triển khai CENC đầy đủ.
+
+[English details](../../../CHANGELOG.md#3150--2026-11-06)
+
 ## 3.10.2 — 2026-11-04
 
 ### Báo cáo sự cố cục bộ

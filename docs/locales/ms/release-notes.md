@@ -1,3 +1,15 @@
+## 3.15.0 — 2026-11-06
+
+### Teras pembekal Lua dan sari kata ASS
+
+HTTP Lua kini menyokong HEAD, PUT, PATCH, DELETE dan OPTIONS, badan binari dengan had saiz serta sesi yang dibekalkan secara nyata dan terikat pada satu asal. Kelayakan kekal disulitkan di luar penyelesai, tidak disimpan dalam pelan dan tidak dihantar kepada pemproses luar talian. Pelan media menerima saiz segmen yang belum diketahui; lua_stream memproses blok terhad dengan titik semak yang disahkan untuk Jeda, Sambung, Henti dan pemulihan.
+
+Ditambah import kelayakan binari/RSA yang dilindungi sistem operasi, bait rawak, SHA-1/SHA-256, HMAC, tandatangan dan penyahsulitan RSA serta penyahsulitan blok AES. Sari kata ASS mengekalkan gaya dan arahan gaya sebaris dalam MKV, manakala MP4 menukarkannya kepada sari kata teks. Ciri kelayakan dan media baharu memerlukan aplikasi yang menyokong versi penulis profil 9; format titik semak sedia ada kekal serasi.
+
+Makmal pengarang CENC luar talian menggunakan Lua untuk menghuraikan subset terhad penyulitan sampel AVC/AAC, pertukaran lesen bertandatangan sintetik, penyerahan kunci dan penggabungan trek yang dinyahsulit dengan sari kata ASS. Pengesahan laman, format lesen dan penghurai bekas media kekal dalam Lua. Ujian menggunakan data janaan tanpa perkhidmatan atau akaun sebenar; ini bukan pelaksanaan CENC yang lengkap.
+
+[English details](../../../CHANGELOG.md#3150--2026-11-06)
+
 ## 3.10.2 — 2026-11-04
 
 ### Laporan ranap setempat

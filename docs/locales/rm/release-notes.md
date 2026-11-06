@@ -1,3 +1,15 @@
+## 3.15.0 — 2026-11-06
+
+### Nuschel dals providers Lua e suttitels ASS
+
+HTTP en Lua sustegna ussa HEAD, PUT, PATCH, DELETE ed OPTIONS, cuntegns binars cun limitas da grondezza e sessiuns furnidas explicitamain, liadas ad ina suletta derivanza. Las datas d’access restan criptadas ordaifer il resolver e na vegnan ni memorisadas en ils plans ni transmessas als processurs offline. Ils plans da medias permettan segments cun ina grondezza nunenconuschenta; lua_stream elavura blocs limitads cun puncts da controlla verifitgads per pausa, cuntinuaziun, fermada e recuperaziun.
+
+Agiunt l’import da datas d’access binaras/RSA protegidas dal sistem operativ, bytes casuals, SHA-1/SHA-256, HMAC, suttascripziuns e decifrar cun RSA sco er decifrar blocs AES. Ils suttitels ASS mantegnan stils ed instrucziuns da formataziun integradas en MKV; MP4 als transfurma en suttitels da text. Las novas funcziuns per datas d’access e medias dovran in’app che sustegna la versiun da scriver profils 9. Ils formats existents dals puncts da controlla restan cumpatibels.
+
+Il laboratori CENC offline per auturs dovra Lua per analisar ina part limitada da la criptaziun da samples AVC/AAC, simular in barat da licenza signà, transmetter clavs e cumbinar las pistas decifradas cun suttitels ASS. L’autentificaziun da paginas, ils formats da licenza ed ils parsers da containers restan incumbensa dal code Lua. Ils tests dovran datas generadas, senza servetschs u contos reals; quai n’è betg in’implementaziun cumpletta da CENC.
+
+[English details](../../../CHANGELOG.md#3150--2026-11-06)
+
 ## 3.10.2 — 2026-11-04
 
 ### Rapports locals da collaps

@@ -20,7 +20,8 @@ for (const key of Object.keys(env)) if (key.startsWith('IDM_EX_TEST_') || key.st
 const digest = bytes => createHash('sha256').update(bytes).digest('hex');
 const key = '603deb1015ca71be2b73aef0857d77811f352c073b6108d72d9810a30914dff4'; // public fixture
 const checks = [], requests = [], routes = new Map();
-let app, db, success = false, slow = false, redirectedRequests = 0, forbiddenUrl;
+const unknownPaths = new Set();
+let app, db, success = false, slow = false, redirectedRequests = 0, forbiddenUrl, serverFailure;
 const redirectServer = http.createServer((_req,res) => {
   redirectedRequests++; res.end('This origin must never be contacted');
 });
@@ -30,21 +31,35 @@ function execute(program,args) {
 }
 const probe = (file, args=[]) => JSON.parse(execute(ffprobe,['-v','error',...args,'-of','json',file]));
 const server = http.createServer((req,res) => {
+  try {
   const url = new URL(req.url,'http://127.0.0.1');
   requests.push({url:req.url,range:req.headers.range,credentials:!!(req.headers.cookie||req.headers.authorization)});
   if(url.pathname==='/redirect') {res.writeHead(302,{Location:forbiddenUrl});res.end();return;}
+  if(url.pathname.startsWith('/authenticated/')) {
+    assert.equal(req.headers.authorization,'Bearer offline-session');
+    assert.equal(req.headers['user-agent'],'OfflineFixture/1');
+    assert.equal(req.headers.cookie,url.pathname.endsWith('/video')?'fixture=seed':'fixture=next');
+    res.setHeader('Set-Cookie','fixture=next; Path=/');
+  }
+  if(url.pathname==='/oversized-unknown') {res.writeHead(200,{'Content-Length':268435457});res.end();return;}
+  if(url.pathname==='/truncated-unknown') {res.writeHead(200,{'Content-Length':10,'Connection':'close'});res.end('short');return;}
+  if(url.pathname==='/authenticated-redirect') {
+    assert.equal(req.headers.authorization,'Bearer offline-session');
+    res.writeHead(302,{Location:forbiddenUrl});res.end();return;
+  }
   const bytes = routes.get(url.pathname);
   if(!bytes) {res.writeHead(404);res.end();return;}
   let start=0,end=bytes.length-1;
   if(req.headers.range){const m=/^bytes=(\d+)-(\d+)$/.exec(req.headers.range);assert(m);start=Number(m[1]);end=Number(m[2]);}
   const data=bytes.subarray(start,end+1);
-  res.writeHead(req.headers.range?206:200,{'Content-Length':data.length,...(req.headers.range?{'Content-Range':`bytes ${start}-${end}/${bytes.length}`}:{})});
+  res.writeHead(req.headers.range?206:200,{...(!unknownPaths.has(url.pathname)?{'Content-Length':data.length}:{'Transfer-Encoding':'chunked'}),...(req.headers.range?{'Content-Range':`bytes ${start}-${end}/${bytes.length}`}:{})});
   if(!slow){res.end(data);return;}
   let offset=0,timer;
   function send(){if(res.destroyed)return;const n=Math.min(offset+1024,data.length);res.write(data.subarray(offset,n));offset=n;if(offset===data.length)res.end();else timer=setTimeout(send,25);}
   res.on('close',()=>clearTimeout(timer));send();
+  } catch(error) { serverFailure=error;res.destroy(); }
 });
-async function until(check,label,ms=60000){const end=Date.now()+ms;while(Date.now()<end){const value=await check();if(value)return value;await delay(40);}throw Error(`Timed out: ${label}`);}
+async function until(check,label,ms=60000){const end=Date.now()+ms;while(Date.now()<end){if(serverFailure)throw serverFailure;const value=await check();if(value)return value;await delay(40);}throw Error(`Timed out: ${label}`);}
 async function cli(args,input){
   const child=spawn(exe('de-cli'),[...args,'--no-start'],{env,windowsHide:true,stdio:[input===undefined?'ignore':'pipe','pipe','pipe']});
   if(input!==undefined)child.stdin.end(input);
@@ -127,19 +142,37 @@ async function main(){
   const extensionJob=await cli(['scripts','download',loaded.jobs[0].script_id,base,'--name','extension']);await finished(extensionJob.id);
   mark('Installed Lua extension decrypts and muxes through an opaque saved AES key');
 
-  slow=true;const paused=await cli(['scripts','download',script.id,base,'--name','resume']);
+  const sessionSource=source
+    .replace('local function resolve(request)', `local function resolve(request)\n for _,name in ipairs({'video','english','japanese'}) do xd.handoff_key(name,string.char(${[...Buffer.from(key,'hex')].join(',')})) end`)
+    .replace(`local key='${key}'`, 'local key=xd.session_key(context.track_id)');
+  const sessionExtension={...extension,id:'offline.session',settings:[],files:{'provider.lua':sessionSource}};
+  const sessionFile=path.join(home,'session.de-extension.json');fs.writeFileSync(sessionFile,JSON.stringify(sessionExtension));
+  await cli(['extensions','install',sessionFile]);await cli(['extensions','enable','offline.session']);
+  const sessionLoaded=await cli(['extensions','show','offline.session']);
+  const extensionSession=await cli(['scripts','download',sessionLoaded.jobs[0].script_id,base,'--name','extension-session']);
+  const sessionComplete=await finished(extensionSession.id);
+  assert.deepEqual(probe(sessionComplete.saved_path,['-show_streams']).streams.map(s=>s.codec_type),['video','audio','audio','subtitle']);
+  const extensionStored=db.prepare('SELECT data FROM jobs WHERE id=?').get(extensionSession.id).data;
+  assert(!extensionStored.includes('provider-key-v1:')&&!extensionStored.includes('handoff'));
+  mark('An installed extension hands off three session keys without saved key settings and muxes all four tracks');
+  const sessionScript=await save(sessionSource);
+  slow=true;const paused=await cli(['scripts','download',sessionScript.id,base,'--name','resume']);
   await until(()=>receipt(paused.id)?.inputs.filter(Boolean).length>=2,'two durable segments');
   await cli(['pause',paused.id]);await finished(paused.id,'paused');
   const count=receipt(paused.id).inputs.filter(Boolean).length;
+  const savedSession=db.prepare('SELECT data FROM jobs WHERE id=?').get(paused.id).data;
+  assert(!savedSession.includes(key)&&!savedSession.includes('provider-key-v1:')&&!savedSession.includes('handoff'));
+  assert(!JSON.stringify(receipt(paused.id)).includes('provider-key-v1:'));
   const before=requests.length;await stop();await launch();slow=false;
   await cli(['resume',paused.id]);await finished(paused.id);
   const first=tracks[0].segments[0].url;assert(!requests.slice(before).some(r=>r.url.startsWith(first+'?')));
-  mark(`Pause and process restart reuse ${count} verified segments without redownloading the first segment or creating another job`);
+  assert.deepEqual(probe(job(paused.id).saved_path,['-show_streams']).streams.map(s=>s.codec_type),['video','audio','audio','subtitle']);
+  mark(`Pause and process restart reacquire three session keys and reuse ${count} verified segments without duplicating the job; all four tracks mux correctly`);
 
-  slow=true;const crashed=await cli(['scripts','download',script.id,base,'--name','crash']);
+  slow=true;const crashed=await cli(['scripts','download',sessionScript.id,base,'--name','crash']);
   await until(()=>receipt(crashed.id)?.inputs.filter(Boolean).length>=2,'crash checkpoint');await stop();const durable=receipt(crashed.id).inputs.filter(Boolean).length;
   slow=false;await launch();if(job(crashed.id).status!=='complete')await cli(['resume',crashed.id]);await finished(crashed.id);
-  mark(`Forced desktop termination recovers ${durable} durable segments and completes the existing download`);
+  mark(`Forced desktop termination reacquires session keys, recovers ${durable} durable segments and completes the existing download`);
 
   slow=true;const corrupt=await cli(['scripts','download',script.id,base,'--name','corrupt']);
   await until(()=>receipt(corrupt.id)?.inputs[0],'corruption fixture checkpoint');await cli(['pause',corrupt.id]);await finished(corrupt.id,'paused');
@@ -169,7 +202,7 @@ async function main(){
   assert(!job(invalid.id).saved_path);
   mark('Invalid media fails muxing without publishing a file or exposing decrypted bytes in the job error');
 
-  const hanging=await save(source.replace('return xd.aes_ctr(key,counters[context.track_id],bytes,context.track_offset+offset)','while true do end'));
+  const hanging=await save(sessionSource.replace('return xd.aes_ctr(key,counters[context.track_id],bytes,context.track_offset+offset)','while true do end'));
   const busy=await cli(['scripts','download',hanging.id,base,'--name','stop']);
   await until(()=>receipt(busy.id)?.inputs.every(Boolean),'all encrypted segments');await delay(300);
   // Desktop Stop sends Command::Pause; CLI pause reaches the identical scheduler
@@ -188,6 +221,211 @@ async function main(){
   const stable=stopping.map(j=>JSON.stringify(receipt(j.id)));await delay(300);
   assert.deepEqual(stopping.map(j=>JSON.stringify(receipt(j.id))),stable);assert(stopping.every(j=>!job(j.id).saved_path));
   mark('Stop all scheduler path joins both busy processors; no receipt writes continue after pause acknowledgment');
+
+  // A deliberately simple owned envelope exercises variable-length MP4 processing.
+  // DEMP + public CTR nonce + original byte offset precedes each encrypted piece.
+  // This is a teaching fixture, not a CENC or Widevine implementation.
+  const wholeTracks=structuredClone(tracks);
+  for(const track of wholeTracks){
+    if(track.kind==='subtitle')continue;
+    track.init_segment=track.segments[0].id;
+    let originalOffset=0;
+    for(const segment of track.segments){
+      const resource=routes.get(segment.url);
+      const cipher=segment.range_start===undefined?resource:resource.subarray(segment.range_start,segment.range_start+segment.size);
+      const header=Buffer.alloc(28);header.write('DEMP');Buffer.from(counters[track.id],'hex').copy(header,4);header.writeBigUInt64BE(BigInt(originalOffset),20);
+      originalOffset+=segment.size;
+      const bytes=Buffer.concat([header,cipher]);
+      segment.url='/whole/'+track.id+'/'+segment.id;delete segment.range_start;
+      routes.set(segment.url,bytes);segment.size=bytes.length;segment.processing='lua_segment';segment.input_sha256=digest(bytes);
+    }
+  }
+  const wholePlan={...plan,content_id:'offline-whole-segments-v1',tracks:wholeTracks};
+  const wholeSource=`assert(xd.segment_api==1 and xd.supports('media.segment_processing'))
+local prepared={}
+local function nonce(bytes) assert(bytes:sub(1,4)=='DEMP');return (bytes:sub(5,20):gsub('.',function(c)return string.format('%02x',string.byte(c))end)) end
+local function resolve(request)
+ for _,id in ipairs({'video','english','japanese'}) do xd.handoff_key(id,string.char(${[...Buffer.from(key,'hex')].join(',')})) end
+ local plan=xd.json([==[${JSON.stringify(wholePlan)}]==])
+ for _,track in ipairs(plan.tracks) do for _,segment in ipairs(track.segments) do segment.url=xd.url_join(request.url,segment.url) end end
+ return xd.media_plan(plan)
+end
+return {resolve=resolve,refresh=function(request) return resolve(request) end,
+ transform=function(_,bytes)return bytes end,
+ prepare_track=function(context,bytes) prepared[context.track_id]=nonce(bytes);return true end,
+ transform_segment=function(context,bytes)
+  assert(xd.fetch==nil and xd.http_session==nil and context.url==nil)
+  assert(prepared[context.track_id]==nonce(bytes),'Initialization must replay after resume')
+  assert(context.output_offset==string.unpack('>I8',bytes,21),'Output offsets must include resumed processed segments')
+  if context.track_id=='video' and context.segment_id=='part1' and not xd.setting('continue_processing') then while true do end end
+  return xd.aes_ctr(xd.session_key(context.track_id),prepared[context.track_id],bytes:sub(29),(string.unpack('>I8',bytes,21)))
+ end,
+ finish=function(plan,result) assert(result.size<${wholePlan.tracks.flatMap(t=>t.segments).reduce((n,s)=>n+s.size,0)});return true end}`;
+  const wholeExtension={...extension,id:'offline.whole',settings:[{id:'continue_processing',type:'boolean',label:'Continue offline processing',default:false}],files:{'provider.lua':wholeSource}};
+  const wholeFile=path.join(home,'whole.de-extension.json');fs.writeFileSync(wholeFile,JSON.stringify(wholeExtension));
+  await cli(['extensions','install',wholeFile]);await cli(['extensions','enable','offline.whole']);
+  const wholeLoaded=await cli(['extensions','show','offline.whole']);
+  const wholeScript=wholeLoaded.jobs[0].script_id;
+  const whole=await cli(['scripts','download',wholeScript,base,'--name','whole-resume']);
+  await until(()=>receipt(whole.id)?.outputs[0],'first variable-length output checkpoint');
+  await cli(['pause',whole.id]);await finished(whole.id,'paused');
+  const firstReceipt=receipt(whole.id);
+  assert.equal(firstReceipt.output_sizes[0],wholeTracks[0].segments[0].size-28);
+  assert.equal(firstReceipt.outputs[1],null);
+  const wholeRequestCount=requests.length;
+  await stop();await launch();await cli(['extensions','set','offline.whole','continue_processing','true']);
+  await cli(['resume',whole.id]);const wholeDone=await finished(whole.id);
+  assert.equal(requests.length,wholeRequestCount,'Resume must reuse every verified input');
+  assert.deepEqual(probe(wholeDone.saved_path,['-show_streams']).streams.map(s=>s.codec_type),['video','audio','audio','subtitle']);
+  for(let i=0;i<3;i++){
+    const hashes=(file,select)=>probe(file,['-select_streams',select,'-show_packets','-show_data_hash','sha256','-show_entries','packet=data_hash']).packets.map(p=>p.data_hash);
+    assert.deepEqual(hashes(wholeDone.saved_path,String(i)),hashes(path.join(home,names[i]+'.mp4'),'0'));
+  }
+  mark('Whole-segment callbacks remove envelope metadata, replay initialization after Pause/restart, reuse all inputs and preserve every MP4 media packet');
+
+  await cli(['extensions','set','offline.whole','continue_processing','false']);
+  const wholeCrash=await cli(['scripts','download',wholeScript,base,'--name','whole-crash']);
+  await until(()=>receipt(wholeCrash.id)?.outputs[0],'whole-segment crash checkpoint');await stop();
+  await launch();await cli(['pause',wholeCrash.id]);await finished(wholeCrash.id,'paused');
+  await cli(['extensions','set','offline.whole','continue_processing','true']);
+  await cli(['resume',wholeCrash.id]);await finished(wholeCrash.id);
+  mark('Crash recovery verifies variable-length outputs and restores initialization for a fresh processor');
+
+  await cli(['extensions','set','offline.whole','continue_processing','false']);
+  const wholeCorrupt=await cli(['scripts','download',wholeScript,base,'--name','whole-corrupt']);
+  await until(()=>receipt(wholeCorrupt.id)?.outputs[0],'whole corruption checkpoint');await cli(['pause',wholeCorrupt.id]);await finished(wholeCorrupt.id,'paused');
+  const wholeOutput=path.join(home,'data/parts',wholeCorrupt.id,'provider-media-0.out');fs.appendFileSync(wholeOutput,Buffer.from([1]));
+  await cli(['resume',wholeCorrupt.id]);assert.match((await finished(wholeCorrupt.id,'failed')).error,/Saved media segment size changed/);
+  assert(!job(wholeCorrupt.id).saved_path);
+  mark('A changed variable-length output is rejected before initialization or muxing');
+
+  const wholeStopping=[];
+  for(let i=0;i<2;i++)wholeStopping.push(await cli(['scripts','download',wholeScript,base,'--name',`whole-stop-${i}`]));
+  await until(()=>wholeStopping.every(j=>receipt(j.id)?.outputs[0]),'two whole-segment processors');
+  const stopWhole=Date.now();await cli(['pause-all']);for(const j of wholeStopping)await finished(j.id,'paused');
+  assert(Date.now()-stopWhole<10000);
+  const wholeStable=wholeStopping.map(j=>JSON.stringify(receipt(j.id)));await delay(300);
+  assert.deepEqual(wholeStopping.map(j=>JSON.stringify(receipt(j.id))),wholeStable);
+  mark('Stop all cancels both whole-segment Lua callbacks without late checkpoint writes');
+  const ass=Buffer.from(`[Script Info]\nScriptType: v4.00+\nPlayResX: 160\nPlayResY: 90\n\n[V4+ Styles]\nFormat: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding\nStyle: FixtureStyle,Arial,20,&H00FFFFFF,&H000000FF,&H00000000,&H00000000,0,0,0,0,100,100,0,0,1,1,0,2,5,5,5,1\n\n[Events]\nFormat: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\nDialogue: 0,0:00:00.00,0:00:02.00,FixtureStyle,,0,0,0,,{\\b1\\c&H00FF00&}Owned styled subtitle\n`);
+  const originalVideo=fs.readFileSync(path.join(home,'video.mp4'));
+  routes.set('/authenticated/video',originalVideo);routes.set('/authenticated/ass',ass);
+  unknownPaths.add('/authenticated/video');unknownPaths.add('/authenticated/ass');
+  const styledPlan={content_id:'styled-offline',container:'mkv',tracks:[
+    {id:'video',kind:'video',format:'mp4',segments:[{id:'one',url:'/authenticated/video',session:'media',input_sha256:digest(originalVideo)}]},
+    {id:'ass',kind:'subtitle',format:'ass',language:'eng',segments:[{id:'one',url:'/authenticated/ass',session:'media',input_sha256:digest(ass)}]}
+  ]};
+  const styledSource=`local function resolve(request)
+    local session=xd.http_session(request.url,{cookies={fixture='seed'},headers={Authorization='Bearer offline-session',['User-Agent']='OfflineFixture/1'}})
+    xd.handoff_session('media',session)
+    local p=xd.json([==[${JSON.stringify(styledPlan)}]==])
+    for _,t in ipairs(p.tracks) do for _,s in ipairs(t.segments) do s.url=xd.url_join(request.url,s.url) end end
+    return xd.media_plan(p)
+  end
+  return {resolve=resolve,refresh=resolve,transform=function(_,b)return b end,finish=function(_,r)return r.size>0 end}`;
+  const styledScript=await save(styledSource);
+  const styled=await cli(['scripts','download',styledScript.id,base,'--name','styled-authenticated']);
+  const styledDone=await finished(styled.id);
+  const assText=file=>execute(ffmpeg,['-hide_banner','-nostdin','-loglevel','error','-i',file,'-map','0:s:0','-c','copy','-f','ass','pipe:1']);
+  const renderedAss=assText(styledDone.saved_path);
+  assert(renderedAss.includes('Style: FixtureStyle,Arial,20') && renderedAss.includes('{\\b1\\c&H00FF00&}Owned styled subtitle'));
+  assert.equal(probe(styledDone.saved_path,['-show_streams']).streams[1].codec_name,'ass');
+  assert(!JSON.stringify(job(styled.id)).includes('Bearer offline-session'));
+  assert(!JSON.stringify(job(styled.id)).includes('fixture=next'));
+  assert.equal(styledDone.provider.media.tracks[0].segments[0].size,0);
+  mark('Unknown-size authenticated segments use supplied headers, learn cookies between requests, preserve ASS styles in MKV and keep credentials out of saved jobs');
+
+  const styledMp4=await save(styledSource.replace('"container":"mkv"','"container":"mp4"'));
+  const styledMp4Job=await cli(['scripts','download',styledMp4.id,base,'--name','styled-mp4']);
+  assert.equal(probe((await finished(styledMp4Job.id)).saved_path,['-show_streams']).streams[1].codec_name,'mov_text');
+  mark('ASS subtitles convert to mov_text for MP4 without changing the selected container');
+
+  const sessionRedirect=await save(styledSource.replace('/authenticated/video','/authenticated-redirect'));
+  const beforeRedirect=redirectedRequests;
+  const redirectJob=await cli(['scripts','download',sessionRedirect.id,base,'--name','session-redirect']);
+  assert.match((await finished(redirectJob.id,'failed')).error,/origin|redirect/i);
+  assert.equal(redirectedRequests,beforeRedirect);
+  assert(!job(redirectJob.id).saved_path);
+  mark('Authenticated segment redirects fail before another origin receives a request or credentials');
+
+  const free=Buffer.alloc(9*1024*1024);free.writeUInt32BE(free.length,0);free.write('free',4);
+  const largeVideo=Buffer.concat([originalVideo,free]);
+  const streamCipher=createCipheriv('aes-256-ctr',Buffer.from(key,'hex'),Buffer.alloc(16));
+  const largeEncrypted=Buffer.concat([Buffer.from('DEMP'),streamCipher.update(largeVideo),streamCipher.final()]);
+  routes.set('/stream/video',largeEncrypted);routes.set('/stream/ass',ass);
+  unknownPaths.add('/stream/video');unknownPaths.add('/stream/ass');
+  const streamPlan={...styledPlan,content_id:'streamed-offline',tracks:structuredClone(styledPlan.tracks)};
+  for(const track of streamPlan.tracks){const s=track.segments[0];s.url='/stream/'+track.id;delete s.session;s.processing='lua_stream';s.input_sha256=digest(track.id==='video'?largeEncrypted:ass);s.output_sha256=digest(track.id==='video'?largeVideo:ass);}
+  const streamSource=`assert(xd.supports('media.stream_processing'))
+  local function resolve(request)
+    local p=xd.json([==[${JSON.stringify(streamPlan)}]==])
+    for _,t in ipairs(p.tracks) do for _,s in ipairs(t.segments) do s.url=xd.url_join(request.url,s.url) end end
+    return xd.media_plan(p)
+  end
+  return {resolve=resolve,refresh=resolve,transform=function(_,b)return b end,finish=function(_,r)return r.size>0 end,
+    transform_stream=function(context,input,output)
+      if context.track_id=='ass' and not xd.setting('continue_processing') then while true do end end
+      local offset=context.track_id=='video' and 4 or 0
+      while offset<input:size() do
+        local bytes=input:read(offset,262144)
+        if context.track_id=='video' then bytes=xd.aes_ctr('${key}','00000000000000000000000000000000',bytes,offset-4) end
+        output:write(bytes);offset=offset+#bytes
+      end
+      return true
+    end}`;
+  const streamExtension={...wholeExtension,id:'offline.streaming',files:{'provider.lua':streamSource}};
+  const streamFile=path.join(home,'stream.de-extension.json');fs.writeFileSync(streamFile,JSON.stringify(streamExtension));
+  await cli(['extensions','install',streamFile]);await cli(['extensions','enable','offline.streaming']);
+  const streamScript=(await cli(['extensions','show','offline.streaming'])).jobs[0].script_id;
+  const streaming=await cli(['scripts','download',streamScript,base,'--name','stream-resume']);
+  await until(()=>receipt(streaming.id)?.outputs[0],'large streamed output checkpoint');
+  await cli(['pause',streaming.id]);await finished(streaming.id,'paused');
+  const checkpoint=receipt(streaming.id);
+  assert.deepEqual(checkpoint.input_sizes,[largeEncrypted.length,ass.length]);
+  assert.equal(checkpoint.output_sizes[0],largeVideo.length);
+  const savedCount=requests.length;
+  await stop();await launch();await cli(['extensions','set','offline.streaming','continue_processing','true']);
+  await cli(['resume',streaming.id]);const streamDone=await finished(streaming.id);
+  assert.equal(requests.length,savedCount);
+  const packets=file=>probe(file,['-select_streams','v:0','-show_packets','-show_data_hash','sha256','-show_entries','packet=data_hash']).packets.map(p=>p.data_hash);
+  assert.deepEqual(packets(streamDone.saved_path),packets(path.join(home,'video.mp4')));
+  assert(assText(streamDone.saved_path).includes('Owned styled subtitle'));
+  mark('A >9 MiB encrypted stream is rewritten in bounded chunks; Pause/restart/resume reuses measured inputs and verified outputs without new downloads');
+
+  await cli(['extensions','set','offline.streaming','continue_processing','false']);
+  const crashStream=await cli(['scripts','download',streamScript,base,'--name','stream-crash']);
+  await until(()=>receipt(crashStream.id)?.outputs[0],'stream crash checkpoint');await stop();
+  await launch();await cli(['pause',crashStream.id]);await finished(crashStream.id,'paused');
+  await cli(['extensions','set','offline.streaming','continue_processing','true']);await cli(['resume',crashStream.id]);
+  await finished(crashStream.id);
+  mark('Crash recovery restores streamed output receipts and finishes the same download');
+
+  await cli(['extensions','set','offline.streaming','continue_processing','false']);
+  const corruptStream=await cli(['scripts','download',streamScript,base,'--name','stream-corrupt']);
+  await until(()=>receipt(corruptStream.id)?.outputs[0],'stream corruption checkpoint');
+  await cli(['pause',corruptStream.id]);await finished(corruptStream.id,'paused');
+  const savedInput=path.join(home,'data/parts',corruptStream.id,'provider-media-0.in');fs.appendFileSync(savedInput,Buffer.from([1]));
+  await cli(['resume',corruptStream.id]);assert.match((await finished(corruptStream.id,'failed')).error,/Saved media segment size changed/);
+  assert(!job(corruptStream.id).saved_path);
+  mark('Unknown-size checkpoint corruption is rejected before processing or muxing');
+
+  const stoppedStream=await cli(['scripts','download',streamScript,base,'--name','stream-stop']);
+  await until(()=>receipt(stoppedStream.id)?.outputs[0],'stream stop checkpoint');
+  await cli(['pause-all']);await finished(stoppedStream.id,'paused');
+  const stableStream=JSON.stringify(receipt(stoppedStream.id));await delay(300);assert.equal(JSON.stringify(receipt(stoppedStream.id)),stableStream);
+  mark('Stop all terminates a streaming callback with no late writes');
+
+  const badPlan={...styledPlan,content_id:'oversized',tracks:[{id:'video',kind:'video',format:'mp4',segments:[{id:'one',url:base+'/oversized-unknown'}]}]};
+  const badScript=await save(`local function resolve()return xd.media_plan(xd.json([==[${JSON.stringify(badPlan)}]==]))end return {resolve=resolve,refresh=resolve,transform=function(_,b)return b end,finish=function()return true end}`);
+  const oversizedJob=await cli(['scripts','download',badScript.id,base,'--name','oversized']);
+  assert.match((await finished(oversizedJob.id,'failed')).error,/input limit/);
+  assert(!job(oversizedJob.id).saved_path);
+  mark('An oversized unknown-length segment is rejected from its headers before any file is published');
+  const truncatedScript=await save(badScript.body.replace('/oversized-unknown','/truncated-unknown'));
+  const truncatedJob=await cli(['scripts','download',truncatedScript.id,base,'--name','truncated']);
+  await finished(truncatedJob.id,'failed');
+  assert(!job(truncatedJob.id).saved_path);
+  mark('A truncated response with an advertised size cannot publish an unknown-size segment');
   success=true;
 }
 main().catch(error=>{console.error(error);process.exitCode=1;}).finally(async()=>{

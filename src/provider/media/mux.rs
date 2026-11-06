@@ -3,6 +3,7 @@ use crate::{
     download_file, engine, hls::merge::Helper, model::Job, store::Store,
     synchronization::FinishedFile, transfer_activity::Phase,
 };
+use anyhow::Context;
 use sha2::{Digest, Sha256};
 use std::{fs::File, path::Path, process::Command};
 use tokio::io::{AsyncReadExt, AsyncSeekExt};
@@ -33,6 +34,7 @@ fn command(mut cmd: Command, root: &Path, plan: &Plan, max_output: u64) -> Comma
                 Format::Aac => "aac",
                 Format::Srt => "srt",
                 Format::Webvtt => "webvtt",
+                Format::Ass => "ass",
             },
         ]);
         if track.format == Format::Mp4 {
@@ -105,7 +107,25 @@ pub(super) async fn finish(
         .await?
         .into_std()
         .await;
-    let max_output = plan.size() + plan.size() / 2 + 8 * 1024 * 1024;
+    ensure!(
+        tracks.len() == plan.tracks.len(),
+        "Missing processed media track"
+    );
+    let processed_size = tracks.iter().try_fold(0_u64, |sum, track| {
+        sum.checked_add(track.metadata()?.len())
+            .context("Processed media size overflow")
+    })?;
+    let allowed_size: u64 = plan
+        .tracks
+        .iter()
+        .flat_map(|t| &t.segments)
+        .map(|s| s.output_limit())
+        .sum();
+    ensure!(
+        processed_size > 0 && processed_size <= allowed_size,
+        "Processed media exceeds its size limit"
+    );
+    let max_output = processed_size + processed_size / 2 + 8 * 1024 * 1024;
     let mut cmd = command(helper.command(), root, plan, max_output);
     let token = cancel.clone();
     store.activity.set(&job.id, Phase::Merging);

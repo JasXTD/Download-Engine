@@ -2,6 +2,8 @@ use super::*;
 use crate::provider::runtime::{Capabilities, Runtime};
 use base64::{Engine as _, engine::general_purpose::STANDARD};
 use serde_json::json;
+mod segments;
+mod streaming;
 
 pub(super) fn plan() -> Plan {
     serde_json::from_value(json!({"kind":"media","media_api":1,"content_id":"fixture-v1","container":"mkv","tracks":[
@@ -33,7 +35,6 @@ fn media_plans_reject_unbounded_ambiguous_or_unsafe_inputs() {
     for (pointer, bad) in [
         ("/media_api", json!(2)),
         ("/tracks/0/id", json!("../escape")),
-        ("/tracks/0/segments/0/size", json!(0)),
         (
             "/tracks/0/segments/0/size",
             json!(crate::hls::MAX_PART_BYTES + 1),
@@ -90,6 +91,7 @@ fn media_processor_uses_offsets_and_cannot_fetch_or_change_chunk_length() {
         segment_id: "part2".into(),
         segment_index: 1,
         track_offset: 17,
+        output_offset: 17,
         size: 40,
     };
     let input = vec![42; 23];
@@ -178,4 +180,41 @@ fn media_checkpoint_upgrades_the_profile_and_blocks_older_open_writers() {
     );
     let saved = store.get(&job.id).unwrap().unwrap();
     assert_eq!(saved.provider.unwrap().media.unwrap(), plan().content());
+    for name in ["xdownloader_writer_version", "xdownloader_data_version"] {
+        old.create_scalar_function(
+            name,
+            0,
+            rusqlite::functions::FunctionFlags::SQLITE_UTF8
+                | rusqlite::functions::FunctionFlags::SQLITE_INNOCUOUS,
+            |_| Ok(7_i64),
+        )
+        .unwrap();
+    }
+    job.provider
+        .as_mut()
+        .unwrap()
+        .media
+        .as_mut()
+        .unwrap()
+        .tracks[0]
+        .init_segment = Some("init".into());
+    store.save(&job).unwrap();
+    assert_eq!(
+        store
+            .connect()
+            .unwrap()
+            .query_row("SELECT min_writer_version FROM profile_format", [], |r| r
+                .get::<_, i64>(
+                0
+            ))
+            .unwrap(),
+        8
+    );
+    assert!(
+        old.execute(
+            "UPDATE jobs SET data=json_remove(data,'$.provider.media') WHERE id=?1",
+            [&job.id]
+        )
+        .is_err()
+    );
 }

@@ -11,8 +11,11 @@ use std::collections::HashSet;
 
 pub(crate) use transfer::download;
 pub const API: u32 = 1;
-pub const MAX_PLAN_BYTES: usize = 512 * 1024;
-pub const MAX_SEGMENTS: usize = 2048;
+pub const MAX_PLAN_BYTES: usize = 4 * 1024 * 1024;
+pub const MAX_SEGMENTS: usize = 16384;
+pub const MAX_SEGMENT_INPUT: usize = 8 * 1024 * 1024;
+pub const MAX_SEGMENT_OUTPUT: usize = 16 * 1024 * 1024;
+pub const MAX_STREAM_OUTPUT: u64 = 512 * 1024 * 1024;
 
 #[derive(Clone, Copy, Debug, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
@@ -40,6 +43,7 @@ pub enum Format {
     Aac,
     Srt,
     Webvtt,
+    Ass,
 }
 #[derive(Clone, Copy, Debug, Default, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
@@ -47,6 +51,8 @@ pub enum Processing {
     #[default]
     Copy,
     Lua,
+    LuaSegment,
+    LuaStream,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
@@ -55,7 +61,12 @@ pub struct Segment {
     pub id: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub url: String,
+    /// Zero (or omitted) means the core measures this segment while streaming it.
+    #[serde(default)]
     pub size: u64,
+    /// A non-secret name handed to the downloader with xd.handoff_session.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub session: Option<String>,
     /// A segment may be a byte range of a larger resource.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub range_start: Option<u64>,
@@ -65,6 +76,16 @@ pub struct Segment {
     pub output_sha256: Option<String>,
     #[serde(default)]
     pub processing: Processing,
+}
+impl Segment {
+    pub(crate) fn output_limit(&self) -> u64 {
+        match self.processing {
+            Processing::LuaSegment => MAX_SEGMENT_OUTPUT as u64,
+            Processing::LuaStream => MAX_STREAM_OUTPUT,
+            _ if self.size == 0 => crate::hls::MAX_PART_BYTES,
+            _ => self.size,
+        }
+    }
 }
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(deny_unknown_fields)]
@@ -78,6 +99,9 @@ pub struct Track {
     pub title: String,
     #[serde(default)]
     pub default: bool,
+    /// Replay the verified original initialization segment before every processor run.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub init_segment: Option<String>,
     pub segments: Vec<Segment>,
 }
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
@@ -106,7 +130,7 @@ impl Plan {
         );
         ensure!(
             self.tracks.iter().map(|t| t.segments.len()).sum::<usize>() <= MAX_SEGMENTS,
-            "Media plan exceeds 2048 segments"
+            "Media plan exceeds 16384 segments"
         );
         let mut ids = HashSet::new();
         let mut defaults = HashSet::new();
@@ -116,6 +140,15 @@ impl Plan {
                 "Duplicate or invalid media track ID"
             );
             ensure!(!track.segments.is_empty(), "Media track has no segments");
+            if let Some(id) = &track.init_segment {
+                ensure!(
+                    track
+                        .segments
+                        .first()
+                        .is_some_and(|s| &s.id == id && s.size <= MAX_SEGMENT_INPUT as u64),
+                    "The initialization segment must be first and at most 8 MiB"
+                );
+            }
             ensure!(
                 track.language.len() <= 32
                     && track
@@ -137,19 +170,34 @@ impl Plan {
                     (track.kind, track.format),
                     (TrackKind::Video, Format::Mp4 | Format::Mpegts)
                         | (TrackKind::Audio, Format::Mp4 | Format::Mpegts | Format::Aac)
-                        | (TrackKind::Subtitle, Format::Srt | Format::Webvtt)
+                        | (
+                            TrackKind::Subtitle,
+                            Format::Srt | Format::Webvtt | Format::Ass
+                        )
                 ),
                 "Track kind and format do not match"
             );
             let mut segments = HashSet::new();
             for segment in &track.segments {
+                if let Some(name) = &segment.session {
+                    super::handoff::validate_name(name)?;
+                }
                 ensure!(
                     identifier(&segment.id) && segments.insert(&segment.id),
                     "Duplicate or invalid segment ID"
                 );
                 ensure!(
-                    segment.size > 0 && segment.size <= crate::hls::MAX_PART_BYTES,
-                    "Media segments must contain 1 byte to 256 MiB"
+                    segment.size <= crate::hls::MAX_PART_BYTES,
+                    "Media segments must contain at most 256 MiB; omit size if unknown"
+                );
+                ensure!(
+                    segment.range_start.is_none() || segment.size > 0,
+                    "Byte ranges require a known, positive size"
+                );
+                ensure!(
+                    segment.processing != Processing::LuaSegment
+                        || segment.size <= MAX_SEGMENT_INPUT as u64,
+                    "Whole-segment Lua input exceeds 8 MiB"
                 );
                 ensure!(
                     segment
@@ -183,7 +231,7 @@ impl Plan {
         }
         ensure!(
             serde_json::to_vec(self)?.len() <= MAX_PLAN_BYTES,
-            "Media plan exceeds 512 KiB"
+            "Media plan exceeds 4 MiB"
         );
         Ok(())
     }
@@ -203,6 +251,34 @@ impl Plan {
             .map(|s| s.size)
             .sum()
     }
+    pub fn uses_segment_callbacks(&self) -> bool {
+        self.tracks.iter().any(|t| {
+            t.init_segment.is_some()
+                || t.segments
+                    .iter()
+                    .any(|s| matches!(s.processing, Processing::LuaSegment | Processing::LuaStream))
+        })
+    }
+    pub fn has_unknown_sizes(&self) -> bool {
+        self.tracks
+            .iter()
+            .flat_map(|t| &t.segments)
+            .any(|s| s.size == 0)
+    }
+    pub fn needs_output_sizes(&self) -> bool {
+        self.uses_segment_callbacks() || self.has_unknown_sizes()
+    }
+    pub fn needs_current_writer(&self) -> bool {
+        self.has_unknown_sizes()
+            || self
+                .tracks
+                .iter()
+                .flat_map(|t| &t.segments)
+                .any(|s| s.session.is_some() || s.processing == Processing::LuaStream)
+            || self.tracks.iter().any(|t| t.format == Format::Ass)
+            || self.tracks.iter().map(|t| t.segments.len()).sum::<usize>() > 2048
+            || serde_json::to_vec(self).map_or(true, |bytes| bytes.len() > 512 * 1024)
+    }
     pub fn extension(&self) -> &'static str {
         match self.container {
             Container::Mkv => "mkv",
@@ -221,6 +297,9 @@ pub(crate) struct Chunk {
     pub segment_id: String,
     pub segment_index: usize,
     pub track_offset: u64,
+    /// Bytes already written to this track, including reused saved segments.
+    #[serde(default)]
+    pub output_offset: u64,
     pub size: u64,
 }
 impl Chunk {
@@ -237,6 +316,12 @@ impl Chunk {
                 && self.size <= crate::hls::MAX_PART_BYTES
                 && self.track_offset.checked_add(self.size).is_some(),
             "Invalid media chunk bounds"
+        );
+        ensure!(
+            self.output_offset
+                .checked_add(MAX_SEGMENT_OUTPUT as u64)
+                .is_some(),
+            "Invalid media output offset"
         );
         Ok(())
     }

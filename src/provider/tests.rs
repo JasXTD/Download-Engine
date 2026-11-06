@@ -276,7 +276,20 @@ fn production_lua_crypto_matches_nist_and_has_only_documented_capabilities() {
         "assert(xd.provider_api == 1 and xd.script_kind == 'provider'); assert(io == nil and os == nil and package == nil and load == nil and print == nil and xd.command == nil and xd.add == nil and xd.store == nil)\n",
     );
     for f in functions() {
-        if f.name == "xd.fetch" {
+        if matches!(
+            f.name,
+            "xd.fetch"
+                | "xd.fetch_bytes"
+                | "xd.handoff_key"
+                | "xd.http_session"
+                | "xd.handoff_session"
+                | "xd.binary_setting"
+                | "xd.rsa_key_setting"
+        ) {
+            source.push_str(&format!(
+                "assert({} == nil and not xd.supports('{}'))\n",
+                f.name, f.name
+            ));
             continue;
         }
         source.push_str(&format!(

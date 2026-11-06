@@ -1,0 +1,17 @@
+{
+  "format": "download-engine-extension",
+  "format_version": 1,
+  "id": "download-engine.offline-cenc",
+  "name": "Offline CENC provider lab",
+  "version": "1.0.0",
+  "publisher": "Download Engine examples",
+  "description": "Generated AVC/AAC CENC samples, a synthetic license protocol and ASS subtitles. No live service integration.",
+  "license": "MIT",
+  "api_version": 1,
+  "provider_api": 1,
+  "permissions": { "network": ["offline-cenc.invalid"] },
+  "settings": [],
+  "jobs": [
+    { "id": "sample", "name": "Download generated CENC sample", "entry": "provider.lua", "timeout_seconds": 60, "trigger": { "kind": "provider" } }
+  ]
+}

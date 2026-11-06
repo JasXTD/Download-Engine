@@ -711,8 +711,33 @@ The core downloads one segment at a time and copies video/audio without re-encod
 
 Read `docs/lua-media-providers.md` for fields, callbacks, protected keys and the
 offline test command. The first media job raises profile compatibility to version
-7; older app builds cannot reopen that profile. These APIs were tested with owned
-encrypted samples only and do not implement Widevine or service-specific access.
+7; older app builds cannot reopen that profile. These APIs were tested with generated
+encrypted samples. The bundled implementation does not currently include Widevine
+license handling or Crunchyroll authentication. These are technical capabilities
+of this build, not additional software license conditions.
+
+From 3.13.0, a provider can make binary HTTP requests with `xd.fetch_bytes` and
+pass a newly received AES key through `xd.handoff_key` to its offline processor,
+which uses `xd.session_key`. Keys are temporary and reacquired on resume; they
+are not saved in a download plan. The media-provider guide explains the API and
+its permission limits. These helpers do not themselves implement a DRM protocol.
+
+From 3.14.0, `xd.http_session` lets a provider or site reader use cookies and headers
+you supply, in a temporary session restricted to one origin. Extensions must request
+this permission in their install/update review; browser logins are not imported.
+Media authors can use `lua_segment`, `prepare_track` and `transform_segment` for
+variable-length processing. Initialization replays after a restart and saved outputs
+are checked by size and hash. See `docs/lua-media-providers.md` for the contracts,
+memory limits and offline examples. Format parsing and service protocols remain
+the extension author's implementation.
+
+From 3.15.0, extension authors can use additional HTTP methods, protected binary
+and RSA-key imports, digest/HMAC/RSA helpers, explicit download sessions and
+stream processing for segments larger than 8 MiB. Unknown segment sizes are
+measured during download. ASS subtitles preserve their styling in MKV; MP4
+converts them to text subtitles. See `docs/lua-provider-core.md` for working API
+examples, limits and offline verification. Imported credential files are chosen
+under the extension's Settings; scripts cannot read arbitrary local files.
 
 For a runnable extension with quality, language and container settings, see
 `plugins/offline-episode/README.md` beside the installed application resources.

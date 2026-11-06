@@ -2,10 +2,12 @@
 pub mod api;
 mod fetch;
 pub(crate) mod helpers;
+mod http_session;
 pub(crate) mod json;
 pub(crate) mod lua;
 pub mod package;
 pub use fetch::{FetchReply, FetchRequest, Fetcher};
+pub use http_session::HttpSession;
 pub use lua::{execute_job, execute_lua, execute_reader, execute_reader_job};
 mod reading;
 pub use reading::{Reading, ReadingItem};
@@ -80,6 +82,8 @@ pub struct ExtensionLink {
     pub version: String,
     /// The only hosts this job can reach, enforced in Rust.
     pub hosts: Vec<String>,
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub http_sessions: bool,
     /// A package with a secret may only return addresses on its own hosts, since
     /// the app opens a single returned stream without asking.
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]

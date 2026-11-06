@@ -6,11 +6,27 @@ Extensions are not the Download Engine browser extension. That is the add-on you
 
 Your own scripts stay on the **Scripts** tab and work as they always have. Write a script for something just for you. Make an extension for something you want to share or keep updated.
 
+The app's original code and bundled Lua example are [MIT licensed](../LICENSE).
+You can modify and redistribute them while retaining the required notices.
+The capabilities and permission checks described here are features of the current
+runtime, not additional license conditions. Features beyond the exposed APIs may
+also require changes to the app; each third-party extension retains its own license.
+
+From 3.13.0, provider extensions can use [binary HTTP and session-key handoff](lua-media-providers.md#binary-requests-and-session-keys).
+The key handoff is temporary and provider-bound; it does not grant network access
+to processors or change an extension's declared-host permissions.
+
+From 3.14.0, [authenticated HTTP sessions](lua-media-providers.md#authenticated-http-sessions)
+require `permissions.http_sessions`. Adding that permission requires update review.
+Media jobs can use [whole-segment callbacks](lua-media-providers.md#whole-segment-callbacks)
+to rewrite container bytes and restore initialization on resume.
+
 For a runnable example, see the [offline episode extension](../examples/offline-episode/README.md).
 From 3.12.0 it ships in the application's `plugins` folder; its companion bundle also contains an installable JSON, generated encrypted media and
 a loopback sample server. It adapts helpers from crunchyroll-downloader under MIT
-and demonstrates language/quality selection, protected keys and MKV/MP4 muxing;
-it does not connect to Crunchyroll. Build it with
+and demonstrates language/quality selection, protected keys and MKV/MP4 muxing.
+This bundled version uses generated offline media; it does not implement Crunchyroll
+authentication or Widevine license handling. Build it with
 `node scripts/build_offline_episode_demo.cjs` from the source checkout.
 
 ## The application's plugins folder
@@ -85,9 +101,9 @@ Get-Content .\key.txt | .\de-cli.exe extensions set-secret example.videohost con
 | Job | Sees downloads | Reaches the web | `xd.store` | Changes files | Secrets and keys |
 | --- | --- | --- | --- | --- | --- |
 | Automation | Names, folders, status and errors. Never address fields. | Only through `xd.add`, declared hosts only | Its own values | Any downloaded file, only if you allow it | None |
-| Site reader | No | `xd.fetch`, declared hosts only | No | No | `secret` settings |
-| Provider resolver | No | `xd.fetch`, declared hosts only | No | No | `secret` settings |
-| Provider processor | Only the bytes of its own download | No | No | No | `aes_key` settings |
+| Site reader | No | `xd.fetch` / `xd.fetch_bytes`, declared hosts only | No | No | `secret` settings |
+| Provider resolver | No | `xd.fetch` / `xd.fetch_bytes`, declared hosts only | No | No | `secret` settings; can hand off received AES keys |
+| Provider processor | Only the bytes of its own download | No | No | No | `aes_key` settings and this run's opaque session-key handles |
 
 Automation jobs can also pause, resume and retry downloads, create, start and pause queues, change a queue's limit, and show notifications. The review lists all of this.
 
@@ -95,7 +111,7 @@ Jobs share only read-only settings, and `xd.store` values stay with the job that
 
 Rust enforces these limits, not Lua:
 
-- `xd.fetch` checks every request and redirect against the declared hosts.
+- `xd.fetch` and `xd.fetch_bytes` check every request and redirect against the declared hosts and share the same request budget.
 - `xd.add` refuses addresses on undeclared hosts. A declared host that redirects elsewhere is outside this limit, because normal downloads follow redirects. These downloads can't reach this computer or your local network, even when a declared name points there.
 - A package with a `secret` setting may only return addresses on declared hosts, because the app opens a single returned stream by itself. This includes a download that started before an update added the secret.
 - Extensions cannot use `xd.command("automation", …)`, `request` or `cancel`, so they cannot change your routing rules. `xd.restart` is refused too, because it discards partial downloads.
@@ -194,6 +210,7 @@ Unknown fields are refused.
 | `api_version` | Yes | Must equal the app's Lua API version. |
 | `provider_api` | Only with a provider job | Must equal the app's provider API version. |
 | `permissions.network` | With site reader or provider jobs, or to use `xd.add` | Up to 32 patterns: `host` or `*.host`. `*.host` covers subdomains, not the bare host. No ports, paths or IP addresses. A bare `*` is refused. |
+| `permissions.http_sessions` | Optional, default false; 3.14.0+ | Lets site reader/provider jobs use explicitly supplied cookies and headers in exact-origin, run-local HTTP sessions. No browser import or processor access. Adding it requires update approval. |
 | `settings` | No | Up to 32 entries. |
 | `jobs` | Yes | 1 to 16 entries. |
 | `files` | Yes | Up to 64 Lua files. |
@@ -223,8 +240,10 @@ Every setting has `id`, `type` and `label`. Lua can read settings but never writ
 | `choice` | `options`, `default` | Every job |
 | `secret` | None | Site reader and provider resolver jobs |
 | `aes_key` | None | Provider processor jobs, as an opaque handle |
+| `binary_secret` | None; import a 1 byte–64 KiB file (3.15.0+) | Site reader and provider resolver jobs, as binary bytes |
+| `rsa_private_key` | None; import a PKCS#1/PKCS#8 PEM/DER private key (3.15.0+) | Site reader and provider resolver jobs, as an opaque handle |
 
-Secrets and keys are protected with Windows user-scoped encryption, and can be replaced or cleared but not shown again. A `secret` reaches Lua as text, so a script could still print it to its run log.
+Secrets and keys use OS-protected storage and can be replaced or cleared but not shown again. A `secret` reaches Lua as text and a `binary_secret` as bytes, so trusted script code could still disclose them. See [credential import and crypto contracts](lua-provider-core.md#protected-binary-credentials-and-rsa-keys).
 
 ### Files and limits
 
@@ -248,6 +267,8 @@ Extension jobs use Lua API 1 with these additions. Personal scripts do not have 
 | `require("lib.parse")` | Loads `lib/parse.lua` from this package only, once per run. |
 | `xd.setting(id)` | Reads one setting this job may hold. |
 | `xd.key_setting(id)` | Provider processor only. Returns an opaque key handle for `xd.aes_ctr` and `xd.aes_blocks`. |
+| `xd.binary_setting(id)` | Web jobs only. Reads an explicitly imported binary credential. |
+| `xd.rsa_key_setting(id)` | Web jobs only. Returns an opaque imported RSA private-key handle. |
 | `xd.extension` | A table with `id`, `version` and `job`. |
 
 Check `xd.supports("xd.setting")` to tell whether the code is running in an extension.
@@ -258,6 +279,11 @@ Provider jobs can also return `xd.media_plan(...)` for segmented media, multiple
 tracks and core-controlled MKV/MP4 muxing in Download Engine 3.11.0 or newer.
 Check `xd.media_api == 1` in the Lua entry. Protected `aes_key` settings work in
 media processors too. See [the media-provider guide](lua-media-providers.md).
+
+From 3.13.0, provider jobs can also use `xd.fetch_bytes` in the resolver and pass
+newly received AES keys through `xd.handoff_key` to processor `xd.session_key`.
+These APIs also work in personal providers. Detect them with `xd.supports` in
+the appropriate phase; they do not change the extension's reviewed permissions.
 
 The first install raises the profile's data version, so older builds refuse that profile rather than misread it. Keep a profile backup before downgrading. Profiles without extensions are unaffected.
 

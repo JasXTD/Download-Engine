@@ -3,21 +3,47 @@ use crate::script_automation::{Fetcher, helpers, json, lua::to_lua};
 use anyhow::{Context, Result, ensure};
 use base64::{Engine as _, engine::general_purpose::STANDARD};
 use mlua::{Lua, StdLib, Table, Value, chunk::ChunkMode};
+mod segments;
+mod stream;
 
 pub(super) struct Runtime {
     lua: Lua,
     callbacks: Table,
     role: Role,
+    handoff: Option<super::handoff::Pending>,
+    segments: std::cell::RefCell<segments::Segments>,
 }
 pub(super) enum Capabilities {
     Resolver(Box<Fetcher>),
     Processor(uuid::Uuid),
 }
 impl Runtime {
+    #[cfg(test)]
     pub(super) fn new(
         source: &str,
         capabilities: Capabilities,
         extension: Option<&crate::extensions::Context>,
+    ) -> Result<Self> {
+        let owner = match &capabilities {
+            Capabilities::Processor(id) => *id,
+            Capabilities::Resolver(_) => uuid::Uuid::new_v4(),
+        };
+        Self::with_handoff(
+            source,
+            capabilities,
+            extension,
+            uuid::Uuid::new_v4(),
+            owner,
+            None,
+        )
+    }
+    pub(super) fn with_handoff(
+        source: &str,
+        capabilities: Capabilities,
+        extension: Option<&crate::extensions::Context>,
+        scope: uuid::Uuid,
+        owner: uuid::Uuid,
+        keys: Option<super::handoff::Keys>,
     ) -> Result<Self> {
         ensure!(
             source.len() <= crate::script_automation::MAX_SCRIPT_BYTES,
@@ -33,16 +59,27 @@ impl Runtime {
         }
         let xd = lua.create_table()?;
         helpers::install(&lua, &xd, true)?;
+        super::primitives::install(&lua, &xd)?;
+        let mut handoff = None;
         // Capabilities are installed before source evaluation. A processor can
         // never capture fetch in a local/upvalue, including at module scope.
         let role = match capabilities {
             Capabilities::Resolver(mut fetch) => {
-                crate::script_automation::lua::install_fetch(&lua, &xd, move |request| {
-                    fetch.fetch(request)
-                })?;
+                ensure!(keys.is_none(), "Resolver cannot receive session keys");
+                crate::script_automation::lua::install_fetch(
+                    &lua,
+                    &xd,
+                    extension.is_none_or(|e| e.http_sessions),
+                    move |request| fetch.fetch(request),
+                )?;
+                handoff = Some(super::handoff::Pending::install(&lua, &xd, scope, owner)?);
                 Role::Resolver
             }
             Capabilities::Processor(script_id) => {
+                ensure!(script_id == owner, "Invalid provider key owner");
+                let keys = keys.unwrap_or_else(|| super::handoff::Keys::empty(scope, owner));
+                keys.validate(scope, owner)?;
+                super::handoff::install_processor(&lua, &xd, keys)?;
                 #[cfg(any(windows, unix))]
                 xd.set(
                     "key",
@@ -58,12 +95,13 @@ impl Runtime {
         xd.set("script_kind", "provider")?;
         xd.set("provider_api", VERSION)?;
         xd.set("media_api", super::media::API)?;
+        xd.set("segment_api", 1)?;
         xd.set(
             "media_plan",
             lua.create_function(|lua, table: Table| {
                 table.set("kind", "media")?;
                 table.set("media_api", super::media::API)?;
-                let value = json::from_lua(
+                let value = json::media_from_lua(
                     lua,
                     Value::Table(table.clone()),
                     super::media::MAX_PLAN_BYTES,
@@ -83,12 +121,28 @@ impl Runtime {
                 "processor"
             },
         )?;
+        let allow_sessions = extension.is_none_or(|e| e.http_sessions);
         xd.set(
             "supports",
             lua.create_function(move |_, name: String| {
+                if matches!(
+                    name.as_str(),
+                    "media.segment_processing"
+                        | "media.stream_processing"
+                        | "media.unknown_sizes"
+                        | "media.ass"
+                ) {
+                    return Ok(true);
+                }
                 Ok(super::supports(&name)
                     && match name.as_str() {
-                        "xd.fetch" => role == Role::Resolver,
+                        "xd.fetch" | "xd.fetch_bytes" => role == Role::Resolver,
+                        "xd.binary_setting" | "xd.rsa_key_setting" => false,
+                        "xd.http_session" | "xd.handoff_session" => {
+                            role == Role::Resolver && allow_sessions
+                        }
+                        "xd.handoff_key" => cfg!(any(windows, unix)) && role == Role::Resolver,
+                        "xd.session_key" => cfg!(any(windows, unix)) && role == Role::Processor,
                         "xd.key" => cfg!(any(windows, unix)) && role == Role::Processor,
                         "xd.aes_ctr" | "xd.aes_blocks" => cfg!(any(windows, unix)),
                         _ => true,
@@ -120,6 +174,16 @@ impl Runtime {
                     let output = super::crypto::encrypt_blocks(&key, bytes.as_bytes().as_ref())
                         .map_err(mlua::Error::external)?;
                     lua.create_string(output)
+                })?,
+            )?;
+            xd.set(
+                "aes_decrypt_blocks",
+                lua.create_function(|lua, (key, bytes): (Value, mlua::LuaString)| {
+                    let key = super::keys::bytes(key)?;
+                    lua.create_string(
+                        super::crypto::decrypt_blocks(&key, bytes.as_bytes().as_ref())
+                            .map_err(mlua::Error::external)?,
+                    )
                 })?,
             )?;
         }
@@ -156,6 +220,8 @@ impl Runtime {
             lua,
             callbacks,
             role,
+            handoff,
+            segments: Default::default(),
         })
     }
     pub(super) fn handle(&self, message: serde_json::Value) -> Result<serde_json::Value> {
@@ -163,11 +229,25 @@ impl Runtime {
             .as_str()
             .context("Missing provider operation")?;
         match op {
+            "segment_begin" | "segment_feed" | "segment_run" | "segment_read" => {
+                ensure!(
+                    self.role == Role::Processor,
+                    "Resolver workers cannot process segments"
+                );
+                self.segments
+                    .borrow_mut()
+                    .handle(&self.lua, &self.callbacks, &message)
+            }
             "resolve" => {
                 ensure!(
                     self.role == Role::Resolver,
                     "Processor workers cannot resolve or refresh"
                 );
+                let handoff = self
+                    .handoff
+                    .as_ref()
+                    .context("Missing resolver key scope")?;
+                let _resolution = handoff.begin();
                 let request = to_lua(&self.lua, &serde_json::json!({"url":message["url"]}))?;
                 let previous = &message["previous"];
                 let callback = self
@@ -178,9 +258,9 @@ impl Runtime {
                         "refresh"
                     })?;
                 let value = callback.call::<Value>((request, to_lua(&self.lua, previous)?))?;
-                let value = json::from_lua(&self.lua, value, super::media::MAX_PLAN_BYTES)?;
+                let value = json::media_from_lua(&self.lua, value, super::media::MAX_PLAN_BYTES)?;
                 super::Resolution::parse(value.clone())?;
-                Ok(value)
+                Ok(serde_json::json!({"plan":value,"handoff":handoff.take()?}))
             }
             "media_transform" => {
                 ensure!(
@@ -225,7 +305,22 @@ impl Runtime {
                 );
                 let plan: super::media::Plan = serde_json::from_value(message["plan"].clone())?;
                 plan.validate(false)?;
-                let result = serde_json::json!({"size":plan.size(),"tracks":plan.tracks.len(),"stage":"before_mux"});
+                let size = match message.get("size") {
+                    None => plan.size(),
+                    Some(value) => value.as_u64().context("Invalid media output size")?,
+                };
+                let maximum: u64 = plan
+                    .tracks
+                    .iter()
+                    .flat_map(|t| &t.segments)
+                    .map(|s| s.output_limit())
+                    .sum();
+                ensure!(size > 0 && size <= maximum, "Invalid media output size");
+                ensure!(
+                    plan.uses_segment_callbacks() || size == plan.size(),
+                    "Fixed-size media output changed length"
+                );
+                let result = serde_json::json!({"size":size,"tracks":plan.tracks.len(),"stage":"before_mux"});
                 let finished: Value = self
                     .callbacks
                     .get::<mlua::Function>("finish")?
@@ -321,12 +416,19 @@ pub fn worker_main() -> Result<()> {
                 .context("Missing provider identity")?,
         )?),
     };
-    let runtime = Runtime::new(
+    let runtime = Runtime::with_handoff(
         first["source"]
             .as_str()
             .context("Missing provider source")?,
         capabilities,
         extension.as_ref(),
+        serde_json::from_value(first["handoff_scope"].clone())?,
+        uuid::Uuid::parse_str(
+            first["script_id"]
+                .as_str()
+                .context("Missing provider identity")?,
+        )?,
+        serde_json::from_value(first["handoff"].clone())?,
     );
     match runtime {
         Err(error) => super::process::write_frame(

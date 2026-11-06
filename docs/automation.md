@@ -6,11 +6,17 @@ verified byte transforms, frozen revisions and offline examples. Submit a saved
 provider with `de-cli.exe scripts download ID URL --name FILE`; control its job
 through the normal download list or CLI pause/resume commands.
 
-Provider `xd.fetch` is available only in resolver workers. Processors use
+Provider `xd.fetch` and `xd.fetch_bytes` are available only in resolver workers. Processors use
 `xd.key(protected_token)` for private AES keys; `de-cli.exe scripts protect-key ID`
 reads the hex key from redirected stdin and returns a provider-bound protected
 token (Windows DPAPI or an OS-keyring-protected envelope on macOS/Linux). See the provider guide for the `xd.phase` contract, protected frozen
 source, URL refresh and profile upgrades.
+
+From 3.13.0, `xd.fetch_bytes` preserves binary HTTP bodies. Providers can pass
+newly received AES keys to the offline processor with `xd.handoff_key` and
+`xd.session_key`, without saving keys in a download plan. See
+[binary requests and session keys](lua-media-providers.md#binary-requests-and-session-keys)
+for the API, limits and resume behavior.
 
 Download Engine includes `de-cli.exe` beside the desktop executable. Run it from
 that application folder in PowerShell. It uses the same portable or installed
@@ -593,7 +599,9 @@ ahead of them, with a slot reserved so busy scripts never hold them up.
 
 | Function | Purpose |
 | --- | --- |
-| `xd.fetch(url, options)` | Read a page or API. Options: `method` (`"GET"` or `"POST"`), `headers` (a table), `body` (POST only, up to 1 MiB). Returns `status`, final `url`, `headers` (lower-case names) and `body` (text). HTTP error statuses are returned, not raised. |
+| `xd.fetch(url, options)` | Read a page or API. Options: `method` (`GET`, `HEAD`, `POST`, `PUT`, `PATCH`, `DELETE`, `OPTIONS`), `headers` (a table), `body` (except GET/HEAD, up to 1 MiB). Returns `status`, final `url`, `headers` (lower-case names) and `body` (text; empty for HEAD). HTTP error statuses are returned, not raised. Methods beyond GET/POST require 3.15.0. |
+| `xd.fetch_bytes(url, options)` | From 3.13.0: the same request options and response fields, with exact binary request and reply bodies. Shares `xd.fetch` host checks, request budget, size limits and Direct connection requirement. |
+| `xd.http_session(origin, options)` | From 3.14.0: opaque, run-local credentials for one origin. Options: `cookies` and `headers` maps. Pass the handle as fetch option `session`; installed extensions need `permissions.http_sessions`. See [session limits and an example](lua-media-providers.md#authenticated-http-sessions). |
 | `xd.json(text)` | Parse JSON into Lua tables; JSON `null` becomes `nil`. |
 | `xd.to_json(value)` | Encode a Lua value as JSON, for example a POST body. |
 | `xd.url_encode(text)` | Percent-encode text for use in an address. |

@@ -3,10 +3,7 @@ use crate::{
     bandwidth::Limiter,
     download_file, engine,
     model::Job,
-    provider::{
-        CHUNK_BYTES,
-        process::{Role, Worker},
-    },
+    provider::{CHUNK_BYTES, process::Worker},
     store::Store,
     synchronization::FinishedFile,
     transfer_activity::Phase,
@@ -30,6 +27,10 @@ struct Receipts {
     binding: String,
     inputs: Vec<Option<String>>,
     outputs: Vec<Option<String>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    input_sizes: Vec<Option<u64>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    output_sizes: Vec<Option<u64>>,
 }
 fn part(root: &Path, index: usize, output: bool) -> PathBuf {
     root.join(format!(
@@ -118,9 +119,71 @@ fn load(root: &Path, job: &Job, content: &Plan, cancel: &CancellationToken) -> R
             binding,
             inputs: vec![None; count],
             outputs: vec![None; count],
+            input_sizes: if content.has_unknown_sizes() {
+                vec![None; count]
+            } else {
+                Vec::new()
+            },
+            output_sizes: if content.needs_output_sizes() {
+                vec![None; count]
+            } else {
+                Vec::new()
+            },
         }
     };
+    ensure!(
+        if content.needs_output_sizes() {
+            receipts.output_sizes.len() == count
+        } else {
+            receipts.output_sizes.is_empty()
+        },
+        "Media output-size receipts do not match the plan. Restart this download."
+    );
+    ensure!(
+        if content.has_unknown_sizes() {
+            receipts.input_sizes.len() == count
+        } else {
+            receipts.input_sizes.is_empty()
+        },
+        "Media input-size receipts do not match the plan. Restart this download."
+    );
     for (index, segment) in content.tracks.iter().flat_map(|t| &t.segments).enumerate() {
+        let input_size = if receipts.input_sizes.is_empty() {
+            segment.size
+        } else {
+            ensure!(
+                receipts.input_sizes[index].is_some() == receipts.inputs[index].is_some(),
+                "Media input size has no matching receipt"
+            );
+            if let Some(size) = receipts.input_sizes[index] {
+                ensure!(
+                    size > 0
+                        && size <= input_limit(segment)
+                        && (segment.size == 0 || size == segment.size),
+                    "Invalid saved media input size"
+                );
+            }
+            receipts.input_sizes[index].unwrap_or(0)
+        };
+        if !receipts.output_sizes.is_empty() {
+            ensure!(
+                receipts.output_sizes[index].is_some() == receipts.outputs[index].is_some(),
+                "Media output size has no matching receipt"
+            );
+            if let Some(size) = receipts.output_sizes[index] {
+                ensure!(
+                    size > 0
+                        && if segment.processing == Processing::LuaSegment {
+                            size <= MAX_SEGMENT_OUTPUT as u64
+                        } else if segment.processing == Processing::LuaStream {
+                            size <= MAX_STREAM_OUTPUT
+                        } else {
+                            size == input_size
+                        },
+                    "Invalid saved media output size"
+                );
+            }
+        }
         ensure!(
             receipts.outputs[index].is_none() || receipts.inputs[index].is_some(),
             "Media output has no source receipt"
@@ -132,7 +195,12 @@ fn load(root: &Path, job: &Job, content: &Plan, cancel: &CancellationToken) -> R
             if let Some(saved) = saved {
                 let mut file = download_file::read_part_sync(&part(root, index, output))
                     .context("Saved media segment is missing. Restart this download.")?;
-                let actual = hash(&mut file, segment.size, cancel)?;
+                let size = if output && !receipts.output_sizes.is_empty() {
+                    receipts.output_sizes[index].context("Missing media output size")?
+                } else {
+                    input_size
+                };
+                let actual = hash(&mut file, size, cancel)?;
                 ensure!(
                     &actual == saved,
                     "Saved media segment changed. Restart this download."
@@ -154,12 +222,14 @@ pub(crate) async fn download(
     job: &mut Job,
     root: &Path,
     plan: Plan,
+    mut keys: crate::provider::handoff::Keys,
     cancel: &CancellationToken,
     limiter: &Limiter,
 ) -> Result<Option<FinishedFile>> {
     plan.validate(true)?;
+    let sessions = keys.take_sessions()?;
     let helper = crate::hls::merge::Helper::checked(cancel).await?;
-    let content = plan.content();
+    let mut content = plan.content();
     store.activity.set(&job.id, Phase::CheckingSaved);
     let (r, j, c, token) = (
         root.to_owned(),
@@ -169,14 +239,21 @@ pub(crate) async fn download(
     );
     let mut receipts = tokio::task::spawn_blocking(move || load(&r, &j, &c, &token)).await??;
     job.saved_path = None;
-    job.total = Some(plan.size());
+    job.total = (!plan.has_unknown_sizes()).then(|| plan.size());
     job.downloaded = plan
         .tracks
         .iter()
         .flat_map(|t| &t.segments)
         .zip(&receipts.inputs)
-        .filter(|(_, h)| h.is_some())
-        .map(|(s, _)| s.size)
+        .enumerate()
+        .filter(|(_, (_, h))| h.is_some())
+        .map(|(index, (s, _))| {
+            if receipts.input_sizes.is_empty() {
+                s.size
+            } else {
+                receipts.input_sizes[index].unwrap_or(0)
+            }
+        })
         .sum();
     store.checkpoint(job).await?;
     // One bounded streaming request at a time; no worker writes outlive pause.
@@ -193,12 +270,21 @@ pub(crate) async fn download(
             &part(root, index, false),
             cancel,
             limiter,
+            segment
+                .session
+                .as_ref()
+                .map(|name| sessions.get(name).context("Missing media HTTP session"))
+                .transpose()?
+                .cloned(),
         )
         .await?;
         let Some(value) = value else {
             return Ok(None);
         };
-        receipts.inputs[index] = Some(value);
+        receipts.inputs[index] = Some(value.0);
+        if !receipts.input_sizes.is_empty() {
+            receipts.input_sizes[index] = Some(value.1);
+        }
         let (r, saved) = (root.to_owned(), receipts.clone());
         tokio::task::spawn_blocking(move || save(&r, &saved)).await??;
         store.checkpoint(job).await?;
@@ -206,6 +292,20 @@ pub(crate) async fn download(
     if cancel.is_cancelled() {
         return Ok(None);
     }
+    // Persist the original plan, but give processors the actual verified byte sizes.
+    if !receipts.input_sizes.is_empty() {
+        for (segment, size) in content
+            .tracks
+            .iter_mut()
+            .flat_map(|t| &mut t.segments)
+            .zip(&receipts.input_sizes)
+        {
+            segment.size = size.context("Missing media input size")?;
+        }
+    }
+    content.validate(false)?;
+    job.total = Some(content.size());
+    store.checkpoint(job).await?;
     store.activity.set(&job.id, Phase::Processing);
     let (s, j, r, c, token) = (
         store.clone(),
@@ -215,9 +315,17 @@ pub(crate) async fn download(
         cancel.clone(),
     );
     let tracks =
-        tokio::task::spawn_blocking(move || process(&s, &j, &r, &c, &mut receipts, &token))
+        tokio::task::spawn_blocking(move || process(&s, &j, &r, &c, &mut receipts, keys, &token))
             .await??;
     mux::finish(store, job, root, &content, tracks, helper, cancel).await
+}
+
+fn input_limit(segment: &Segment) -> u64 {
+    if segment.processing == Processing::LuaSegment {
+        MAX_SEGMENT_INPUT as u64
+    } else {
+        crate::hls::MAX_PART_BYTES
+    }
 }
 
 async fn receive(
@@ -227,7 +335,8 @@ async fn receive(
     path: &Path,
     cancel: &CancellationToken,
     limiter: &Limiter,
-) -> Result<Option<String>> {
+    session: Option<crate::script_automation::HttpSession>,
+) -> Result<Option<(String, u64)>> {
     limiter.check_quota().await?;
     let mut context = job.clone();
     context.public_only =
@@ -240,6 +349,9 @@ async fn receive(
         .get(&segment.url)?
         .same_origin()
         .header(header::ACCEPT_ENCODING, "identity");
+    if let Some(session) = session {
+        request = request.http_session(session);
+    }
     if let Some(start) = segment.range_start {
         request = request.header(
             header::RANGE,
@@ -266,10 +378,19 @@ async fn receive(
             "Unexpected media response status"
         );
     }
+    let expected_size = if segment.size > 0 {
+        Some(segment.size)
+    } else {
+        response.content_length()
+    };
+    ensure!(
+        expected_size.is_none_or(|size| size > 0 && size <= input_limit(segment)),
+        "Media segment exceeds its input limit"
+    );
     ensure!(
         response
             .content_length()
-            .is_none_or(|size| size == segment.size),
+            .is_none_or(|size| segment.size == 0 || size == segment.size),
         "Media segment size changed"
     );
     let mut output = download_file::buffered(download_file::fresh(path).await?);
@@ -278,7 +399,7 @@ async fn receive(
     let mut updated = Instant::now();
     let outcome: Result<bool> = async {
         loop {
-            if received != segment.size {
+            if expected_size != Some(received) {
                 limiter.check_quota().await?;
             }
             let chunk = tokio::select! {
@@ -289,7 +410,7 @@ async fn receive(
             limiter.record_payload(chunk.len()).await?;
             received += chunk.len() as u64;
             ensure!(
-                received <= segment.size,
+                received <= expected_size.unwrap_or_else(|| input_limit(segment)),
                 "Media segment exceeds its declared size"
             );
             let mut remaining = chunk.as_ref();
@@ -307,7 +428,7 @@ async fn receive(
                 updated = Instant::now();
             }
         }
-        if received != segment.size {
+        if received == 0 || expected_size.is_some_and(|size| received != size) {
             return Err(crate::retry::incomplete(
                 "Media segment ended before its declared size",
             ));
@@ -321,7 +442,7 @@ async fn receive(
     }
     let actual = format!("{:x}", digest.finalize());
     expected(&actual, segment.input_sha256.as_deref(), "source")?;
-    Ok(Some(actual))
+    Ok(Some((actual, received)))
 }
 
 fn process(
@@ -330,22 +451,48 @@ fn process(
     root: &Path,
     content: &Plan,
     receipts: &mut Receipts,
+    keys: crate::provider::handoff::Keys,
     cancel: &CancellationToken,
 ) -> Result<Vec<File>> {
     let provider = job.provider.as_ref().context("Missing provider")?;
     let extension =
         store.extension_context(&provider.script, crate::extensions::Reach::Processor)?;
-    let mut worker = Worker::start(
+    let mut worker = Worker::start_processor(
         &store.paths,
         &provider.script,
-        Role::Processor,
         extension.as_ref(),
+        keys,
         cancel,
     )?;
     let mut index = 0;
     let mut buffer = vec![0; CHUNK_BYTES];
     for track in &content.tracks {
+        let make_context = |segment: &Segment, segment_index, track_offset, output_offset| Chunk {
+            content_id: content.content_id.clone(),
+            track_id: track.id.clone(),
+            kind: track.kind,
+            segment_id: segment.id.clone(),
+            segment_index,
+            track_offset,
+            output_offset,
+            size: segment.size,
+        };
+        // Always replay the verified ORIGINAL initialization bytes, including when
+        // their processed output was checkpointed by an earlier worker process.
+        if track.init_segment.is_some() {
+            let segment = &track.segments[0];
+            let mut input = download_file::read_part_sync(&part(root, index, false))?;
+            let actual = hash(&mut input, segment.size, cancel)?;
+            ensure!(
+                Some(&actual) == receipts.inputs[index].as_ref(),
+                "Media initialization changed before processing"
+            );
+            use std::io::{Seek, SeekFrom};
+            input.seek(SeekFrom::Start(0))?;
+            worker.whole_segment(&make_context(segment, 0, 0, 0), &mut input, true, cancel)?;
+        }
         let mut track_offset = 0;
+        let mut output_offset = 0;
         for (segment_index, segment) in track.segments.iter().enumerate() {
             if receipts.outputs[index].is_none() {
                 let mut input = download_file::read_part_sync(&part(root, index, false))?;
@@ -357,43 +504,75 @@ fn process(
                 );
                 use std::io::{Seek, SeekFrom};
                 input.seek(SeekFrom::Start(0))?;
-                let mut output = download_file::fresh_sync(&part(root, index, true), false)?;
-                let context = Chunk {
-                    content_id: content.content_id.clone(),
-                    track_id: track.id.clone(),
-                    kind: track.kind,
-                    segment_id: segment.id.clone(),
-                    segment_index,
-                    track_offset,
-                    size: segment.size,
-                };
+                let mut output = download_file::fresh_sync(
+                    &part(root, index, true),
+                    segment.processing == Processing::LuaStream,
+                )?;
+                let context = make_context(segment, segment_index, track_offset, output_offset);
                 let mut offset = 0;
                 let mut digest = Sha256::new();
-                while offset < segment.size {
-                    ensure!(!cancel.is_cancelled(), "Media provider cancelled");
-                    let n = (segment.size - offset).min(CHUNK_BYTES as u64) as usize;
-                    input.read_exact(&mut buffer[..n])?;
-                    let bytes = if segment.processing == Processing::Lua {
-                        worker.transform_media(&context, &buffer[..n], offset, cancel)?
-                    } else {
-                        buffer[..n].to_vec()
-                    };
+                let output_size = if segment.processing == Processing::LuaStream {
+                    worker.stream_segment(&context, &mut input, &mut output, cancel)?
+                } else if segment.processing == Processing::LuaSegment {
+                    let bytes = worker.whole_segment(&context, &mut input, false, cancel)?;
                     ensure!(!cancel.is_cancelled(), "Media provider cancelled");
                     output.write_all(&bytes)?;
                     digest.update(&bytes);
-                    offset += n as u64;
-                }
-                let actual = format!("{:x}", digest.finalize());
+                    bytes.len() as u64
+                } else {
+                    while offset < segment.size {
+                        ensure!(!cancel.is_cancelled(), "Media provider cancelled");
+                        let n = (segment.size - offset).min(CHUNK_BYTES as u64) as usize;
+                        input.read_exact(&mut buffer[..n])?;
+                        let bytes = if segment.processing == Processing::Lua {
+                            worker.transform_media(&context, &buffer[..n], offset, cancel)?
+                        } else {
+                            buffer[..n].to_vec()
+                        };
+                        ensure!(!cancel.is_cancelled(), "Media provider cancelled");
+                        output.write_all(&bytes)?;
+                        digest.update(&bytes);
+                        offset += n as u64;
+                    }
+                    segment.size
+                };
+                let actual = if segment.processing == Processing::LuaStream {
+                    // This branch writes directly to disk, so hash the guarded output.
+                    output.sync_all()?;
+                    output.seek(SeekFrom::Start(0))?;
+                    hash(&mut output, output_size, cancel)?
+                } else {
+                    format!("{:x}", digest.finalize())
+                };
                 expected(&actual, segment.output_sha256.as_deref(), "plaintext")?;
                 output.sync_all()?;
                 receipts.outputs[index] = Some(actual);
+                if !receipts.output_sizes.is_empty() {
+                    receipts.output_sizes[index] = Some(output_size);
+                }
                 save(root, receipts)?;
             }
             track_offset += segment.size;
+            output_offset += if receipts.output_sizes.is_empty() {
+                segment.size
+            } else {
+                receipts.output_sizes[index].context("Missing media output size")?
+            };
             index += 1;
         }
     }
-    worker.finish_media(content, cancel)?;
+    let output_size = if receipts.output_sizes.is_empty() {
+        content.size()
+    } else {
+        receipts
+            .output_sizes
+            .iter()
+            .map(|s| s.context("Missing media output size"))
+            .collect::<Result<Vec<_>>>()?
+            .into_iter()
+            .sum()
+    };
+    worker.finish_media(content, output_size, cancel)?;
     drop(worker);
     store.activity.set(&job.id, Phase::Assembling);
     let mut tracks = Vec::new();
@@ -402,6 +581,11 @@ fn process(
         let mut output =
             download_file::fresh_sync(&root.join(format!("provider-track-{number}.part")), true)?;
         for segment in &track.segments {
+            let expected_size = if receipts.output_sizes.is_empty() {
+                segment.size
+            } else {
+                receipts.output_sizes[index].context("Missing media output size")?
+            };
             let mut input = download_file::read_part_sync(&part(root, index, true))?;
             let mut digest = Sha256::new();
             let mut count = 0;
@@ -412,12 +596,12 @@ fn process(
                     break;
                 }
                 count += n as u64;
-                ensure!(count <= segment.size, "Media plaintext grew before muxing");
+                ensure!(count <= expected_size, "Media plaintext grew before muxing");
                 digest.update(&buffer[..n]);
                 output.write_all(&buffer[..n])?;
             }
             ensure!(
-                count == segment.size
+                count == expected_size
                     && Some(format!("{:x}", digest.finalize())) == receipts.outputs[index],
                 "Media plaintext changed before muxing"
             );

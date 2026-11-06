@@ -8,9 +8,24 @@ see [NOTICE.md](NOTICE.md) for the pinned source, modifications and MIT notice.
 
 The video is a four-second generated test pattern. The two audio choices are
 synthetic tones, labelled with Japanese and English locale codes to demonstrate
-track selection. Subtitles are generated sample text. **This is an offline
-example, not a working Crunchyroll integration.** It contains no account login,
-Widevine device, license acquisition, service media or service URLs.
+track selection. Subtitles are generated sample text. **This bundled version uses
+offline samples.** Crunchyroll authentication, Widevine license handling and live
+service discovery are not implemented.
+
+The Lua source is editable and MIT licensed. You can modify and redistribute it
+while retaining the required notices in [NOTICE.md](NOTICE.md). The missing
+features describe this version's implementation, not restrictions on what users
+may develop. Features beyond the exposed Lua APIs may also need core changes.
+
+Download Engine 3.15.0 adds [generic provider core APIs](../../docs/lua-provider-core.md)
+for binary/RSA imports, cryptography, scoped HTTP sessions, unknown sizes,
+streaming processing and ASS subtitles. This demo keeps its small offline workflow;
+the new helpers do not turn it into a live Crunchyroll integration.
+
+For sample-level encryption instead of this example's whole-fragment envelope,
+see the [offline CENC provider lab](../offline-cenc/README.md). It adds a Lua
+parser for a defined AVC/AAC CENC subset and a synthetic license exchange, tested
+with generated files. It also remains an offline example.
 
 ## Try the bundled demo on Windows
 

@@ -101,6 +101,7 @@ try {
         Copy-Item -LiteralPath (Join-Path $workspaceRoot 'docs\cross-platform.md') -Destination (Join-Path $stage 'docs')
         Copy-Item -LiteralPath (Join-Path $workspaceRoot 'docs\lua-providers.md') -Destination (Join-Path $stage 'docs')
         Copy-Item -LiteralPath (Join-Path $workspaceRoot 'docs\lua-media-providers.md') -Destination (Join-Path $stage 'docs')
+        Copy-Item -LiteralPath (Join-Path $workspaceRoot 'docs\lua-provider-core.md') -Destination (Join-Path $stage 'docs')
         Copy-Item -LiteralPath (Join-Path $workspaceRoot 'docs\lua-provider-lab.md') -Destination (Join-Path $stage 'docs')
         Copy-Item -LiteralPath (Join-Path $workspaceRoot 'docs\releases.md') -Destination (Join-Path $stage 'docs')
         Copy-Item -LiteralPath (Join-Path $workspaceRoot 'docs\localization.md') -Destination (Join-Path $stage 'docs')

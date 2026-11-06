@@ -20,6 +20,12 @@ const encrypted = Buffer.concat([cipher.update(plain),cipher.final()]);
 const hash = b=>createHash('sha256').update(b).digest('hex');
 const template = fs.readFileSync(path.join(root,'examples/download-provider.lua'),'utf8')
   .replace('REPLACE_WITH_CIPHERTEXT_SHA256', hash(encrypted)).replace('REPLACE_WITH_PLAINTEXT_SHA256',hash(plain));
+// The fixture is owned and public. Production resolvers can obtain these bytes
+// with fetch_bytes; the Rust wire test covers that HTTP path without weakening
+// the production rule that metadata fetch may not access loopback.
+const sessionTemplate = template
+  .replace('local function describe(request)', `local function describe(request)\n    xd.handoff_key('content', string.char(${[...Buffer.from(key,'hex')].join(',')}))`)
+  .replace(`local key = "${key}"`, "local key = xd.session_key('content')");
 let app, db, requests=0, success=false; const checks=[], ranges=[];
 const server=http.createServer((req,res)=>{
   requests++;
@@ -80,6 +86,13 @@ async function main(){
   assert.equal(hash(encrypted),complete.provider.plan.input_sha256);
   mark('Native AES provider downloads, verifies and publishes one exact plaintext file; request retries do not duplicate it');
 
+  const sessionScript=await save(sessionTemplate);
+  const sessionJob=await cli(['scripts','download',sessionScript.id,url,'--name','session-key.bin']);
+  assert.equal(hash(fs.readFileSync((await finished(sessionJob.id)).saved_path)),hash(plain));
+  const sessionStored=db.prepare('SELECT data FROM jobs WHERE id=?').get(sessionJob.id).data;
+  assert(!sessionStored.includes(key)&&!sessionStored.includes('provider-key-v1:')&&!sessionStored.includes('handoff'));
+  mark('Resolver session keys cross real worker processes, decrypt exact output and are absent from saved jobs');
+
   const custom=fs.readFileSync(path.join(root,'examples/download-provider-custom-ctr.lua'),'utf8')
     .replace('REPLACE_WITH_CIPHERTEXT_SHA256',hash(encrypted)).replace('REPLACE_WITH_PLAINTEXT_SHA256',hash(plain));
   assert(!custom.includes('xd.aes_ctr('));
@@ -115,7 +128,7 @@ async function main(){
   assert.equal(hash(fs.readFileSync((await finished(isolatedJob.id)).saved_path)),hash(plain));
   mark('Real processor workers cannot cache fetch during initialization or access it during transform/finish; verified output still publishes');
 
-  const refreshing=template.replace('return describe(request) end','local p=describe(request); p.url=request.url.."?renewed=1"; return p end');
+  const refreshing=sessionTemplate.replace('return describe(request) end','local p=describe(request); p.url=request.url.."?renewed=1"; return p end');
   const netScript=await save(refreshing);
   const netJob=await cli(['scripts','download',netScript.id,url.replace('sample.bin','network-pause.bin'),'--name','network-resume.bin']);
   await until(()=>{const j=job(netJob.id);return j.downloaded>0&&j.downloaded<plain.length;},'network progress');
@@ -126,7 +139,7 @@ async function main(){
   assert(ranges.some(r=>r.url.includes('network-pause.bin?renewed=1')&&r.start>0));
   assert.equal(job(netJob.id).provider.plan.url,undefined);
   assert(!db.prepare('SELECT data FROM jobs WHERE id=?').get(netJob.id).data.includes('?renewed=1'));
-  mark('Network pause/resume refreshes the source URL and requests the remaining byte range');
+  mark('Network pause/resume reacquires session keys, refreshes the source URL and requests the remaining byte range');
 
   const singleJob=await cli(['scripts','download',script.id,url.replace('sample.bin','chunked.bin'),'--name','chunked-plain.bin']);
   assert.equal(hash(fs.readFileSync((await finished(singleJob.id)).saved_path)),hash(plain));
@@ -136,7 +149,7 @@ async function main(){
   assert(job(boundedJob.id).downloaded<=1024&&!job(boundedJob.id).saved_path);
   mark('Chunked non-range transfers work, while data exceeding the provider plan is rejected before writing beyond its size');
 
-  const slow=template.replace('return xd.aes_ctr(key, counter, bytes, offset)', 'for i=1,60000000 do local x=i*7 end\n        return xd.aes_ctr(key, counter, bytes, offset)');
+  const slow=sessionTemplate.replace('return xd.aes_ctr(key, counter, bytes, offset)', 'for i=1,60000000 do local x=i*7 end\n        return xd.aes_ctr(key, counter, bytes, offset)');
   const pausedScript=await save(slow,20);
   const pausedJob=await cli(['scripts','download',pausedScript.id,url,'--name','resumed-plain.bin']);
   const progress=path.join(home,'data/parts',pausedJob.id,'provider-progress.json');
@@ -144,6 +157,7 @@ async function main(){
   await until(()=>{const p=readProgress();return p&&p.offset>0&&p.offset<plain.length;},'first durable transformed chunk');
   await cli(['pause',pausedJob.id]);await finished(pausedJob.id,'paused');
   const checkpoint=readProgress();assert(checkpoint.offset>0&&checkpoint.offset<plain.length);
+  assert(!JSON.stringify(checkpoint).includes('provider-key-v1:')&&!JSON.stringify(checkpoint).includes('handoff'));
   const partial=fs.readFileSync(path.join(home,'data/parts',pausedJob.id,'provider-output.part'));
   assert.equal(hash(partial.subarray(0,checkpoint.offset)),checkpoint.prefix_sha256);
   await save('error("Edited library code must not replace a frozen download")',20,pausedScript);
@@ -154,7 +168,7 @@ async function main(){
   assert.equal(hash(fs.readFileSync(resumed.saved_path)),hash(plain));
   assert.equal(resumed.provider.script.format,'provider-script-v1');
   assert.equal(resumed.provider.script.body,undefined);
-  mark(`Pause, desktop restart and resume preserve a ${checkpoint.offset}-byte plaintext checkpoint and the frozen script revision`);
+  mark(`Pause, desktop restart and resume reacquire session keys and preserve a ${checkpoint.offset}-byte plaintext checkpoint and the frozen script revision`);
 
   const corruptScript=await save(slow,20);
   const corruptJob=await cli(['scripts','download',corruptScript.id,url,'--name','corrupt-recovery.bin']);
@@ -191,7 +205,7 @@ async function main(){
   assert.match((await finished(timed.id,'failed')).error,/timed out/);
   mark('An infinite transform is terminated by the worker deadline without freezing the desktop');
 
-  const stopScript=await save(template.replace('return xd.aes_ctr(key, counter, bytes, offset)','while true do end'),60);
+  const stopScript=await save(sessionTemplate.replace('return xd.aes_ctr(key, counter, bytes, offset)','while true do end'),60);
   const stopping=await cli(['scripts','download',stopScript.id,url,'--name','cancelled.bin']);
   const zeroProgress=path.join(home,'data/parts',stopping.id,'provider-progress.json');
   await until(()=>fs.existsSync(zeroProgress),'transform worker active');await delay(400);

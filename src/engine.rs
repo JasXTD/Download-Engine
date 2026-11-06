@@ -306,8 +306,10 @@ async fn transfer(
             crate::provider::Source::File(source) => {
                 http::transfer(source, store, job, &root, cancel, limiter).await
             }
-            crate::provider::Source::Media(plan) => {
-                crate::provider::media::download(store, job, &root, plan, cancel, limiter).await
+            crate::provider::Source::Media(resolved) => {
+                let (plan, keys) = *resolved;
+                crate::provider::media::download(store, job, &root, plan, keys, cancel, limiter)
+                    .await
             }
         };
     }

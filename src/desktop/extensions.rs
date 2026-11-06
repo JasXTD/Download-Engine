@@ -105,6 +105,7 @@ enum Act {
     Copy(String, String),
     SaveSettings(String),
     ClearSetting(String, String),
+    ImportSecret(String, String),
     AddDownload(Script),
     OpenLog(String),
     OpenScripts,
@@ -202,6 +203,9 @@ fn powers(package: &Package, files_allowed: bool) -> (Vec<String>, Vec<String>) 
     if web && !hosts.is_empty() {
         can.push(tf!("Read {hosts}", hosts = hosts));
     }
+    if web && package.permissions.http_sessions {
+        can.push(tr("Use login cookies and headers you supply, on the declared hosts").into());
+    }
     if automation {
         if !hosts.is_empty() {
             can.push(tf!("Add downloads only from {hosts}", hosts = hosts));
@@ -222,7 +226,7 @@ fn powers(package: &Package, files_allowed: bool) -> (Vec<String>, Vec<String>) 
         can.push(tr("Rename, move and delete any downloaded file. You allowed this.").into());
     }
     let mut cannot: Vec<String> = vec![
-        tr("Use your browser logins or cookies").into(),
+        tr("Import logins or cookies from your browser").into(),
         tr("Run other programs").into(),
     ];
     if !files_allowed {
@@ -489,6 +493,19 @@ fn settings(ui: &mut egui::Ui, state: &mut State, index: usize, p: Palette) -> O
                                     view::line_edit(state.values.entry(key.clone()).or_default())
                                         .desired_width(width),
                                 );
+                            }
+                            Setting::BinarySecret { .. } | Setting::RsaPrivateKey { .. } => {
+                                let has = saved.contains_key(&key);
+                                ui.horizontal(|ui| {
+                                    ui.label(if has { "Saved securely" } else { "Not set" });
+                                    if ui.button(if has { "Replace file…" } else { "Import file…" }).clicked() {
+                                        act = Some(Act::ImportSecret(id.clone(), key.clone()));
+                                    }
+                                    if has && ui.button(tr("Clear")).clicked() { act = Some(Act::ClearSetting(id.clone(), key.clone())); }
+                                });
+                                ui.label(RichText::new(if matches!(setting, Setting::RsaPrivateKey { .. }) {
+                                    "RSA private key · protected by your OS · used through an opaque handle"
+                                } else { "Binary credential · protected by your OS · readable by this extension's web jobs" }).small().color(p.muted));
                             }
                             Setting::Secret { .. } | Setting::AesKey { .. } => {
                                 let has = saved.contains_key(&key);
@@ -1000,6 +1017,17 @@ impl Desktop {
             }
             Act::SaveSettings(id) => self.save_extension_settings(&id),
             Act::ClearSetting(id, key) => self.store.clear_extension_setting(&id, &key),
+            Act::ImportSecret(id, key) => {
+                match self.folder_picker.open_file(
+                    "Import protected credential",
+                    &self.store.paths.downloads,
+                    ("Credential files", "*.*"),
+                ) {
+                    Ok(Some(path)) => self.store.import_extension_secret(&id, &key, &path),
+                    Ok(None) => Ok(()),
+                    Err(error) => Err(error),
+                }
+            }
             Act::AddDownload(script) => self.add_extension_download(&script),
             Act::OpenLog(run) => {
                 self.scripts.show_run(run);
@@ -1268,6 +1296,9 @@ fn update_summary(ui: &mut egui::Ui, changes: &Changes, p: Palette) {
         }
         for host in &changes.added_hosts {
             new(tf!("Read {hosts}", hosts = host));
+        }
+        if changes.new_http_sessions {
+            new(tr("Use login cookies and headers you supply, on the declared hosts").into());
         }
         for job in &changes.new_file_access {
             new(tf!("{job} asks to change downloaded files", job = job));

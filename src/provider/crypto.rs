@@ -79,6 +79,9 @@ impl Aes {
     }
 
     fn blocks(&self, input: &[u8]) -> Result<Zeroizing<Vec<u8>>> {
+        self.crypt(input, false)
+    }
+    fn crypt(&self, input: &[u8], decrypt: bool) -> Result<Zeroizing<Vec<u8>>> {
         ensure!(
             !input.is_empty() && input.len().is_multiple_of(16),
             "Invalid AES blocks"
@@ -87,7 +90,12 @@ impl Aes {
         let mut written = 0;
         // Non-overlapping, live buffers; no padding, synchronous ECB operation.
         unsafe {
-            checked(BCryptEncrypt(
+            let operation = if decrypt {
+                BCryptDecrypt
+            } else {
+                BCryptEncrypt
+            };
+            checked(operation(
                 self.key,
                 input.as_ptr(),
                 input.len() as u32,
@@ -130,6 +138,13 @@ pub fn encrypt_blocks(secret: &[u8], blocks: &[u8]) -> Result<Vec<u8>> {
     );
     Ok(Aes::new(secret)?.blocks(blocks)?.to_vec())
 }
+pub fn decrypt_blocks(secret: &[u8], blocks: &[u8]) -> Result<Vec<u8>> {
+    ensure!(
+        blocks.len() <= MAX_CHUNK + 16,
+        "AES block input exceeds limit"
+    );
+    Ok(Aes::new(secret)?.crypt(blocks, true)?.to_vec())
+}
 
 /// Full 128-bit, big-endian counter. Offset is in input bytes, not blocks.
 /// CTR is symmetric and unauthenticated: the host must verify trusted output.
@@ -170,10 +185,13 @@ impl Aes {
         Ok(Self(crate::unix_crypto::Aes::new(secret, false)?))
     }
     fn blocks(&self, input: &[u8]) -> Result<Zeroizing<Vec<u8>>> {
+        self.crypt(input, false)
+    }
+    fn crypt(&self, input: &[u8], decrypt: bool) -> Result<Zeroizing<Vec<u8>>> {
         ensure!(
             !input.is_empty() && input.len().is_multiple_of(16),
             "Invalid AES blocks"
         );
-        Ok(Zeroizing::new(self.0.crypt(input, None, false)?))
+        Ok(Zeroizing::new(self.0.crypt(input, None, decrypt)?))
     }
 }

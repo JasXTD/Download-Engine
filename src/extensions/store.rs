@@ -68,6 +68,7 @@ pub struct Changes {
     pub new_publisher: Option<String>,
     pub added_hosts: Vec<String>,
     pub removed_hosts: Vec<String>,
+    pub new_http_sessions: bool,
     pub added_jobs: Vec<String>,
     pub removed_jobs: Vec<String>,
     pub changed_files: Vec<String>,
@@ -82,6 +83,7 @@ pub struct Changes {
 impl Changes {
     pub fn needs_approval(&self) -> bool {
         self.new_publisher.is_some()
+            || self.new_http_sessions
             || !self.added_hosts.is_empty()
             // A new job ID can add automatic triggers within an existing kind.
             || !self.added_jobs.is_empty()
@@ -134,6 +136,7 @@ fn compare(old: &Package, new: &Package) -> Changes {
         new_publisher: (old.publisher != new.publisher).then(|| new.publisher.clone()),
         added_hosts: new_hosts.difference(&old_hosts).cloned().collect(),
         removed_hosts: old_hosts.difference(&new_hosts).cloned().collect(),
+        new_http_sessions: new.permissions.http_sessions && !old.permissions.http_sessions,
         added_jobs: names(new, old),
         removed_jobs: names(old, new),
         changed_files: new
@@ -308,6 +311,17 @@ impl Store {
         let mut conn = self.connect()?;
         let tx = conn.transaction_with_behavior(TransactionBehavior::Immediate)?;
         let old = read(&tx, &package.id)?;
+        if package.settings.iter().any(|s| {
+            matches!(
+                s,
+                Setting::BinarySecret { .. } | Setting::RsaPrivateKey { .. }
+            )
+        }) {
+            tx.execute("UPDATE profile_format SET data_version=MAX(data_version,9),min_writer_version=MAX(min_writer_version,9) WHERE id=1", [])?;
+        }
+        if package.permissions.http_sessions {
+            tx.execute("UPDATE profile_format SET data_version=MAX(data_version,8),min_writer_version=MAX(min_writer_version,8) WHERE id=1", [])?;
+        }
         if let Some(old) = &old {
             ensure!(
                 version(&package.version)? > version(&old.package.version)?,
@@ -403,7 +417,8 @@ impl Store {
                     job: job.id.clone(),
                     version: package.version.clone(),
                     hosts: package.permissions.network.clone(),
-                    limit_results: package.has_secret(),
+                    http_sessions: package.permissions.http_sessions,
+                    limit_results: package.has_secret() || package.permissions.http_sessions,
                     files: BTreeMap::new(),
                 }),
             };
@@ -564,6 +579,43 @@ impl Store {
         Ok(())
     }
 
+    /// User-selected binary data only. No script can read an arbitrary local file.
+    pub fn import_extension_secret(
+        &self,
+        id: &str,
+        key: &str,
+        path: &std::path::Path,
+    ) -> Result<()> {
+        use std::io::Read;
+        let (installed, setting) = self.setting_for(id, key)?;
+        ensure!(
+            matches!(
+                setting,
+                Setting::BinarySecret { .. } | Setting::RsaPrivateKey { .. }
+            ),
+            "Choose a binary credential or RSA key setting"
+        );
+        let file = std::fs::File::open(path)?;
+        ensure!(file.metadata()?.is_file(), "Choose a regular file");
+        let mut bytes = zeroize::Zeroizing::new(Vec::new());
+        file.take(crate::provider::primitives::MAX_CREDENTIAL as u64 + 1)
+            .read_to_end(&mut bytes)?;
+        ensure!(
+            !bytes.is_empty() && bytes.len() <= crate::provider::primitives::MAX_CREDENTIAL,
+            "Import 1 byte to 64 KiB"
+        );
+        if matches!(setting, Setting::RsaPrivateKey { .. }) {
+            crate::provider::primitives::validate_private_key(&bytes)?;
+        }
+        let sealed = crate::protected_data::seal(installed.key_scope, &mut bytes)?;
+        let mut conn = self.connect()?;
+        let tx = conn.transaction()?;
+        tx.execute("UPDATE profile_format SET data_version=MAX(data_version,9),min_writer_version=MAX(min_writer_version,9) WHERE id=1", [])?;
+        tx.execute("INSERT INTO extension_settings(extension_id,key,value,protected) VALUES(?1,?2,?3,1) ON CONFLICT(extension_id,key) DO UPDATE SET value=excluded.value,protected=1", params![id, key, &*sealed])?;
+        tx.commit()?;
+        Ok(())
+    }
+
     /// Plain values as saved, and null for protected ones that have been saved.
     pub fn extension_settings(&self, id: &str) -> Result<BTreeMap<String, serde_json::Value>> {
         let conn = self.connect()?;
@@ -662,9 +714,27 @@ impl Store {
         }
         let mut settings = BTreeMap::new();
         let mut keys = BTreeMap::new();
+        let mut binary_secrets = BTreeMap::new();
+        let mut rsa_keys = BTreeMap::new();
         for setting in &installed.package.settings {
             let saved = stored.get(setting.id());
             match setting {
+                Setting::BinarySecret { .. } | Setting::RsaPrivateKey { .. } => {
+                    if reach == Reach::Web
+                        && let Some(sealed) = saved
+                    {
+                        let target = if matches!(setting, Setting::BinarySecret { .. }) {
+                            &mut binary_secrets
+                        } else {
+                            &mut rsa_keys
+                        };
+                        use base64::Engine as _;
+                        target.insert(
+                            setting.id().to_owned(),
+                            base64::engine::general_purpose::STANDARD.encode(sealed),
+                        );
+                    }
+                }
                 Setting::Secret { .. } => {
                     if reach == Reach::Web {
                         let value = saved
@@ -699,11 +769,17 @@ impl Store {
                 }
             }
         }
+        let key_scope =
+            (reach == Reach::Processor || !binary_secrets.is_empty() || !rsa_keys.is_empty())
+                .then_some(installed.key_scope);
         Ok(Some(Context {
             id: link.id.clone(),
             version: link.version.clone(),
             job: link.job.clone(),
             hosts: link.hosts.clone(),
+            http_sessions: reach == Reach::Web
+                && link.http_sessions
+                && installed.package.permissions.http_sessions,
             // The saved settings are today's, whatever version a frozen job runs.
             limit_results: link.limit_results || installed.package.has_secret(),
             // A frozen download keeps the files it started with.
@@ -714,7 +790,9 @@ impl Store {
             },
             settings,
             keys,
-            key_scope: (reach == Reach::Processor).then_some(installed.key_scope),
+            binary_secrets,
+            rsa_keys,
+            key_scope,
         }))
     }
 

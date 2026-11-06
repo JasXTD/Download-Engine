@@ -11,6 +11,148 @@ use std::collections::{BTreeMap, BTreeSet};
 const KIB: usize = 1024;
 const KEY: &str = "00112233445566778899aabbccddeeff";
 
+#[test]
+fn binary_credentials_are_sealed_redacted_and_limited_to_web_jobs() {
+    let (temp, store) = fixture();
+    let mut package = example();
+    package["settings"]
+        .as_array_mut()
+        .unwrap()
+        .push(json!({"id":"device","label":"Fixture credential","type":"binary_secret"}));
+    store
+        .install_extension(&bytes(&package), &Grants::default())
+        .unwrap();
+    store
+        .set_extension_enabled("example.videohost", true)
+        .unwrap();
+    let credential: Vec<u8> = (0..=255).cycle().take(8192).collect();
+    let file = temp.path().join("owned.bin");
+    std::fs::write(&file, &credential).unwrap();
+    store
+        .import_extension_secret("example.videohost", "device", &file)
+        .unwrap();
+    assert_eq!(
+        store.extension_settings("example.videohost").unwrap()["device"],
+        Value::Null
+    );
+    let script = store.extension_job("example.videohost", "decrypt").unwrap();
+    let web = store
+        .extension_context(&script, Reach::Web)
+        .unwrap()
+        .unwrap();
+    assert!(web.limit_results);
+    assert_ne!(web.binary_secrets["device"].as_bytes(), credential);
+    let lua = mlua::Lua::new();
+    let xd = lua.create_table().unwrap();
+    xd.set(
+        "supports",
+        lua.create_function(|_, _: String| Ok(false)).unwrap(),
+    )
+    .unwrap();
+    web.install(&lua, &xd).unwrap();
+    let returned: mlua::LuaString = xd
+        .get::<mlua::Function>("binary_setting")
+        .unwrap()
+        .call("device")
+        .unwrap();
+    assert_eq!(returned.as_bytes().as_ref(), credential);
+    for role in [Reach::Processor, Reach::Automation] {
+        let context = store.extension_context(&script, role).unwrap().unwrap();
+        assert!(context.binary_secrets.is_empty() && context.rsa_keys.is_empty());
+    }
+    std::fs::write(&file, vec![0; 65537]).unwrap();
+    assert!(
+        store
+            .import_extension_secret("example.videohost", "device", &file)
+            .is_err()
+    );
+    assert!(
+        store
+            .set_extension_secret("example.videohost", "device", "plain")
+            .is_err()
+    );
+    let version: i64 = store
+        .connect()
+        .unwrap()
+        .query_row("SELECT min_writer_version FROM profile_format", [], |r| {
+            r.get(0)
+        })
+        .unwrap();
+    assert_eq!(version, 9);
+}
+
+#[test]
+fn authenticated_sessions_require_review_and_never_reach_processors() {
+    let (_temp, store) = fixture();
+    let mut package = example();
+    store
+        .install_extension(&bytes(&package), &Grants::default())
+        .unwrap();
+    package["version"] = json!("1.3.0");
+    package["permissions"]["http_sessions"] = json!(true);
+    let review = store.review_extension(&bytes(&package)).unwrap();
+    assert!(review.update.unwrap().new_http_sessions);
+    assert!(
+        store
+            .install_extension(&bytes(&package), &Grants::default())
+            .is_err()
+    );
+    store
+        .install_extension(
+            &bytes(&package),
+            &Grants {
+                approved: true,
+                ..Default::default()
+            },
+        )
+        .unwrap();
+    let script = store.extension_job("example.videohost", "decrypt").unwrap();
+    store
+        .set_extension_enabled("example.videohost", true)
+        .unwrap();
+    assert!(
+        store
+            .extension_context(&script, Reach::Web)
+            .unwrap()
+            .unwrap()
+            .http_sessions
+    );
+    assert!(
+        !store
+            .extension_context(&script, Reach::Processor)
+            .unwrap()
+            .unwrap()
+            .http_sessions
+    );
+    assert!(
+        !store
+            .extension_context(&script, Reach::Automation)
+            .unwrap()
+            .unwrap()
+            .http_sessions
+    );
+    let version: i64 = store
+        .connect()
+        .unwrap()
+        .query_row("SELECT min_writer_version FROM profile_format", [], |r| {
+            r.get(0)
+        })
+        .unwrap();
+    assert_eq!(version, 8);
+    package["version"] = json!("1.4.0");
+    package["permissions"]["http_sessions"] = json!(false);
+    store
+        .install_extension(&bytes(&package), &Grants::default())
+        .unwrap();
+    assert!(
+        !store
+            .extension_context(&script, Reach::Web)
+            .unwrap()
+            .unwrap()
+            .http_sessions
+    );
+}
+
 fn example() -> Value {
     json!({
         "format": "download-engine-extension",

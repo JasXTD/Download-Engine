@@ -22,6 +22,8 @@ pub struct Context {
     pub version: String,
     pub job: String,
     pub hosts: Vec<String>,
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub http_sessions: bool,
     /// The package holds a secret, so its jobs may only return declared hosts.
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub limit_results: bool,
@@ -30,6 +32,10 @@ pub struct Context {
     /// Protected key tokens by setting, for processors only.
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub keys: BTreeMap<String, String>,
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub binary_secrets: BTreeMap<String, String>,
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub rsa_keys: BTreeMap<String, String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub key_scope: Option<uuid::Uuid>,
 }
@@ -103,14 +109,51 @@ impl Context {
         extension.set("version", self.version.as_str())?;
         extension.set("job", self.job.as_str())?;
         xd.set("extension", extension)?;
+        if let Some(scope) = self.key_scope {
+            let secrets = self.binary_secrets.clone();
+            xd.set(
+                "binary_setting",
+                lua.create_function(move |lua, id: String| {
+                    use base64::Engine as _;
+                    let sealed = secrets.get(&id).ok_or_else(|| {
+                        mlua::Error::runtime("No binary credential is available to this job")
+                    })?;
+                    let sealed = base64::engine::general_purpose::STANDARD
+                        .decode(sealed)
+                        .map_err(mlua::Error::external)?;
+                    let bytes = crate::protected_data::open(scope, &sealed)
+                        .map_err(|_| mlua::Error::runtime("Cannot unlock binary credential"))?;
+                    lua.create_string(&*bytes)
+                })?,
+            )?;
+            let keys = self.rsa_keys.clone();
+            xd.set(
+                "rsa_key_setting",
+                lua.create_function(move |_, id: String| {
+                    use base64::Engine as _;
+                    let sealed = keys.get(&id).ok_or_else(|| {
+                        mlua::Error::runtime("No RSA key is available to this job")
+                    })?;
+                    let sealed = base64::engine::general_purpose::STANDARD
+                        .decode(sealed)
+                        .map_err(mlua::Error::external)?;
+                    let bytes = crate::protected_data::open(scope, &sealed)
+                        .map_err(|_| mlua::Error::runtime("Cannot unlock RSA key"))?;
+                    crate::provider::primitives::Rsa::new(&bytes)
+                        .map_err(|_| mlua::Error::runtime("Invalid stored RSA key"))
+                })?,
+            )?;
+        }
         let supports: mlua::Function = xd.get("supports").context("Missing xd.supports")?;
+        let can_binary = !self.binary_secrets.is_empty();
+        let can_rsa = !self.rsa_keys.is_empty();
         xd.set(
             "supports",
             lua.create_function(move |_, name: String| {
-                Ok(
-                    matches!(name.as_str(), "xd.setting" | "xd.extension" | "require")
-                        || supports.call::<bool>(name)?,
-                )
+                Ok((name == "xd.binary_setting" && can_binary)
+                    || (name == "xd.rsa_key_setting" && can_rsa)
+                    || matches!(name.as_str(), "xd.setting" | "xd.extension" | "require")
+                    || supports.call::<bool>(name)?)
             })?,
         )?;
         Ok(())

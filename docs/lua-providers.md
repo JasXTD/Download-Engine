@@ -10,9 +10,25 @@ Download Engine owns the network transfer, files, checkpoints and final hash
 verification. No recompilation is needed. To share a provider with others, package it as
 an [extension](extensions.md).
 
-This release was tested with generated encrypted fixtures and a local HTTP
-server only. It does not establish compatibility with Crunchyroll, Widevine,
-DRM licenses, or any other service's encryption/container format.
+Provider validation uses generated encrypted fixtures and a local HTTP server.
+The bundled implementation does not currently provide Crunchyroll authentication
+or Widevine license handling. Those are implementation limits, not additional
+[software license conditions](../README.md#license); developers can extend the
+provider code and the app's core APIs. Offline tests do not establish compatibility
+with a service's encryption or container format.
+
+From **3.13.0**, both single-file and media providers support binary HTTP through
+`xd.fetch_bytes`, resolver-only `xd.handoff_key(name, bytes)` and processor-only
+`xd.session_key(name)`. See [binary requests and session keys](lua-media-providers.md#binary-requests-and-session-keys)
+for limits, permissions and the requirement to reacquire keys on resume.
+
+From **3.14.0**, resolvers can use [explicit HTTP sessions](lua-media-providers.md#authenticated-http-sessions).
+Media providers can also use [whole-segment callbacks and initialization replay](lua-media-providers.md#whole-segment-callbacks)
+for variable-length container processing. Single-file transforms remain same-length.
+
+From **3.15.0**, see [provider core APIs](lua-provider-core.md) for additional HTTP
+methods, protected binary/RSA imports, cryptographic helpers, session-authorized
+segments, streaming processing and ASS subtitles. Service protocols remain Lua code.
 
 ## Use a provider
 
@@ -123,9 +139,9 @@ multiple tracks and controlled muxing through the separate Media API 1 contract.
 - `xd.key(protected_token)` is available only in the processor. It returns an
   opaque AES key handle accepted by both crypto helpers, without exposing key
   bytes to Lua. Raw hex keys remain supported for public fixtures.
-- `xd.fetch` is available only in the resolver and retains the site-reader GET/POST rules: public addresses only,
+- `xd.fetch` and `xd.fetch_bytes` are available only in the resolver and retain the site-reader HTTP rules: public addresses only,
   checked/pinned DNS and redirects, bounded requests and replies, no browser
-  cookies or saved login access. Normal proxy preferences apply.
+  cookies or saved login access. They require a Direct connection.
 - JSON, URL and HTML helpers remain available. `xd.supports(name)` reports the
   actual function set. There is no `xd.command`, download mutation, state store,
   filesystem, process, native module, `os`, `io`, `debug`, or dynamic code loader.

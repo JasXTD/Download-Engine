@@ -20,6 +20,44 @@ fn checked(source: &Path, expected: &str) -> Arc<Program> {
 }
 
 #[test]
+fn permissive_umask_keeps_the_snapshot_private_and_executable() {
+    const CHILD: &str = "DOWNLOAD_ENGINE_PRIVATE_MERGER_CHILD";
+    if std::env::var_os(CHILD).is_none() {
+        let output = Command::new(std::env::current_exe().unwrap())
+            .args([
+                "--exact",
+                "hls::merge::unix_program::tests::permissive_umask_keeps_the_snapshot_private_and_executable",
+                "--nocapture",
+                "--test-threads=1",
+            ])
+            .env(CHILD, "1")
+            .output()
+            .unwrap();
+        assert!(
+            output.status.success(),
+            "child failed: {}\n{}",
+            String::from_utf8_lossy(&output.stdout),
+            String::from_utf8_lossy(&output.stderr)
+        );
+        return;
+    }
+
+    // umask is process-global: change it only in this isolated test child.
+    unsafe { libc::umask(0) };
+    let (_root, source, expected) = fixture();
+    let program = checked(&source, &expected);
+    let folder = program.folder.clone();
+    assert_eq!(fs::metadata(&folder).unwrap().mode() & 0o777, 0o700);
+    assert_eq!(
+        fs::metadata(folder.join("ffmpeg")).unwrap().mode() & 0o777,
+        0o500
+    );
+    assert!(program.command().status().unwrap().success());
+    drop(program);
+    assert!(!folder.exists());
+}
+
+#[test]
 fn replacing_the_resource_cannot_replace_the_verified_program() {
     let (_root, source, expected) = fixture();
     let program = checked(&source, &expected);

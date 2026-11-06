@@ -9,7 +9,10 @@ use std::{
     io::{Read, Write},
     os::{
         fd::{AsRawFd, FromRawFd},
-        unix::{fs::MetadataExt, process::CommandExt},
+        unix::{
+            fs::{MetadataExt, PermissionsExt},
+            process::CommandExt,
+        },
     },
     path::PathBuf,
     process::Command,
@@ -53,6 +56,8 @@ impl Program {
         );
         let folder = tempfile::Builder::new()
             .prefix("download-engine-merger-")
+            // Create privately even when the caller's umask allows other users.
+            .permissions(std::fs::Permissions::from_mode(0o700))
             .tempdir()
             .context("Cannot create a private media merger directory")?;
         let directory = File::open(folder.path())?;

@@ -88,6 +88,111 @@ fn quoted(value: impl AsRef<str>) -> String {
 }
 
 #[test]
+fn lua_scheduler_stops_a_running_worker_and_cleans_its_runtime() {
+    const CHILD: &str = "DOWNLOAD_ENGINE_LUA_LIFECYCLE_CHILD";
+    if std::env::var_os(CHILD).is_none() {
+        // Give the real scheduler its normal app-directory layout without
+        // installing a shell or changing another test's executable directory.
+        let app = tempfile::tempdir().unwrap();
+        let executable = app
+            .path()
+            .join(download_engine::paths::executable_name("script-test"));
+        std::fs::copy(std::env::current_exe().unwrap(), &executable).unwrap();
+        std::fs::copy(
+            env!("CARGO_BIN_EXE_de-cli"),
+            app.path()
+                .join(download_engine::paths::executable_name("de-cli")),
+        )
+        .unwrap();
+        let mut child = Command::new(executable);
+        #[cfg(windows)]
+        {
+            use std::os::windows::process::CommandExt;
+            child.creation_flags(0x08000000);
+        }
+        let output = child
+            .args([
+                "--exact",
+                "lua_scheduler_stops_a_running_worker_and_cleans_its_runtime",
+                "--nocapture",
+                "--test-threads=1",
+            ])
+            .env(CHILD, "1")
+            .output()
+            .unwrap();
+        assert!(
+            output.status.success(),
+            "{}\n{}",
+            String::from_utf8_lossy(&output.stdout),
+            String::from_utf8_lossy(&output.stderr)
+        );
+        return;
+    }
+
+    let f = Fixture::new();
+    let _scheduler = download_engine::scheduler::Scheduler::start(f.store.clone()).unwrap();
+    let script = f
+        .store
+        .save_script(&Script {
+            id: uuid::Uuid::new_v4().to_string(),
+            revision: 0,
+            name: "Lua lifecycle fixture".into(),
+            language: Language::Lua,
+            body: "print('worker ready'); while true do end".into(),
+            enabled: false,
+            trigger: Trigger::Manual,
+            timeout_seconds: 60,
+            change_files: false,
+            extension: None,
+        })
+        .unwrap();
+    let run = f
+        .store
+        .run_script(&script.id, &uuid::Uuid::new_v4().to_string())
+        .unwrap();
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(20);
+    loop {
+        let current = f.store.script_run(&run.id).unwrap();
+        assert!(current.active(), "worker failed to start: {current:?}");
+        if f.store
+            .script_logs(&run.id)
+            .unwrap()
+            .iter()
+            .any(|log| log.text.contains("worker ready"))
+        {
+            assert_eq!(current.state, "running");
+            break;
+        }
+        assert!(
+            std::time::Instant::now() < deadline,
+            "Lua worker did not become ready"
+        );
+        std::thread::sleep(std::time::Duration::from_millis(20));
+    }
+    f.store.stop_script(&run.id).unwrap();
+    loop {
+        let current = f.store.script_run(&run.id).unwrap();
+        if !current.active() {
+            assert_eq!(current.state, "stopped", "{current:?}");
+            assert!(
+                !f.store
+                    .paths
+                    .data
+                    .join("script-runtime")
+                    .join(&run.id)
+                    .exists()
+            );
+            break;
+        }
+        assert!(
+            std::time::Instant::now() < deadline,
+            "Lua worker did not stop"
+        );
+        std::thread::sleep(std::time::Duration::from_millis(20));
+    }
+}
+
+#[test]
 fn published_core_api_walkthrough_runs_without_creating_downloads() {
     let f = Fixture::new();
     let run = f.run(false, false);

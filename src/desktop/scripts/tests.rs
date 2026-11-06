@@ -553,10 +553,25 @@ fn editor_saves_runs_stops_and_keeps_the_control_bar_visible() {
     assert!(app.scripts.dirty());
     assert!(!app.scripts.draft.as_ref().unwrap().enabled);
     assert_eq!(app.scripts.draft.as_ref().unwrap().language, Language::Lua);
-    // This interaction test runs from the Rust test binary, beside no CLI worker.
-    // Packaged integration tests exercise actual Lua execution.
-    app.scripts.draft.as_mut().unwrap().language = Language::PowerShell;
-    app.scripts.draft.as_mut().unwrap().body = "Write-Output 'ready'; Start-Sleep 60".into();
+    // Windows includes PowerShell. Unix has no mandatory external shell, and
+    // this unit-test executable has no adjacent CLI worker. Exercise queued
+    // cancellation there; script_security tests the real Lua worker lifecycle.
+    #[cfg(windows)]
+    {
+        app.scripts.draft.as_mut().unwrap().language = Language::PowerShell;
+        app.scripts.draft.as_mut().unwrap().body = "Write-Output 'ready'; Start-Sleep 60".into();
+    }
+    #[cfg(not(windows))]
+    {
+        app.scheduler.send(Command::Stop).unwrap();
+        assert!(matches!(
+            app.scheduler
+                .errors
+                .recv_timeout(std::time::Duration::from_secs(10)),
+            Err(std::sync::mpsc::RecvTimeoutError::Disconnected)
+        ));
+        app.scripts.draft.as_mut().unwrap().body = "print('ready'); while true do end".into();
+    }
     click(&mut app, &ctx, "Run script");
     assert!(app.store.script_runs(None).unwrap().is_empty());
     click(&mut app, &ctx, "Save script");
@@ -567,6 +582,8 @@ fn editor_saves_runs_stops_and_keeps_the_control_bar_visible() {
     let runs = app.store.script_runs(None).unwrap();
     assert_eq!(runs.len(), 1);
     assert!(runs[0].active());
+    #[cfg(not(windows))]
+    assert_eq!(runs[0].state, "queued");
     click(&mut app, &ctx, "Stop script");
     let deadline = std::time::Instant::now() + std::time::Duration::from_secs(10);
     while app.store.script_run(&runs[0].id).unwrap().active() {

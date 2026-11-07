@@ -3,6 +3,7 @@
   "Saved on this device. You choose what to share.": ["保存在此设备上。由您决定分享哪些内容。","儲存於此裝置。由您決定分享哪些內容。","Disimpan pada peranti ini. Anda memilih perkara yang hendak dikongsi."],
   "Crash reports could not be read or updated. Open Help → Crash reports to retry.": ["无法读取或更新崩溃报告。请打开帮助 → 崩溃报告重试。","無法讀取或更新當機報告。請開啟說明 → 當機報告重試。","Laporan ranap tidak dapat dibaca atau dikemas kini. Buka Bantuan → Laporan ranap untuk mencuba lagi."],
   "Choose where to save the crash report": ["选择崩溃报告的保存位置","選擇當機報告的儲存位置","Pilih tempat untuk menyimpan laporan ranap"],
+  "Working…": ["正在处理…","正在處理…","Memproses…"],
   "Crash report exported": ["崩溃报告已导出","當機報告已匯出","Laporan ranap dieksport"],
   "Some incomplete or invalid reports were skipped.": ["已跳过部分不完整或无效的报告。","已略過部分不完整或無效的報告。","Sesetengah laporan yang tidak lengkap atau tidak sah telah dilangkau."],
   "No crash reports saved": ["尚无已保存的崩溃报告","尚無已儲存的當機報告","Tiada laporan ranap disimpan"],
@@ -11,12 +12,16 @@
   "A previous session did not close normally": ["上一次会话未正常关闭","上一次工作階段未正常關閉","Sesi terdahulu tidak ditutup secara normal"],
   "A component failed unexpectedly. A worker panic does not always close the whole app.": ["某个组件意外失败。工作线程发生 panic 不一定会关闭整个应用。","某個元件意外失敗。工作執行緒發生 panic 不一定會關閉整個應用程式。","Satu komponen gagal secara tidak dijangka. Panic dalam pekerja tidak semestinya menutup seluruh aplikasi."],
   "A crash, power loss or forced termination may cause this. The exact cause is unknown.": ["崩溃、断电或强制结束进程都可能导致此情况。具体原因未知。","當機、斷電或強制結束程序皆可能導致此情況。確切原因不明。","Ranap, gangguan kuasa atau penamatan paksa boleh menyebabkan ini. Punca sebenar tidak diketahui."],
+  "Version": ["版本","版本","Versi"],
+  "Platform": ["平台","平台","Platform"],
+  "Component": ["组件","元件","Komponen"],
   "Code location": ["代码位置","程式碼位置","Lokasi kod"],
   "Browser connector": ["浏览器连接组件","瀏覽器連接元件","Penyambung pelayar"],
   "No passwords, download URLs, personal file paths or memory dumps are included. Nothing is uploaded automatically.": ["不包含密码、下载链接、个人文件路径或内存转储。不会自动上传任何内容。","不包含密碼、下載連結、個人檔案路徑或記憶體傾印。不會自動上傳任何內容。","Tiada kata laluan, URL muat turun, laluan fail peribadi atau dump memori disertakan. Tiada apa-apa dimuat naik secara automatik."],
   "Review report contents": ["查看报告内容","檢視報告內容","Semak kandungan laporan"],
   "Copy report": ["复制报告","複製報告","Salin laporan"],
   "Export report…": ["导出报告…","匯出報告…","Eksport laporan…"],
+  "Report an issue": ["报告问题","回報問題","Laporkan masalah"],
   "Crash reporting is unavailable for this session. Check the profile folder permissions.": ["本次会话无法记录崩溃报告。请检查配置文件夹权限。","本次工作階段無法記錄當機報告。請檢查設定檔資料夾權限。","Pelaporan ranap tidak tersedia untuk sesi ini. Semak keizinan folder profil."],
   "Check for updates on launch": ["启动时检查更新","啟動時檢查更新","Semak kemas kini semasa pelancaran"],
   "Updates": ["更新","更新","Kemas kini"],
@@ -449,6 +454,11 @@
     "仅用于此文件服务器。保存在 Windows 凭据管理器中。",
     "僅用於此檔案伺服器。儲存在 Windows 認證管理員中。",
     "Untuk pelayan fail ini sahaja. Disimpan dalam Pengurus Kelayakan Windows."
+  ],
+  "For this file server only. Saved in your system keyring.": [
+    "仅用于此文件服务器。保存在系统密钥环中。",
+    "僅用於此檔案伺服器。儲存在系統鑰匙圈中。",
+    "Untuk pelayan fail ini sahaja. Disimpan dalam rantai kunci sistem anda."
   ],
   "Use login is available for direct file links only.": [
     "仅文件直链支持登录。",
@@ -1119,6 +1129,11 @@
     "应用打开时（包括托盘中）规则会运行。优先使用首个匹配的分配规则。",
     "應用程式開啟時（包括系統匣中）規則會執行。優先使用首個相符的分配規則。",
     "Peraturan berjalan semasa aplikasi terbuka, termasuk dalam dulang. Peraturan penghalaan pertama yang sepadan digunakan."
+  ],
+  "Rules run while the app is open. The first matching routing rule wins.": [
+    "应用打开时规则会运行。优先使用首个匹配的分配规则。",
+    "應用程式開啟時規則會執行。優先使用首個相符的分配規則。",
+    "Peraturan berjalan semasa aplikasi terbuka. Peraturan penghalaan pertama yang sepadan digunakan."
   ],
   "No runs yet. Matching downloads and completed queues will appear here.": [
     "尚无运行记录。匹配的下载和已完成队列将显示在这里。",
@@ -4014,6 +4029,11 @@
     "应用打开时运行，包括托盘中。",
     "應用程式開啟時執行，包括系統匣中。",
     "Berjalan semasa aplikasi terbuka, termasuk dalam dulang."
+  ],
+  "Runs while the app is open.": [
+    "应用打开时运行。",
+    "應用程式開啟時執行。",
+    "Berjalan semasa aplikasi terbuka."
   ],
   "Stopping MCP disconnects AI clients. Downloads already started keep running.": [
     "停止 MCP 会断开 AI 客户端。已开始的下载会继续运行。",
@@ -7424,6 +7444,11 @@
     "启动与托盘",
     "啟動與系統匣",
     "Permulaan & dulang"
+  ],
+  "Updates": [
+    "更新",
+    "更新",
+    "Kemas kini"
   ],
   "No unsaved changes": [
     "没有未保存的更改",

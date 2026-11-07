@@ -655,8 +655,6 @@ impl Desktop {
                     | "automation-installed-review"
                     | "automation-installed-examples"
                     | "automation-installed-allow"
-                    | "automation-installed-folder"
-                    | "automation-installed-strip"
                     | "automation-scripts"
                     | "automation-scripts-empty"
                     | "automation-scripts-error"

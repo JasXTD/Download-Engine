@@ -8,6 +8,14 @@ Hinzu kommen betriebssystemgeschützte Binär-/RSA-Zugangsdatenimporte, Zufallsb
 
 Das Offline-CENC-Labor für Autoren zeigt mit Lua einen begrenzten Teil der AVC/AAC-Sample-Verschlüsselung, einen simulierten signierten Lizenzaustausch, die Schlüsselübergabe und das Zusammenführen entschlüsselter Spuren mit ASS-Untertiteln. Website-Anmeldung, Lizenzformate und Container-Parser bleiben Aufgabe des Lua-Codes. Die Tests nutzen erzeugte Daten ohne echte Dienste oder Konten; dies ist keine vollständige CENC-Implementierung.
 
+### Torrent-Freigabe und -Suche
+
+Die Freigabe eines fertigen Torrents endet jetzt von selbst bei einem Verhältnis von 2.0 oder nach einer Woche, je nachdem, was zuerst eintritt. Das gilt standardmässig, auch für bestehende Profile; beide Grenzen lassen sich unter Einstellungen → Torrents ändern oder abschalten. Uploads während des Downloads zählen zum Verhältnis. Das Statusfenster zeigt das Verhältnis; ein durch eine Grenze gestoppter Torrent behält seine Dateien und bietet im Menü Freigabe erneut starten an.
+
+Magnet-Links ohne Tracker werden nicht mehr einfach abgelehnt. Das Fenster Download hinzufügen erklärt, dass bei einer DHT-Suche andere Computer sehen, welchen Torrent Sie suchen, und Ihre IP-Adresse; gesucht wird erst nach einem Klick auf Im DHT suchen. Ihr Computer wird erst als Peer bekannt gegeben, wenn die geprüfte Dateiliste einen öffentlichen Torrent zeigt. Ein privater Torrent beendet die Suche, und eine Suche endet nach 10 Minuten. Links aus Browsern, der Zwischenablage oder dem Explorer starten nie von selbst eine Suche.
+
+Neu: Router automatisch einrichten (UPnP), standardmässig ausgeschaltet wie die eingehenden Verbindungen, die es voraussetzt. Es spricht nur mit dem Standard-Gateway im privaten Netz, fordert eine Weiterleitungsregel für jeweils eine Stunde an und entfernt nur die eigene Regel; unter macOS ist es nicht verfügbar. Gefundene Peers und DHT-Knoten auf Ports anderer Dienste (unter 1024 sowie etwa SIP 5060) werden nie kontaktiert. Downloads, die aus einem DHT-Grund stoppen, nennen den Grund jetzt in der gewählten Sprache.
+
 [English details](../../../CHANGELOG.md#3150--2026-11-06)
 
 ## 3.10.2 — 2026-11-04
@@ -107,3 +115,13 @@ Einstellungen → Darstellung → Eigene bietet Neon Courier, Reactor Night, Aur
 ### Profil- und Steuerungsverbesserungen
 
 Enthalten sind auch Profilversionsschutz und MCP-Zugriffskontrollen.
+
+## 3.3.3 — 2026-10-28
+
+### Verbesserungen der Oberfläche
+
+Editor und geladene Skripte haben jetzt eigene Registerkarten. Skripte lassen sich in der Liste suchen und erstellen; der vollständige Editor öffnet sich im Kopfbereich des Lua- oder PowerShell-Editors. Speichern, Ausführen/Stoppen und optionale Protokolle bleiben beim Code. Dateibefehle stehen im Aktionsmenü des Editors. Beim Ansichtswechsel bleiben ungespeicherter Code, Einstellungen und Cursorposition erhalten.
+
+### Reaktionsschnellere Download-Aktionen
+
+Warteschlangen- und Statusaktualisierungen, Videoanfragen des Browsers und das Hinzufügen von Downloads laufen im Hintergrund, damit langsame Datenträger keine Klicks blockieren. Dialoge zeigen den Fortschritt, verhindern doppelte Übermittlungen und behalten Eingaben bei Speicherfehlern. Auch Ordner öffnen sich im Hintergrund; ältere Ergebnisse überschreiben keine neu gewählte Warteschlange.

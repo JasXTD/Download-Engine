@@ -8,6 +8,14 @@ Dodano import poświadczeń binarnych/RSA chronionych przez system operacyjny, l
 
 Laboratorium CENC offline dla autorów używa Lua do analizy ograniczonego podzbioru szyfrowania próbek AVC/AAC, symulowanej wymiany podpisanej licencji, przekazywania kluczy i łączenia odszyfrowanych ścieżek z napisami ASS. Uwierzytelnianie witryn, formaty licencji i parsery kontenerów pozostają zadaniem kodu Lua. Testy wykorzystują wygenerowane dane, bez rzeczywistych usług i kont; nie jest to pełna implementacja CENC.
 
+### Udostępnianie i wyszukiwanie torrentów
+
+Udostępnianie ukończonego torrenta kończy się teraz samo po osiągnięciu współczynnika 2.0 lub po tygodniu, zależnie od tego, co nastąpi wcześniej. Działa to domyślnie, także w istniejących profilach; oba limity można zmienić lub wyłączyć w sekcji Preferencje → Torrenty. Wysyłanie podczas pobierania wlicza się do współczynnika. Okno stanu pokazuje współczynnik, a torrent zatrzymany przez limit zachowuje pliki i ma w menu opcję Udostępnij ponownie.
+
+Linki magnet bez trackera nie są już po prostu odrzucane. Okno Dodaj pobieranie wyjaśnia, że wyszukiwanie w DHT pokazuje innym komputerom szukany torrent i adres IP, i szuka dopiero po kliknięciu Szukaj w DHT. Komputer jest ogłaszany jako peer dopiero wtedy, gdy sprawdzona lista plików potwierdzi publiczny torrent. Prywatny torrent zatrzymuje wyszukiwanie, a wyszukiwanie kończy się po 10 minutach. Linki z przeglądarek, schowka lub Eksploratora nigdy same nie uruchamiają wyszukiwania.
+
+Nowa opcja Skonfiguruj router automatycznie (UPnP) jest domyślnie wyłączona, podobnie jak wymagane przez nią połączenia przychodzące. Komunikuje się tylko z bramą domyślną w sieci prywatnej, prosi o jedną regułę przekierowania ważną godzinę, odnawianą podczas pracy torrentów, i usuwa wyłącznie własną regułę; w macOS jest niedostępna. Znalezione peery i węzły DHT na portach innych usług (poniżej 1024 oraz np. SIP 5060) nigdy nie są kontaktowane. Pobierania zatrzymane z powodu DHT pokazują teraz przyczynę w wybranym języku.
+
 [English details](../../../CHANGELOG.md#3150--2026-11-06)
 
 ## 3.10.2 — 2026-11-04
@@ -107,3 +115,13 @@ Preferencje → Wygląd → Własny oferuje Neon Courier, Reactor Night, Aurora 
 ### Ulepszenia profili i sterowania
 
 Wersja zawiera też ochronę wersji profilu i kontrolę dostępu MCP.
+
+## 3.3.3 — 2026-10-28
+
+### Ulepszenia interfejsu
+
+Edytor i wczytane skrypty mają teraz osobne karty. Skrypty można wyszukiwać i tworzyć na liście, a pełny edytor otworzyć z nagłówka Lua lub PowerShell. Zapis, uruchamianie/zatrzymywanie i opcjonalne dzienniki znajdują się przy kodzie. Polecenia plików przeniesiono do menu działań edytora. Zmiana widoku zachowuje niezapisany kod, ustawienia i pozycję kursora.
+
+### Sprawniejsze działania pobierania
+
+Odświeżanie kolejek i stanu, obsługa filmów z przeglądarki oraz dodawanie pobrań odbywają się w tle, aby wolny dysk nie blokował kliknięć. Okna dodawania pokazują postęp, zapobiegają wielokrotnemu wysłaniu i zachowują dane po błędzie zapisu. Foldery również otwierają się w tle, a stare wyniki odświeżania nie zastępują nowo wybranej kolejki.

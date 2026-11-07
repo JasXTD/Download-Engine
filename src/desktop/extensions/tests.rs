@@ -50,6 +50,19 @@ fn has_text(output: &egui::FullOutput, label: &str) -> bool {
     })
 }
 
+fn text_containing(output: &egui::FullOutput, part: &str) -> egui::Rect {
+    output
+        .shapes
+        .iter()
+        .find_map(|shape| match &shape.shape {
+            egui::Shape::Text(text) if text.galley.job.text.contains(part) => {
+                Some(text.galley.rect.translate(text.pos.to_vec2()))
+            }
+            _ => None,
+        })
+        .unwrap_or_else(|| panic!("No rendered text containing: {part}"))
+}
+
 /// One automation job that asks for file access. Its Access list is in view in
 /// the window the click helper uses, without scrolling.
 fn tidy_only() -> Vec<u8> {
@@ -120,12 +133,29 @@ fn installing_goes_through_a_review_and_starts_turned_off() {
     text_rect(&output, "1.2.0 · Example · Publisher not verified");
     text_rect(&output, "Turned off");
     text_rect(&output, "Turned off. Nothing runs until you turn it on.");
-    text_rect(&output, "What it does");
+    let overview = text_rect(&output, "What it does");
+    text_rect(&output, "Tidy finished files");
+    // The plugins panel leaves less vertical space. Reach the lower access
+    // details through the real scroll area instead of assuming they are in view.
+    frame(
+        &mut app,
+        &ctx,
+        size(),
+        vec![
+            egui::Event::PointerMoved(overview.center()),
+            egui::Event::MouseWheel {
+                unit: egui::MouseWheelUnit::Point,
+                phase: egui::TouchPhase::Move,
+                delta: egui::vec2(0.0, -500.0),
+                modifiers: egui::Modifiers::NONE,
+            },
+        ],
+    );
+    let output = frame(&mut app, &ctx, size(), vec![]);
     text_rect(
         &output,
         "Never: your browser logins or cookies, or other programs.",
     );
-    text_rect(&output, "Tidy finished files");
     text_rect(&output, "Not allowed");
 
     click(&mut app, &ctx, "Enabled");

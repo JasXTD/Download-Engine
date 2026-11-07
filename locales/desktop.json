@@ -1,4 +1,5 @@
 {
+  "Use login cookies and headers you supply, on the declared hosts": ["在声明的主机上使用您提供的登录 Cookie 和请求头","在宣告的主機上使用您提供的登入 Cookie 和標頭","Gunakan kuki log masuk dan pengepala yang anda berikan pada hos yang diisytiharkan"],
   "Crash reports": ["崩溃报告","當機報告","Laporan ranap"],
   "Saved on this device. You choose what to share.": ["保存在此设备上。由您决定分享哪些内容。","儲存於此裝置。由您決定分享哪些內容。","Disimpan pada peranti ini. Anda memilih perkara yang hendak dikongsi."],
   "Crash reports could not be read or updated. Open Help → Crash reports to retry.": ["无法读取或更新崩溃报告。请打开帮助 → 崩溃报告重试。","無法讀取或更新當機報告。請開啟說明 → 當機報告重試。","Laporan ranap tidak dapat dibaca atau dikemas kini. Buka Bantuan → Laporan ranap untuk mencuba lagi."],

@@ -83,7 +83,7 @@ fn card(ui: &mut egui::Ui, card: &Card, p: Palette) -> Option<Goal> {
                 ui.horizontal_wrapped(|ui| {
                     for (index, (label, choice)) in card.buttons.iter().enumerate() {
                         let button = if index == 0 {
-                            ui.add(primary(*label, p))
+                            ui.add(primary(label, p))
                         } else {
                             ui.button(*label)
                         };

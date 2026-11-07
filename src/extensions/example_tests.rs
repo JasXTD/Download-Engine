@@ -100,7 +100,7 @@ fn read(
                 status,
                 url: request.url,
                 headers: BTreeMap::new(),
-                body,
+                body: body.into_bytes(),
             })
         },
     )

@@ -8,6 +8,14 @@ Ajout de l’import d’identifiants binaires/RSA protégés par le système, d�
 
 Le laboratoire CENC hors ligne pour les auteurs utilise Lua pour analyser un sous-ensemble limité du chiffrement d’échantillons AVC/AAC, simuler un échange de licence signé, transmettre les clés et assembler les pistes déchiffrées avec des sous-titres ASS. L’authentification des sites, les formats de licence et les analyseurs de conteneurs restent à implémenter en Lua. Les tests utilisent des données générées, sans service ni compte réel ; il ne s’agit pas d’une implémentation complète de CENC.
 
+### Partage et recherche de torrents
+
+Le partage d’un torrent terminé s’arrête désormais de lui-même au ratio 2.0 ou après une semaine, selon ce qui arrive en premier. C’est activé par défaut, y compris pour les profils existants ; les deux limites se modifient ou se désactivent dans Préférences → Torrents. Les envois pendant le téléchargement comptent dans le ratio. La fenêtre d’état affiche le ratio, et un torrent arrêté par une limite garde ses fichiers et propose Partager à nouveau dans son menu.
+
+Les liens magnet sans tracker ne sont plus simplement refusés. La fenêtre Ajouter un téléchargement explique qu’avec une recherche DHT, les autres ordinateurs voient quel torrent vous voulez et votre adresse IP, et ne lance la recherche qu’après un clic sur Chercher dans le DHT. Votre ordinateur n’est annoncé comme pair qu’une fois que la liste de fichiers vérifiée indique un torrent public. Un torrent privé arrête la recherche, et une recherche s’arrête après 10 minutes. Les liens venant des navigateurs, du presse-papiers ou de l’Explorateur ne lancent jamais de recherche d’eux-mêmes.
+
+Nouveau : Configurer mon routeur (UPnP), désactivé par défaut comme les connexions entrantes dont il a besoin. Il ne communique qu’avec la passerelle par défaut du réseau privé, demande une seule règle de redirection valable une heure à la fois et ne supprime que sa propre règle ; macOS l’indique comme indisponible. Les pairs et nœuds DHT découverts sur des ports d’autres services (moins de 1024, ainsi que des ports comme SIP 5060) ne sont jamais contactés. Les téléchargements arrêtés pour une raison liée au DHT affichent désormais cette raison dans la langue choisie.
+
 [English details](../../../CHANGELOG.md#3150--2026-11-06)
 
 ## 3.10.2 — 2026-11-04
@@ -107,3 +115,13 @@ Préférences → Apparence → Personnalisé propose Neon Courier, Reactor Nigh
 ### Améliorations des profils et des contrôles
 
 Protection des versions du profil et contrôles d’accès MCP inclus.
+
+## 3.3.3 — 2026-10-28
+
+### Améliorations de l’interface
+
+L’éditeur et les scripts chargés disposent désormais d’onglets distincts. Recherchez ou créez un script dans la liste, puis ouvrez l’éditeur complet depuis l’en-tête Lua ou PowerShell. Enregistrement, exécution/arrêt et journaux facultatifs restent près du code. Les commandes de fichiers sont regroupées dans le menu d’actions de l’éditeur. Le changement de vue conserve le code non enregistré, les réglages et la position du curseur.
+
+### Des actions de téléchargement plus réactives
+
+Les mises à jour des files et des états, les demandes vidéo du navigateur et les ajouts de téléchargements sont traités en arrière-plan pour éviter que le stockage lent ne bloque les clics. Les fenêtres affichent la progression, empêchent les envois en double et conservent les saisies en cas d’échec. Les dossiers s’ouvrent aussi en arrière-plan et les anciens résultats ne remplacent pas la nouvelle file sélectionnée.

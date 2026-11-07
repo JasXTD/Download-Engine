@@ -57,7 +57,7 @@ fn discovered_install_is_reviewed_and_disabled_and_uses_the_reviewed_snapshot() 
     assert!(app.store.extensions().unwrap().is_empty());
     assert!(app.store.script_runs(None).unwrap().is_empty());
     click(&mut app, &ctx, "Review install");
-    text_rect(&render(&mut app, &ctx), "Read videohost.example");
+    text_rect(&render(&mut app, &ctx), "Reads videohost.example");
     escape(&mut app, &ctx);
     assert!(app.dialog.is_none());
     assert!(app.store.extensions().unwrap().is_empty());

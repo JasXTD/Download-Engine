@@ -8,6 +8,14 @@ Agiunt l’import da datas d’access binaras/RSA protegidas dal sistem operativ
 
 Il laboratori CENC offline per auturs dovra Lua per analisar ina part limitada da la criptaziun da samples AVC/AAC, simular in barat da licenza signà, transmetter clavs e cumbinar las pistas decifradas cun suttitels ASS. L’autentificaziun da paginas, ils formats da licenza ed ils parsers da containers restan incumbensa dal code Lua. Ils tests dovran datas generadas, senza servetschs u contos reals; quai n’è betg in’implementaziun cumpletta da CENC.
 
+### Cundivisiun e tschertga da torrents
+
+La cundivisiun d’in torrent terminà sa ferma ussa automaticamain tar la proporziun 2.0 u suenter in’emna, tut tenor tge che arriva l’emprim. Quai è activà sco standard, er per profils existents; omaduas limitas sa laschan midar u deactivar en Preferenzas → Torrents. Chargiar si durant la telechargiada quinta er per la proporziun. La fanestra da status mussa la proporziun, ed in torrent fermà d’ina limita mantegna sias datotecas e porscha Cundivider danovamain en ses menu.
+
+Las colliaziuns magnet senza tracker na vegnan betg pli simplamain refusadas. La fanestra Agiuntar telechargiada declera ch’ils auters computers vesan tar ina tschertga en la DHT tge torrent che Vus vulais e Vossa adressa IP, e tschertga pir suenter in clic sin Tschertgar en la DHT. Voss computer vegn pir annunzià sco peer, cura che la glista da datotecas verifitgada mussa in torrent public. In torrent privat ferma la tschertga, ed ina tschertga finescha suenter 10 minutas. Colliaziuns da navigaturs, da l’archiv provisoric u da l’Explorer na cumenzan mai da sasez ina tschertga.
+
+Nov è l’opziun Configurar il router (UPnP). Ella è deactivada sco standard, sco las connexiuns entradas, da las qualas ella dependa. Ella communitgescha mo cun il gateway da standard da la rait privata, dumonda ina suletta regla per renviar il port, valaivla per ina ura a la giada, ed allontanescha mo sia atgna regla; sin macOS n’è ella betg disponibla. Peers e computers da la DHT chattads sin ports d’auters servetschs (sut 1024 e ports sco SIP 5060) na vegnan mai contactads. Telechargiadas fermadas per in motiv da la DHT mussan ussa il motiv en la lingua tschernida.
+
 [English details](../../../CHANGELOG.md#3150--2026-11-06)
 
 ## 3.10.2 — 2026-11-04
@@ -107,3 +115,13 @@ Preferenzas → Aspect → Persunalisà porscha Neon Courier, Reactor Night, Aur
 ### Meglieraziuns da profils e controllas
 
 Inclus èn era protecziun da versiuns dal profil e controllas d’access MCP.
+
+## 3.3.3 — 2026-10-28
+
+### Meglieraziuns da l’interfatscha
+
+L’editur ed ils scripts chargiads han ussa registers separads. Tschertga u creescha scripts en la glista ed avra l’editur cumplet en il chau da l’editur Lua u PowerShell. Memorisar, exequir/fermar ed ils protocols opziunals restan sper il code. Ils cumonds da datotecas èn en il menu d’acziuns da l’editur. La midada da vista mantegna il code betg memorisà, ils parameters e la posiziun dal cursor.
+
+### Acziuns da telechargiar pli reactivas
+
+L’actualisaziun da las colonnas e dal status, las dumondas da video dal navigatur e l’agiunta da telechargiadas vegnan elavuradas en il fund per che la memoria lenta na blocchia betg ils clics. Ils dialogs mussan il progress, impedeschan tramissiuns dublas e mantegnan il sboz sche memorisar na reussescha betg. Er ils ordinaturs vegnan averts en il fund; resultats vegls na remplazzan betg la colonna selecziunada da nov.

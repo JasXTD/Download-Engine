@@ -54,6 +54,23 @@ fn discovers_only_top_level_packages_without_creating_or_changing_a_profile() {
 }
 
 #[test]
+fn discovery_accepts_bundled_examples_but_rejects_impersonations() {
+    let temp = tempfile::tempdir().unwrap();
+    let bundled = crate::extensions::examples::FILES[0];
+    write(temp.path(), "bundled", bundled);
+    write(
+        temp.path(),
+        "impersonation",
+        &package("examples.impersonation", "1.0.0"),
+    );
+    let report = scan(temp.path()).unwrap();
+    assert_eq!(report.candidates.len(), 1);
+    assert_eq!(report.candidates[0].bytes(), bundled);
+    assert_eq!(report.issues.len(), 1);
+    assert!(report.issues[0].message.contains("Only the examples"));
+}
+
+#[test]
 fn rejects_invalid_large_linked_and_directory_packages_but_keeps_valid_ones() {
     let temp = tempfile::tempdir().unwrap();
     let root = temp.path();

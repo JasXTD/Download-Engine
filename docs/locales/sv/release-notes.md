@@ -8,6 +8,14 @@ Tillagt: import av binära/RSA-inloggningsuppgifter skyddade av operativsystemet
 
 CENC-labbet för författare körs offline och använder Lua för att tolka en begränsad del av AVC/AAC-sampelkryptering, simulera ett signerat licensutbyte, överlämna nycklar och sammanfoga dekrypterade spår med ASS-undertexter. Webbplatsautentisering, licensformat och containertolkning ligger fortsatt i Lua-koden. Testerna använder genererade data utan verkliga tjänster eller konton; detta är inte en fullständig CENC-implementation.
 
+### Delning och sökning av torrenter
+
+Delning av en färdig torrent stoppar nu av sig själv vid kvoten 2.0 eller efter en vecka, beroende på vad som inträffar först. Det är på som standard, även för befintliga profiler; båda gränserna kan ändras eller stängas av under Inställningar → Torrenter. Uppladdning under hämtning räknas in i kvoten. Statusfönstret visar kvoten, och en torrent som stoppats av en gräns behåller sina filer och erbjuder Dela igen i sin meny.
+
+Magnetlänkar utan tracker avvisas inte längre direkt. Fönstret Lägg till hämtning förklarar att andra datorer vid en DHT-sökning ser vilken torrent du vill ha och din IP-adress, och söker först när du klickar på Sök i DHT. Din dator annonseras som peer först när den kontrollerade fillistan visar en offentlig torrent. En privat torrent stoppar sökningen, och en sökning avslutas efter 10 minuter. Länkar från webbläsare, urklipp eller Utforskaren startar aldrig en sökning av sig själva.
+
+Nytt: Konfigurera routern (UPnP), avstängt som standard precis som inkommande anslutningar, som det kräver. Det kommunicerar bara med standardgatewayen i det privata nätverket, begär en enda vidarebefordringsregel som gäller en timme i taget och tar bara bort sin egen regel; macOS rapporterar det som otillgängligt. Upptäckta peers och DHT-noder på andra tjänsters portar (under 1024 samt portar som SIP 5060) kontaktas aldrig. Hämtningar som stoppas av en DHT-orsak visar nu orsaken på det valda språket.
+
 [English details](../../../CHANGELOG.md#3150--2026-11-06)
 
 ## 3.10.2 — 2026-11-04
@@ -107,3 +115,13 @@ Inställningar → Utseende → Eget erbjuder Neon Courier, Reactor Night, Auror
 ### Förbättringar av profiler och kontroller
 
 Även skydd för profilversioner och MCP-åtkomstkontroller ingår.
+
+## 3.3.3 — 2026-10-28
+
+### Förbättrat gränssnitt
+
+Redigeraren och inlästa skript har nu separata flikar. Sök eller skapa skript i listan och öppna den fullständiga redigeraren från rubriken för Lua eller PowerShell. Spara, kör/stoppa och valfria loggar finns nära koden. Filkommandon ligger i redigerarens åtgärdsmeny. Byte av vy bevarar osparad kod, inställningar och markörens position.
+
+### Snabbare respons vid nedladdningar
+
+Uppdatering av köer och status, videoförfrågningar från webbläsaren och nya nedladdningar hanteras i bakgrunden så att långsam lagring inte blockerar klick. Dialogerna visar förloppet, förhindrar dubbla inlämningar och behåller utkastet om det inte går att spara. Mappar öppnas också i bakgrunden, och äldre uppdateringar ersätter inte den nyvalda kön.

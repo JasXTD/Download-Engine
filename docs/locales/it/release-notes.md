@@ -8,6 +8,14 @@ Aggiunti l’importazione di credenziali binarie/RSA protette dal sistema operat
 
 Il laboratorio CENC offline per gli autori usa Lua per analizzare un sottoinsieme limitato della cifratura dei campioni AVC/AAC, simulare uno scambio di licenza firmato, trasferire le chiavi e unire le tracce decifrate ai sottotitoli ASS. Autenticazione dei siti, formati delle licenze e parser dei contenitori restano a carico del codice Lua. I test usano dati generati, senza servizi o account reali; non si tratta di un’implementazione CENC completa.
 
+### Condivisione e ricerca dei torrent
+
+La condivisione di un torrent completato ora si interrompe da sola al rapporto 2.0 o dopo una settimana, a seconda di cosa avviene prima. È attiva per impostazione predefinita, anche nei profili esistenti; entrambi i limiti si possono modificare o disattivare in Preferenze → Torrent. Gli upload durante il download contano nel rapporto. La finestra di stato mostra il rapporto, e un torrent fermato da un limite conserva i file e offre Condividi di nuovo nel suo menu.
+
+I link magnet senza tracker non vengono più semplicemente rifiutati. La finestra Aggiungi download spiega che con una ricerca nella DHT gli altri computer vedono quale torrent vuoi e il tuo indirizzo IP, e avvia la ricerca solo dopo un clic su Cerca nella DHT. Il tuo computer viene annunciato come peer solo quando l’elenco dei file verificato indica un torrent pubblico. Un torrent privato interrompe la ricerca, e una ricerca termina dopo 10 minuti. I link da browser, appunti o Esplora file non avviano mai una ricerca da soli.
+
+Novità: Configura il router (UPnP), disattivato per impostazione predefinita come le connessioni in ingresso, di cui ha bisogno. Comunica solo con il gateway predefinito della rete privata, chiede una sola regola di inoltro valida un’ora alla volta e rimuove solo la propria regola; su macOS risulta non disponibile. Peer e nodi DHT trovati su porte di altri servizi (sotto 1024 e porte come SIP 5060) non vengono mai contattati. I download fermati per un motivo legato alla DHT ora mostrano il motivo nella lingua scelta.
+
 [English details](../../../CHANGELOG.md#3150--2026-11-06)
 
 ## 3.10.2 — 2026-11-04
@@ -107,3 +115,13 @@ Preferenze → Aspetto → Personalizzato offre Neon Courier, Reactor Night, Aur
 ### Miglioramenti a profili e controlli
 
 Inclusi anche protezione delle versioni del profilo e controlli di accesso MCP.
+
+## 3.3.3 — 2026-10-28
+
+### Miglioramenti dell’interfaccia
+
+L’editor e gli script caricati hanno ora schede separate. Cerca o crea gli script nell’elenco e apri l’editor completo dall’intestazione Lua o PowerShell. Salvataggio, esecuzione/arresto e registri facoltativi restano accanto al codice. I comandi dei file sono nel menu delle azioni dell’editor. Il cambio di vista conserva codice non salvato, impostazioni e posizione del cursore.
+
+### Azioni di download più reattive
+
+Gli aggiornamenti delle code e dello stato, le richieste video del browser e l’aggiunta di download avvengono in background, così un disco lento non blocca i clic. Le finestre mostrano l’avanzamento, impediscono invii duplicati e conservano la bozza se il salvataggio non riesce. Anche le cartelle si aprono in background; i risultati precedenti non sostituiscono la nuova coda selezionata.

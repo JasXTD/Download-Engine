@@ -8,6 +8,14 @@ Ditambah import kelayakan binari/RSA yang dilindungi sistem operasi, bait rawak,
 
 Makmal pengarang CENC luar talian menggunakan Lua untuk menghuraikan subset terhad penyulitan sampel AVC/AAC, pertukaran lesen bertandatangan sintetik, penyerahan kunci dan penggabungan trek yang dinyahsulit dengan sari kata ASS. Pengesahan laman, format lesen dan penghurai bekas media kekal dalam Lua. Ujian menggunakan data janaan tanpa perkhidmatan atau akaun sebenar; ini bukan pelaksanaan CENC yang lengkap.
 
+### Perkongsian dan carian torrent
+
+Perkongsian torrent yang telah selesai kini berhenti sendiri pada nisbah 2.0 atau selepas seminggu, mengikut mana yang dicapai dahulu. Ciri ini dihidupkan secara lalai, termasuk untuk profil sedia ada; kedua-dua had boleh diubah atau dimatikan dalam Keutamaan → Torrent. Muat naik semasa memuat turun turut dikira dalam nisbah. Tetingkap status menunjukkan nisbah, dan torrent yang dihentikan oleh had mengekalkan failnya serta menawarkan Kongsi semula dalam menunya.
+
+Pautan magnet tanpa penjejak tidak lagi ditolak begitu sahaja. Tetingkap Tambah muat turun menerangkan bahawa carian DHT membolehkan komputer lain melihat torrent yang anda mahu dan alamat IP anda, dan hanya mencari selepas anda mengklik Cari dalam DHT. Komputer anda hanya diumumkan sebagai rakan setelah senarai fail yang disemak menunjukkan torrent awam. Torrent peribadi menghentikan carian, dan carian tamat selepas 10 minit. Pautan daripada pelayar, papan klip atau Explorer tidak sekali-kali mencari dengan sendirinya.
+
+Baharu: Sediakan penghala saya (UPnP), dimatikan secara lalai seperti sambungan masuk yang diperlukannya. Ia hanya berhubung dengan get laluan lalai rangkaian peribadi, meminta satu peraturan pemajuan yang sah selama sejam pada satu masa dan hanya membuang peraturannya sendiri; macOS melaporkannya sebagai tidak tersedia. Rakan dan nod DHT yang ditemui pada port perkhidmatan lain (di bawah 1024, serta port seperti SIP 5060) tidak pernah dihubungi. Muat turun yang berhenti atas sebab DHT kini memaparkan sebabnya dalam bahasa yang dipilih.
+
 [English details](../../../CHANGELOG.md#3150--2026-11-06)
 
 ## 3.10.2 — 2026-11-04
@@ -107,3 +115,13 @@ Keutamaan → Penampilan → Tersuai menyediakan Neon Courier, Reactor Night, Au
 ### Penambahbaikan profil dan kawalan
 
 Termasuk perlindungan versi profil dan kawalan akses MCP.
+
+## 3.3.3 — 2026-10-28
+
+### Penambahbaikan antara muka
+
+Editor dan skrip yang dimuatkan kini mempunyai tab berasingan. Cari atau cipta skrip dalam pustaka, dan buka editor penuh dari pengepala editor Lua atau PowerShell. Simpan, Jalankan/Hentikan dan log pilihan kekal bersama kod. Arahan fail berada dalam menu tindakan editor. Pertukaran paparan mengekalkan kod yang belum disimpan, tetapan dan kedudukan kursor.
+
+### Tindakan muat turun lebih responsif
+
+Kemas kini baris gilir dan status, permintaan video pelayar serta penambahan muat turun diproses di latar belakang supaya storan perlahan tidak menyekat klik. Dialog menunjukkan kemajuan, menghalang penghantaran berganda dan mengekalkan draf jika simpanan gagal. Folder dibuka di latar belakang dan hasil kemas kini lama tidak menggantikan pilihan baris gilir baharu.

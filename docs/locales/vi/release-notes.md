@@ -8,6 +8,14 @@ Bổ sung nhập thông tin xác thực nhị phân/RSA được hệ điều h�
 
 Phòng thử nghiệm CENC ngoại tuyến dành cho tác giả dùng Lua để phân tích một phần giới hạn của mã hóa mẫu AVC/AAC, trao đổi giấy phép ký số mô phỏng, chuyển giao khóa và ghép các luồng đã giải mã với phụ đề ASS. Xác thực trang web, định dạng giấy phép và bộ phân tích bộ chứa vẫn do mã Lua đảm nhiệm. Kiểm thử dùng dữ liệu tạo sẵn, không dùng dịch vụ hay tài khoản thực; đây không phải bản triển khai CENC đầy đủ.
 
+### Chia sẻ và tìm kiếm torrent
+
+Việc chia sẻ torrent đã hoàn tất giờ tự dừng khi đạt tỷ lệ 2.0 hoặc sau một tuần, tùy điều kiện nào đến trước. Tính năng này bật theo mặc định, kể cả với hồ sơ hiện có; có thể đổi hoặc tắt cả hai giới hạn trong Tùy chọn → Torrent. Dữ liệu tải lên trong lúc tải xuống cũng được tính vào tỷ lệ. Cửa sổ trạng thái hiển thị tỷ lệ; torrent bị dừng do giới hạn vẫn giữ tệp và có mục Chia sẻ lại trong menu.
+
+Liên kết magnet không có tracker không còn bị từ chối ngay. Cửa sổ Thêm tải xuống giải thích rằng khi tìm trên DHT, các máy tính khác sẽ thấy bạn muốn torrent nào và địa chỉ IP của bạn, và chỉ tìm sau khi bạn nhấp Tìm trên DHT. Máy tính của bạn chỉ được thông báo là peer khi danh sách tệp đã kiểm tra cho thấy đây là torrent công khai. Torrent riêng tư sẽ dừng việc tìm kiếm, và mỗi lần tìm kết thúc sau 10 phút. Liên kết từ trình duyệt, bảng nhớ tạm hoặc Explorer không bao giờ tự tìm kiếm.
+
+Mới: Tự thiết lập bộ định tuyến (UPnP), mặc định tắt giống như kết nối đến mà tính năng này cần. Tính năng chỉ giao tiếp với bộ định tuyến làm cổng mặc định trong mạng riêng, chỉ yêu cầu một quy tắc chuyển tiếp có hiệu lực một giờ mỗi lần và chỉ gỡ quy tắc của chính nó; trên macOS, tính năng này báo là không khả dụng. Peer và nút DHT tìm thấy mà dùng cổng của dịch vụ khác (dưới 1024, cùng các cổng như SIP 5060) không bao giờ được kết nối. Tải xuống bị dừng vì lý do DHT giờ hiển thị lý do bằng ngôn ngữ đã chọn.
+
 [English details](../../../CHANGELOG.md#3150--2026-11-06)
 
 ## 3.10.2 — 2026-11-04
@@ -107,3 +115,13 @@ Tùy chọn → Giao diện → Tùy chỉnh có Neon Courier, Reactor Night, Au
 ### Cải tiến hồ sơ và điều khiển
 
 Bản này cũng có bảo vệ phiên bản hồ sơ và kiểm soát truy cập MCP.
+
+## 3.3.3 — 2026-10-28
+
+### Cải thiện giao diện
+
+Trình chỉnh sửa và danh sách tập lệnh đã tải nay có các thẻ riêng. Tìm kiếm hoặc tạo tập lệnh trong danh sách, rồi mở trình chỉnh sửa toàn màn hình từ tiêu đề Lua hoặc PowerShell. Lưu, chạy/dừng và nhật ký tùy chọn được đặt cùng mã; các lệnh tệp nằm trong trình đơn thao tác. Chuyển chế độ xem vẫn giữ mã chưa lưu, cài đặt và vị trí con trỏ.
+
+### Thao tác tải xuống phản hồi nhanh hơn
+
+Làm mới hàng đợi và trạng thái, xử lý yêu cầu video từ trình duyệt và thêm lượt tải chạy trong nền để bộ nhớ chậm không chặn thao tác nhấp. Hộp thoại hiển thị tiến trình, ngăn gửi trùng và giữ bản nháp nếu lưu thất bại. Mở thư mục cũng chạy trong nền; kết quả làm mới cũ không ghi đè hàng đợi vừa chọn.

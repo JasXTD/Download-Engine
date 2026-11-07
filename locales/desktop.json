@@ -16,12 +16,16 @@
   "Platform": ["平台","平台","Platform"],
   "Component": ["组件","元件","Komponen"],
   "Code location": ["代码位置","程式碼位置","Lokasi kod"],
-  "Browser connector": ["浏览器连接组件","瀏覽器連接元件","Penyambung pelayar"],
+  "Browser connector": [
+    "浏览器连接器",
+    "瀏覽器連接器",
+    "Penyambung pelayar"
+  ],
   "No passwords, download URLs, personal file paths or memory dumps are included. Nothing is uploaded automatically.": ["不包含密码、下载链接、个人文件路径或内存转储。不会自动上传任何内容。","不包含密碼、下載連結、個人檔案路徑或記憶體傾印。不會自動上傳任何內容。","Tiada kata laluan, URL muat turun, laluan fail peribadi atau dump memori disertakan. Tiada apa-apa dimuat naik secara automatik."],
   "Review report contents": ["查看报告内容","檢視報告內容","Semak kandungan laporan"],
   "Copy report": ["复制报告","複製報告","Salin laporan"],
   "Export report…": ["导出报告…","匯出報告…","Eksport laporan…"],
-  "Report an issue": ["报告问题","回報問題","Laporkan masalah"],
+  "Report an issue": ["报告问题","回報問題","Laporkan isu"],
   "Crash reporting is unavailable for this session. Check the profile folder permissions.": ["本次会话无法记录崩溃报告。请检查配置文件夹权限。","本次工作階段無法記錄當機報告。請檢查設定檔資料夾權限。","Pelaporan ranap tidak tersedia untuk sesi ini. Semak keizinan folder profil."],
   "Check for updates on launch": ["启动时检查更新","啟動時檢查更新","Semak kemas kini semasa pelancaran"],
   "Updates": ["更新","更新","Kemas kini"],
@@ -455,11 +459,7 @@
     "僅用於此檔案伺服器。儲存在 Windows 認證管理員中。",
     "Untuk pelayan fail ini sahaja. Disimpan dalam Pengurus Kelayakan Windows."
   ],
-  "For this file server only. Saved in your system keyring.": [
-    "仅用于此文件服务器。保存在系统密钥环中。",
-    "僅用於此檔案伺服器。儲存在系統鑰匙圈中。",
-    "Untuk pelayan fail ini sahaja. Disimpan dalam rantai kunci sistem anda."
-  ],
+  "For this file server only. Saved in your system keyring.": ["仅用于此文件服务器。保存在系统密钥环中。","僅用於此檔案伺服器。儲存在系統鑰匙圈中。","Untuk pelayan fail ini sahaja. Disimpan dalam rantai kunci sistem anda."],
   "Use login is available for direct file links only.": [
     "仅文件直链支持登录。",
     "僅檔案直接連結支援登入。",
@@ -1130,11 +1130,7 @@
     "應用程式開啟時（包括系統匣中）規則會執行。優先使用首個相符的分配規則。",
     "Peraturan berjalan semasa aplikasi terbuka, termasuk dalam dulang. Peraturan penghalaan pertama yang sepadan digunakan."
   ],
-  "Rules run while the app is open. The first matching routing rule wins.": [
-    "应用打开时规则会运行。优先使用首个匹配的分配规则。",
-    "應用程式開啟時規則會執行。優先使用首個相符的分配規則。",
-    "Peraturan berjalan semasa aplikasi terbuka. Peraturan penghalaan pertama yang sepadan digunakan."
-  ],
+  "Rules run while the app is open. The first matching routing rule wins.": ["应用打开时规则会运行。优先使用首个匹配的分配规则。","應用程式開啟時規則會執行。優先使用首個相符的分配規則。","Peraturan berjalan semasa aplikasi terbuka. Peraturan penghalaan pertama yang sepadan digunakan."],
   "No runs yet. Matching downloads and completed queues will appear here.": [
     "尚无运行记录。匹配的下载和已完成队列将显示在这里。",
     "尚無執行記錄。相符的下載和已完成佇列將顯示在這裡。",
@@ -3605,11 +3601,6 @@
     "桌面",
     "Desktop"
   ],
-  "Browser connector": [
-    "浏览器连接器",
-    "瀏覽器連接器",
-    "Penyambung pelayar"
-  ],
   "Application started": [
     "应用已启动",
     "應用程式已啟動",
@@ -4030,11 +4021,7 @@
     "應用程式開啟時執行，包括系統匣中。",
     "Berjalan semasa aplikasi terbuka, termasuk dalam dulang."
   ],
-  "Runs while the app is open.": [
-    "应用打开时运行。",
-    "應用程式開啟時執行。",
-    "Berjalan semasa aplikasi terbuka."
-  ],
+  "Runs while the app is open.": ["应用打开时运行。","應用程式開啟時執行。","Berjalan semasa aplikasi terbuka."],
   "Stopping MCP disconnects AI clients. Downloads already started keep running.": [
     "停止 MCP 会断开 AI 客户端。已开始的下载会继续运行。",
     "停止 MCP 會中斷 AI 用戶端。已開始的下載會繼續執行。",
@@ -7445,11 +7432,6 @@
     "啟動與系統匣",
     "Permulaan & dulang"
   ],
-  "Updates": [
-    "更新",
-    "更新",
-    "Kemas kini"
-  ],
   "No unsaved changes": [
     "没有未保存的更改",
     "沒有未儲存的變更",
@@ -8291,5 +8273,16 @@
   "That tracker leads to this computer or its network, so it can't be used.": ["该 Tracker 指向本计算机或其网络，因此无法使用。","該 Tracker 指向本電腦或其網路，因此無法使用。","Penjejak itu menghala ke komputer ini atau rangkaiannya, jadi ia tidak boleh digunakan."],
   "This torrent already has 32 trackers.": ["此种子已有 32 个 Tracker。","此種子已有 32 個 Tracker。","Torrent ini sudah mempunyai 32 penjejak."],
   "Copy magnet link": ["复制磁力链接","複製磁力連結","Salin pautan magnet"],
-  "Magnet link copied.": ["已复制磁力链接。","已複製磁力連結。","Pautan magnet disalin."]
+  "Magnet link copied.": ["已复制磁力链接。","已複製磁力連結。","Pautan magnet disalin."],
+  "Saved in your system keyring for this download and server. Removed when the download completes or you remove it.": ["保存在系统密钥环中，仅用于此下载和服务器。下载完成或移除时删除。","儲存在系統鑰匙圈中，僅用於此下載和伺服器。下載完成或移除時刪除。","Disimpan dalam rantai kunci sistem anda untuk muat turun dan pelayan ini. Dibuang apabila muat turun selesai atau dibuang."],
+  "Saved in your system keyring, separately from website logins.": ["保存在系统密钥环中，与网站登录信息分开。","儲存在系統鑰匙圈中，與網站登入資訊分開。","Disimpan dalam rantai kunci sistem anda, berasingan daripada log masuk laman."],
+  "Follow the system or pick a fixed theme.": ["跟随系统或选择固定主题。","跟隨系統或選擇固定佈景主題。","Ikut sistem atau pilih tema tetap."],
+  "MCP": ["MCP","MCP","MCP"],
+  "From plugins folder": ["来自 plugins 文件夹","來自 plugins 資料夾","Daripada folder plugins"],
+  "Review install": ["检查并安装","檢查並安裝","Semak dan pasang"],
+  "Review update": ["检查并更新","檢查並更新","Semak dan kemas kini"],
+  "Installed version is newer": ["已安装的版本较新","已安裝的版本較新","Versi dipasang lebih baharu"],
+  "Changed package: its author must increase the version": ["包已更改：其作者必须提高版本号","套件已變更：其作者必須提高版本號","Pakej berubah: pengarangnya mesti menaikkan versi"],
+  "No new packages. Add a .de-extension.json file here, then Refresh.": ["没有新的包。请将 .de-extension.json 文件添加到此处，然后点击“刷新”。","沒有新的套件。請將 .de-extension.json 檔案加入此處，然後按「重新整理」。","Tiada pakej baharu. Tambah fail .de-extension.json di sini, kemudian pilih Segarkan."],
+  "Review permissions before installing or updating. New extensions start disabled.": ["安装或更新前请检查权限。新扩展默认禁用。","安裝或更新前請檢查權限。新的擴充功能預設為停用。","Semak keizinan sebelum memasang atau mengemas kini. Sambungan baharu bermula dalam keadaan dilumpuhkan."]
 }

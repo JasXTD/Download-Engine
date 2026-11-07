@@ -31,16 +31,63 @@ test('catalogs retain format placeholders, nonempty translations and referenced 
       const key=JSON.parse(match[1]); if(!(key in extension)) missing.push(`${file}: ${key}`);
     }
   }
-  const {files,production,literals}=require('../scripts/localization-source.cjs');
+  const {files,production,labels}=require('../scripts/localization-source.cjs');
   for(const file of files(path.join(root,'src')).filter(f=>f.endsWith('.rs')&&!/tests\.rs$/.test(f))) {
     const source=production(fs.readFileSync(file,'utf8'));
-    for(const literal of literals(source)) {
-      if(/(?:\btr\(\s*|\btf!\(\s*)$/.test(source.slice(Math.max(0,literal.start-30),literal.start)) && !(literal.value in desktop)) {
-        missing.push(`${path.relative(root,file)}: ${literal.value}`);
-      }
+    for(const label of labels(source)) {
+      if(!(label.value in desktop)) missing.push(`${path.relative(root,file)}: ${label.value}`);
     }
   }
   assert.deepEqual(missing,[]);
+});
+
+test('label scanner keeps its place after char literals and finds wrapped and branch labels',()=>{
+  const {literals,labels}=require('../scripts/localization-source.cjs');
+  // A '"' once opened a string that ran to the next quote in the file, a literal that rustfmt
+  // moved more than 30 characters past tr( was not read as a label, and neither were the
+  // values that tr(if …) or tr(match …) choose between.
+  const fixture=String.raw`fn detect<'a>(text: &'a str, ui: &mut Ui) -> &'a str {
+    ui.label(tr("Between lifetimes"));
+    let text = text.trim().trim_matches('"');
+    let quotes = [b'"', '\"', '\'', '\\', '\u{22}', '😀'];
+    'outer: loop {
+        break 'outer;
+    }
+    ui.label(tr("After a quote char"));
+    if let Some(folder) = folder {
+        ui.selectable_value(&mut destination, folder, &name)
+            .on_hover_text(
+                folder.path.as_deref().unwrap_or(tr(
+                                        "Wrapped under a deep indent",
+                )),
+            );
+    }
+    ui.label(tf!(
+                                        "Wrapped format {count}",
+        count = "not a label"
+    ));
+    ui.label(tr(if cfg!(windows) { "On Windows" } else { "Elsewhere" }));
+    ui.label(tr(match kind {
+        Kind::Plain if text == "a guard" => "Plain arm",
+        Kind::Block => {
+            "Block arm"
+        }
+        Kind::Call => other("an argument"),
+        _ => &name,
+    }));
+    ui.label(tr(match text { "a pattern" => "Pattern arm", _ => "Fallback arm" }));
+    let plain = if wide { "Outside tr" } else { "Also outside" };
+    // tr("Only in a comment")
+    let raw = format!("tr(\"Only in a string\") {}", r#"tr("Only in a raw string")"#);
+    text
+}`;
+  assert.deepEqual(labels(fixture).map(label=>label.value),
+    ['Between lifetimes','After a quote char','Wrapped under a deep indent','Wrapped format {count}',
+      'On Windows','Elsewhere','Plain arm','Block arm','Pattern arm','Fallback arm']);
+  assert.deepEqual(literals(fixture).map(literal=>literal.value),
+    ['Between lifetimes','After a quote char','Wrapped under a deep indent','Wrapped format {count}','not a label',
+      'On Windows','Elsewhere','a guard','Plain arm','Block arm','an argument','a pattern','Pattern arm','Fallback arm',
+      'Outside tr','Also outside','tr("Only in a string") {}','tr("Only in a raw string")']);
 });
 
 async function runtime(uiLanguage='en-US',saved='system') {

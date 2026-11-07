@@ -1,3 +1,13 @@
+## 3.16.0 — 2026-11-07
+
+### Sambungan permulaan Lua dan kawalan kebenaran
+
+Lima sambungan Lua disertakan: fail awam Internet Archive, fail asal Wikimedia Commons, aset keluaran GitHub, pengisihan fail siap mengikut jenis, serta pemberitahuan giliran selesai dengan pilihan memulakan giliran seterusnya. Pilih melalui Extensions → Examples dan semak kebenaran sebelum memasang; sambungan tidak berjalan hanya kerana disertakan. Halaman kosong, semakan pemasangan, kebenaran setiap tugas dan kawalan akses fail selepas pemasangan diperjelas. Panduan menulis sambungan pertama turut ditambah.
+
+Semakan yang lapuk ditolak jika pakej berubah. ID contoh terpelihara memerlukan fail yang sama tepat dengan salinan disertakan, dan metadata menolak aksara kawalan yang mengelirukan. Penemuan kekal dalam folder plugins aplikasi. Terjemahan laporan ranap dan UI dilengkapkan, pengesanan teks terjemahan diperbaiki, bahasa Romansh diseragamkan, nota keluaran lama dipulihkan, dan pakej macOS/Linux menyertakan panduan serta imej yang dipautkan untuk bacaan luar talian.
+
+[English details](../../../CHANGELOG.md#3160--2026-11-07)
+
 ## 3.15.0 — 2026-11-06
 
 ### Teras pembekal Lua dan sari kata ASS

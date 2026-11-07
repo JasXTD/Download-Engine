@@ -1,3 +1,13 @@
+## 3.16.0 — 2026-11-07
+
+### Lua-exempel och behörighetskontroll
+
+Fem Lua-tillägg ingår: offentliga Internet Archive-filer, Wikimedia Commons-original, GitHub-versionsfiler, sortering av färdiga filer efter typ samt aviseringar när kön är klar med valfri start av nästa kö. Välj dem under Extensions → Examples och granska behörigheterna före installation; medföljande tillägg körs inte automatiskt. Den tomma tilläggssidan, installationsgranskningen och behörigheter per jobb har förbättrats. Filåtkomst kan beviljas eller återkallas efter installation, och en guide beskriver det första egna tillägget.
+
+Ändrade paket kräver en ny granskning. Reserverade exempel-ID:n kräver exakt de medföljande filerna, och vilseledande kontrolltecken avvisas i metadata. Tillägg hittas fortfarande i appens plugins-mapp. Saknade översättningar av kraschrapporter och gränssnitt har lagts till, upptäckten av översättningsbara texter har förbättrats och rätoromanskan har gjorts enhetlig. Saknade äldre versionsanteckningar har återställts; macOS/Linux-paket innehåller länkade guider och bilder för dokumentation offline.
+
+[English details](../../../CHANGELOG.md#3160--2026-11-07)
+
 ## 3.15.0 — 2026-11-06
 
 ### Lua-leverantörer och ASS-undertexter

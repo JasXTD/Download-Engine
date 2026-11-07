@@ -2,6 +2,15 @@
 
 Release notes are available offline in Help → Changelog. Newest releases appear first.
 
+## 3.16.0 — 2026-11-07
+
+### Lua starter extensions and permission controls
+
+- Added five bundled Lua starter extensions: Internet Archive public item files, Wikimedia Commons originals, GitHub release assets, sorting completed files by type, and queue completion notifications with an optional next queue. Find them in Extensions → Examples, review their permissions and install the ones you want. Nothing runs merely because it is bundled.
+- Added goal cards to the empty Extensions page, clearer installation reviews, per-job permission details and controls to grant or revoke file access after installation. A new author guide walks through creating a first extension using the current Lua APIs.
+- Installation refuses stale reviews when a package or installed copy has changed. Reserved example IDs require the exact bundled files during both discovery and installation, and metadata rejects control characters that could disguise what is being reviewed. Packages continue to be discovered from the application's plugins folder.
+- Filled missing crash-report and other UI translations, improved translation source discovery and made Romansh wording consistent. Restored missing historical release notes, and included linked guides and images in macOS and Linux packages so their offline documentation works.
+
 ## 3.15.0 — 2026-11-06
 
 ### Lua provider core and ASS subtitles

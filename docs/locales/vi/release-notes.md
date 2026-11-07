@@ -1,3 +1,13 @@
+## 3.16.0 — 2026-11-07
+
+### Tiện ích Lua mẫu và quản lý quyền
+
+Bổ sung năm tiện ích Lua đi kèm: tệp công khai trên Internet Archive, bản gốc Wikimedia Commons, tài sản bản phát hành GitHub, sắp xếp tệp hoàn tất theo loại và thông báo khi hàng đợi hoàn tất với tùy chọn chạy hàng đợi tiếp theo. Chọn trong Extensions → Examples và xem quyền trước khi cài; tiện ích không tự chạy chỉ vì được đóng gói sẵn. Cải thiện trang trống, màn hình duyệt cài đặt, quyền theo tác vụ và khả năng cấp hoặc thu hồi quyền truy cập tệp sau khi cài. Có hướng dẫn viết tiện ích đầu tiên.
+
+Từ chối cài đặt nếu nội dung đã thay đổi sau khi duyệt. ID mẫu dành riêng phải khớp hoàn toàn với tệp đi kèm; siêu dữ liệu không được chứa ký tự điều khiển gây hiểu nhầm. Tiện ích vẫn được tìm trong thư mục plugins của ứng dụng. Bổ sung bản dịch báo cáo sự cố và giao diện, cải thiện việc tìm chuỗi dịch và thống nhất tiếng Romansh. Khôi phục ghi chú phát hành cũ còn thiếu; gói macOS/Linux có đủ hướng dẫn và hình ảnh được liên kết để đọc ngoại tuyến.
+
+[English details](../../../CHANGELOG.md#3160--2026-11-07)
+
 ## 3.15.0 — 2026-11-06
 
 ### Lõi trình cung cấp Lua và phụ đề ASS

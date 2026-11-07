@@ -1,3 +1,13 @@
+## 3.16.0 — 2026-11-07
+
+### Lua-Beispielerweiterungen und Berechtigungen
+
+Fünf Lua-Erweiterungen sind enthalten: öffentliche Internet-Archive-Dateien, Wikimedia-Commons-Originale, GitHub-Release-Dateien, Sortierung fertiger Dateien nach Typ und Benachrichtigungen zum Warteschlangenende mit optionalem Start der nächsten Warteschlange. Wählen Sie sie unter Extensions → Examples und prüfen Sie die Berechtigungen vor der Installation. Mitgelieferter Code läuft nicht automatisch. Die leere Erweiterungsseite, Installationsprüfung und Anzeige der Auftragsrechte wurden verbessert. Dateizugriff lässt sich nachträglich gewähren oder entziehen; eine Anleitung erklärt die erste eigene Erweiterung.
+
+Geänderte Pakete erfordern eine erneute Prüfung. Reservierte Beispiel-IDs setzen exakt die mitgelieferten Dateien voraus; irreführende Steuerzeichen in Metadaten werden abgewiesen. Erweiterungen werden weiterhin im plugins-Ordner der App gefunden. Fehlende Absturzbericht- und UI-Übersetzungen wurden ergänzt, die Erkennung übersetzbarer Texte verbessert und die rätoromanische Sprache vereinheitlicht. Fehlende ältere Versionshinweise wurden wiederhergestellt. macOS/Linux-Pakete enthalten nun die verlinkten Anleitungen und Bilder für die Offline-Dokumentation.
+
+[English details](../../../CHANGELOG.md#3160--2026-11-07)
+
 ## 3.15.0 — 2026-11-06
 
 ### Lua-Provider und ASS-Untertitel

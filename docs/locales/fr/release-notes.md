@@ -1,3 +1,13 @@
+## 3.16.0 — 2026-11-07
+
+### Extensions Lua de démarrage et autorisations
+
+Cinq extensions Lua sont fournies : fichiers publics Internet Archive, originaux Wikimedia Commons, fichiers de versions GitHub, classement des fichiers terminés par type et notifications de fin de file avec démarrage facultatif de la suivante. Choisissez-les dans Extensions → Examples et examinez leurs autorisations avant installation ; leur présence ne les exécute pas. La page vide, la vérification d’installation et les droits par tâche sont plus clairs. L’accès aux fichiers peut être accordé ou retiré après installation. Un guide accompagne la création d’une première extension.
+
+Une modification du paquet invalide la vérification précédente. Les identifiants réservés aux exemples exigent les fichiers fournis à l’identique ; les métadonnées refusent les caractères de contrôle trompeurs. La découverte reste limitée au dossier plugins de l’application. Les traductions des rapports de plantage et de l’interface ont été complétées, la détection des textes à traduire améliorée et le romanche harmonisé. Les anciennes notes manquantes ont été rétablies ; les paquets macOS/Linux incluent les guides et images liés pour une documentation hors ligne complète.
+
+[English details](../../../CHANGELOG.md#3160--2026-11-07)
+
 ## 3.15.0 — 2026-11-06
 
 ### Noyau des fournisseurs Lua et sous-titres ASS

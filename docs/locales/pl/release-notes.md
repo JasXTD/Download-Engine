@@ -1,3 +1,13 @@
+## 3.16.0 — 2026-11-07
+
+### Przykładowe rozszerzenia Lua i zarządzanie uprawnieniami
+
+Dołączono pięć rozszerzeń Lua: publiczne pliki Internet Archive, oryginały Wikimedia Commons, zasoby wydań GitHub, sortowanie ukończonych plików według typu oraz powiadomienia o zakończeniu kolejki z opcjonalnym uruchomieniem następnej. Wybierz je w Extensions → Examples i sprawdź uprawnienia przed instalacją; samo dołączenie do aplikacji nie uruchamia kodu. Ulepszono pustą stronę rozszerzeń, przegląd instalacji i uprawnienia zadań. Dodano nadawanie i odbieranie dostępu do plików po instalacji oraz poradnik pierwszego rozszerzenia.
+
+Nieaktualny przegląd nie pozwala na instalację zmienionego pakietu. Zastrzeżone identyfikatory przykładów wymagają dokładnej zgodności dołączonych plików, a metadane odrzucają mylące znaki sterujące. Rozszerzenia nadal są wykrywane w folderze plugins aplikacji. Uzupełniono tłumaczenia raportów awarii i interfejsu, poprawiono wyszukiwanie tekstów do tłumaczenia i ujednolicono język romansz. Przywrócono brakujące historyczne informacje o wydaniach; pakiety macOS/Linux zawierają poradniki i obrazy potrzebne w dokumentacji offline.
+
+[English details](../../../CHANGELOG.md#3160--2026-11-07)
+
 ## 3.15.0 — 2026-11-06
 
 ### Rdzeń dostawców Lua i napisy ASS

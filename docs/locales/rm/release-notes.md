@@ -1,3 +1,13 @@
+## 3.16.0 — 2026-11-07
+
+### Extensiuns Lua d’exempel e controlla da permissiuns
+
+Cun questa versiun vegnan furnidas tschintg extensiuns Lua: datotecas publicas dad Internet Archive, originals da Wikimedia Commons, datotecas da versiuns GitHub, ordinaziun da datotecas terminadas tenor tip e notificaziuns a la fin da la colonna cun l’opziun da lantschar la proxima. Tschernair las extensiuns sut Extensions → Examples e controllar las permissiuns avant l’installaziun. Il code furnì na vegn betg exequì automaticamain. La pagina vida, la controlla d’installaziun e las permissiuns per incumbensa èn pli cleras. L’access a datotecas po vegnir concedì u revocà suenter l’installaziun; in mussavia declera l’emprima extensiun.
+
+Pachets modifitgads dovran ina nova controlla. Ils identificaturs reservads per exempels pretendan datotecas identicas a quellas furnidas; caracters da controlla che pon engianar vegnan refusads en las metadatas. Las extensiuns vegnan anc adina tschertgadas en l’ordinatur plugins da l’applicaziun. Traducziuns mancantas dals rapports da collaps e da l’interfatscha èn cumplettadas, la tschertga da texts da translatar è meglierada ed il rumantsch è unifitgà. Notizias istoricas mancantas èn restabilidas; ils pachets macOS/Linux cuntegnan ils mussavias e maletgs colliads per la documentaziun senza connexiun.
+
+[English details](../../../CHANGELOG.md#3160--2026-11-07)
+
 ## 3.15.0 — 2026-11-06
 
 ### Nuschel dals providers Lua e suttitels ASS

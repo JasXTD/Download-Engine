@@ -1,3 +1,13 @@
+## 3.16.0 — 2026-11-07
+
+### Estensioni Lua introduttive e autorizzazioni
+
+Sono incluse cinque estensioni Lua: file pubblici di Internet Archive, originali di Wikimedia Commons, risorse delle release GitHub, ordinamento dei file completati per tipo e notifiche di fine coda con avvio facoltativo della successiva. Sceglile in Extensions → Examples e verifica i permessi prima di installarle; la sola inclusione non le esegue. Migliorate la pagina vuota, la verifica di installazione e le autorizzazioni per attività. L’accesso ai file può essere concesso o revocato dopo l’installazione. Una guida spiega come creare la prima estensione.
+
+Una modifica al pacchetto invalida la verifica precedente. Gli ID riservati agli esempi richiedono file identici a quelli inclusi e i metadati rifiutano caratteri di controllo ingannevoli. Il rilevamento resta nella cartella plugins dell’app. Completate le traduzioni dei rapporti di arresto anomalo e dell’interfaccia, migliorata la ricerca dei testi traducibili e uniformato il romancio. Ripristinate le note storiche mancanti; i pacchetti macOS/Linux includono guide e immagini collegate per la documentazione offline.
+
+[English details](../../../CHANGELOG.md#3160--2026-11-07)
+
 ## 3.15.0 — 2026-11-06
 
 ### Nucleo dei provider Lua e sottotitoli ASS

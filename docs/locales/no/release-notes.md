@@ -1,3 +1,13 @@
+## 3.16.0 — 2026-11-07
+
+### Lua-eksempler og tilgangskontroll
+
+Fem Lua-utvidelser følger med: offentlige Internet Archive-filer, Wikimedia Commons-originaler, GitHub-utgivelsesfiler, sortering av ferdige filer etter type og varsler når køen er ferdig med valgfri start av neste kø. Velg dem under Extensions → Examples og gjennomgå tillatelsene før installasjon; medfølgende utvidelser kjører ikke automatisk. Den tomme utvidelsessiden, installasjonsgjennomgangen og tillatelsene per oppgave er forbedret. Filtilgang kan gis eller trekkes tilbake etter installasjon, og en veiledning forklarer den første egne utvidelsen.
+
+Endrede pakker krever en ny gjennomgang. Reserverte eksempel-ID-er krever nøyaktig de medfølgende filene, og metadata avviser villedende kontrolltegn. Utvidelser finnes fortsatt i appens plugins-mappe. Manglende oversettelser av krasjrapporter og grensesnitt er lagt til, oppdagelsen av oversettbare tekster er forbedret og retoromansk er gjort konsekvent. Manglende eldre utgivelsesnotater er gjenopprettet; macOS/Linux-pakker inneholder lenkede veiledninger og bilder for frakoblet dokumentasjon.
+
+[English details](../../../CHANGELOG.md#3160--2026-11-07)
+
 ## 3.15.0 — 2026-11-06
 
 ### Lua-tilbydere og ASS-undertekster

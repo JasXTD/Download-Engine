@@ -1,0 +1,27 @@
+{
+  "batchcomplete": true,
+  "query": {
+    "normalized": [
+      { "fromencoded": false, "from": "File:Café_at_night.jpg", "to": "File:Café at night.jpg" }
+    ],
+    "pages": [
+      {
+        "pageid": 1234567,
+        "ns": 6,
+        "title": "File:Café at night.jpg",
+        "imagerepository": "local",
+        "imageinfo": [
+          {
+            "size": 4718592,
+            "width": 6000,
+            "height": 4000,
+            "url": "https://upload.wikimedia.org/wikipedia/commons/a/ab/Caf%C3%A9_at_night.jpg",
+            "descriptionurl": "https://commons.wikimedia.org/wiki/File:Caf%C3%A9_at_night.jpg",
+            "descriptionshorturl": "https://commons.wikimedia.org/w/index.php?curid=1234567",
+            "mime": "image/jpeg"
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,33 @@
+{
+  "api_version": 1,
+  "description": "Gets the full-size original behind a Wikimedia Commons file page, not the preview.",
+  "files": {
+    "reader.lua": "-- Site reader: gets the original file behind a Wikimedia Commons file page,\n-- such as https://commons.wikimedia.org/wiki/File:Example.jpg\n--\n-- A Commons page shows a smaller preview. This reader asks the public\n-- MediaWiki API for the full-size original, and returns that one file.\n\n-- 1. Take the page title from the address: everything after /wiki/.\nlocal title = event.url:match(\"^https?://commons%.wikimedia%.org/wiki/([^?#]+)\")\nassert(title and title:match(\"^File:\"), \"Open a Commons file page, such as .../wiki/File:Example.jpg\")\n\n-- Addresses write some characters as codes: \"Café\" becomes \"Caf%C3%A9\".\n-- Turn the codes back into characters before using the title.\ntitle = title:gsub(\"%%(%x%x)\", function(code)\n  return string.char(tonumber(code, 16))\nend)\n\n-- 2. Ask the API for the original's address, size and type.\n--    \"%7C\" is \"|\", the separator the API uses between the values we want.\nlocal api = \"https://commons.wikimedia.org/w/api.php?action=query&format=json&formatversion=2\"\n  .. \"&prop=imageinfo&iiprop=url%7Csize%7Cmime&titles=\" .. xd.url_encode(title)\nlocal reply = xd.fetch(api)\nassert(reply.status == 200, \"Commons answered with HTTP \" .. reply.status)\n\n-- 3. Find the page in the answer. JSON null becomes nil in Lua.\nlocal answer = xd.json(reply.body)\nlocal page = answer.query and answer.query.pages and answer.query.pages[1]\nassert(page and not page.missing and not page.invalid, \"Commons has no file called \" .. title)\nlocal original = page.imageinfo and page.imageinfo[1]\nassert(original and original.url, \"Commons did not return the file's address\")\n\n-- 4. Return one file. Its name is the page title without \"File:\".\nlocal filename = page.title:gsub(\"^File:\", \"\")\nreturn {\n  title = page.title,\n  items = {\n    {\n      kind = \"file\",\n      url = original.url,\n      filename = filename,\n      label = original.mime,\n      size = original.size,\n    },\n  },\n}\n"
+  },
+  "format": "download-engine-extension",
+  "format_version": 1,
+  "id": "examples.wikimedia-commons",
+  "jobs": [
+    {
+      "entry": "reader.lua",
+      "id": "original-file",
+      "name": "Commons file pages",
+      "timeout_seconds": 30,
+      "trigger": {
+        "kind": "site_reader",
+        "pages": [
+          "commons.wikimedia.org/wiki/File:*"
+        ]
+      }
+    }
+  ],
+  "license": "MIT",
+  "name": "Wikimedia Commons originals",
+  "permissions": {
+    "network": [
+      "commons.wikimedia.org"
+    ]
+  },
+  "publisher": "Download Engine examples",
+  "version": "1.0.0"
+}

@@ -1,0 +1,44 @@
+{
+  "api_version": 1,
+  "description": "Lists the files attached to a GitHub release so you can choose which ones to download.",
+  "files": {
+    "reader.lua": "-- Site reader: lists the files attached to a GitHub release, so you can\n-- choose which ones to download. It works on pages such as:\n--   https://github.com/OWNER/REPO/releases/tag/v1.2.3   one release\n--   https://github.com/OWNER/REPO/releases/latest       the newest release\n--   https://github.com/OWNER/REPO/releases              also the newest release\n\n-- 1. Read the owner, repository and the rest of the address.\nlocal owner, repo, rest = event.url:match(\"^https?://github%.com/([^/]+)/([^/]+)/releases/?([^?#]*)\")\nassert(owner, \"Open a GitHub releases page, such as github.com/OWNER/REPO/releases/latest\")\nrest = rest:gsub(\"/$\", \"\") -- \"latest/\" means the same as \"latest\"\n\n-- 2. Pick the GitHub API address for this page.\nlocal api = \"https://api.github.com/repos/\" .. owner .. \"/\" .. repo .. \"/releases/\"\nlocal tag = rest:match(\"^tag/(.+)$\")\nif tag then\n  api = api .. \"tags/\" .. tag -- The tag is already encoded, as it was in the page address.\nelseif rest == \"\" or rest == \"latest\" then\n  api = api .. \"latest\"\nelse\n  error(\"Open one release, such as .../releases/tag/v1.0, or .../releases/latest\")\nend\n\n-- 3. Ask GitHub. Without signing in, its API answers about 60 requests an\n--    hour from one address, and says 403 or 429 after that.\nlocal reply = xd.fetch(api, { headers = { Accept = \"application/vnd.github+json\" } })\nif reply.status == 403 or reply.status == 429 then\n  error(\"GitHub is limiting requests right now. Try again in an hour\")\nend\nassert(reply.status == 200, \"GitHub answered with HTTP \" .. reply.status)\nlocal release = xd.json(reply.body)\n\n-- 4. Each file attached to the release becomes one item in the list.\nlocal files = {}\nfor _, asset in ipairs(release.assets or {}) do\n  -- Stream playlists need a different kind of item, so this example skips them.\n  local name = asset.name:lower()\n  local playlist = name:match(\"%.m3u8$\") or name:match(\"%.mpd$\")\n  if not playlist then\n    files[#files + 1] = {\n      kind = \"file\",\n      url = asset.browser_download_url,\n      filename = asset.name,\n      -- Download Engine takes a size above 0, so an empty file's size is left out.\n      size = asset.size > 0 and asset.size or nil,\n    }\n  end\nend\n\n-- 5. A setting you can change on the Settings tab. GitHub also makes source\n--    code archives for every release; they are listed only if you ask.\nif xd.setting(\"include_source\") then\n  local base = \"https://github.com/\" .. owner .. \"/\" .. repo .. \"/archive/refs/tags/\"\n    .. xd.url_encode(release.tag_name)\n  for _, format in ipairs({ \"zip\", \"tar.gz\" }) do\n    files[#files + 1] = {\n      kind = \"file\",\n      url = base .. \".\" .. format,\n      filename = repo .. \"-\" .. release.tag_name .. \".\" .. format,\n      label = \"Source code (\" .. format .. \")\",\n    }\n  end\nend\nassert(#files > 0, \"This release has no files attached\")\n\n-- Download Engine accepts up to 1,000 files from one page.\nif #files > 1000 then\n  xd.log(\"warning\", \"Showing the first 1,000 of \" .. #files .. \" files\")\n  for index = #files, 1001, -1 do\n    files[index] = nil\n  end\nend\n\n-- 6. Use the release's name as the title, or its tag when it has no name.\nlocal title = release.name\nif not title or title == \"\" then\n  title = release.tag_name\nend\nreturn { title = repo .. \" \" .. title, items = files }\n"
+  },
+  "format": "download-engine-extension",
+  "format_version": 1,
+  "id": "examples.github-releases",
+  "jobs": [
+    {
+      "entry": "reader.lua",
+      "id": "release-files",
+      "name": "GitHub release pages",
+      "timeout_seconds": 30,
+      "trigger": {
+        "kind": "site_reader",
+        "pages": [
+          "github.com/*/releases/tag/*",
+          "github.com/*/releases/latest",
+          "github.com/*/releases"
+        ]
+      }
+    }
+  ],
+  "license": "MIT",
+  "name": "GitHub release files",
+  "permissions": {
+    "network": [
+      "github.com",
+      "api.github.com"
+    ]
+  },
+  "publisher": "Download Engine examples",
+  "settings": [
+    {
+      "default": false,
+      "id": "include_source",
+      "label": "Also list the source code archives GitHub makes for each release",
+      "type": "boolean"
+    }
+  ],
+  "version": "1.0.0"
+}

@@ -1,0 +1,71 @@
+{
+  "created": 1793800000,
+  "d1": "ia800100.us.archive.org",
+  "d2": "ia600100.us.archive.org",
+  "dir": "/1/items/example-public-domain-film",
+  "files": [
+    {
+      "name": "Example Film.mp4",
+      "source": "original",
+      "format": "MPEG4",
+      "size": "73400320",
+      "md5": "0123456789abcdef0123456789abcdef",
+      "mtime": "1700000000"
+    },
+    {
+      "name": "Example Film.ogv",
+      "source": "derivative",
+      "format": "Ogg Video",
+      "size": "51200000",
+      "original": "Example Film.mp4"
+    },
+    {
+      "name": "Example Film.thumbs/Example Film_000001.jpg",
+      "source": "derivative",
+      "format": "Thumbnail",
+      "size": "8192",
+      "original": "Example Film.mp4"
+    },
+    {
+      "name": "extras/Making of #1.mp4",
+      "source": "original",
+      "format": "MPEG4",
+      "size": "10485760"
+    },
+    {
+      "name": "notes.txt",
+      "source": "original",
+      "format": "Text",
+      "size": "0"
+    },
+    {
+      "name": "lending-only scan.pdf",
+      "source": "original",
+      "format": "Text PDF",
+      "size": "2048",
+      "private": "true"
+    },
+    {
+      "name": "stream/index.m3u8",
+      "source": "original",
+      "format": "Unknown",
+      "size": "512"
+    },
+    {
+      "name": "example-public-domain-film_meta.xml",
+      "source": "metadata",
+      "format": "Metadata",
+      "size": "1450"
+    }
+  ],
+  "files_count": 8,
+  "item_size": 135000000,
+  "metadata": {
+    "identifier": "example-public-domain-film",
+    "mediatype": "movies",
+    "title": ["Example Public Domain Film", "Another title"],
+    "licenseurl": "http://creativecommons.org/publicdomain/mark/1.0/"
+  },
+  "server": "ia800100.us.archive.org",
+  "workable_servers": ["ia800100.us.archive.org", "ia600100.us.archive.org"]
+}

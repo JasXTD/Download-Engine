@@ -56,7 +56,7 @@ Erweiterungen ergänzen die App um Website-Unterstützung und Automatisierung, g
 
 1. „Erweiterungen“ in der oberen Symbolleiste öffnen. Die Registerkarte „Installiert“ zeigt, was vorhanden ist.
 
-2. „Aus Datei installieren…“ wählen und eine .de-extension.json-Datei auswählen.
+2. „Aus Datei installieren…“ wählen und eine .de-extension.json-Datei auswählen. Um zuerst etwas auszuprobieren, stattdessen „Beispiele…“ wählen: Fünf kleine Beispiele werden mit der App geliefert. Dateien lassen sich auch im Erweiterungsordner speichern: „Erweiterungsordner…“ listet sie zur Prüfung auf, und „Ordner öffnen“ zeigt, wo er liegt.
 
 3. Den Prüfdialog lesen. Er zeigt den Herausgeber, was die Erweiterung kann, und ihre Aufträge. Noch läuft nichts.
 
@@ -68,7 +68,7 @@ Herausgeber werden nicht verifiziert, installieren Sie Erweiterungen also nur vo
 
 ### Einstellungen, Code und Updates
 
-Eine Erweiterung auswählen, um zu sehen, was sie kann, was sie nicht kann und wann ihre Aufträge zuletzt gelaufen sind. „Einstellungen“ enthält ihre Optionen. Geschützte Werte lassen sich ersetzen oder löschen, aber nicht erneut anzeigen. „Code“ zeigt ihre Dateien nur lesbar an. „In meine Skripte kopieren“ erstellt eine bearbeitbare Kopie als persönliches Skript.
+Eine Erweiterung auswählen, um zu sehen, was sie kann, was sie nicht kann und wann ihre Aufträge zuletzt gelaufen sind. „Einstellungen“ enthält ihre Optionen. Geschützte Werte lassen sich ersetzen oder löschen, aber nicht erneut anzeigen. „Code“ zeigt ihre Dateien nur lesbar an. „In meine Skripte kopieren“ erstellt eine bearbeitbare Kopie als persönliches Skript. Bittet ein Auftrag darum, Dateien zu ändern, und blieb das Feld leer, erteilt „Erlauben…“ auf dem Tab „Übersicht“ den Zugriff später, und „Zurücknehmen“ nimmt ihn wieder zurück.
 
 Zum Aktualisieren „Aus Datei installieren…“ wählen und eine neuere Datei auswählen. Der Prüfdialog zeigt, was sich geändert hat. Verlangt das Update neuen Zugriff, müssen Sie ihn freigeben, und „Nicht jetzt“ lässt die installierte Version unverändert. Einstellungen, Schlüssel und gespeicherte Werte bleiben erhalten, und bereits laufende Downloads behalten den Code, mit dem sie gestartet wurden.
 

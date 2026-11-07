@@ -56,7 +56,7 @@ Les extensions ajoutent la prise en charge de sites et l’automatisation en un 
 
 1. Ouvrez Extensions dans la barre d’outils supérieure. L’onglet Installées liste vos extensions.
 
-2. Choisissez Installer depuis un fichier… et sélectionnez un fichier .de-extension.json.
+2. Choisissez Installer depuis un fichier… et sélectionnez un fichier .de-extension.json. Pour essayer d’abord, choisissez plutôt Exemples… : cinq petits exemples sont fournis avec l’application. Vous pouvez aussi enregistrer des fichiers dans votre dossier d’extensions : Dossier des extensions… les liste pour vérification, et Ouvrir le dossier montre où il se trouve.
 
 3. Lisez la fenêtre de vérification. Elle indique l’éditeur, ce que l’extension peut faire et ses tâches. Rien ne s’exécute pour l’instant.
 
@@ -68,7 +68,7 @@ Les éditeurs ne sont pas vérifiés : installez uniquement des extensions prove
 
 ### Paramètres, code et mises à jour
 
-Sélectionnez une extension pour voir ce qu’elle peut faire, ce qu’elle ne peut pas faire et quand ses tâches se sont exécutées pour la dernière fois. Paramètres contient ses options. Les valeurs protégées peuvent être remplacées ou effacées, mais ne peuvent plus être affichées. Code affiche ses fichiers en lecture seule. Copier dans mes scripts crée une copie modifiable sous forme de script personnel.
+Sélectionnez une extension pour voir ce qu’elle peut faire, ce qu’elle ne peut pas faire et quand ses tâches se sont exécutées pour la dernière fois. Paramètres contient ses options. Les valeurs protégées peuvent être remplacées ou effacées, mais ne peuvent plus être affichées. Code affiche ses fichiers en lecture seule. Copier dans mes scripts crée une copie modifiable sous forme de script personnel. Si une tâche demande à modifier des fichiers et que vous avez laissé la case vide, Autoriser… dans l’onglet Vue d’ensemble l’accorde plus tard, et Retirer l’enlève.
 
 Pour mettre à jour, choisissez Installer depuis un fichier… et sélectionnez un fichier plus récent. La fenêtre de vérification indique ce qui a changé. Si la mise à jour demande un nouvel accès, vous devez l’approuver, et Pas maintenant laisse la version installée telle quelle. Les paramètres, clés et valeurs enregistrées sont conservés, et les téléchargements en cours gardent le code avec lequel ils ont démarré.
 

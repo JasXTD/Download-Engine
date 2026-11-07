@@ -56,7 +56,7 @@ Tillägg ger webbplatsstöd och automatisering i ett enda paket. De körs i samm
 
 1. Öppna Tillägg i verktygsfältet högst upp. Fliken Installerade visar vad du har.
 
-2. Välj Installera från fil… och välj sedan en .de-extension.json-fil.
+2. Välj Installera från fil… och välj sedan en .de-extension.json-fil. Om du vill prova först kan du i stället välja Exempel…: fem små exempel följer med appen. Du kan också spara filer i din tilläggsmapp: Tilläggsmapp… listar dem för granskning, och Öppna mapp visar var den finns.
 
 3. Läs granskningsrutan. Den visar utgivaren, vad tillägget kan göra och dess jobb. Inget körs ännu.
 
@@ -68,7 +68,7 @@ Utgivare verifieras inte, så installera bara tillägg från personer du litar p
 
 ### Inställningar, kod och uppdateringar
 
-Välj ett tillägg för att se vad det kan göra, vad det inte kan göra och när dess jobb senast kördes. Inställningar innehåller dess alternativ. Skyddade värden kan ersättas eller rensas men inte visas igen. Kod visar dess filer, skrivskyddade. Kopiera till mina skript skapar en redigerbar kopia som ett personligt skript.
+Välj ett tillägg för att se vad det kan göra, vad det inte kan göra och när dess jobb senast kördes. Inställningar innehåller dess alternativ. Skyddade värden kan ersättas eller rensas men inte visas igen. Kod visar dess filer, skrivskyddade. Kopiera till mina skript skapar en redigerbar kopia som ett personligt skript. Om ett jobb ber om att få ändra filer och du lämnade rutan tom kan du tillåta det senare med Tillåt… på fliken Översikt, och ta bort det med Återkalla.
 
 Om du vill uppdatera väljer du Installera från fil… och sedan en nyare fil. Granskningsrutan visar vad som har ändrats. Om uppdateringen begär ny åtkomst måste du godkänna den, och Inte nu lämnar den installerade versionen som den var. Inställningar, nycklar och sparade värden behålls, och hämtningar som redan pågår behåller koden de startade med.
 

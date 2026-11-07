@@ -168,6 +168,8 @@ enum Dialog {
     ScriptReplace,
     ExtensionReview,
     ExtensionRemove,
+    ExtensionExamples,
+    ExtensionFileAccess,
     TorrentChoice,
     TorrentLocation,
 }
@@ -651,6 +653,10 @@ impl Desktop {
                     | "automation-installed-settings"
                     | "automation-installed-code"
                     | "automation-installed-review"
+                    | "automation-installed-examples"
+                    | "automation-installed-allow"
+                    | "automation-installed-folder"
+                    | "automation-installed-strip"
                     | "automation-scripts"
                     | "automation-scripts-empty"
                     | "automation-scripts-error"

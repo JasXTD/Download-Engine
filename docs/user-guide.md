@@ -332,7 +332,7 @@ Extensions add site support and automation as one package. They run on the same 
 
 1. Open Extensions in the top toolbar. The Installed tab lists what you have.
 
-2. Under From plugins folder, choose Review install for the bundled demo or another discovered package. Or choose Install from file… and pick a .de-extension.json file anywhere.
+2. Under From plugins folder, choose Review install for a discovered package. Or choose Install from file… to pick a .de-extension.json anywhere, or Examples… to review one of five bundled starters.
 
 3. Read the review. It shows the publisher, what the extension can do and its jobs. Nothing runs yet.
 
@@ -353,7 +353,7 @@ Deleting the source file leaves the reviewed installed copy intact.
 
 ### Settings, code and updates
 
-Select an extension to see what it can do, what it cannot do and when its jobs last ran. Settings holds its options. Protected values can be replaced or cleared but not shown again. Code shows its files, read-only. Copy to my scripts makes an editable copy as a personal script.
+Select an extension to see what it can do, what it cannot do and when its jobs last ran. Settings holds its options. Protected values can be replaced or cleared but not shown again. Code shows its files, read-only. Copy to my scripts makes an editable copy as a personal script. If a job asks to change files and you left that box clear, Allow… on the Overview tab grants it later, and Take back removes it.
 
 To update, choose Review update beside a newer discovered package, or Install from file… and pick a newer file. The review shows what changed. If it asks for new access, you must approve it; closing the review leaves the installed version as it was. Settings, keys and stored values are kept, and downloads already running keep the code they started with.
 

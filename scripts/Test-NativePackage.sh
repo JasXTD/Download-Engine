@@ -61,4 +61,33 @@ test -s "$resources/tools/ffmpeg/LICENSE"
 test ! -e "$resources/tools/ffmpeg/build-record/config.log"
 test -s "$resources/docs/licenses/RUST-DEPENDENCIES.md"
 test -s "$resources/extensions/firefox/manifest.json"
-printf 'Packaged CLI, native host, bundle contents, notices and source passed.\n'
+# Package-Unix.sh copies a fixed list of documents. Every relative Markdown link,
+# image and HTML src/href in the packaged README and reference guide must open
+# inside the package.
+perl -e '
+  my ($root, @documents) = @ARGV;
+  my @missing;
+  for my $document (@documents) {
+    open my $f, "<", "$root/$document" or do { push @missing, "$document: $!"; next };
+    my $fenced = 0;
+    while (my $line = <$f>) {
+      if ($line =~ /^\s*(?:```|~~~)/) { $fenced = !$fenced; next }
+      next if $fenced;
+      for my $target ($line =~ /\]\(\s*<?([^)\s>]+)/g, $line =~ /\b(?:src|href)\s*=\s*"([^"]+)"/g) {
+        next if $target =~ m{\A(?:#|[A-Za-z][A-Za-z0-9+.-]*:|//)};
+        (my $path = $target) =~ s/[?#].*//s;
+        $path =~ s/%([0-9A-Fa-f]{2})/chr hex $1/ge;
+        my @parts = split m{/}, $document;
+        pop @parts;
+        my $inside = 1;
+        for my $part (split m{/}, $path) {
+          if ($part eq "..") { if (@parts) { pop @parts } else { $inside = 0 } }
+          elsif ($part ne "" && $part ne ".") { push @parts, $part }
+        }
+        push @missing, "$document:$.: $target" unless $inside && -e join("/", $root, @parts);
+      }
+    }
+  }
+  die "Packaged documents link to missing files:\n", map("  $_\n", @missing) if @missing;
+' "$resources" README.md docs/reference.md
+printf 'Packaged CLI, native host, bundle contents, notices, document links and source passed.\n'

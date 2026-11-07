@@ -1,0 +1,41 @@
+{
+  "api_version": 1,
+  "description": "Lists the files in an archive.org item so you can choose which ones to download.",
+  "files": {
+    "reader.lua": "-- Site reader: lists the files in an Internet Archive item.\n--\n-- It runs when you open a page such as https://archive.org/details/ITEM with\n-- Add URL, Find videos on this page, or the browser extension's button. It\n-- returns a list of files, and Download Engine shows that list so you can\n-- choose which ones to download. It downloads nothing by itself.\n\n-- 1. Read the item's name from the page address. event.url is the page.\n--    https://archive.org/details/ITEM/anything-else  ->  ITEM\nlocal item_name = event.url:match(\"^https?://archive%.org/details/([%w%._%-]+)\")\nassert(item_name, \"Open an archive.org item page, such as archive.org/details/ITEM\")\n\n-- 2. Ask archive.org's public metadata service about the item.\n--    xd.fetch reaches only the hosts listed under \"network\" in manifest.json.\nlocal reply = xd.fetch(\"https://archive.org/metadata/\" .. item_name)\nassert(reply.status == 200, \"archive.org answered with HTTP \" .. reply.status)\nlocal item = xd.json(reply.body)\nassert(item.files, \"archive.org has no files for \" .. item_name)\n\n-- 3. Read a setting. You can change it on the extension's Settings tab.\nlocal include_copies = xd.setting(\"include_derivatives\")\n\n-- A file can sit in a folder inside the item, such as \"disc1/track01.mp3\".\n-- Encode each part of its path on its own, so the \"/\" between them stays.\nlocal function file_address(path)\n  local parts = {}\n  for part in path:gmatch(\"[^/]+\") do\n    parts[#parts + 1] = xd.url_encode(part)\n  end\n  return \"https://archive.org/download/\" .. item_name .. \"/\" .. table.concat(parts, \"/\")\nend\n\n-- 4. Turn archive.org's file list into the list Download Engine expects.\n--    \"original\" files were uploaded. \"derivative\" files are copies archive.org\n--    made from them. \"metadata\" files describe the item, so they are skipped.\nlocal files = {}\nfor _, file in ipairs(item.files) do\n  local wanted = file.source == \"original\"\n    or (include_copies and file.source == \"derivative\")\n  -- Files marked private can't be downloaded, such as books that are only\n  -- lent out. They are left out of the list.\n  local private = file.private == \"true\"\n  -- Stream playlists need a different kind of item, so this example skips them.\n  local name = file.name:lower()\n  local playlist = name:match(\"%.m3u8$\") or name:match(\"%.mpd$\")\n  if wanted and not private and not playlist then\n    -- archive.org gives sizes as text. Download Engine takes a number above 0,\n    -- so an empty or unknown size is left out.\n    local size = tonumber(file.size)\n    files[#files + 1] = {\n      kind = \"file\",\n      url = file_address(file.name),\n      filename = file.name:match(\"[^/]+$\"),\n      label = file.format,\n      size = size and size > 0 and size or nil,\n    }\n  end\nend\nassert(#files > 0, \"This item has no files that can be downloaded\")\n\n-- Download Engine accepts up to 1,000 files from one page.\nif #files > 1000 then\n  xd.log(\"warning\", \"Showing the first 1,000 of \" .. #files .. \" files\")\n  for index = #files, 1001, -1 do\n    files[index] = nil\n  end\nend\n\n-- 5. Return the item's title and its files. Some items list several titles.\nlocal title = item.metadata and item.metadata.title\nif type(title) == \"table\" then\n  title = title[1]\nend\nreturn { title = title or item_name, items = files }\n"
+  },
+  "format": "download-engine-extension",
+  "format_version": 1,
+  "id": "examples.internet-archive",
+  "jobs": [
+    {
+      "entry": "reader.lua",
+      "id": "item-files",
+      "name": "archive.org item pages",
+      "timeout_seconds": 30,
+      "trigger": {
+        "kind": "site_reader",
+        "pages": [
+          "archive.org/details/*"
+        ]
+      }
+    }
+  ],
+  "license": "MIT",
+  "name": "Internet Archive files",
+  "permissions": {
+    "network": [
+      "archive.org"
+    ]
+  },
+  "publisher": "Download Engine examples",
+  "settings": [
+    {
+      "default": false,
+      "id": "include_derivatives",
+      "label": "Also list copies archive.org made, such as other formats and thumbnails",
+      "type": "boolean"
+    }
+  ],
+  "version": "1.0.0"
+}

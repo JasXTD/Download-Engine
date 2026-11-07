@@ -86,6 +86,8 @@ try {
             New-Item -ItemType Directory -Force -Path (Split-Path $destination -Parent) | Out-Null
             Copy-Item -LiteralPath (Join-Path $workspaceRoot "examples/offline-cenc/$example") -Destination $destination
         }
+        # The extension starter pack: each packed file beside the folder it was packed from.
+        Copy-Item -LiteralPath (Join-Path $workspaceRoot 'examples/extensions') -Destination $examplesRoot -Recurse
         $mediaRoot = Join-Path $stage 'tools\ffmpeg'
         New-Item -ItemType Directory -Force -Path $mediaRoot | Out-Null
         foreach ($file in @('ffmpeg.exe','LICENSE','README.txt','PROVENANCE.md','media-manifest.json')) {
@@ -101,6 +103,7 @@ try {
         Copy-Item -LiteralPath (Join-Path $workspaceRoot 'docs\wetransfer.md') -Destination (Join-Path $stage 'docs')
         Copy-Item -LiteralPath (Join-Path $workspaceRoot 'docs\automation.md') -Destination (Join-Path $stage 'docs')
         Copy-Item -LiteralPath (Join-Path $workspaceRoot 'docs\extensions.md') -Destination (Join-Path $stage 'docs')
+        Copy-Item -LiteralPath (Join-Path $workspaceRoot 'docs\first-extension.md') -Destination (Join-Path $stage 'docs')
         Copy-Item -LiteralPath (Join-Path $workspaceRoot 'docs\mcp.md') -Destination (Join-Path $stage 'docs')
         Copy-Item -LiteralPath (Join-Path $workspaceRoot 'docs\mcp-ai-guide.md') -Destination (Join-Path $stage 'docs')
         Copy-Item -LiteralPath (Join-Path $workspaceRoot 'docs\user-guide.md') -Destination (Join-Path $stage 'docs')

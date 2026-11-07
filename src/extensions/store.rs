@@ -58,6 +58,25 @@ pub struct Installed {
 pub struct Review {
     pub package: Package,
     pub update: Option<Changes>,
+    /// What was installed when the review was made.
+    #[serde(skip)]
+    shown_against: Option<Shown>,
+}
+
+/// The installed copy a review was made against. A fresh install gets a new
+/// key scope, and an update a new version, so either shows it changed.
+#[derive(Clone, Debug, PartialEq, Eq)]
+struct Shown {
+    version: String,
+    key_scope: uuid::Uuid,
+}
+impl Shown {
+    fn of(installed: Option<&Installed>) -> Option<Self> {
+        installed.map(|installed| Self {
+            version: installed.package.version.clone(),
+            key_scope: installed.key_scope,
+        })
+    }
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize)]
@@ -205,6 +224,17 @@ fn stale_settings(conn: &Connection, old: &Package, new: &Package) -> Result<Vec
         .collect())
 }
 
+/// Decodes a package file, and refuses an `examples.` id on anything but the
+/// examples that come with the app, which could otherwise be impersonated.
+pub(super) fn checked(bytes: &[u8]) -> Result<Package> {
+    let package = Package::decode(bytes)?;
+    ensure!(
+        !super::examples::reserved(&package.id) || super::examples::is_example(bytes),
+        "Only the examples that come with Download Engine can use an id that starts with \"examples.\". Change the id in manifest.json to your own"
+    );
+    Ok(package)
+}
+
 fn read(conn: &Connection, id: &str) -> Result<Option<Installed>> {
     let row: Option<(String, bool, i64)> = conn
         .query_row(
@@ -286,9 +316,11 @@ impl Store {
 
     /// Checks a package and says what installing it would change. Saves nothing.
     pub fn review_extension(&self, bytes: &[u8]) -> Result<Review> {
-        let package = Package::decode(bytes)?;
+        let package = checked(bytes)?;
         let conn = self.connect()?;
-        let update = read(&conn, &package.id)?
+        let installed = read(&conn, &package.id)?;
+        let shown_against = Shown::of(installed.as_ref());
+        let update = installed
             .map(|old| {
                 let mut changes = compare(&old.package, &package);
                 changes.dropped_settings = stale_settings(&conn, &old.package, &package)?
@@ -302,12 +334,32 @@ impl Store {
                 Ok::<_, anyhow::Error>(changes)
             })
             .transpose()?;
-        Ok(Review { package, update })
+        Ok(Review {
+            package,
+            update,
+            shown_against,
+        })
     }
 
     /// Installs a new extension turned off, or updates an installed one.
     pub fn install_extension(&self, bytes: &[u8], grants: &Grants) -> Result<Installed> {
-        let package = Package::decode(bytes)?;
+        self.install(bytes, grants, None)
+    }
+
+    /// Installs what `review` showed the person. It is refused if the installed
+    /// extension changed after the review was made, for example from the CLI,
+    /// because the review would no longer say what installing does.
+    pub fn install_reviewed(
+        &self,
+        bytes: &[u8],
+        grants: &Grants,
+        review: &Review,
+    ) -> Result<Installed> {
+        self.install(bytes, grants, Some(review))
+    }
+
+    fn install(&self, bytes: &[u8], grants: &Grants, review: Option<&Review>) -> Result<Installed> {
+        let package = checked(bytes)?;
         let mut conn = self.connect()?;
         let tx = conn.transaction_with_behavior(TransactionBehavior::Immediate)?;
         let old = read(&tx, &package.id)?;
@@ -321,6 +373,16 @@ impl Store {
         }
         if package.permissions.http_sessions {
             tx.execute("UPDATE profile_format SET data_version=MAX(data_version,8),min_writer_version=MAX(min_writer_version,8) WHERE id=1", [])?;
+        }
+        if let Some(review) = review {
+            ensure!(
+                review.package == package,
+                "This is not the file that was reviewed. Review it again"
+            );
+            ensure!(
+                review.shown_against == Shown::of(old.as_ref()),
+                "This extension changed after you reviewed it. Review it again"
+            );
         }
         if let Some(old) = &old {
             ensure!(
@@ -489,6 +551,44 @@ impl Store {
                 }
             }
         }
+        Ok(())
+    }
+
+    /// Grants or takes back the file access a job's package asks for, after the
+    /// install. Only the person decides this, and a job that doesn't ask never
+    /// gets it. The change applies to the job's next file command, even mid-run.
+    pub fn set_extension_file_access(&self, id: &str, job: &str, allowed: bool) -> Result<()> {
+        let mut conn = self.connect()?;
+        let tx = conn.transaction_with_behavior(TransactionBehavior::Immediate)?;
+        let installed = read(&tx, id)?.context("Extension no longer exists")?;
+        let asked = installed
+            .package
+            .job(job)
+            .context("This extension has no such job")?
+            .change_files;
+        ensure!(
+            !allowed || asked,
+            "This job doesn't ask to change downloaded files"
+        );
+        let script = job_scripts(&tx, id)?
+            .remove(job)
+            .context("This extension has no such job")?;
+        let mut script = definition(&tx, &script)?;
+        if script.change_files != allowed {
+            script.change_files = allowed;
+            script.revision = script
+                .revision
+                .checked_add(1)
+                .context("Script revision overflow")?;
+            script.validate()?;
+            // Unlike put_script, this keeps the job's place in the event queue
+            // and its interval: only what it may do changes.
+            tx.execute(
+                "UPDATE automation_scripts SET data=?2 WHERE id=?1",
+                params![script.id, serde_json::to_string(&script)?],
+            )?;
+        }
+        tx.commit()?;
         Ok(())
     }
 

@@ -123,7 +123,7 @@ pub fn scan(directory: &Path) -> Result<Report> {
                 bytes.len() <= MAX_PACKAGE_BYTES,
                 "Package exceeds the 1 MiB limit"
             );
-            let package = Package::decode(&bytes)?;
+            let package = super::store::checked(&bytes)?;
             Ok(Candidate {
                 path: path.clone(),
                 package,

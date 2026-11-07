@@ -161,7 +161,7 @@ Some upgrades change the profile in a way that older versions refuse, so back up
 going back to an older version. Versions 3.0 and 3.6 need extra steps; see the
 [upgrade notes by version](docs/reference.md#upgrade-notes-by-version).
 
-The app checks for updates when it opens; turn this off in **Preferences → Startup & tray**, or
+The app checks for updates when it opens; turn this off in **Preferences → Updates**, or
 check manually from **Help → Check for updates**. Updates are downloaded and installed manually
 from the official GitHub release page.
 
@@ -206,7 +206,7 @@ download by itself. Copying your browser login for a download is a separate, opt
 | **PowerShell scripting** | Run trusted automation under your own account, with normal file and program access. macOS/Linux require an existing PowerShell 7 installation. |
 | **Lua site readers** | Add support for more file and video pages, with restricted page-fetching permissions. |
 | **Lua download providers** | Resolve files or media segments, process bytes, and mux video, audio and subtitles while the core owns transfers, recovery and verification. [Provider API](docs/lua-providers.md) · [Media API](docs/lua-media-providers.md) |
-| **Extensions** | Install site support and automation as one reviewed package, from a file or the app's `plugins` folder. Publishers are not verified. [Guide](docs/extensions.md) |
+| **Extensions** | Install site support and automation as one reviewed package, from a file or the app's `plugins` folder. Includes five reviewed starter examples. Publishers are not verified. [Guide](docs/extensions.md) |
 | **`de-cli`** | Inspect and manage downloads from a terminal or script, with structured JSON results. [CLI reference](docs/automation.md#cli-examples) |
 | **Local MCP** | Let a compatible AI client on this computer inspect or control the app. [Setup](docs/mcp.md) · [AI usage guide](docs/mcp-ai-guide.md) |
 

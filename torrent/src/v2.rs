@@ -129,7 +129,12 @@ pub fn root(mut hashes: Vec<Hash>, pad: Hash) -> Hash {
     assert!(!hashes.is_empty());
     hashes.resize(hashes.len().next_power_of_two(), pad);
     while hashes.len() > 1 {
-        hashes = hashes.chunks_exact(2).map(|p| parent(p[0], p[1])).collect();
+        hashes = hashes
+            .as_chunks::<2>()
+            .0
+            .iter()
+            .map(|p| parent(p[0], p[1]))
+            .collect();
     }
     hashes[0]
 }
@@ -168,7 +173,9 @@ impl FileTree {
                 .levels
                 .last()
                 .unwrap()
-                .chunks_exact(2)
+                .as_chunks::<2>()
+                .0
+                .iter()
                 .map(|p| parent(p[0], p[1]))
                 .collect();
             self.levels.push(next);
@@ -470,7 +477,7 @@ pub fn metadata(
     let mut trees = Vec::new();
     let mut offset = 0u64;
     for f in &flat {
-        if f.len > 0 && offset % u64::from(piece_length) != 0 {
+        if f.len > 0 && !offset.is_multiple_of(u64::from(piece_length)) {
             let pad = u64::from(piece_length) - offset % u64::from(piece_length);
             files.push(TorrentMetaV1File {
                 length: pad,
@@ -667,12 +674,7 @@ pub fn install_layers(meta: &mut TorrentMeta, bytes: &[u8]) -> Result<()> {
                 bytes.len() == file.piece_count as usize * 32,
                 "Incorrect v2 piece-layer size"
             );
-            file.install(
-                bytes
-                    .chunks_exact(32)
-                    .map(|b| b.try_into().unwrap())
-                    .collect(),
-            )?;
+            file.install(bytes.as_chunks::<32>().0.to_vec())?;
         }
     }
     Ok(())
@@ -705,6 +707,23 @@ pub fn encode_layers(meta: &TorrentMeta) -> Result<Vec<u8>> {
 #[cfg(test)]
 mod parser_tests {
     use super::*;
+
+    #[test]
+    fn v2_tree_reservations_bound_parallel_layers_and_survive_shared_ownership() {
+        // No large allocation: reserve the cost of the audit's 16 GiB / 16 KiB
+        // torrent. Eight peers cannot independently build these trees at once.
+        let pieces = 16u64 * 1024 * 1024 * 1024 / u64::from(BLOCK);
+        let first = reserve_tree_memory(pieces).unwrap();
+        assert_eq!(first.num_permits(), 320 * 1024 * 1024);
+        for _ in 0..7 {
+            assert!(reserve_tree_memory(pieces).is_err());
+        }
+        let shared = first.clone();
+        drop(first);
+        assert!(reserve_tree_memory(pieces).is_err());
+        drop(shared);
+        assert!(reserve_tree_memory(pieces).is_ok());
+    }
 
     #[test]
     fn canonical_parser_rejects_ambiguous_and_excessive_input() {

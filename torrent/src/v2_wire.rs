@@ -5,17 +5,39 @@ use bytes::{Bytes, BytesMut};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
 pub const MAX_FRAME: usize = 53 + (512 + 32) * 32;
+// At most one maximum-size leaf range (512 * 16 KiB), including its proof.
+// Larger lower-tree proofs may be rejected under BEP 52 instead of hashing GiBs.
+pub const MAX_HASH_WORK: u32 = 8 * 1024 * 1024;
+const HASH_WORK_PER_SECOND: u32 = 16 * 1024 * 1024;
+
+struct HashWorkers {
+    slots: std::sync::Arc<tokio::sync::Semaphore>,
+    work: crate::rate::ByteLimiter,
+}
+
+impl HashWorkers {
+    fn new() -> Self {
+        Self {
+            slots: std::sync::Arc::new(tokio::sync::Semaphore::new(2)),
+            work: crate::rate::ByteLimiter::new(Some(HASH_WORK_PER_SECOND)),
+        }
+    }
+
+    async fn reserve(&self, bytes: u32) -> Result<tokio::sync::OwnedSemaphorePermit> {
+        ensure!(bytes <= MAX_HASH_WORK, "Hash proof exceeds disk work limit");
+        let permit = self.slots.clone().acquire_owned().await?;
+        // Charge cold-cache cost before spawning. Cancellation drops the slot;
+        // existing cache hits never allow an attacker to evade the work budget.
+        self.work.take(bytes).await;
+        Ok(permit)
+    }
+}
 
 // A peer must not create an unbounded blocking disk worker for each hash request.
 // The permit also covers cancellation/join, across all torrents in this process.
-pub async fn hash_worker() -> Result<tokio::sync::OwnedSemaphorePermit> {
-    static WORKERS: std::sync::OnceLock<std::sync::Arc<tokio::sync::Semaphore>> =
-        std::sync::OnceLock::new();
-    Ok(WORKERS
-        .get_or_init(|| std::sync::Arc::new(tokio::sync::Semaphore::new(2)))
-        .clone()
-        .acquire_owned()
-        .await?)
+pub async fn hash_worker(bytes: u32) -> Result<tokio::sync::OwnedSemaphorePermit> {
+    static WORKERS: std::sync::OnceLock<HashWorkers> = std::sync::OnceLock::new();
+    WORKERS.get_or_init(HashWorkers::new).reserve(bytes).await
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -37,19 +59,23 @@ impl Request {
             length: num(45),
             proof: num(49),
         };
+        request.validate()?;
+        Ok(request)
+    }
+    fn validate(self) -> Result<()> {
         ensure!(
-            (2..=512).contains(&request.length)
-                && request.length.is_power_of_two()
-                && request.index % request.length == 0
-                && request.base <= 32
-                && request.proof <= 32,
+            (2..=512).contains(&self.length)
+                && self.length.is_power_of_two()
+                && self.index.is_multiple_of(self.length)
+                && self.base <= 32
+                && self.proof <= 32,
             "Invalid or excessive hash request"
         );
         ensure!(
-            request.index.checked_add(request.length).is_some(),
+            self.index.checked_add(self.length).is_some(),
             "Hash request range overflow"
         );
-        Ok(request)
+        Ok(())
     }
     pub fn frame(self, id: u8, hashes: &[Hash]) -> Bytes {
         let mut b = Vec::with_capacity(53 + hashes.len() * 32);
@@ -67,6 +93,63 @@ impl Request {
     fn proof_count(self) -> usize {
         self.proof.saturating_sub(self.length.ilog2() - 1) as usize
     }
+    pub fn response_len(self) -> u32 {
+        53 + (self.length + self.proof_count() as u32) * 32
+    }
+
+    /// Worst-case bytes read by `answer_cancellable`, including every uncached
+    /// proof sibling below the authenticated piece layer. No payload is touched.
+    pub fn work_bytes(self, meta: &crate::meta::TorrentMeta) -> Result<u32> {
+        self.validate()?;
+        let file = meta
+            .v2
+            .iter()
+            .find(|f| f.root == self.root)
+            .context("Unknown file root")?;
+        let height = file.height();
+        ensure!(
+            (self.base == 0 || self.base == file.layer) && self.base < height,
+            "Unsupported hash layer"
+        );
+        let width = 1u64
+            .checked_shl(height - self.base)
+            .context("Hash tree width overflow")?;
+        ensure!(
+            u64::from(self.index) + u64::from(self.length) <= width
+                && self.proof < height - self.base,
+            "Hash request exceeds tree"
+        );
+        let cost = |level: u32, index: u32| -> Result<u64> {
+            if level >= file.layer {
+                return Ok(0);
+            }
+            let size = u64::from(BLOCK)
+                .checked_shl(level)
+                .context("Hash work size overflow")?;
+            let start = u64::from(index)
+                .checked_mul(size)
+                .context("Hash work offset overflow")?;
+            Ok(file.len.saturating_sub(start).min(size))
+        };
+        let mut bytes = 0u64;
+        for index in self.index..self.index + self.length {
+            bytes = bytes
+                .checked_add(cost(self.base, index)?)
+                .context("Hash work overflow")?;
+        }
+        let mut index = self.index / self.length;
+        for level in (self.base + self.length.ilog2()..).take(self.proof_count()) {
+            bytes = bytes
+                .checked_add(cost(level, index ^ 1)?)
+                .context("Hash work overflow")?;
+            index /= 2;
+        }
+        ensure!(
+            bytes <= u64::from(MAX_HASH_WORK),
+            "Hash proof exceeds disk work limit"
+        );
+        Ok(bytes as u32)
+    }
     pub fn verify(self, file: &FileTree, frame: &[u8]) -> Result<Vec<Hash>> {
         ensure!(
             frame.get(4) == Some(&22) && Self::parse(frame)? == self,
@@ -81,10 +164,7 @@ impl Request {
             frame.len() == 53 + count * 32,
             "Incorrect hash proof length"
         );
-        let hashes: Vec<Hash> = frame[53..]
-            .chunks_exact(32)
-            .map(|b| b.try_into().unwrap())
-            .collect();
+        let hashes = frame[53..].as_chunks::<32>().0;
         let mut computed = root(hashes[..self.length as usize].to_vec(), zero(self.base));
         let mut index = self.index / self.length;
         for sibling in &hashes[self.length as usize..] {
@@ -163,7 +243,7 @@ pub async fn fetch_layers(
 }
 
 /// Read only completed pieces for leaf proofs. Higher layers come from authenticated
-/// metadata, so constructing a small proof never reads or hashes the whole file.
+/// metadata; lower-tree work is preflighted before any disk access.
 #[cfg(test)]
 pub fn answer(
     request: Request,
@@ -187,22 +267,12 @@ pub fn answer_cancellable(
     have: &crate::bitfield::Bitfield,
     cancel: &tokio_util::sync::CancellationToken,
 ) -> Result<Bytes> {
+    request.work_bytes(meta)?;
     let file = meta
         .v2
         .iter()
         .find(|f| f.root == request.root)
         .context("Unknown file root")?;
-    let height = file.height();
-    ensure!(
-        (request.base == 0 || request.base == file.layer) && request.base < height,
-        "Unsupported hash layer"
-    );
-    let width = 1u64 << (height - request.base);
-    ensure!(
-        u64::from(request.index) + u64::from(request.length) <= width
-            && request.proof < height - request.base,
-        "Hash request exceeds tree"
-    );
     fn node(
         file: &FileTree,
         level: u32,
@@ -260,12 +330,42 @@ pub fn answer_cancellable(
             cancel,
         )?);
     }
-    let mut level = request.base + request.length.ilog2();
     let mut index = request.index / request.length;
-    for _ in 0..request.proof_count() {
+    for level in (request.base + request.length.ilog2()..).take(request.proof_count()) {
         hashes.push(node(file, level, index ^ 1, storage, meta, have, cancel)?);
-        level += 1;
         index /= 2;
     }
     Ok(request.frame(22, &hashes))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tokio::time::{Duration, Instant};
+
+    #[tokio::test(start_paused = true)]
+    async fn hash_work_is_charged_before_permits_are_returned() {
+        let workers = HashWorkers::new();
+        let start = Instant::now();
+        let (one, two) = tokio::join!(
+            workers.reserve(MAX_HASH_WORK),
+            workers.reserve(MAX_HASH_WORK)
+        );
+        assert_eq!(Instant::now() - start, Duration::from_secs(1));
+        assert_eq!(workers.slots.available_permits(), 0);
+        drop((one.unwrap(), two.unwrap()));
+        assert_eq!(workers.slots.available_permits(), 2);
+        assert!(workers.reserve(MAX_HASH_WORK + 1).await.is_err());
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn cancelling_a_work_budget_wait_releases_the_worker_slot() {
+        let workers = HashWorkers::new();
+        tokio::select! {
+            biased;
+            _ = workers.reserve(MAX_HASH_WORK) => panic!("work must be charged first"),
+            _ = async {} => {}
+        }
+        assert_eq!(workers.slots.available_permits(), 2);
+    }
 }

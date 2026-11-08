@@ -3274,20 +3274,20 @@
     },
     {
       "name": "ringbuf",
-      "version": "0.4.8",
-      "license": "MIT/Apache-2.0",
-      "selectedLicense": "MIT/Apache-2.0",
+      "version": "0.5.2",
+      "license": "MIT OR Apache-2.0",
+      "selectedLicense": "MIT OR Apache-2.0",
       "authors": [
         "Alexey Gerasev <alexey.gerasev@gmail.com>"
       ],
       "repository": "https://github.com/agerasev/ringbuf.git",
-      "checksum": "fe47b720588c8702e34b5979cb3271a8b1842c7cb6f57408efa70c779363488c",
+      "checksum": "0b123165531e325df9079f56c036f2da4103a5d5abfef9e2fda4b9c34d1ef7aa",
       "notices": [
-        "rust/ringbuf-0.4.8/LICENSE-APACHE",
-        "rust/ringbuf-0.4.8/LICENSE-MIT"
+        "rust/ringbuf-0.5.2/LICENSE-APACHE",
+        "rust/ringbuf-0.5.2/LICENSE-MIT"
       ],
       "source": null,
-      "upstreamSource": "https://crates.io/crates/ringbuf/0.4.8"
+      "upstreamSource": "https://crates.io/crates/ringbuf/0.5.2"
     },
     {
       "name": "rusqlite",

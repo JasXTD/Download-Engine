@@ -329,12 +329,12 @@ fn v2_resume_requires_sha256_version_and_rechecks_changed_files() {
 
 #[tokio::test]
 async fn v2_hash_workers_are_bounded_and_release_on_cancellation() {
-    let first = crate::v2_wire::hash_worker().await.unwrap();
-    let second = crate::v2_wire::hash_worker().await.unwrap();
+    let first = crate::v2_wire::hash_worker(0).await.unwrap();
+    let second = crate::v2_wire::hash_worker(0).await.unwrap();
     assert!(
         tokio::time::timeout(
             std::time::Duration::from_millis(20),
-            crate::v2_wire::hash_worker()
+            crate::v2_wire::hash_worker(0)
         )
         .await
         .is_err()
@@ -342,10 +342,105 @@ async fn v2_hash_workers_are_bounded_and_release_on_cancellation() {
     drop(first);
     let third = tokio::time::timeout(
         std::time::Duration::from_secs(1),
-        crate::v2_wire::hash_worker(),
+        crate::v2_wire::hash_worker(0),
     )
     .await
     .unwrap()
     .unwrap();
     drop((second, third));
+}
+
+#[test]
+fn expensive_leaf_proof_is_refused_before_storage_access() {
+    // A valid 4 GiB file with two 2 GiB pieces, described without allocating its
+    // payload. The missing file proves rejection happens before any disk access.
+    let hashes = [[1; 32], [2; 32]];
+    let file_root = parent(hashes[0], hashes[1]);
+    let info = d(vec![
+        (
+            b"file tree",
+            d(vec![(
+                b"sample.bin",
+                d(vec![(
+                    b"",
+                    d(vec![
+                        (b"length", i(4usize * 1024 * 1024 * 1024)),
+                        (b"pieces root", b(&file_root)),
+                    ]),
+                )]),
+            )]),
+        ),
+        (b"meta version", i(2)),
+        (b"name", b(b"sample.bin")),
+        (b"piece length", i(2usize * 1024 * 1024 * 1024)),
+    ]);
+    let metainfo = d(vec![
+        (b"info", info),
+        (b"piece layers", d(vec![(&file_root, b(&hashes.concat()))])),
+    ]);
+    let meta = Arc::new(TorrentMeta::from_torrent_file(&metainfo).unwrap());
+    let folder = TempFolder::new();
+    let storage = Storage::new(meta.clone(), folder.path());
+    let request = Request {
+        root: file_root,
+        base: 0,
+        index: 0,
+        length: 2,
+        proof: meta.v2[0].height() - 1,
+    };
+    let have = meta.wanted_pieces(None).unwrap();
+    let error = crate::v2_wire::answer(request, &storage, &meta, &have).unwrap_err();
+    assert!(
+        error
+            .to_string()
+            .contains("Hash proof exceeds disk work limit"),
+        "{error:#}"
+    );
+    // The same large torrent can still serve its authenticated piece layer
+    // without touching the payload. Only the expensive lower-tree proof is denied.
+    let layer = Request {
+        base: meta.v2[0].layer,
+        proof: 0,
+        ..request
+    };
+    assert_eq!(layer.work_bytes(&meta).unwrap(), 0);
+    let response = crate::v2_wire::answer(layer, &storage, &meta, &have).unwrap();
+    assert_eq!(response.len(), layer.response_len() as usize);
+    assert_eq!(layer.verify(&meta.v2[0], &response).unwrap(), hashes);
+}
+
+#[test]
+fn hash_work_counts_siblings_short_blocks_and_padding_but_not_cached_layers() {
+    let piece = 65536;
+    let data = vec![5; piece * 2 + 17];
+    let meta = TorrentMeta::from_torrent_file(&sample(&data, piece)).unwrap();
+    let file = &meta.v2[0];
+    let leaf = Request {
+        root: file.root,
+        base: 0,
+        index: 0,
+        length: 2,
+        proof: file.height() - 1,
+    };
+    // The two requested leaves cost 32 KiB, their uncached sibling costs 32 KiB,
+    // and the remaining proof siblings come from authenticated cached layers.
+    assert_eq!(leaf.work_bytes(&meta).unwrap(), piece as u32);
+    assert_eq!(Request { index: 8, ..leaf }.work_bytes(&meta).unwrap(), 17);
+    assert_eq!(Request { index: 12, ..leaf }.work_bytes(&meta).unwrap(), 0);
+    let layer = Request {
+        base: file.layer,
+        proof: file.height() - file.layer - 1,
+        ..leaf
+    };
+    assert_eq!(layer.work_bytes(&meta).unwrap(), 0);
+    for request in [
+        Request { length: 0, ..leaf },
+        Request {
+            index: u32::MAX,
+            ..leaf
+        },
+        Request { base: 32, ..leaf },
+    ] {
+        assert!(request.work_bytes(&meta).is_err());
+    }
 }

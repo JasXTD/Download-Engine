@@ -11,6 +11,8 @@ Release notes are available offline in Help → Changelog. Newest releases appea
 - Preserve file selection, short final blocks, virtual padding, pause/resume, crash recovery and Stop all. Optional encrypted TCP/uTP and web seeds use the same verified-piece checks. Uploading and incoming-connection defaults are unchanged.
 - Keep full v2 identities in saved state, detect known v1/v2 aliases before adding duplicate downloads, and remove both identities' cached state when forgetting a hybrid torrent. Profiles storing v2/hybrid magnets require this version or newer.
 - Reject malformed or conflicting metadata, unsafe/colliding paths, missing or altered piece layers and mismatched hash proofs. Bound hash messages, metadata memory and proof workers; cancel and join proof work during Stop. Keep pending peer connections bounded through hybrid handshake fallbacks.
+- Limit each peer hash proof to 8 MiB of payload reads and share a 16 MiB/second work budget across the process. Reject excessive proofs before reading files, while keeping authenticated piece-layer exchange available.
+- Update the uTP buffer dependency to ringbuf 0.5.2, including its source and license records.
 - Verified with generated harmless files in an isolated Docker lab using Debian libtorrent 2.0.8 and the previous v1 engine. No public swarms, tracker accounts, firewall changes or new Windows software were used.
 
 ## 3.18.1 — 2026-11-08

@@ -662,10 +662,20 @@ impl Reader {
                 self.link.outbox.lock().control.len() < 32,
                 "Too many pending control messages"
             );
-            let storage = self.live.core.storage.clone();
             let meta = self.live.core.meta.clone();
+            let work = match request.work_bytes(&meta) {
+                Ok(work) => work,
+                Err(_) => {
+                    let response = request.frame(23, &[]);
+                    self.live.core.context.up.take(response.len() as u32).await;
+                    self.link.push(Out::Hashes(response));
+                    return Ok(());
+                }
+            };
+            let permit = crate::v2_wire::hash_worker(work).await?;
+            self.live.core.context.up.take(request.response_len()).await;
+            let storage = self.live.core.storage.clone();
             let have = self.live.core.picker.lock().have().clone();
-            let permit = crate::v2_wire::hash_worker().await?;
             let cancel = self.hash_cancel.clone();
             self.pending_hash = Some(tokio::task::spawn_blocking(move || {
                 let _permit = permit;
@@ -674,7 +684,6 @@ impl Reader {
             let result = self.pending_hash.as_mut().unwrap().await;
             self.pending_hash.take();
             let response = result?.unwrap_or_else(|_| request.frame(23, &[]));
-            self.live.core.context.up.take(response.len() as u32).await;
             self.link.push(Out::Hashes(response));
             return Ok(());
         }
@@ -1044,6 +1053,7 @@ impl Drop for Reader {
     /// However a connection ends, what it held goes back, or those chunks would stay
     /// "requested" forever and the download could never finish.
     fn drop(&mut self) {
+        self.hash_cancel.cancel();
         {
             let mut picker = self.live.core.picker.lock();
             picker.peer_removed(&self.peer_has);

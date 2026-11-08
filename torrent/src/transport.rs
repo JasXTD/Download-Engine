@@ -33,10 +33,10 @@ type Socket = UtpSocket<PublicUdp, DefaultUtpEnvironment>;
 
 type NamedAddresses = Arc<Mutex<HashMap<SocketAddr, usize>>>;
 fn canonical(mut addr: SocketAddr) -> SocketAddr {
-    if let IpAddr::V6(ip) = addr.ip() {
-        if let Some(ip) = ip.to_ipv4_mapped() {
-            addr.set_ip(IpAddr::V4(ip));
-        }
+    if let IpAddr::V6(ip) = addr.ip()
+        && let Some(ip) = ip.to_ipv4_mapped()
+    {
+        addr.set_ip(IpAddr::V4(ip));
     }
     addr
 }
@@ -206,10 +206,8 @@ impl Peers {
     ) -> Result<Arc<Self>> {
         let named = Arc::default();
         let socket = if utp {
-            assert!(
-                !cfg!(all(test, windows)),
-                "a Windows test tried to open a UDP socket"
-            );
+            #[cfg(all(test, windows))]
+            crate::testkit::forbid_network();
             let port = listen_port.unwrap_or(0);
             let udp = UdpSocket::bind_udp(
                 SocketAddr::new(IpAddr::V6(Ipv6Addr::UNSPECIFIED), port),
@@ -267,10 +265,8 @@ impl Peers {
         udp: bool,
         explicitly_named: bool,
     ) -> Result<BoxedStream> {
-        assert!(
-            !cfg!(all(test, windows)),
-            "a Windows test tried to connect to {addr}"
-        );
+        #[cfg(all(test, windows))]
+        crate::testkit::forbid_network();
         if udp {
             let socket = self.utp.lock().clone().context("uTP is disabled")?;
             let permit = self

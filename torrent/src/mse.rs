@@ -472,7 +472,7 @@ mod tests {
         let (mut b, selected) = b.unwrap();
         assert_eq!(selected, Some(hash));
         let data = sample_bytes(200_003, 66);
-        let (sent, received) = tokio::join!(
+        let ((), received) = tokio::join!(
             async {
                 a.write_all(&data).await.unwrap();
                 a.flush().await.unwrap();
@@ -483,7 +483,6 @@ mod tests {
                 got
             }
         );
-        let _ = sent;
         assert_eq!(received, data);
         let ((), received) = tokio::join!(
             async {

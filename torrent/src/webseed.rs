@@ -283,10 +283,8 @@ impl Http {
             request_url(url.as_str(), self.allow_local).is_some(),
             "Web seed endpoint is blocked"
         );
-        assert!(
-            !cfg!(all(test, windows)),
-            "Network tests must run in the isolated Linux container"
-        );
+        #[cfg(all(test, windows))]
+        crate::testkit::forbid_network();
         let _permit = self.slots.acquire().await?;
         let mut request = self
             .client

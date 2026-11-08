@@ -245,7 +245,7 @@ impl TorrentMeta {
 
     pub fn chunk_request(&self, piece: u32, begin: u32) -> Option<librqbit_peer_protocol::Request> {
         let len = self.piece_data_length(piece)?;
-        if begin >= len || begin % crate::v2::BLOCK != 0 {
+        if begin >= len || !begin.is_multiple_of(crate::v2::BLOCK) {
             return None;
         }
         Some(librqbit_peer_protocol::Request::new(

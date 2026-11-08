@@ -1695,10 +1695,10 @@ async fn run_swarm(
     while let Some(done) = peers.join_next().await {
         peer_ended(&core, &mut book, done);
     }
-    if let Some(worker) = web_seed {
-        if let Err(error) = worker.await {
-            outcome = Some(Phase::Error(format!("The web seed worker failed: {error}")));
-        }
+    if let Some(worker) = web_seed
+        && let Err(error) = worker.await
+    {
+        outcome = Some(Phase::Error(format!("The web seed worker failed: {error}")));
     }
     while let Ok(event) = events.try_recv() {
         match event {

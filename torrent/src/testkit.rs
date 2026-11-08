@@ -19,6 +19,21 @@ use crate::torrent::{Context, Torrent, TorrentOptions, TorrentStats, Totals};
 
 pub const PATIENCE: Duration = Duration::from_secs(30);
 
+/// Keep network entry points forbidden in Windows unit tests. Linux socket
+/// fixtures run separately in the isolated lab.
+#[cfg(windows)]
+#[track_caller]
+pub fn forbid_network() {
+    panic!("Network tests must run in the isolated Linux container");
+}
+
+#[cfg(windows)]
+#[test]
+#[should_panic(expected = "Network tests must run in the isolated Linux container")]
+fn windows_network_test_guard_panics() {
+    forbid_network();
+}
+
 /// A folder that is removed when the test ends.
 pub struct TempFolder(PathBuf);
 

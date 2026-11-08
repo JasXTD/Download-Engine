@@ -8,6 +8,9 @@ Malwarebytes scan on 2026-11-08. The upstream Apache-2.0 notice is retained in `
 
 ## Changes
 
+- Pin `ringbuf` to 0.5.2, which fixes the panic-in-Drop memory safety issue in
+  `Consumer::skip`/`clear` (RUSTSEC-2026-0293). The transmit buffer holds `u8`, so
+  that panic trigger is not reachable here; the dependency is updated regardless.
 - Bound the dispatcher-to-stream packet queue to 128 datagrams. Drop packets on overload
   without blocking the shared UDP dispatcher or removing the connection. UDP loss recovery
   can retransmit them. The original unbounded queue allowed memory growth before the

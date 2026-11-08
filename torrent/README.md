@@ -103,6 +103,11 @@ The formats and network protocols come from the crates copied into `../vendor/rq
   bencode has a depth/node limit; duplicate keys, unsafe paths and inconsistent hybrid
   layouts are rejected. Entirely empty torrents remain unsupported.
 - Hash requests have at most 512 hashes, 32 proof levels and 64 requests/second/peer.
+  Before starting a worker, calculate the worst-case payload reads, including proof
+  siblings: reject requests over 8 MiB and charge an aggregate 16 MiB/second work
+  budget across the process. Authenticated cached piece layers require no disk work.
+  Larger lower-tree requests receive BEP 52 hash rejection; payload transfer and
+  piece-layer exchange remain available. Charge response bandwidth before hashing.
   Two blocking proof workers serve the whole process, with bounded subtree caches.
   Cancellation is checked between block reads; Stop joins those workers. Final v2
   block alignment bytes are explicitly zero-filled, including reused output buffers.

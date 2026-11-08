@@ -45,6 +45,10 @@ not affiliated with IDM, and does not claim complete IDM feature parity.
 Get published packages from the [releases page](https://github.com/JasXTD/Download-Engine/releases)
 and read the [changelog](CHANGELOG.md) for release and development notes.
 
+**[Download 3.19.0](https://github.com/JasXTD/Download-Engine/releases/tag/v3.19.0)** —
+Windows, Apple Silicon and Intel Macs, and Linux x64. Native FFmpeg is bundled;
+browser extensions, source code and SHA-256 checksums are included with the release.
+
 ## Features
 
 - **Files:** HTTP, HTTPS, FTP and FTPS, with parallel connections where the server supports them.
@@ -136,7 +140,8 @@ as a media file. These are capabilities of the shipped readers, not additional
 
 New in **3.19.0**: v2 and hybrid support with file selection, verified recovery and the same
 transfer controls. A `btih`-only magnet uses v1; a magnet containing `btmh` requires v2
-verification. Hash checks establish file integrity, not safety or privacy.
+verification. Peer hash requests have bounded memory, disk work and concurrency.
+Hash checks establish file integrity, not safety or privacy.
 
 Added in **3.18.0**: the Peers list shows actual TCP/uTP and encryption status. Optional
 **VPN/interface binding** keeps torrent peers, trackers, DHT, web seeds and DNS on one

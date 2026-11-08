@@ -222,7 +222,7 @@ Download Engine builds a modified copy of librqbit-utp 0.7.0 (bounded packet que
 - **read-fonts 0.41.0** — MIT OR Apache-2.0. [LICENSE-APACHE](rust/read-fonts-0.41.0/LICENSE-APACHE), [LICENSE-MIT](rust/read-fonts-0.41.0/LICENSE-MIT).
 - **renderdoc-sys 1.1.0** — MIT OR Apache-2.0. [LICENSE-APACHE](rust/renderdoc-sys-1.1.0/LICENSE-APACHE), [LICENSE-MIT](rust/renderdoc-sys-1.1.0/LICENSE-MIT).
 - **reqwest 0.13.5** — MIT OR Apache-2.0. [LICENSE-APACHE](rust/reqwest-0.13.5/LICENSE-APACHE), [LICENSE-MIT](rust/reqwest-0.13.5/LICENSE-MIT).
-- **ringbuf 0.4.8** — MIT/Apache-2.0. [LICENSE-APACHE](rust/ringbuf-0.4.8/LICENSE-APACHE), [LICENSE-MIT](rust/ringbuf-0.4.8/LICENSE-MIT).
+- **ringbuf 0.5.2** — MIT OR Apache-2.0. [LICENSE-APACHE](rust/ringbuf-0.5.2/LICENSE-APACHE), [LICENSE-MIT](rust/ringbuf-0.5.2/LICENSE-MIT).
 - **rusqlite 0.40.2** — MIT. [LICENSE](rust/rusqlite-0.40.2/LICENSE).
 - **rustc_version 0.4.1** — MIT OR Apache-2.0. [LICENSE-APACHE](rust/rustc_version-0.4.1/LICENSE-APACHE), [LICENSE-MIT](rust/rustc_version-0.4.1/LICENSE-MIT).
 - **rustc-hash 1.1.0** — Apache-2.0/MIT. [LICENSE-APACHE](rust/rustc-hash-1.1.0/LICENSE-APACHE), [LICENSE-MIT](rust/rustc-hash-1.1.0/LICENSE-MIT).

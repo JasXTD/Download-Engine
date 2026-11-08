@@ -263,6 +263,17 @@ async fn utp_shutdown_and_restart_with_outgoing_only_policy() {
 async fn a_failed_tcp_bind_releases_the_utp_port_before_returning() {
     let occupied = TcpListener::bind("0.0.0.0:0").await.unwrap();
     let port = occupied.local_addr().unwrap().port();
+    // macOS can bind an IPv6 listener while an IPv4 listener owns the same
+    // port. Occupy both families so this exercises failed startup everywhere.
+    let separate_v6 = librqbit_dualstack_sockets::BindOpts {
+        request_dualstack: false,
+        ..Default::default()
+    };
+    let _occupied_v6 = librqbit_dualstack_sockets::TcpListener::bind_tcp(
+        (std::net::Ipv6Addr::UNSPECIFIED, port).into(),
+        separate_v6,
+    )
+    .unwrap();
     assert!(
         Session::new(SessionOptions {
             use_utp: true,
@@ -273,4 +284,9 @@ async fn a_failed_tcp_bind_releases_the_utp_port_before_returning() {
         .is_err()
     );
     let _udp = std::net::UdpSocket::bind((std::net::Ipv4Addr::UNSPECIFIED, port)).unwrap();
+    let _udp_v6 = librqbit_dualstack_sockets::UdpSocket::bind_udp(
+        (std::net::Ipv6Addr::UNSPECIFIED, port).into(),
+        separate_v6,
+    )
+    .unwrap();
 }

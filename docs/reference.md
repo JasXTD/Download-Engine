@@ -845,6 +845,17 @@ its URLs or filenames.
 
 ### Chrome, Edge and Brave
 
+**Store installation (recommended):** install
+[Download Engine Integration from the Chrome Web Store](https://chromewebstore.google.com/detail/download-engine-integrati/dedbmjfdofigmfigagjnjileiepfhnio).
+Edge may ask you to allow extensions from other stores. In Download Engine's **Browser setup**,
+choose your browser, paste `dedbmjfdofigmfigagjnjileiepfhnio` into the extension ID field,
+then choose **Connect browser**. Choose **Check connection** in the extension popup.
+The store ID differs from the app's suggested unpacked-folder ID; use the store ID for this install.
+The browser updates store-installed extensions automatically. Store releases can lag behind the
+desktop release; newer features may require the matching manual package below.
+
+**Manual installation:**
+
 1. In Download Engine, open **Browser setup** and choose **Chrome**, **Edge** or **Brave**.
 2. Choose **Copy extensions page**, paste it into that browser's address bar,
    and enable Developer mode.

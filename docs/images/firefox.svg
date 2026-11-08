@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Firefox">
+  <defs><linearGradient id="fire" x2="0.7" y2="1"><stop stop-color="#ffbd4f"/><stop offset=".55" stop-color="#ff7139"/><stop offset="1" stop-color="#e92177"/></linearGradient></defs>
+  <circle cx="32" cy="35" r="23" fill="#7542e5"/>
+  <path fill="url(#fire)" d="M53 7c-2 9 6 12 8 23 4 19-10 32-28 32C15 62 3 50 3 34 3 22 10 13 18 8l-1 13 9-8-1 13 11 7-9 5-8-2c2 10 13 14 23 8 8-5 9-14 6-20 0 10-7 16-15 15 8-4 10-10 8-16-2-7 3-13 12-16z"/>
+  <path fill="#ffd56b" d="m6 22 10 2 10-8-1 11 10 6-10 4-10-3z"/>
+</svg>

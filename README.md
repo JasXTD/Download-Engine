@@ -184,7 +184,8 @@ for browser integration; the browser extension does not download on its own.
 
 Close Download Engine through **Tasks → Exit** before upgrading, and stop a separately started CLI
 MCP server. Use the installer to upgrade an installed copy, or update the same portable folder while
-preserving its `data` and downloads. Keep the application and browser extension versions aligned.
+preserving its `data` and downloads. Keep the desktop app and browser extension updated; store
+releases can arrive separately. The matching release ZIPs include the newest extension features.
 Some upgrades change the profile in a way that older versions refuse, so back up the profile before
 going back to an older version. Versions 3.0 and 3.6 need extra steps; see the
 [upgrade notes by version](docs/reference.md#upgrade-notes-by-version).
@@ -208,17 +209,29 @@ for the offline guide.
 
 ## Browser integration
 
-- **Firefox 142 or newer:** install the approved
-  [Download Engine Extension](https://addons.mozilla.org/en-US/firefox/addon/download-engine-extension/)
-  from Firefox Add-ons. Firefox keeps it updated.
-- **Chrome, Edge and Brave, engine version 128 or newer:** store approval is pending. Until then,
-  turn on **Developer mode** on the browser's extensions page, choose **Load unpacked** and select
-  the folder that **Open extension folder** shows in Download Engine. Keep Developer mode on.
+<p>
+  <a href="https://chromewebstore.google.com/detail/download-engine-integrati/dedbmjfdofigmfigagjnjileiepfhnio"><img src="docs/images/chrome.svg" width="32" height="32" alt="Chrome Web Store"></a>&nbsp;
+  <a href="https://chromewebstore.google.com/detail/download-engine-integrati/dedbmjfdofigmfigagjnjileiepfhnio">Add to Chrome</a>&nbsp;&nbsp;·&nbsp;&nbsp;
+  <a href="https://addons.mozilla.org/en-US/firefox/addon/download-engine-extension/"><img src="docs/images/firefox.svg" width="32" height="32" alt="Firefox Add-ons"></a>&nbsp;
+  <a href="https://addons.mozilla.org/en-US/firefox/addon/download-engine-extension/">Add to Firefox</a>
+</p>
+
+- **Chrome, Edge and Brave, engine version 128 or newer:** install from the Chrome Web Store.
+  In **Browser setup**, paste the store extension ID `dedbmjfdofigmfigagjnjileiepfhnio`
+  before choosing **Connect browser**. Edge may ask you to allow extensions from other stores.
+- **Firefox 142 or newer:** install from Firefox Add-ons, then connect Firefox in the app.
+  Its extension ID is already filled in. Store-installed extensions receive browser-managed updates.
+- **Manual installation:** the installer, portable packages and release ZIPs also include the
+  extension files. For Chromium browsers, enable **Developer mode**, choose **Load unpacked** and
+  select the folder from **Open extension folder**. Use that extension's own ID when connecting.
+
+Store versions may lag behind the desktop release and omit newer browser features. For the
+matching extension version, use the release ZIP; the Firefox developer ZIP is unsigned.
 
 Then open **Tools → Browser setup**, choose your browser and **Connect browser**, and select
 **Check connection** in the extension popup. The [Chromium](docs/reference.md#chrome-edge-and-brave)
 and [Firefox](docs/reference.md#firefox) steps have the details. The extension ZIPs on the releases
-page are for manual loading; Firefox removes the unsigned Firefox ZIP when it restarts.
+page are for manual loading; Firefox removes a temporarily loaded unsigned extension when it restarts.
 
 **Capture file downloads** and **Detect media while browsing** are on by default once the
 extension's permissions are accepted, and either can be turned off. Detecting a video never starts a

@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Chrome">
+  <defs><clipPath id="round"><circle cx="32" cy="32" r="30"/></clipPath></defs>
+  <g clip-path="url(#round)">
+    <path fill="#ea4335" d="M0 0h64v27H32L17 49 0 19z"/>
+    <path fill="#fbbc05" d="M64 25v39H24l18-32-5-7z"/>
+    <path fill="#34a853" d="M0 14l20 35 12-2-9 17H0z"/>
+  </g>
+  <circle cx="32" cy="32" r="15" fill="#fff"/>
+  <circle cx="32" cy="32" r="12" fill="#4285f4"/>
+</svg>

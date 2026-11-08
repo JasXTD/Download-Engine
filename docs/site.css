@@ -591,6 +591,8 @@ figcaption { padding: 12px 16px; color: #b3c0cf; font-size: 11px; line-height: 1
   .faq details > p { font-size: 13px; }
   .site-footer nav { gap: 12px 18px; font-size: 11px; }
 }
+.browser-store-links img { flex: 0 0 auto; }
+.browser-store-links { gap: 12px; margin-bottom: 20px; }
 @media (max-width: 420px) {
   .highlights { grid-template-columns: 1fr; }
 }

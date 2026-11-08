@@ -244,6 +244,7 @@ Source: "{#SourceRoot}\installer\languages\ru.json"; DestDir: "{app}"; DestName:
 Source: "{#SourceRoot}\installer\languages\uk.json"; DestDir: "{app}"; DestName: "installer-language.json"; Languages: uk; Flags: ignoreversion
 Source: "{#SourceRoot}\installer\languages\ar.json"; DestDir: "{app}"; DestName: "installer-language.json"; Languages: ar; Flags: ignoreversion
 Source: "{#SourceRoot}\README.md"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#SourceRoot}\torrent\README.md"; DestDir: "{app}\torrent"; Flags: ignoreversion
 Source: "{#SourceRoot}\SECURITY.md"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#SourceRoot}\PRIVACY.md"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#SourceRoot}\CHANGELOG.md"; DestDir: "{app}"; Flags: ignoreversion

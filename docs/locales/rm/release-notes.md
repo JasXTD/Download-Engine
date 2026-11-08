@@ -1,5 +1,7 @@
 ## 3.19.0 — 2026-11-08
 
+### Support per BitTorrent v2 e torrents ibrids
+
 - Sustegn per torrents v2 ed ibrids cun verificaziun SHA-256, selecziun da datotecas e cuntinuaziun da telechargiadas. Il sustegn v1 e las preferenzas da cundivisiun restan.
 
 [English details](../../../CHANGELOG.md#3190--2026-11-08)

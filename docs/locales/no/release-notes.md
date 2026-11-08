@@ -1,5 +1,7 @@
 ## 3.19.0 — 2026-11-08
 
+### BitTorrent v2 og hybride torrenter
+
 - Støtte for v2- og hybridtorrenter med SHA-256-kontroll, filvalg, gjenopptaking og gjenoppretting. V1 og eksisterende delingsinnstillinger beholdes.
 
 [English details](../../../CHANGELOG.md#3190--2026-11-08)

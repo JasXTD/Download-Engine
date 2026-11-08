@@ -1,5 +1,7 @@
 ## 3.19.0 — 2026-11-08
 
+### BitTorrent v2 et torrents hybrides
+
 - Prise en charge des torrents v2 et hybrides avec vérification SHA-256, sélection des fichiers, reprise et récupération. Le support v1 et les réglages de partage sont conservés.
 
 [English details](../../../CHANGELOG.md#3190--2026-11-08)

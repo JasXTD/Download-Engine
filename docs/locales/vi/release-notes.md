@@ -1,5 +1,7 @@
 ## 3.19.0 — 2026-11-08
 
+### Hỗ trợ BitTorrent v2 và torrent lai
+
 - Hỗ trợ torrent v2 và lai với xác minh SHA-256, chọn tệp, tiếp tục tải và khôi phục. Giữ nguyên hỗ trợ v1 và cài đặt chia sẻ.
 
 [English details](../../../CHANGELOG.md#3190--2026-11-08)

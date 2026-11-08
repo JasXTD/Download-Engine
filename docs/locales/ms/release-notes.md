@@ -1,5 +1,7 @@
 ## 3.19.0 — 2026-11-08
 
+### Sokongan BitTorrent v2 dan hibrid
+
 - Sokongan torrent v2 dan hibrid dengan pengesahan SHA-256, pemilihan fail, sambung semula dan pemulihan. Sokongan v1 dan tetapan perkongsian dikekalkan.
 
 [English details](../../../CHANGELOG.md#3190--2026-11-08)

@@ -1,3 +1,11 @@
+## 3.18.1 — 2026-11-08
+
+- Tải lên bị tắt theo mặc định. Bạn có thể bật trong Tùy chọn → Torrent.
+- **Cho phép kết nối đến?** Các máy ngang hàng khác có thể kết nối với ứng dụng này, làm tăng mức độ tiếp xúc với mạng. Cài đặt tường lửa và bộ định tuyến không thay đổi.
+- **Bật UPnP?** Bộ định tuyến sẽ được yêu cầu chuyển tiếp cổng TCP của torrent khi torrent chạy. Khi đó các máy ngang hàng khác có thể truy cập ứng dụng này từ internet. Lưu Tùy chọn để áp dụng thay đổi này.
+
+[English details](../../../CHANGELOG.md#3181--2026-11-08)
+
 ## 3.18.0 — 2026-11-08
 
 ### VPN / giao diện mạng

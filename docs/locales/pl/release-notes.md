@@ -1,3 +1,11 @@
+## 3.18.1 — 2026-11-08
+
+- Wysyłanie jest domyślnie wyłączone. Możesz je włączyć w Preferencje → Torrenty.
+- **Zezwolić na połączenia przychodzące?** Inne peery będą mogły łączyć się z aplikacją. Zwiększa to ekspozycję sieciową. Ustawienia zapory i routera pozostaną bez zmian.
+- **Włączyć UPnP?** Podczas pracy torrentów aplikacja poprosi router o przekierowanie portu TCP torrenta. Inne peery mogą wtedy uzyskać dostęp do aplikacji z internetu. Zapisz Preferencje, aby zastosować tę zmianę.
+
+[English details](../../../CHANGELOG.md#3181--2026-11-08)
+
 ## 3.18.0 — 2026-11-08
 
 ### VPN / interfejs sieciowy

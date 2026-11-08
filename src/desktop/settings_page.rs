@@ -716,10 +716,13 @@ impl Desktop {
                             tr("Let peers connect to this app. Router and firewall rules are not changed.")
                         };
                         toggle(ui, p, tr("Allow incoming connections"), detail, "\u{e716}", &mut incoming);
-                        torrents.incoming_port = incoming.then(|| torrents.incoming_port.unwrap_or(6881));
+                        if incoming && torrents.incoming_port.is_none() {
+                            state.network_warning = Some(preferences_window::TorrentNetworkWarning::Incoming);
+                        }
                         // Turning the port off turns router setup off too, so turning the
                         // port on later never brings router setup back by itself.
                         if !incoming {
+                            torrents.incoming_port = None;
                             torrents.upnp = false;
                         }
                         if let Some(port) = &mut torrents.incoming_port {
@@ -737,9 +740,15 @@ impl Desktop {
                             }
                         }
                         ui.add_enabled_ui(torrents.incoming_port.is_some() && torrents.binding.is_none(), |ui| {
+                            let mut upnp = torrents.upnp;
                             toggle(ui, p, tr("Set up my router (UPnP)"),
                                 tr("Asks your router to forward this port while torrents run, then removes it."),
-                                "\u{e839}", &mut torrents.upnp);
+                                "\u{e839}", &mut upnp);
+                            if upnp && !torrents.upnp {
+                                state.network_warning = Some(preferences_window::TorrentNetworkWarning::Upnp);
+                            } else if !upnp {
+                                torrents.upnp = false;
+                            }
                         });
                         if let (Some(port), true) = (torrents.incoming_port, torrents.upnp) {
                             let (text, color) = router_line(router, helper_running, port, p);

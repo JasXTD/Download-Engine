@@ -109,7 +109,7 @@ as a media file. These are capabilities of the shipped readers, not additional
 > **Use torrents at your own risk.** Downloaded files may contain malware, and peers
 > can see your IP address. Enabling uploads or seeding shares file data with other
 > peers. Antivirus scans cannot guarantee that a file is safe. Torrent support is
-> optional; seeding after completion and incoming connections are off by default.
+> optional; uploading, seeding after completion, incoming connections and UPnP are off by default for new profiles.
 
 - **Open** a torrent file with **Tasks → Open torrent file…**, from your file manager or by dropping
   it on the window, or paste a magnet link into **Add download**. Connected browser extensions send
@@ -117,9 +117,11 @@ as a media file. These are capabilities of the shipped readers, not additional
 - **Off until you turn it on.** The app asks first, then you choose the files to download. The usual
   queue, **Stop** and **Stop all** controls apply. Verified pieces are kept, and existing files are
   never overwritten.
-- **Sharing** settings live in **Preferences → Torrents**: uploads, upload limits and DHT. Sharing
-  after completion and incoming connections are off by default, and data quotas count uploads.
-  Optional UPnP router setup is available on Windows and Linux when incoming connections are on.
+- **Sharing** settings live in **Preferences → Torrents**: uploads, upload limits and DHT. Uploading,
+  sharing after completion, incoming connections and UPnP start off. Saved choices are preserved
+  when upgrading; data quotas count any enabled uploads. Enabling incoming connections or UPnP
+  asks for confirmation, then requires Save. Optional UPnP router setup is available on Windows
+  and Linux when incoming connections are on.
 - **Peer encryption:** choose Off, Prefer encryption (allows plaintext fallback), or Require
   encryption (refuses plaintext). MSE/PE is a legacy compatibility protocol; it does not hide
   your IP address or authenticate peers.

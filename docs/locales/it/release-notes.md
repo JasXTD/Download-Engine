@@ -1,3 +1,11 @@
+## 3.18.1 — 2026-11-08
+
+- Il caricamento è disattivato per impostazione predefinita. Puoi attivarlo in Preferenze → Torrent.
+- **Consentire connessioni in entrata?** Altri peer potranno connettersi a questa app, aumentandone l’esposizione alla rete. Le impostazioni del firewall e del router non cambiano.
+- **Attivare UPnP?** Durante l’esecuzione dei torrent, verrà chiesto al router di inoltrare la porta TCP del torrent. Altri peer potrebbero quindi raggiungere l’app da Internet. Salva le preferenze per applicare questa modifica.
+
+[English details](../../../CHANGELOG.md#3181--2026-11-08)
+
 ## 3.18.0 — 2026-11-08
 
 ### VPN / interfaccia di rete

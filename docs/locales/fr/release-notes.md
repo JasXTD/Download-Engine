@@ -1,3 +1,11 @@
+## 3.18.1 — 2026-11-08
+
+- L’envoi est désactivé par défaut. Vous pouvez l’activer dans Préférences → Torrents.
+- **Autoriser les connexions entrantes ?** D’autres pairs pourront se connecter à cette application. Cela augmente son exposition au réseau. Les réglages du pare-feu et du routeur restent inchangés.
+- **Activer UPnP ?** Pendant les transferts torrent, l’application demandera au routeur de rediriger le port TCP du torrent. D’autres pairs pourront alors éventuellement accéder à l’application depuis Internet. Enregistrez les préférences pour appliquer ce changement.
+
+[English details](../../../CHANGELOG.md#3181--2026-11-08)
+
 ## 3.18.0 — 2026-11-08
 
 ### VPN / interface réseau

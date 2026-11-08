@@ -1,3 +1,11 @@
+## 3.18.1 — 2026-11-08
+
+- Muat naik dimatikan secara lalai. Anda boleh mendayakannya dalam Keutamaan → Torrent.
+- **Benarkan sambungan masuk?** Rakan lain boleh menyambung ke aplikasi ini. Ini meningkatkan pendedahan rangkaian. Tetapan tembok api dan penghala anda kekal sama.
+- **Dayakan UPnP?** Penghala anda akan diminta untuk memajukan port TCP torrent semasa torrent berjalan. Rakan lain kemudian mungkin dapat mencapai aplikasi ini dari internet. Simpan Keutamaan untuk menggunakan perubahan ini.
+
+[English details](../../../CHANGELOG.md#3181--2026-11-08)
+
 ## 3.18.0 — 2026-11-08
 
 ### VPN / antara muka rangkaian

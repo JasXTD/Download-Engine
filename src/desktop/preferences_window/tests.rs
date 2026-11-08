@@ -1,6 +1,218 @@
 use super::*;
 use crate::desktop::interaction_tests::{click, fixture, frame, text_rect};
 
+fn click_torrent_network_option(app: &mut Desktop, ctx: &egui::Context, label: &str) {
+    let size = vec2(1080.0, 800.0);
+    for _ in 0..40 {
+        frame(app, ctx, size, vec![]);
+        let output = frame(app, ctx, size, vec![]);
+        let visible = output.shapes.iter().any(|shape| {
+            matches!(&shape.shape, egui::Shape::Text(text)
+                if text.galley.job.text.trim() == label
+                    && shape.clip_rect.contains_rect(text.galley.rect.translate(text.pos.to_vec2())))
+        });
+        if visible {
+            click(app, ctx, label);
+            return;
+        }
+        frame(
+            app,
+            ctx,
+            size,
+            vec![
+                egui::Event::PointerMoved(egui::pos2(650.0, 400.0)),
+                egui::Event::MouseWheel {
+                    unit: egui::MouseWheelUnit::Point,
+                    phase: egui::TouchPhase::Move,
+                    delta: vec2(0.0, -100.0),
+                    modifiers: egui::Modifiers::NONE,
+                },
+            ],
+        );
+    }
+    panic!("Torrent option never became visible: {label}");
+}
+
+#[test]
+fn torrent_warning_cancel_close_escape_and_backdrop_preserve_the_draft() {
+    for dismissal in ["Cancel", "×", "escape", "backdrop"] {
+        let (_temp, mut app, ctx) = fixture();
+        let original = app.store.torrent_settings().unwrap();
+        let saved_interface = app.store.interface_preferences().unwrap();
+        app.open_preferences_window();
+        let draft = app.preferences_window.as_mut().unwrap();
+        draft.category = Category::Torrents;
+        draft.torrents.enabled = true;
+        draft.interface.compact_rows = !app.interface.compact_rows;
+        click_torrent_network_option(&mut app, &ctx, "Allow incoming connections");
+        let draft = app.preferences_window.as_ref().unwrap();
+        assert_eq!(draft.network_warning, Some(TorrentNetworkWarning::Incoming));
+        assert!(draft.torrents.incoming_port.is_none());
+        // A shortcut or another caller must not save behind the warning.
+        app.save_preferences_window(&ctx);
+        assert_eq!(app.store.interface_preferences().unwrap(), saved_interface);
+        let size = vec2(1080.0, 800.0);
+        frame(&mut app, &ctx, size, vec![]);
+        let output = frame(&mut app, &ctx, size, vec![]);
+        text_rect(&output, "Allow incoming connections?");
+        if dismissal == "escape" {
+            frame(
+                &mut app,
+                &ctx,
+                size,
+                vec![egui::Event::Key {
+                    key: egui::Key::Escape,
+                    physical_key: None,
+                    pressed: true,
+                    repeat: false,
+                    modifiers: egui::Modifiers::NONE,
+                }],
+            );
+        } else if dismissal == "backdrop" {
+            let pos = egui::pos2(20.0, 20.0);
+            for pressed in [true, false] {
+                frame(
+                    &mut app,
+                    &ctx,
+                    size,
+                    vec![
+                        egui::Event::PointerMoved(pos),
+                        egui::Event::PointerButton {
+                            pos,
+                            button: egui::PointerButton::Primary,
+                            pressed,
+                            modifiers: egui::Modifiers::NONE,
+                        },
+                    ],
+                );
+            }
+        } else {
+            click(&mut app, &ctx, dismissal);
+        }
+        let draft = app.preferences_window.as_ref().unwrap();
+        assert!(draft.network_warning.is_none(), "{dismissal}");
+        assert!(draft.torrents.incoming_port.is_none());
+        assert!(!draft.torrents.upnp);
+        assert_ne!(draft.interface.compact_rows, app.interface.compact_rows);
+        assert_eq!(app.dialog, Some(Dialog::PreferencesWindow));
+        assert_eq!(app.store.torrent_settings().unwrap(), original);
+        assert!(!app.store.torrents.is_running());
+    }
+}
+
+#[test]
+fn torrent_network_confirmation_requires_save_and_does_not_enable_uploads() {
+    let (_temp, mut app, ctx) = fixture();
+    let original = app.store.torrent_settings().unwrap();
+    app.open_preferences_window();
+    let draft = app.preferences_window.as_mut().unwrap();
+    draft.category = Category::Torrents;
+    draft.torrents.enabled = true;
+    click_torrent_network_option(&mut app, &ctx, "Allow incoming connections");
+    click(&mut app, &ctx, "Enable");
+    assert_eq!(
+        app.preferences_window
+            .as_ref()
+            .unwrap()
+            .torrents
+            .incoming_port,
+        Some(6881)
+    );
+    assert_eq!(app.store.torrent_settings().unwrap(), original);
+    click_torrent_network_option(&mut app, &ctx, "Set up my router (UPnP)");
+    assert_eq!(
+        app.preferences_window.as_ref().unwrap().network_warning,
+        Some(TorrentNetworkWarning::Upnp)
+    );
+    assert!(!app.preferences_window.as_ref().unwrap().torrents.upnp);
+    click(&mut app, &ctx, "Cancel");
+    assert!(!app.preferences_window.as_ref().unwrap().torrents.upnp);
+    click_torrent_network_option(&mut app, &ctx, "Set up my router (UPnP)");
+    click(&mut app, &ctx, "Enable");
+    assert!(app.preferences_window.as_ref().unwrap().torrents.upnp);
+    assert_eq!(app.store.torrent_settings().unwrap(), original);
+    click(&mut app, &ctx, "Save");
+    let saved = app.store.torrent_settings().unwrap();
+    assert_eq!(saved.incoming_port, Some(6881));
+    assert!(saved.upnp && saved.enabled);
+    assert!(!saved.upload);
+    assert!(
+        !app.store.torrents.is_running(),
+        "No torrent jobs: no helper, listener or router mapping"
+    );
+    app.open_preferences_window();
+    app.preferences_window.as_mut().unwrap().category = Category::Torrents;
+    assert!(
+        app.preferences_window
+            .as_ref()
+            .unwrap()
+            .network_warning
+            .is_none()
+    );
+    // Turning options off never asks; turning them on again must ask again.
+    click_torrent_network_option(&mut app, &ctx, "Set up my router (UPnP)");
+    assert!(!app.preferences_window.as_ref().unwrap().torrents.upnp);
+    assert!(
+        app.preferences_window
+            .as_ref()
+            .unwrap()
+            .network_warning
+            .is_none()
+    );
+    click_torrent_network_option(&mut app, &ctx, "Set up my router (UPnP)");
+    click(&mut app, &ctx, "Enable");
+    click_torrent_network_option(&mut app, &ctx, "Allow incoming connections");
+    let draft = app.preferences_window.as_ref().unwrap();
+    assert!(draft.torrents.incoming_port.is_none() && !draft.torrents.upnp);
+    assert!(draft.network_warning.is_none());
+    click_torrent_network_option(&mut app, &ctx, "Allow incoming connections");
+    click(&mut app, &ctx, "Enable");
+    assert!(!app.preferences_window.as_ref().unwrap().torrents.upnp);
+    click(&mut app, &ctx, "×");
+    assert_eq!(
+        app.store.torrent_settings().unwrap(),
+        saved,
+        "Closing discards confirmed but unsaved edits"
+    );
+}
+
+#[test]
+fn torrent_warning_rechecks_prerequisites_and_reset_disables_sharing() {
+    let (_temp, mut app, _ctx) = fixture();
+    app.open_preferences_window();
+    let draft = app.preferences_window.as_mut().unwrap();
+    draft.category = Category::Torrents;
+    draft.network_warning = Some(TorrentNetworkWarning::Incoming);
+    draft.confirm_network_warning();
+    assert!(
+        draft.torrents.incoming_port.is_none(),
+        "Torrents remain disabled"
+    );
+    draft.torrents.enabled = true;
+    draft.network_warning = Some(TorrentNetworkWarning::Upnp);
+    draft.confirm_network_warning();
+    assert!(!draft.torrents.upnp, "UPnP requires incoming connections");
+    draft.torrents.incoming_port = Some(6881);
+    draft.torrents.binding = Some(de_torrent::network::Binding {
+        interface: "offline-test-adapter".into(),
+        address: "192.0.2.2".parse().unwrap(),
+        dns: "192.0.2.53".parse().unwrap(),
+    });
+    draft.network_warning = Some(TorrentNetworkWarning::Upnp);
+    draft.confirm_network_warning();
+    assert!(!draft.torrents.upnp, "A bound interface cannot enable UPnP");
+    draft.torrents.upload = true;
+    draft.torrents.seed_completed = true;
+    draft.network_warning = Some(TorrentNetworkWarning::Incoming);
+    draft.reset_category();
+    assert_eq!(
+        draft.torrents,
+        download_engine::torrent::Settings::default()
+    );
+    assert!(!draft.torrents.upload && !draft.torrents.seed_completed && !draft.torrents.upnp);
+    assert!(draft.torrents.incoming_port.is_none() && draft.network_warning.is_none());
+}
+
 #[test]
 fn torrent_binding_validates_dns_before_saving_and_cancel_preserves_policy() {
     let (_temp, mut app, ctx) = fixture();

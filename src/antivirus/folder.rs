@@ -361,6 +361,7 @@ mod sharing_regression {
             .unwrap();
         store
             .save_torrent_settings(&crate::torrent::Settings {
+                upload: true,
                 seed_completed: true,
                 ..store.torrent_settings().unwrap()
             })

@@ -35,7 +35,7 @@ impl Default for Settings {
             utp: false,
             web_seeds: false,
             enabled: false,
-            upload: true,
+            upload: false,
             upload_limit: None,
             dht: true,
             seed_completed: false,
@@ -81,7 +81,7 @@ pub(crate) fn initialize(conn: &Connection) -> Result<()> {
         upload INTEGER NOT NULL CHECK(upload IN (0,1)),
         upload_limit INTEGER CHECK(upload_limit BETWEEN 1024 AND 1073741824),
         dht INTEGER NOT NULL CHECK(dht IN (0,1)));
-        INSERT OR IGNORE INTO torrent_settings VALUES(1,0,1,NULL,1);
+        INSERT OR IGNORE INTO torrent_settings VALUES(1,0,0,NULL,1);
         CREATE TABLE IF NOT EXISTS torrent_files (
         job_id TEXT PRIMARY KEY REFERENCES jobs(id) ON DELETE CASCADE,
         data TEXT NOT NULL);",
@@ -334,6 +334,33 @@ fn windows_proxy_is_on() -> bool {
 
 #[cfg(test)]
 mod sharing_tests {
+    #[test]
+    fn uploading_starts_off_and_existing_choices_survive_reopening() {
+        let temp = tempfile::tempdir().unwrap();
+        let paths = crate::paths::AppPaths {
+            data: temp.path().join("data"),
+            downloads: temp.path().join("downloads"),
+        };
+        let store = Store::open(paths.clone()).unwrap();
+        assert!(
+            !store.torrent_settings().unwrap().upload,
+            "Fresh profiles must not upload"
+        );
+        assert!(
+            !Settings::default().upload,
+            "Reset must not enable uploading"
+        );
+        for upload in [true, false] {
+            let mut choice = store.torrent_settings().unwrap();
+            choice.upload = upload;
+            store.save_torrent_settings(&choice).unwrap();
+            initialize(&store.connect().unwrap()).unwrap();
+            let reopened = Store::open(paths.clone()).unwrap();
+            assert_eq!(reopened.torrent_settings().unwrap(), choice);
+            assert!(!reopened.torrents.is_running());
+        }
+    }
+
     #[test]
     fn binding_round_trip_validation_and_downgrade_guard() {
         let temp = tempfile::tempdir().unwrap();

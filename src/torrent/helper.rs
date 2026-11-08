@@ -538,6 +538,23 @@ mod tests {
     use super::*;
 
     #[test]
+    fn helper_disables_uploads_unless_the_profile_explicitly_enables_them() {
+        assert!(
+            args(Settings::default())
+                .iter()
+                .any(|arg| arg == "--no-upload")
+        );
+        assert!(
+            !args(Settings {
+                upload: true,
+                ..Default::default()
+            })
+            .iter()
+            .any(|arg| arg == "--no-upload")
+        );
+    }
+
+    #[test]
     fn transports_are_explicit_and_require_a_policy_restart() {
         let defaults = Settings::default();
         let changed = Settings {

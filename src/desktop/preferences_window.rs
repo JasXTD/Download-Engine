@@ -54,6 +54,12 @@ impl Category {
     }
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(super) enum TorrentNetworkWarning {
+    Incoming,
+    Upnp,
+}
+
 pub(super) struct State {
     pub(super) session: Uuid,
     pub(super) category: Category,
@@ -68,6 +74,7 @@ pub(super) struct State {
     pub(super) torrents: download_engine::torrent::Settings,
     pub(super) network_interfaces: Result<Vec<de_torrent::network::Interface>, String>,
     pub(super) binding_dns: String,
+    pub(super) network_warning: Option<TorrentNetworkWarning>,
     original_torrents: download_engine::torrent::Settings,
     pub(super) error: Option<String>,
     pub(super) advanced_saved: bool,
@@ -98,6 +105,7 @@ impl State {
                 .map(|binding| binding.dns.to_string())
                 .unwrap_or_default(),
             error: None,
+            network_warning: None,
             advanced_saved: false,
         }
     }
@@ -151,6 +159,74 @@ impl State {
             Category::Connection | Category::Antivirus => {}
         }
         self.error = None;
+        self.network_warning = None;
+    }
+
+    fn confirm_network_warning(&mut self) {
+        // Only change the draft. Saving Preferences applies the policy to workers.
+        // Recheck prerequisites in case the draft was reset or changed meanwhile.
+        match self.network_warning.take() {
+            Some(TorrentNetworkWarning::Incoming) if self.torrents.enabled => {
+                self.torrents.incoming_port.get_or_insert(6881);
+            }
+            Some(TorrentNetworkWarning::Upnp)
+                if self.torrents.enabled
+                    && self.torrents.incoming_port.is_some()
+                    && self.torrents.binding.is_none() =>
+            {
+                self.torrents.upnp = true;
+            }
+            _ => {}
+        }
+    }
+
+    fn network_warning_dialog(&mut self, ctx: &egui::Context, p: Palette) {
+        let Some(warning) = self.network_warning else {
+            return;
+        };
+        let (title, explanation) = match warning {
+            TorrentNetworkWarning::Incoming => (
+                tr("Allow incoming connections?"),
+                tr(
+                    "Other peers can connect to this app. This increases network exposure. Your firewall and router settings stay unchanged.",
+                ),
+            ),
+            TorrentNetworkWarning::Upnp => (
+                tr("Enable UPnP?"),
+                tr(
+                    "Your router will be asked to forward the torrent TCP port while torrents run. Other peers may then reach this app from the internet.",
+                ),
+            ),
+        };
+        let mut cancel = false;
+        let mut enable = false;
+        let response = form_dialog::modal("torrent-network-warning", p).show(ctx, |ui| {
+            cancel = form_dialog::header(
+                ui,
+                title,
+                "",
+                form_dialog::Icon::Symbol("\u{e83d}"),
+                p,
+                true,
+            );
+            ui.label(explanation);
+            ui.add_space(8.0);
+            ui.label(
+                RichText::new(tr("Save Preferences to apply this change."))
+                    .small()
+                    .color(p.muted),
+            );
+            ui.add_space(8.0);
+            form_dialog::controls(ui, |ui| {
+                enable = form_dialog::primary_button(ui, tr("Enable")).clicked();
+                cancel |= form_dialog::secondary_button(ui, tr("Cancel")).clicked();
+            });
+        });
+        if cancel || form_dialog::dismissed(&response, false) {
+            self.network_warning = None;
+        } else if enable {
+            self.confirm_network_warning();
+        }
     }
 
     /// Only replace fields edited here. A floating-window position or another
@@ -239,6 +315,10 @@ impl Desktop {
         let Some(mut state) = self.preferences_window.take() else {
             return;
         };
+        if state.network_warning.is_some() {
+            self.preferences_window = Some(state);
+            return;
+        }
         if let Some(binding) = &mut state.torrents.binding {
             let result = state
                 .binding_dns
@@ -371,6 +451,13 @@ impl Desktop {
             self.dialog = None;
             return;
         };
+        // Present one modal at a time so Escape dismisses only the warning,
+        // preserving the Preferences draft underneath it.
+        if state.network_warning.is_some() {
+            state.network_warning_dialog(ctx, p);
+            self.preferences_window = Some(state);
+            return;
+        }
         let mut cancel = false;
         let mut save = false;
         let mut editor = None;

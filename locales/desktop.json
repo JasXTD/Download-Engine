@@ -1,4 +1,11 @@
 {
+  "Allow incoming connections?": ["允许传入连接？","允許傳入連線？","Benarkan sambungan masuk?"],
+  "Other peers can connect to this app. This increases network exposure. Your firewall and router settings stay unchanged.": ["其他节点可连接到此应用，这会增加网络暴露面。防火墙和路由器设置保持不变。","其他節點可連線至此應用程式，這會增加網路暴露面。防火牆和路由器設定保持不變。","Rakan lain boleh menyambung ke aplikasi ini. Ini meningkatkan pendedahan rangkaian. Tetapan tembok api dan penghala anda kekal sama."],
+  "Enable UPnP?": ["启用 UPnP？","啟用 UPnP？","Dayakan UPnP?"],
+  "Your router will be asked to forward the torrent TCP port while torrents run. Other peers may then reach this app from the internet.": ["种子运行期间，应用会请求路由器转发种子 TCP 端口。其他节点随后可能从互联网连接到此应用。","種子執行期間，應用程式會請求路由器轉送種子 TCP 連接埠。其他節點隨後可能從網際網路連線至此應用程式。","Penghala anda akan diminta untuk memajukan port TCP torrent semasa torrent berjalan. Rakan lain kemudian mungkin dapat mencapai aplikasi ini dari internet."],
+  "Save Preferences to apply this change.": ["保存偏好设置以应用此更改。","儲存偏好設定以套用此變更。","Simpan Keutamaan untuk menggunakan perubahan ini."],
+  "Enable": ["启用","啟用","Dayakan"],
+  "Uploading is off by default. You can enable it in Preferences → Torrents.": ["默认关闭上传。您可在偏好设置 → 种子中启用。","預設關閉上傳。您可在偏好設定 → 種子中啟用。","Muat naik dimatikan secara lalai. Anda boleh mendayakannya dalam Keutamaan → Torrent."],
   "Encrypted": ["已加密","已加密","Disulitkan"],
   "Plaintext": ["明文","明文","Teks biasa"],
   "Enter a numeric DNS server IP address.": ["请输入数字形式的 DNS 服务器 IP 地址。","請輸入數字形式的 DNS 伺服器 IP 位址。","Masukkan alamat IP angka pelayan DNS."],

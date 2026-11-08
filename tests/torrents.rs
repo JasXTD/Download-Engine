@@ -66,6 +66,7 @@ fn sharing_auto_start_stop_all_rename_and_history_cleanup_keep_completed_data() 
         sample("original.bin", &[("original.bin", 8 * PIECE)], 901),
         Settings {
             enabled: true,
+            upload: true,
             dht: false,
             seed_completed: true,
             ..Default::default()
@@ -136,6 +137,7 @@ fn sharing_selected_folder_moves_then_shares_again_without_skipped_files() {
         ),
         Settings {
             enabled: true,
+            upload: true,
             dht: false,
             seed_completed: true,
             ..Default::default()
@@ -193,6 +195,7 @@ fn sharing_recovers_after_normal_restart_but_stop_all_and_helper_failure_stay_st
         single(),
         Settings {
             enabled: true,
+            upload: true,
             dht: false,
             seed_completed: true,
             ..Default::default()
@@ -246,6 +249,7 @@ fn sharing_stop_all_cancels_even_when_its_database_write_fails() {
         single(),
         Settings {
             enabled: true,
+            upload: true,
             dht: false,
             seed_completed: true,
             ..Default::default()

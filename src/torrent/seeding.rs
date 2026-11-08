@@ -540,6 +540,7 @@ mod tests {
         store
             .save_torrent_settings(&Settings {
                 enabled: true,
+                upload: true,
                 dht: false,
                 seed_completed: true,
                 share_ratio: Some(100),

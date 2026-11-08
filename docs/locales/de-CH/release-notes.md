@@ -1,3 +1,11 @@
+## 3.18.1 — 2026-11-08
+
+- Uploads sind standardmässig ausgeschaltet. Sie können sie unter Einstellungen → Torrents aktivieren.
+- **Eingehende Verbindungen erlauben?** Andere Peers können sich mit dieser App verbinden. Dadurch ist sie stärker dem Netzwerk ausgesetzt. Ihre Firewall- und Routereinstellungen bleiben unverändert.
+- **UPnP aktivieren?** Während Torrents laufen, wird Ihr Router um eine Weiterleitung des Torrent-TCP-Ports gebeten. Andere Peers können diese App dann möglicherweise aus dem Internet erreichen. Speichern Sie die Einstellungen, um diese Änderung anzuwenden.
+
+[English details](../../../CHANGELOG.md#3181--2026-11-08)
+
 ## 3.18.0 — 2026-11-08
 
 ### VPN / Netzwerkschnittstelle

@@ -2,6 +2,15 @@
 
 Release notes are available offline in Help → Changelog. Newest releases appear first.
 
+## 3.18.1 — 2026-11-08
+
+### Torrent upload defaults and network confirmations
+
+- New profiles and Reset defaults now leave torrent uploading off. Saved upload choices from existing profiles are preserved. Enabling torrents or incoming connections does not enable uploads.
+- Enabling incoming connections or UPnP now asks for confirmation and explains the network exposure. Confirming changes only the Preferences draft; Save is still required. Cancel, the header close button, Escape and clicking outside the warning keep the option off and preserve other draft edits.
+- UPnP still requires incoming connections, stays unavailable with interface binding, and turns off when incoming connections are disabled. No Windows Firewall rules are changed.
+- Updated the torrent consent message, guide, website source and translations for all 19 interface languages. Existing users who want uploads off can disable Upload while downloading in Preferences → Torrents and Save.
+
 ## 3.18.0 — 2026-11-08
 
 ### Torrent connection visibility and interface binding

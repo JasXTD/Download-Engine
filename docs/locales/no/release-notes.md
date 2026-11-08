@@ -1,3 +1,11 @@
+## 3.18.1 — 2026-11-08
+
+- Opplasting er av som standard. Du kan aktivere den i Innstillinger → Torrenter.
+- **Tillat innkommende tilkoblinger?** Andre klienter kan koble til denne appen. Det øker eksponeringen mot nettverket. Innstillingene for brannmuren og ruteren endres ikke.
+- **Aktivere UPnP?** Ruteren blir bedt om å videresende torrentens TCP-port mens torrenter kjører. Andre klienter kan da muligens nå appen fra internett. Lagre innstillingene for å bruke endringen.
+
+[English details](../../../CHANGELOG.md#3181--2026-11-08)
+
 ## 3.18.0 — 2026-11-08
 
 ### VPN / nettverksgrensesnitt

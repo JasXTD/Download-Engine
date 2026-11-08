@@ -1,3 +1,11 @@
+## 3.18.1 — 2026-11-08
+
+- Il chargiar si è deactivà sco standard. Vus al pudais activar en Preferenzas → Torrents.
+- **Permetter connexiuns d’entrada?** Auters peers pon sa connectar cun questa app. Quai augmenta l’exposiziun a la rait. Las configuraziuns dal firewall e dal router restan invariadas.
+- **Activar UPnP?** Durant che torrents èn activs, vegn il router dumandà da rediriger il port TCP dal torrent. Auters peers pon alura eventualmain cuntanscher l’app via l’internet. Memorisai las preferenzas per applitgar questa midada.
+
+[English details](../../../CHANGELOG.md#3181--2026-11-08)
+
 ## 3.18.0 — 2026-11-08
 
 ### VPN / interfatscha da rait

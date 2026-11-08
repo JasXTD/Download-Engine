@@ -407,6 +407,19 @@ impl Desktop {
             self.open_torrent_location(&job, mode == "torrent-rename");
             return;
         }
+        if matches!(mode, "torrent-warning-incoming" | "torrent-warning-upnp") {
+            self.open_preferences_window();
+            let draft = self.preferences_window.as_mut().unwrap();
+            draft.category = preferences_window::Category::Torrents;
+            draft.torrents.enabled = true;
+            draft.network_warning = Some(if mode == "torrent-warning-upnp" {
+                draft.torrents.incoming_port = Some(6881);
+                preferences_window::TorrentNetworkWarning::Upnp
+            } else {
+                preferences_window::TorrentNetworkWarning::Incoming
+            });
+            return;
+        }
         if matches!(
             mode,
             "torrent-sharing-preferences"
@@ -422,6 +435,7 @@ impl Desktop {
             let draft = self.preferences_window.as_mut().unwrap();
             draft.category = preferences_window::Category::Torrents;
             draft.torrents.enabled = true;
+            draft.torrents.upload = true;
             draft.torrents.seed_completed = true;
             draft.torrents.incoming_port = Some(6881);
             draft.torrents.upnp = mode.starts_with("torrent-router");
@@ -624,7 +638,11 @@ impl Desktop {
             ui.add_space(4.0);
             for line in [
                 tr("Your computer connects directly to other people. They can see your IP address."),
-                tr("While it downloads, your computer also uploads pieces to them."),
+                if self.torrents.settings.upload {
+                    tr("While it downloads, your computer also uploads pieces to them.")
+                } else {
+                    tr("Uploading is off by default. You can enable it in Preferences → Torrents.")
+                },
                 tr("Security apps may show blocked addresses while a torrent runs."),
                 tr("Only download files you have the right to use."),
             ] {
@@ -1455,6 +1473,25 @@ mod tests {
     }
 
     #[test]
+    fn torrent_consent_describes_the_profiles_actual_upload_choice() {
+        for upload in [false, true] {
+            let (_temp, mut app, ctx) = fixture();
+            app.torrents.settings.upload = upload;
+            app.store
+                .save_torrent_settings(&app.torrents.settings)
+                .unwrap();
+            let output = paste_magnet(&mut app, &ctx);
+            let expected = if upload {
+                "While it downloads, your computer also uploads pieces to them."
+            } else {
+                "Uploading is off by default. You can enable it in Preferences → Torrents."
+            };
+            assert!(shown(&output, &format!("• {expected}")));
+            assert!(!app.store.torrents.is_running());
+        }
+    }
+
+    #[test]
     fn a_magnet_link_asks_first_and_nothing_starts_until_the_answer_is_yes() {
         let (_temp, mut app, ctx) = fixture();
         assert!(!app.torrents.settings.enabled, "off by default");
@@ -1476,6 +1513,8 @@ mod tests {
         click(&mut app, &ctx, "Turn on torrents");
         assert!(app.torrents.question.is_none());
         assert!(app.torrents.settings.enabled);
+        assert!(!app.torrents.settings.upload);
+        assert!(!app.store.torrent_settings().unwrap().upload);
         assert!(
             app.store.torrent_settings().unwrap().enabled,
             "yes turns on the Preferences switch"

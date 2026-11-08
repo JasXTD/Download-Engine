@@ -31,6 +31,11 @@ librqbit-dht = "9.1.0"
 librqbit-dualstack-sockets = "0.7"
 librqbit-peer-protocol = "9.1.0"
 librqbit-tracker-comms = "9.1.0"
+librqbit-utp = { path = "../vendor/librqbit-utp" }
+# Already locked and used by the application; MSE uses legacy DH and SHA-1.
+num-bigint = "=0.4.8"
+getrandom = "=0.4.3"
+zeroize = "1.9.1"
 parking_lot = "0.12"
 # Reads the router's answers for router setup. The app already uses this version, so its
 # build gains no crate.

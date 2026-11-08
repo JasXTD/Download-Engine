@@ -120,9 +120,19 @@ as a media file. These are capabilities of the shipped readers, not additional
 - **Sharing** settings live in **Preferences → Torrents**: uploads, upload limits and DHT. Sharing
   after completion and incoming connections are off by default, and data quotas count uploads.
   Optional UPnP router setup is available on Windows and Linux when incoming connections are on.
+- **Peer encryption:** choose Off, Prefer encryption (allows plaintext fallback), or Require
+  encryption (refuses plaintext). MSE/PE is a legacy compatibility protocol; it does not hide
+  your IP address or authenticate peers.
+- **uTP:** allow reliable UDP connections when TCP fails. Incoming connections need their
+  separate opt-in. This implementation uses CUBIC, not LEDBAT; UPnP maps TCP only.
+- **Web seeds:** download verified pieces from HTTP/HTTPS sources in a `.torrent` file and
+  keep those sources for restart recovery. Raw magnet `ws=` parameters are not imported.
 - **Limits:** torrents pause while a proxy is enabled, because the app's proxy does not carry
-  torrent traffic. Adding torrents through the CLI, scripts or MCP, peer encryption, uTP and web
-  seeds are not supported.
+  torrent traffic. Adding torrents through the CLI, scripts or MCP is not supported.
+
+Peer encryption, uTP and web seeds are new in **3.17.0**. Each starts off; enable them in
+**Preferences → Torrents → Transfers**. See the [engine notes](torrent/README.md#optional-transports)
+for transport policies and limits.
 
 The [torrent guide](docs/user-guide.md#download-torrents) covers Windows registration, sharing,
 antivirus scans and moving completed torrents; macOS and Linux file associations are in the

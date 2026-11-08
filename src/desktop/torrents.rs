@@ -413,6 +413,8 @@ impl Desktop {
                 | "torrent-sharing-network"
                 | "torrent-router-preferences"
                 | "torrent-router-working"
+                | "torrent-transports"
+                | "torrent-transports-required"
         ) {
             self.open_preferences_window();
             let draft = self.preferences_window.as_mut().unwrap();
@@ -421,6 +423,11 @@ impl Desktop {
             draft.torrents.seed_completed = true;
             draft.torrents.incoming_port = Some(6881);
             draft.torrents.upnp = mode.starts_with("torrent-router");
+            if mode == "torrent-transports-required" {
+                draft.torrents.encryption = de_torrent::mse::Encryption::Required;
+                draft.torrents.utp = true;
+                draft.torrents.web_seeds = true;
+            }
             return;
         }
         if matches!(mode, "torrent-preferences" | "torrent-windows-preferences") {

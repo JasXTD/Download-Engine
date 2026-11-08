@@ -1,3 +1,11 @@
+## 3.17.0 — 2026-11-08
+
+### Criptaziun tranter peers, uTP e funtaunas web
+
+Agiuntà opziuns per la criptaziun MSE/PE tranter peers, colliaziuns uTP e funtaunas web HTTP/HTTPS. Tut las trais èn deactivadas sco standard e pon vegnir activadas en las preferenzas da torrents. Las parts vegnan verifitgadas e las funtaunas memorisadas per cuntinuar suenter in restart. Meglierà la pausa, la cuntinuaziun e la funcziun per fermar tut. La criptaziun na zuppenta betg l’adressa IP.
+
+[English details](../../../CHANGELOG.md#3170--2026-11-08)
+
 ## 3.16.1 — 2026-11-08
 
 ### Correcturas da las configuraziuns e da la controlla

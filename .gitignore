@@ -1,6 +1,7 @@
 # Build output, release packages and local test artifacts
 /target/
 /vendor/rqbit/target/
+/vendor/librqbit-utp/target/
 /dist/
 /artifacts/
 /coverage/
@@ -96,6 +97,7 @@ node_modules/
 *.orig
 # Preserve the vendored crate's original package manifest.
 !/vendor/epaint/Cargo.toml.orig
+!/vendor/librqbit-utp/Cargo.toml.orig
 *.rej
 *.tmp
 *~

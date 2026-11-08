@@ -91,7 +91,7 @@ function Get-ReleaseSourceFiles {
             $relative = "$directory/$($entry.Name)"
             $null = Resolve-ReleasePath -Root $Root -Relative $relative
             if ($entry.PSIsContainer) {
-                if ($entry.Name -notin @('__pycache__','.git','node_modules','.venv','venv') -and $relative -cnotin @('torrent/target','vendor/rqbit/target')) { $pending.Enqueue($relative) }
+                if ($entry.Name -notin @('__pycache__','.git','node_modules','.venv','venv') -and $relative -cnotin @('torrent/target','vendor/rqbit/target','vendor/librqbit-utp/target')) { $pending.Enqueue($relative) }
             } elseif ($relative -cne 'tools/ffmpeg/ffmpeg.exe') {
                 $null = $actual.Add($relative)
             }

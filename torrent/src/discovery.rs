@@ -202,7 +202,7 @@ pub(crate) fn stays_local(url: &Url) -> bool {
 
 /// Looks up tracker names and keeps only public addresses. The address in a tracker's URL
 /// isn't enough to go on, because any name can point anywhere.
-struct PublicNames;
+pub(crate) struct PublicNames;
 
 impl Resolve for PublicNames {
     fn resolve(&self, name: Name) -> Resolving {

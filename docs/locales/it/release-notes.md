@@ -1,3 +1,11 @@
+## 3.17.0 — 2026-11-08
+
+### Cifratura dei peer, uTP e web seed
+
+Aggiunte opzioni per la cifratura MSE/PE dei peer, le connessioni uTP e i web seed HTTP/HTTPS. Sono tutte disattivate per impostazione predefinita e si possono abilitare nelle preferenze dei torrent. I pezzi vengono verificati e le fonti salvate per riprendere dopo un riavvio. Migliorate pausa, ripresa e interruzione di tutti i trasferimenti. La cifratura non nasconde l’indirizzo IP.
+
+[English details](../../../CHANGELOG.md#3170--2026-11-08)
+
 ## 3.16.1 — 2026-11-08
 
 ### Correzioni alle impostazioni e ai comandi

@@ -208,6 +208,20 @@
       "upstreamSource": "https://crates.io/crates/bitflags/2.13.2"
     },
     {
+      "name": "bitvec",
+      "version": "1.1.1",
+      "license": "MIT",
+      "selectedLicense": "MIT",
+      "authors": [],
+      "repository": "https://github.com/bitvecto-rs/bitvec",
+      "checksum": "ddcec3d12c579d40898fe0a9a358a803c23e9c52ca3c425707f81c9436211837",
+      "notices": [
+        "rust/bitvec-1.1.1/LICENSE.txt"
+      ],
+      "source": null,
+      "upstreamSource": "https://crates.io/crates/bitvec/1.1.1"
+    },
+    {
       "name": "block-buffer",
       "version": "0.10.4",
       "license": "MIT OR Apache-2.0",
@@ -489,6 +503,21 @@
       "upstreamSource": "https://crates.io/crates/crc32fast/1.5.2"
     },
     {
+      "name": "crossbeam-utils",
+      "version": "0.8.23",
+      "license": "MIT OR Apache-2.0",
+      "selectedLicense": "MIT OR Apache-2.0",
+      "authors": [],
+      "repository": "https://github.com/crossbeam-rs/crossbeam",
+      "checksum": "a31eee39dddec8330830986fcd7625edb5a24ec90ea038215273bbc3adb08ac6",
+      "notices": [
+        "rust/crossbeam-utils-0.8.23/LICENSE-APACHE",
+        "rust/crossbeam-utils-0.8.23/LICENSE-MIT"
+      ],
+      "source": null,
+      "upstreamSource": "https://crates.io/crates/crossbeam-utils/0.8.23"
+    },
+    {
       "name": "crypto-common",
       "version": "0.1.7",
       "license": "MIT OR Apache-2.0",
@@ -637,6 +666,23 @@
       ],
       "source": null,
       "upstreamSource": "https://crates.io/crates/document-features/0.2.12"
+    },
+    {
+      "name": "dontfrag",
+      "version": "1.0.1",
+      "license": "MIT OR Apache-2.0",
+      "selectedLicense": "MIT OR Apache-2.0",
+      "authors": [
+        "N. Nattis <contact@nicbn.com>"
+      ],
+      "repository": "https://github.com/nicbn/dontfrag-rs",
+      "checksum": "c117949f5a8b25ba471b4dfea927a07a2f8730c585532a2eb4294e18f5155397",
+      "notices": [
+        "rust/dontfrag-1.0.1/LICENSE-APACHE",
+        "rust/dontfrag-1.0.1/LICENSE-MIT"
+      ],
+      "source": null,
+      "upstreamSource": "https://crates.io/crates/dontfrag/1.0.1"
     },
     {
       "name": "dpi",
@@ -1136,6 +1182,22 @@
       ],
       "source": null,
       "upstreamSource": "https://crates.io/crates/form_urlencoded/1.2.2"
+    },
+    {
+      "name": "funty",
+      "version": "2.0.0",
+      "license": "MIT",
+      "selectedLicense": "MIT",
+      "authors": [
+        "myrrlyn <self@myrrlyn.dev>"
+      ],
+      "repository": "https://github.com/myrrlyn/funty",
+      "checksum": "e6d5a32815ae3f33302d95fdcb2ce17862f8c65363dcfd29360480ba1001fc9c",
+      "notices": [
+        "rust/funty-2.0.0/LICENSE.txt"
+      ],
+      "source": null,
+      "upstreamSource": "https://crates.io/crates/funty/2.0.0"
     },
     {
       "name": "futures-channel",
@@ -1957,6 +2019,23 @@
       "upstreamSource": "https://crates.io/crates/kurbo/0.13.1"
     },
     {
+      "name": "lazy_static",
+      "version": "1.5.1",
+      "license": "MIT OR Apache-2.0",
+      "selectedLicense": "MIT OR Apache-2.0",
+      "authors": [
+        "Marvin Löbel <loebel.marvin@gmail.com>"
+      ],
+      "repository": "https://github.com/rust-lang-nursery/lazy-static.rs",
+      "checksum": "20870f649af7073d53e38067b2a84312175d56ea15217e1b15bc83506ec50afb",
+      "notices": [
+        "rust/lazy_static-1.5.1/LICENSE-APACHE",
+        "rust/lazy_static-1.5.1/LICENSE-MIT"
+      ],
+      "source": null,
+      "upstreamSource": "https://crates.io/crates/lazy_static/1.5.1"
+    },
+    {
       "name": "libc",
       "version": "0.2.190",
       "license": "MIT OR Apache-2.0",
@@ -2158,6 +2237,24 @@
       "modifiedCopy": "vendor/rqbit/librqbit-tracker-comms",
       "modification": "the BitTorrent formats and network protocols, adapted and maintained for Download Engine",
       "changes": "vendor/rqbit/patch.md"
+    },
+    {
+      "name": "librqbit-utp",
+      "version": "0.7.0",
+      "license": "Apache-2.0",
+      "selectedLicense": "Apache-2.0",
+      "authors": [],
+      "repository": "https://github.com/ikatson/librqbit-utp",
+      "checksum": "4f3bfdc73944bc76cab24d5690a98816770040a654c449edf5ff2b9ba22626aa",
+      "notices": [
+        "rust/librqbit-utp-0.7.0/LICENSE",
+        "rust/librqbit-utp-0.7.0/LICENSE-APACHE"
+      ],
+      "source": null,
+      "upstreamSource": "https://crates.io/crates/librqbit-utp/0.7.0",
+      "modifiedCopy": "vendor/librqbit-utp",
+      "modification": "bounded packet queues, connection admission, packet serialization and cancellation fixes",
+      "changes": "vendor/librqbit-utp/patch.md"
     },
     {
       "name": "libsqlite3-sys",
@@ -2541,6 +2638,40 @@
       "upstreamSource": "https://crates.io/crates/nohash-hasher/0.2.0"
     },
     {
+      "name": "num-bigint",
+      "version": "0.4.8",
+      "license": "MIT OR Apache-2.0",
+      "selectedLicense": "MIT OR Apache-2.0",
+      "authors": [
+        "The Rust Project Developers"
+      ],
+      "repository": "https://github.com/rust-num/num-bigint",
+      "checksum": "c89e69e7e0f03bea5ef08013795c25018e101932225a656383bd384495ecc367",
+      "notices": [
+        "rust/num-bigint-0.4.8/LICENSE-APACHE",
+        "rust/num-bigint-0.4.8/LICENSE-MIT"
+      ],
+      "source": null,
+      "upstreamSource": "https://crates.io/crates/num-bigint/0.4.8"
+    },
+    {
+      "name": "num-integer",
+      "version": "0.1.47",
+      "license": "MIT OR Apache-2.0",
+      "selectedLicense": "MIT OR Apache-2.0",
+      "authors": [
+        "The Rust Project Developers"
+      ],
+      "repository": "https://github.com/rust-num/num-integer",
+      "checksum": "7ce2d95d4b3734dc35aa2f45e1aa22cd416814592a4f9d9205e11affd5b8e10b",
+      "notices": [
+        "rust/num-integer-0.1.47/LICENSE-APACHE",
+        "rust/num-integer-0.1.47/LICENSE-MIT"
+      ],
+      "source": null,
+      "upstreamSource": "https://crates.io/crates/num-integer/0.1.47"
+    },
+    {
       "name": "num-traits",
       "version": "0.2.19",
       "license": "MIT OR Apache-2.0",
@@ -2802,6 +2933,36 @@
       "upstreamSource": "https://crates.io/crates/polycool/0.4.0"
     },
     {
+      "name": "portable-atomic",
+      "version": "1.15.0",
+      "license": "Apache-2.0 OR MIT",
+      "selectedLicense": "Apache-2.0 OR MIT",
+      "authors": [],
+      "repository": "https://github.com/taiki-e/portable-atomic",
+      "checksum": "05c8b63e8d9609db387f0324918f81d68fe27748f084ef092fb35954d0539a85",
+      "notices": [
+        "rust/portable-atomic-1.15.0/LICENSE-APACHE",
+        "rust/portable-atomic-1.15.0/LICENSE-MIT"
+      ],
+      "source": null,
+      "upstreamSource": "https://crates.io/crates/portable-atomic/1.15.0"
+    },
+    {
+      "name": "portable-atomic-util",
+      "version": "0.2.8",
+      "license": "Apache-2.0 OR MIT",
+      "selectedLicense": "Apache-2.0 OR MIT",
+      "authors": [],
+      "repository": "https://github.com/taiki-e/portable-atomic-util",
+      "checksum": "10ab3eb7f3becc3a1cbc4f2c6f20267996cfc1a6467a873763411b136a122715",
+      "notices": [
+        "rust/portable-atomic-util-0.2.8/LICENSE-APACHE",
+        "rust/portable-atomic-util-0.2.8/LICENSE-MIT"
+      ],
+      "source": null,
+      "upstreamSource": "https://crates.io/crates/portable-atomic-util/0.2.8"
+    },
+    {
       "name": "potential_utf",
       "version": "0.1.6",
       "license": "Unicode-3.0",
@@ -2816,6 +2977,23 @@
       ],
       "source": null,
       "upstreamSource": "https://crates.io/crates/potential_utf/0.1.6"
+    },
+    {
+      "name": "ppv-lite86",
+      "version": "0.2.21",
+      "license": "MIT OR Apache-2.0",
+      "selectedLicense": "MIT OR Apache-2.0",
+      "authors": [
+        "The CryptoCorrosion Contributors"
+      ],
+      "repository": "https://github.com/cryptocorrosion/cryptocorrosion",
+      "checksum": "85eae3c4ed2f50dcfe72643da4befc30deadb458a9b590d720cde2f2b1e97da9",
+      "notices": [
+        "rust/ppv-lite86-0.2.21/LICENSE-APACHE",
+        "rust/ppv-lite86-0.2.21/LICENSE-MIT"
+      ],
+      "source": null,
+      "upstreamSource": "https://crates.io/crates/ppv-lite86/0.2.21"
     },
     {
       "name": "precomputed-hash",
@@ -2934,6 +3112,43 @@
       "upstreamSource": "https://crates.io/crates/quote/1.0.47"
     },
     {
+      "name": "radium",
+      "version": "0.7.0",
+      "license": "MIT",
+      "selectedLicense": "MIT",
+      "authors": [
+        "Nika Layzell <nika@thelayzells.com>",
+        "myrrlyn <self@myrrlyn.dev>"
+      ],
+      "repository": "https://github.com/bitvecto-rs/radium",
+      "checksum": "dc33ff2d4973d518d823d61aa239014831e521c75da58e3df4840d3f47749d09",
+      "notices": [
+        "rust/radium-0.7.0/LICENSE.txt"
+      ],
+      "source": null,
+      "upstreamSource": "https://crates.io/crates/radium/0.7.0"
+    },
+    {
+      "name": "rand_chacha",
+      "version": "0.9.0",
+      "license": "MIT OR Apache-2.0",
+      "selectedLicense": "MIT OR Apache-2.0",
+      "authors": [
+        "The Rand Project Developers",
+        "The Rust Project Developers",
+        "The CryptoCorrosion Contributors"
+      ],
+      "repository": "https://github.com/rust-random/rand",
+      "checksum": "d3022b5f1df60f26e1ffddd6c66e8aa15de382ae63b3a0c1bfc0e4d3e3f325cb",
+      "notices": [
+        "rust/rand_chacha-0.9.0/COPYRIGHT",
+        "rust/rand_chacha-0.9.0/LICENSE-APACHE",
+        "rust/rand_chacha-0.9.0/LICENSE-MIT"
+      ],
+      "source": null,
+      "upstreamSource": "https://crates.io/crates/rand_chacha/0.9.0"
+    },
+    {
       "name": "rand_core",
       "version": "0.6.4",
       "license": "MIT OR Apache-2.0",
@@ -2951,6 +3166,44 @@
       ],
       "source": null,
       "upstreamSource": "https://crates.io/crates/rand_core/0.6.4"
+    },
+    {
+      "name": "rand_core",
+      "version": "0.9.5",
+      "license": "MIT OR Apache-2.0",
+      "selectedLicense": "MIT OR Apache-2.0",
+      "authors": [
+        "The Rand Project Developers",
+        "The Rust Project Developers"
+      ],
+      "repository": "https://github.com/rust-random/rand",
+      "checksum": "76afc826de14238e6e8c374ddcc1fa19e374fd8dd986b0d2af0d02377261d83c",
+      "notices": [
+        "rust/rand_core-0.9.5/COPYRIGHT",
+        "rust/rand_core-0.9.5/LICENSE-APACHE",
+        "rust/rand_core-0.9.5/LICENSE-MIT"
+      ],
+      "source": null,
+      "upstreamSource": "https://crates.io/crates/rand_core/0.9.5"
+    },
+    {
+      "name": "rand",
+      "version": "0.9.5",
+      "license": "MIT OR Apache-2.0",
+      "selectedLicense": "MIT OR Apache-2.0",
+      "authors": [
+        "The Rand Project Developers",
+        "The Rust Project Developers"
+      ],
+      "repository": "https://github.com/rust-random/rand",
+      "checksum": "b9ef1d0d795eb7d84685bca4f72f3649f064e6641543d3a8c415898726a57b41",
+      "notices": [
+        "rust/rand-0.9.5/COPYRIGHT",
+        "rust/rand-0.9.5/LICENSE-APACHE",
+        "rust/rand-0.9.5/LICENSE-MIT"
+      ],
+      "source": null,
+      "upstreamSource": "https://crates.io/crates/rand/0.9.5"
     },
     {
       "name": "raw-window-handle",
@@ -3018,6 +3271,23 @@
       ],
       "source": null,
       "upstreamSource": "https://crates.io/crates/reqwest/0.13.5"
+    },
+    {
+      "name": "ringbuf",
+      "version": "0.4.8",
+      "license": "MIT/Apache-2.0",
+      "selectedLicense": "MIT/Apache-2.0",
+      "authors": [
+        "Alexey Gerasev <alexey.gerasev@gmail.com>"
+      ],
+      "repository": "https://github.com/agerasev/ringbuf.git",
+      "checksum": "fe47b720588c8702e34b5979cb3271a8b1842c7cb6f57408efa70c779363488c",
+      "notices": [
+        "rust/ringbuf-0.4.8/LICENSE-APACHE",
+        "rust/ringbuf-0.4.8/LICENSE-MIT"
+      ],
+      "source": null,
+      "upstreamSource": "https://crates.io/crates/ringbuf/0.4.8"
     },
     {
       "name": "rusqlite",
@@ -3680,6 +3950,23 @@
       "upstreamSource": "https://crates.io/crates/synstructure/0.14.0"
     },
     {
+      "name": "tap",
+      "version": "1.0.1",
+      "license": "MIT",
+      "selectedLicense": "MIT",
+      "authors": [
+        "Elliott Linder <elliott.darfink@gmail.com>",
+        "myrrlyn <self@myrrlyn.dev>"
+      ],
+      "repository": "https://github.com/myrrlyn/tap",
+      "checksum": "55937e1799185b12863d447f42597ed69d9928686b8d88a1df17376a097d8369",
+      "notices": [
+        "rust/tap-1.0.1/LICENSE.txt"
+      ],
+      "source": null,
+      "upstreamSource": "https://crates.io/crates/tap/1.0.1"
+    },
+    {
       "name": "tempfile",
       "version": "3.27.0",
       "license": "MIT OR Apache-2.0",
@@ -3928,6 +4215,24 @@
       ],
       "source": null,
       "upstreamSource": "https://crates.io/crates/tracing/0.1.44"
+    },
+    {
+      "name": "tracing-attributes",
+      "version": "0.1.31",
+      "license": "MIT",
+      "selectedLicense": "MIT",
+      "authors": [
+        "Tokio Contributors <team@tokio.rs>",
+        "Eliza Weisman <eliza@buoyant.io>",
+        "David Barsky <dbarsky@amazon.com>"
+      ],
+      "repository": "https://github.com/tokio-rs/tracing",
+      "checksum": "7490cfa5ec963746568740651ac6781f701c9c5ea257c58e057f3ba8cf69e8da",
+      "notices": [
+        "rust/tracing-attributes-0.1.31/LICENSE"
+      ],
+      "source": null,
+      "upstreamSource": "https://crates.io/crates/tracing-attributes/0.1.31"
     },
     {
       "name": "tracing-core",
@@ -4727,6 +5032,22 @@
       ],
       "source": null,
       "upstreamSource": "https://crates.io/crates/writeable/0.6.4"
+    },
+    {
+      "name": "wyz",
+      "version": "0.5.1",
+      "license": "MIT",
+      "selectedLicense": "MIT",
+      "authors": [
+        "myrrlyn <self@myrrlyn.dev>"
+      ],
+      "repository": "https://github.com/myrrlyn/wyz",
+      "checksum": "05f360fc0b24296329c78fda852a1e9ae82de9cf7b27dae4b7f62f118f77b9ed",
+      "notices": [
+        "rust/wyz-0.5.1/LICENSE.txt"
+      ],
+      "source": null,
+      "upstreamSource": "https://crates.io/crates/wyz/0.5.1"
     },
     {
       "name": "xml-rs",

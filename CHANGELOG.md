@@ -2,6 +2,23 @@
 
 Release notes are available offline in Help → Changelog. Newest releases appear first.
 
+## 3.17.0 — 2026-11-08
+
+### Peer encryption, uTP and web seeds
+
+- Added three optional transports in Preferences → Torrents → Transfers. All start off, including for existing profiles; proxy and private-address restrictions apply to every transport.
+- Peer encryption offers Off, Prefer encryption (allows a fresh plaintext fallback) and Require encryption (refuses plaintext), using the MSE/PE compatibility protocol. Encryption does not hide your IP address or authenticate peers.
+- Allow uTP connections tries reliable UDP when TCP fails. Incoming uTP requires incoming connections to be enabled separately. uTP uses CUBIC congestion control rather than LEDBAT; automatic UPnP forwarding remains TCP-only.
+- Use web seeds downloads from HTTP/HTTPS sources embedded in torrent files, verifies every piece and retains sources for restart recovery. Redirects, incorrect ranges and private addresses are rejected. Raw magnet `ws=` parameters are not imported.
+
+### Reliability and transport hardening
+
+- Reviewed and patched the vendored uTP source: bounded packet queues, validated connection IDs, corrected extension serialization, capped connections and joined socket tasks on shutdown.
+- Fixed uTP Pause/Stop teardown to notify peers with a current sequence/ACK reset without flushing pending uploads, allowing encrypted peers to reconnect and resume reliably.
+- Discard corrupt web seeds for the current run and back off transient failures; progress counts verified pieces only.
+- Wait for pending peer disk writes when pausing or stopping, preventing writes from outliving a cancelled connection.
+- Prevent duplicate peer blocks from writing over a piece while its completed data is being verified.
+
 ## 3.16.1 — 2026-11-08
 
 ### Settings and control fixes

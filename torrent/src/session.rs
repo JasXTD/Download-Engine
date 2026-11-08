@@ -20,18 +20,23 @@ use crate::admission::Admission;
 use crate::debug_log;
 use crate::discovery::{Discovery, DiscoveryOptions};
 use crate::meta::{TorrentMeta, usable_tracker};
+use crate::mse::{self, Encryption};
 use crate::peer::read_handshake;
 use crate::rate::ByteLimiter;
 use crate::reason::{self, Reason};
 use crate::resume;
 use crate::router::{self, RouterState};
 use crate::torrent::{Context, Torrent, TorrentOptions, TorrentStats, Totals};
+use crate::transport::Peers;
 
 /// Connections that haven't said which torrent they want yet.
 const MAX_PENDING_HANDSHAKES: usize = 32;
 
 #[derive(Clone, Default)]
 pub struct SessionOptions {
+    pub encryption: Encryption,
+    pub use_utp: bool,
+    pub web_seeds: bool,
     /// Incoming connections stay off unless a port is set.
     pub listen_port: Option<u16>,
     pub upload_limit: Option<u32>,
@@ -167,12 +172,16 @@ pub struct Session {
     torrents: Mutex<BTreeMap<String, Arc<Torrent>>>,
     cancel: CancellationToken,
     listener: tokio::sync::Mutex<Option<tokio::task::JoinHandle<()>>>,
+    utp_listener: tokio::sync::Mutex<Option<tokio::task::JoinHandle<()>>>,
+    pending: Arc<Admission>,
+    handshakes: tokio_util::task::TaskTracker,
     router: Mutex<Option<RouterTask>>,
 }
 
 impl Session {
     pub async fn new(options: SessionOptions) -> Result<Arc<Self>> {
         let cancel = CancellationToken::new();
+        let startup = cancel.clone().drop_guard();
         let peer_id = librqbit_core::peer_id::generate_azereus_style(*b"DE", (0, 1, 0, 0));
         let discovery = if options.use_trackers || options.use_dht {
             Some(Discovery::new(
@@ -191,6 +200,14 @@ impl Session {
             None
         };
         let context = Context {
+            peers: Peers::new(
+                options.encryption,
+                options.use_utp,
+                options.listen_port,
+                options.allow_loopback_peers,
+                cancel.clone(),
+            )
+            .await?,
             peer_id,
             up: Arc::new(ByteLimiter::new(options.upload_limit)),
             down: Arc::new(ByteLimiter::new(options.download_limit)),
@@ -204,16 +221,30 @@ impl Session {
             torrents: Mutex::default(),
             cancel,
             listener: tokio::sync::Mutex::new(None),
+            utp_listener: tokio::sync::Mutex::new(None),
+            pending: Admission::new(MAX_PENDING_HANDSHAKES),
+            handshakes: tokio_util::task::TaskTracker::new(),
             router: Mutex::new(None),
         });
         if let Some(port) = session.options.listen_port {
-            let listener = bind(port)?;
+            let listener = match bind(port) {
+                Ok(listener) => listener,
+                Err(error) => {
+                    session.context.peers.shutdown().await;
+                    return Err(error);
+                }
+            };
             *session.listener.lock().await = Some(tokio::spawn(session.clone().listen(listener)));
+            if session.options.use_utp {
+                *session.utp_listener.lock().await =
+                    Some(tokio::spawn(session.clone().listen_utp()));
+            }
             // Only once something listens, and only when the person turned it on.
             if session.options.upnp {
                 *session.router.lock() = Some(start_router(port));
             }
         }
+        startup.disarm();
         Ok(session)
     }
 
@@ -253,6 +284,7 @@ impl Session {
             .take(MAX_TRACKERS)
             .collect();
         TorrentOptions {
+            web_seeds: self.options.web_seeds,
             output: add.output,
             only: add.only,
             peers: add.peers,
@@ -309,6 +341,11 @@ impl Session {
     ) -> Result<String> {
         let meta = Arc::new(TorrentMeta::from_torrent_file(bytes)?);
         let options = self.torrent_options(add);
+        if let Some(state_dir) = &options.state_dir {
+            let meta = meta.clone();
+            let state_dir = state_dir.clone();
+            tokio::task::spawn_blocking(move || resume::save_info(&state_dir, &meta)).await??;
+        }
         let torrent = Torrent::from_meta(meta, options, self.context.clone())?;
         let torrent = self.insert(name, torrent)?;
         torrent.start().await;
@@ -476,6 +513,16 @@ impl Session {
             }
             *listener = None;
         }
+        let mut utp_listener = self.utp_listener.lock().await;
+        if let Some(task) = utp_listener.as_mut() {
+            if let Err(error) = task.await {
+                debug_log!("uTP listener ended unexpectedly: {error}");
+            }
+            *utp_listener = None;
+        }
+        self.handshakes.close();
+        self.handshakes.wait().await;
+        self.context.peers.shutdown().await;
         // The port is closed first, so a new helper can use it while the rule goes.
         let router = self.router.lock().take();
         if let Some(router) = router {
@@ -484,7 +531,6 @@ impl Session {
     }
 
     async fn listen(self: Arc<Self>, listener: TcpListener) {
-        let pending = Admission::new(MAX_PENDING_HANDSHAKES);
         loop {
             let accepted = tokio::select! {
                 _ = self.cancel.cancelled() => return,
@@ -499,15 +545,18 @@ impl Session {
                 }
             };
             // When strangers are this busy, dropping one costs us nothing.
-            let Some(permit) = pending.try_acquire(Some(addr)) else {
+            let Some(permit) = self.pending.try_acquire(Some(addr)) else {
                 continue;
             };
             let session = self.clone();
-            tokio::spawn(async move {
+            self.handshakes.spawn(async move {
                 let _permit = permit;
+                if stream.set_nodelay(true).is_err() {
+                    return;
+                }
                 let result = tokio::select! {
                     _ = session.cancel.cancelled() => return,
-                    result = session.accept(stream, addr) => result,
+                    result = session.accept(Box::new(stream), addr) => result,
                 };
                 if let Err(error) = result {
                     debug_log!("incoming peer {addr}: {error:#}");
@@ -516,16 +565,55 @@ impl Session {
         }
     }
 
-    async fn accept(&self, mut stream: tokio::net::TcpStream, addr: SocketAddr) -> Result<()> {
-        stream.set_nodelay(true)?;
+    async fn listen_utp(self: Arc<Self>) {
+        loop {
+            let accepted = tokio::select! {
+                _ = self.cancel.cancelled() => return,
+                result = self.context.peers.accept_utp() => result,
+            };
+            let (stream, addr) = match accepted {
+                Ok(value) => value,
+                Err(error) => {
+                    debug_log!("uTP listener stopped: {error:#}");
+                    return;
+                }
+            };
+            let Some(permit) = self.pending.try_acquire(Some(addr)) else {
+                continue;
+            };
+            let session = self.clone();
+            self.handshakes.spawn(async move {
+                let _permit = permit;
+                tokio::select! {
+                    _ = session.cancel.cancelled() => {},
+                    result = session.accept(stream, addr) => {
+                        if let Err(error) = result { debug_log!("incoming uTP peer failed: {error:#}"); }
+                    },
+                }
+            });
+        }
+    }
+
+    async fn accept(&self, stream: crate::peer::BoxedStream, addr: SocketAddr) -> Result<()> {
+        let hashes = self
+            .all()
+            .into_iter()
+            .map(|(_, torrent)| torrent.info_hash())
+            .collect();
+        let (mut stream, encrypted_hash) =
+            mse::incoming(stream, self.options.encryption, hashes).await?;
         let (info_hash, hello) = read_handshake(&mut stream).await?;
+        anyhow::ensure!(
+            encrypted_hash.is_none_or(|hash| hash == info_hash),
+            "Peer changed torrent after encryption negotiation"
+        );
         let torrent = self
             .all()
             .into_iter()
             .map(|(_, torrent)| torrent)
             .find(|torrent| torrent.info_hash() == info_hash)
             .context("peer asked for a torrent we don't have")?;
-        torrent.offer(Box::new(stream), addr, hello)
+        torrent.offer(stream, addr, hello)
     }
 }
 

@@ -58,6 +58,7 @@ const patchedCrates = {
 // Crates copied from rqbit and maintained here. Their notices come from the copies, which
 // are all in the source release, so the original crates are not needed in Cargo's cache.
 const copiedCrates = {
+  'librqbit-utp': { version: '0.7.0', checksum: '4f3bfdc73944bc76cab24d5690a98816770040a654c449edf5ff2b9ba22626aa', path: 'vendor/librqbit-utp', change: 'bounded packet queues, connection admission, packet serialization and cancellation fixes', changes: 'vendor/librqbit-utp/patch.md' },
   'librqbit-bencode': { version: '9.1.0', checksum: '0cf295fa65b3ad66bd363a5d3a278730352745b72ff0f5b6e6010612351924e5' },
   'librqbit-buffers': { version: '9.1.0', checksum: '6a11501f6b2d68169725cf9e030d5ad7a9ede4b3839a9e16a27c4faef7507c8c' },
   'librqbit-clone-to-owned': { version: '9.1.0', checksum: 'c611ae410046c2e2cc90b0f300d53fe368d5129f26d822cede8f605f33f7fa84' },
@@ -77,7 +78,7 @@ for (const pkg of metadata.packages.filter(p => !p.source && !workspace.has(p.id
   if (ownCrates.has(pkg.name)) continue;
   const copy = copiedCrates[pkg.name];
   if (copy) {
-    if (copy.version !== pkg.version || path.resolve(path.dirname(pkg.manifest_path)) !== path.resolve(root, 'vendor/rqbit', pkg.name)) {
+    if (copy.version !== pkg.version || path.resolve(path.dirname(pkg.manifest_path)) !== path.resolve(root, copy.path || `vendor/rqbit/${pkg.name}`)) {
       throw new Error(`Unreviewed local dependency: ${pkg.name} ${pkg.version}`);
     }
     pkg.copied = copy;
@@ -172,7 +173,7 @@ for (const pkg of metadata.packages.filter(p => p.copied)) {
     authors: pkg.authors, repository: pkg.repository, checksum: pkg.copied.checksum,
     notices: notices.map(([name]) => `rust/${id}/${name.replaceAll('\\', '/')}`),
     source: null, upstreamSource: `https://crates.io/crates/${pkg.name}/${pkg.version}`,
-    modifiedCopy: `vendor/rqbit/${pkg.name}`, modification: copiedChange, changes: 'vendor/rqbit/patch.md' });
+    modifiedCopy: pkg.copied.path || `vendor/rqbit/${pkg.name}`, modification: pkg.copied.change || copiedChange, changes: pkg.copied.changes || 'vendor/rqbit/patch.md' });
 }
 inventory.sort((a, b) => `${a.name}-${a.version}`.localeCompare(`${b.name}-${b.version}`, 'en'));
 add('docs/licenses/rust-dependencies.json', JSON.stringify({ target, scope: target === 'x86_64-pc-windows-msvc' ? 'Locked Windows dependency graph, including build and test dependencies; not every listed crate is linked into the runtime.' : 'Locked native dependency graph, including build and test dependencies; not every listed crate is linked into the runtime.', packages: inventory }, null, 2) + '\n');

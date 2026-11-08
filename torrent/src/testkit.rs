@@ -146,6 +146,7 @@ pub fn context(id: u8) -> Context {
 
 pub fn limited_context(id: u8, upload_limit: Option<u32>) -> Context {
     Context {
+        peers: Arc::default(),
         peer_id: Id20::new([id; 20]),
         up: Arc::new(ByteLimiter::new(upload_limit)),
         down: Arc::new(ByteLimiter::new(None)),

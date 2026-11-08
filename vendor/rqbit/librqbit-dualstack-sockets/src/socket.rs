@@ -293,6 +293,11 @@ impl MaybeDualstackSocket<tokio::net::UdpSocket> {
         self.socket.send_to(buf, target).await
     }
 
+    /// A nonblocking datagram send, without replacing another sender's task waker.
+    pub fn try_send_to(&self, buf: &[u8], target: SocketAddr) -> std::io::Result<usize> {
+        self.socket.try_send_to(buf, self.convert_addr_for_send(target))
+    }
+
     pub fn poll_send_to(
         &self,
         cx: &mut std::task::Context<'_>,

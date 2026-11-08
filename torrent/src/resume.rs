@@ -105,7 +105,11 @@ pub fn save_info(state_dir: &Path, meta: &TorrentMeta) -> io::Result<()> {
     let path = info_path_for(state_dir, meta.info_hash);
     let temporary = path.with_extension("tmp");
     fs::write(&temporary, &meta.info_bytes)?;
-    fs::rename(&temporary, &path)
+    fs::rename(&temporary, &path)?;
+    let seeds = path.with_extension("webseeds.json");
+    let temporary = seeds.with_extension("tmp");
+    fs::write(&temporary, serde_json::to_vec(&meta.web_seeds)?)?;
+    fs::rename(temporary, seeds)
 }
 
 /// Returns a torrent's saved details. They only count if they still match the hash.
@@ -115,7 +119,26 @@ pub fn load_info(state_dir: &Path, info_hash: Id20, trackers: Vec<Url>) -> Optio
         return None;
     }
     let bytes = fs::read(path).ok()?;
-    TorrentMeta::from_info_bytes(info_hash, bytes.into(), trackers).ok()
+    let mut meta = TorrentMeta::from_info_bytes(info_hash, bytes.into(), trackers).ok()?;
+    // Seeds live outside the hashed info dictionary. Bound and revalidate the optional
+    // sidecar; a missing/corrupt sidecar must not prevent recovering verified pieces.
+    use std::io::Read;
+    if let Ok(file) =
+        fs::File::open(info_path_for(state_dir, info_hash).with_extension("webseeds.json"))
+    {
+        let mut bytes = Vec::new();
+        if file.take(128 * 1024 + 1).read_to_end(&mut bytes).is_ok()
+            && bytes.len() <= 128 * 1024
+            && let Ok(seeds) = serde_json::from_slice::<Vec<crate::webseed::Seed>>(&bytes)
+            && seeds.len() <= crate::webseed::MAX_SEEDS
+        {
+            meta.web_seeds = seeds
+                .into_iter()
+                .filter(|s| crate::webseed::checked_url(&s.url, true).is_some())
+                .collect();
+        }
+    }
+    Some(meta)
 }
 
 #[cfg(test)]
@@ -123,6 +146,43 @@ mod tests {
     use super::*;
     use crate::testkit::{TempFolder, meta_of, sample_bytes, single_file_torrent, touch_later};
     use std::sync::Arc;
+
+    #[test]
+    fn web_seed_sidecar_round_trips_and_is_bounded() {
+        let folder = TempFolder::new();
+        let mut meta =
+            TorrentMeta::from_torrent_file(&single_file_torrent("a.bin", b"abcd", 16384)).unwrap();
+        meta.web_seeds = vec![crate::webseed::Seed {
+            kind: crate::webseed::Kind::UrlList,
+            url: "https://example.org/a.bin?token=value".into(),
+        }];
+        save_info(&folder.path(), &meta).unwrap();
+        assert_eq!(
+            load_info(&folder.path(), meta.info_hash, vec![])
+                .unwrap()
+                .web_seeds,
+            meta.web_seeds
+        );
+        fs::write(
+            info_path_for(&folder.path(), meta.info_hash).with_extension("webseeds.json"),
+            vec![b' '; 128 * 1024 + 1],
+        )
+        .unwrap();
+        assert!(
+            load_info(&folder.path(), meta.info_hash, vec![])
+                .unwrap()
+                .web_seeds
+                .is_empty()
+        );
+        meta.web_seeds.clear();
+        save_info(&folder.path(), &meta).unwrap();
+        assert!(
+            load_info(&folder.path(), meta.info_hash, vec![])
+                .unwrap()
+                .web_seeds
+                .is_empty()
+        );
+    }
 
     fn setup(folder: &TempFolder) -> (Arc<TorrentMeta>, Storage, PathBuf) {
         let data = sample_bytes(40_000, 1);

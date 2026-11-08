@@ -315,10 +315,32 @@ fn options_from(arguments: &[String]) -> Result<SessionOptions> {
             "--trackers" => options.use_trackers = true,
             "--dht" => options.use_dht = true,
             "--upnp" => options.upnp = true,
+            "--utp" => options.use_utp = true,
+            "--web-seeds" => options.web_seeds = true,
+            "--peer-encryption" => options.encryption = crate::mse::Encryption::parse(value()?)?,
+            // Only the offline lab can accept loopback peers from another local client.
+            // This switch is absent from normal helper/release builds.
+            #[cfg(feature = "lab")]
+            "--lab-allow-loopback-peers" => options.allow_loopback_peers = true,
             other => bail!("unknown option {other}"),
         }
     }
     Ok(options)
+}
+
+#[cfg(test)]
+mod option_tests {
+    use super::options_from;
+
+    #[test]
+    fn local_peer_override_is_restricted_to_lab_builds() {
+        assert!(!options_from(&[]).unwrap().allow_loopback_peers);
+        let result = options_from(&["--lab-allow-loopback-peers".into()]);
+        #[cfg(feature = "lab")]
+        assert!(result.unwrap().allow_loopback_peers);
+        #[cfg(not(feature = "lab"))]
+        assert!(result.is_err());
+    }
 }
 
 #[tokio::main]

@@ -38,6 +38,13 @@ application.
 
 ## What changed
 
+### Transport teardown
+
+- `librqbit-dualstack-sockets`: expose a nonblocking `try_send_to` using the same
+  IPv4/IPv6 address conversion as normal sends. The vendored uTP abort path uses it
+  for a single RESET without replacing another sender's waker or waiting during Drop.
+  This path is covered by the uTP unit suite and isolated TCP/uTP interoperability tests.
+
 ### Removed
 
 - `librqbit-dualstack-sockets`: axum web server support and `src/multicast.rs`, which only

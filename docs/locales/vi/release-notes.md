@@ -1,3 +1,11 @@
+## 3.17.0 — 2026-11-08
+
+### Mã hóa kết nối ngang hàng, uTP và web seed
+
+Đã thêm tùy chọn mã hóa MSE/PE, kết nối uTP và web seed HTTP/HTTPS. Cả ba đều tắt theo mặc định và có thể bật trong tùy chọn torrent. Từng phần được xác minh và nguồn được lưu để tiếp tục sau khi khởi động lại. Đã cải thiện tạm dừng, tiếp tục và dừng tất cả. Mã hóa không ẩn địa chỉ IP của bạn.
+
+[English details](../../../CHANGELOG.md#3170--2026-11-08)
+
 ## 3.16.1 — 2026-11-08
 
 ### Sửa lỗi cài đặt và điều khiển

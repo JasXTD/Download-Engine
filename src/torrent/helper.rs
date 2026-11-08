@@ -59,6 +59,16 @@ fn arguments(settings: &Settings, state_dir: &Path) -> Vec<std::ffi::OsString> {
         "--no-seed".into(),
         "--trackers".into(),
     ];
+    list.extend([
+        "--peer-encryption".into(),
+        settings.encryption.as_str().into(),
+    ]);
+    if settings.utp {
+        list.push("--utp".into());
+    }
+    if settings.web_seeds {
+        list.push("--web-seeds".into());
+    }
     if settings.dht {
         list.push("--dht".into());
     }
@@ -254,6 +264,25 @@ const WATCH_FOR: Duration = Duration::from_secs(3);
 /// What a request came to: a message to show when it worked, or why it failed.
 pub type RequestOutcome = std::result::Result<Option<&'static str>, String>;
 
+#[derive(Clone, Copy, PartialEq, Eq)]
+struct Network {
+    dht: bool,
+    port: Option<u16>,
+    encryption: de_torrent::mse::Encryption,
+    utp: bool,
+    web_seeds: bool,
+}
+impl From<&Settings> for Network {
+    fn from(settings: &Settings) -> Self {
+        Self {
+            dht: settings.dht,
+            port: settings.incoming_port,
+            encryption: settings.encryption,
+            utp: settings.utp,
+            web_seeds: settings.web_seeds,
+        }
+    }
+}
 #[derive(Default)]
 struct Shared {
     helper: Option<Arc<Helper>>,
@@ -262,7 +291,7 @@ struct Shared {
     users: usize,
     selections: HashMap<String, Vec<usize>>,
     test_peers: Vec<SocketAddr>,
-    network: Option<(bool, Option<u16>)>,
+    network: Option<Network>,
     watched: HashMap<String, Instant>,
     requests: HashMap<String, Vec<(u64, super::Request)>>,
     outcomes: HashMap<String, (u64, RequestOutcome)>,
@@ -288,7 +317,7 @@ impl Host {
                 ensure!(settings.enabled, super::OFF_MESSAGE);
                 let state_dir = store.paths.data.join("torrents");
                 let helper = Arc::new(Helper::start(&settings, &state_dir)?);
-                shared.network = Some((settings.dht, settings.incoming_port));
+                shared.network = Some(Network::from(&settings));
                 shared.helper = Some(helper.clone());
                 helper
             }
@@ -307,7 +336,7 @@ impl Host {
 
     pub(crate) fn network_changed(&self, settings: &Settings) -> bool {
         let shared = self.shared();
-        shared.helper.is_some() && shared.network != Some((settings.dht, settings.incoming_port))
+        shared.helper.is_some() && shared.network != Some(Network::from(settings))
     }
 
     /// Scheduler workers are settled before this. An outstanding metadata
@@ -477,6 +506,52 @@ impl Drop for Lease {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn transports_are_explicit_and_require_a_policy_restart() {
+        let defaults = Settings::default();
+        let changed = Settings {
+            encryption: de_torrent::mse::Encryption::Required,
+            utp: true,
+            web_seeds: true,
+            ..defaults
+        };
+        let arguments = args(changed);
+        assert!(
+            arguments
+                .windows(2)
+                .any(|pair| pair == ["--peer-encryption", "required"])
+        );
+        assert!(arguments.iter().any(|arg| arg == "--utp"));
+        assert!(arguments.iter().any(|arg| arg == "--web-seeds"));
+        assert!(
+            !args(defaults)
+                .iter()
+                .any(|arg| arg == "--utp" || arg == "--web-seeds")
+        );
+        assert!(Network::from(&defaults) != Network::from(&changed));
+        assert!(
+            Network::from(&defaults)
+                != Network::from(&Settings {
+                    web_seeds: true,
+                    ..defaults
+                })
+        );
+        assert!(
+            Network::from(&defaults)
+                != Network::from(&Settings {
+                    utp: true,
+                    ..defaults
+                })
+        );
+        assert!(
+            Network::from(&defaults)
+                != Network::from(&Settings {
+                    encryption: de_torrent::mse::Encryption::Required,
+                    ..defaults
+                })
+        );
+    }
 
     fn args(settings: Settings) -> Vec<String> {
         arguments(&settings, Path::new("state"))

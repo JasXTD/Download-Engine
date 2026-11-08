@@ -1,3 +1,11 @@
+## 3.17.0 — 2026-11-08
+
+### Chiffrement des pairs, uTP et sources web
+
+Ajout du chiffrement MSE/PE des pairs, des connexions uTP et des sources web HTTP/HTTPS. Ces trois options sont désactivées par défaut et peuvent être activées dans les préférences des torrents. Les blocs sont vérifiés et les sources conservées pour reprendre après un redémarrage. La pause, la reprise et l’arrêt de tous les transferts sont plus fiables. Le chiffrement ne masque pas votre adresse IP.
+
+[English details](../../../CHANGELOG.md#3170--2026-11-08)
+
 ## 3.16.1 — 2026-11-08
 
 ### Corrections des paramètres et commandes

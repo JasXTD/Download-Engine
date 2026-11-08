@@ -1,3 +1,11 @@
+## 3.17.0 — 2026-11-08
+
+### Peer-Verschlüsselung, uTP und Webseeds
+
+Optionale MSE/PE-Peer-Verschlüsselung, uTP-Verbindungen und HTTP/HTTPS-Webseeds hinzugefügt. Alle drei sind standardmässig aus und können in den Torrent-Einstellungen aktiviert werden. Teile werden geprüft und Quellen für die Wiederaufnahme nach einem Neustart gespeichert. Pause, Fortsetzen und Alle stoppen wurden verbessert. Die Verschlüsselung verbirgt die IP-Adresse nicht.
+
+[English details](../../../CHANGELOG.md#3170--2026-11-08)
+
 ## 3.16.1 — 2026-11-08
 
 ### Korrekturen an Einstellungen und Steuerung

@@ -1,3 +1,11 @@
+## 3.17.0 — 2026-11-08
+
+### Kryptering mellom parter, uTP og webfrø
+
+Lagt til valgfrie MSE/PE-kryptering, uTP-forbindelser og HTTP/HTTPS-webfrø. Alle tre er av som standard og kan aktiveres i torrentinnstillingene. Deler kontrolleres og kilder lagres for gjenopptakelse etter omstart. Pause, gjenoppta og stopp alle er mer pålitelige. Kryptering skjuler ikke IP-adressen din.
+
+[English details](../../../CHANGELOG.md#3170--2026-11-08)
+
 ## 3.16.1 — 2026-11-08
 
 ### Rettelser i innstillinger og kontroller

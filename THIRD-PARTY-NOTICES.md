@@ -37,6 +37,10 @@ Download Engine's MIT source alone does not replace this source distribution.
 
 ## Rust dependencies and fonts
 
+Optional uTP transport uses a reviewed, modified copy of Igor Katson's
+`librqbit-utp` 0.7.0, under Apache-2.0. The source, upstream notice and full license
+are included in `vendor/librqbit-utp`; `patch.md` records the local changes.
+
 See the [complete dependency index](docs/licenses/RUST-DEPENDENCIES.md) and
 `docs/licenses/rust-dependencies.json` for versions, license texts and source
 checksums. The index includes build/test dependencies as well as runtime crates.

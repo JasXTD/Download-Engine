@@ -17,6 +17,9 @@ The formats and network protocols come from the crates copied into `../vendor/rq
 | `src/picker.rs` | Chooses what to ask each peer for. Pure logic with no network or disk. |
 | `src/storage.rs` | Reads and writes across file boundaries. |
 | `src/peer.rs` | One connection to one peer. |
+| `src/mse.rs` | Bounded legacy MSE/PE negotiation and encrypted peer streams. |
+| `src/transport.rs` | Shared TCP/uTP policy, address filtering and shutdown. |
+| `src/webseed.rs` | Bounded HTTP(S) web-seed requests, piece verification and retry. |
 | `src/admission.rs` | Connection reservations and per-source-IP limits. |
 | `src/torrent.rs` | One torrent's life: details, checking, swarm, pausing. |
 | `src/metadata.rs` | Fetches a magnet link's details from a peer. |
@@ -130,7 +133,8 @@ the wanted ones is finished, with `9` only when all are. A tracker's `state` is 
 `asking`, `working`, `failed`, `refused` (it leads to this computer or its network) or `off`.
 
 Options: `--port`, `--upload-limit`, `--download-limit`, `--state-dir`, `--no-seed`,
-`--no-upload`, `--trackers`, `--dht`, `--upnp`. Trackers, the DHT, incoming connections and
+`--no-upload`, `--trackers`, `--dht`, `--upnp`, `--utp`, `--web-seeds`,
+`--peer-encryption disabled|prefer|required`. Trackers, the DHT, incoming connections and
 router setup are off unless asked for, and `--upnp` does nothing without `--port`.
 Set `DE_TORRENT_DEBUG=1` to write diagnostics to stderr.
 
@@ -152,14 +156,49 @@ These tests open no sockets, so they cause no firewall prompts. Peers are joined
 in-memory pipes. `src/network_tests.rs` uses real sockets and only builds on Linux, so
 run it in a container with `--network none`.
 
+Only builds with the `lab` feature accept `--lab-allow-loopback-peers` for incoming
+loopback fixtures. Normal builds reject this option; it does not change production
+peer-address restrictions.
+
 The test lab in `artifacts/torrent-lab` runs real transfers with unchanged rqbit on a
 private Docker network, using `run-lab.cjs test ours`.
 
-## Not done yet
+The 2026-11-08 transport interoperability run also used unchanged rqbit 9.1.0 and
+Debian libtorrent-rasterbar 2.0.8 in a container with no external network. Twelve
+scenarios passed with generated harmless files: TCP/uTP transfers, encryption-policy
+fallback/refusal, encrypted connections in both directions, Pause/Resume, repeated
+Stop all, saved-progress recovery and final SHA-256 checks. Libtorrent confirmed the
+negotiated RC4 and uTP flags; rqbit alone cannot verify encrypted transfers.
 
-- HTTPS trackers only work in the app's build, which brings the TLS library. Built alone,
-  this folder only reaches plain HTTP and UDP trackers.
-- There is no peer encryption, uTP or web seeds. Router setup speaks UPnP IGD only (no
+## Optional transports
+
+The new transport switches start off. In the app, use **Preferences → Torrents → Transfers**.
+Changing these settings settles active torrent workers and restarts the helper with the new policy.
+
+- **Peer encryption:** MSE/PE with RC4, a legacy BitTorrent compatibility protocol. Prefer
+  first tries encryption, then permits a fresh plaintext connection; Required never falls
+  back to plaintext. This is not authenticated encryption and does not hide IP addresses.
+- **uTP:** TCP is tried first, then reliable UDP when TCP fails. The reviewed Apache-2.0
+  source is in `../vendor/librqbit-utp`; its fixes and provenance are in `patch.md` there.
+  It uses CUBIC, not LEDBAT. Incoming UDP uses the configured incoming port only when
+  incoming connections are enabled. The existing UPnP feature forwards TCP only.
+- **Web seeds:** HTTP/HTTPS `url-list` (BEP 19) and `httpseeds` (BEP 17) from `.torrent`
+  metadata. Sources are retained in a bounded sidecar for recovery. Raw `ws=` magnet
+  parameters are not imported; an imported torrent's saved sources work with its magnet.
+  Requests span contiguous pieces where possible; responses are bounded to 4 MiB and
+  exact ranges, with four requests across the process. Every piece must pass its hash.
+  Private addresses, URL credentials, unsafe paths and redirects are rejected; DNS answers
+  are filtered too. Corrupt sources are discarded for the run and transient errors back off.
+  Pause/Stop joins pending disk writes before returning and keeps verified progress.
+
+All protocols keep the app's proxy gate: enabling a proxy stops torrents rather than
+silently leaking direct traffic. The tests use harmless fixtures in a network-none container.
+
+## Remaining limits
+
+- HTTPS trackers and web seeds only work in the app's build, which brings the TLS library.
+  Standalone test builds of this folder use HTTP and UDP.
+- Router setup speaks UPnP IGD only (no
   NAT-PMP, PCP or IPv6 openings), and reads the routing table on Windows and Linux only.
 - Peer exchange is only read. The engine doesn't send peer lists of its own.
 - `add` reuses files already in `output`, so the app must choose a fresh folder for a new

@@ -13,7 +13,6 @@ use anyhow::{Context as _, Result, anyhow};
 use librqbit_core::hash_id::Id20;
 use librqbit_core::network::is_public_endpoint;
 use librqbit_core::torrent_limits::{MAX_TRACKER_URL_BYTES, MAX_TRACKERS};
-use librqbit_dualstack_sockets::{ConnectOpts, tcp_connect};
 use librqbit_peer_protocol::Request;
 use librqbit_tracker_comms::{TorrentStatsProvider, TrackerCommsStats, TrackerCommsStatsState};
 use parking_lot::Mutex;
@@ -49,7 +48,6 @@ const MAX_PEERS: usize = 50;
 const MAX_OUTGOING: usize = 40;
 /// Most addresses from trackers are dead, and each takes seconds to give up on.
 const MAX_CONNECTING: usize = 16;
-const CONNECT_TIMEOUT: Duration = Duration::from_secs(10);
 const MAX_METADATA_ATTEMPTS: usize = 8;
 const METADATA_TIMEOUT: Duration = Duration::from_secs(60);
 /// How many peers we send to at once. More would split the upload too thinly to help.
@@ -107,6 +105,7 @@ pub struct Totals {
 /// What all torrents in a session share.
 #[derive(Clone)]
 pub struct Context {
+    pub peers: Arc<crate::transport::Peers>,
     pub peer_id: Id20,
     pub up: Arc<ByteLimiter>,
     pub down: Arc<ByteLimiter>,
@@ -118,6 +117,7 @@ pub struct Context {
 
 #[derive(Clone, Default)]
 pub struct TorrentOptions {
+    pub web_seeds: bool,
     pub output: PathBuf,
     /// The files to download, or None for all of them.
     pub only: Option<Vec<usize>>,
@@ -205,6 +205,7 @@ impl Rates {
 }
 
 pub(crate) enum Event {
+    WebVerified(u32),
     PieceComplete(u32),
     Fatal(String),
     Ban(SocketAddr),
@@ -239,6 +240,12 @@ pub(crate) struct TorrentCore {
 }
 
 impl TorrentCore {
+    pub(crate) fn lease_write(self: &Arc<Self>, chunk: Chunk) -> Option<WriteLease> {
+        self.picker.lock().begin_write(chunk).then(|| WriteLease {
+            core: self.clone(),
+            chunk,
+        })
+    }
     fn new(
         meta: Arc<TorrentMeta>,
         options: TorrentOptions,
@@ -352,6 +359,16 @@ impl TorrentCore {
         if let Err(error) = result {
             debug_log!("could not save resume data: {error}");
         }
+    }
+}
+
+pub(crate) struct WriteLease {
+    core: Arc<TorrentCore>,
+    chunk: Chunk,
+}
+impl Drop for WriteLease {
+    fn drop(&mut self) {
+        self.core.picker.lock().end_write(self.chunk);
     }
 }
 
@@ -967,9 +984,11 @@ impl Torrent {
                 };
                 let (info_hash, our_id) = (self.info_hash, self.context.peer_id);
                 let budget = budget.clone();
+                let transports = self.context.peers.clone();
+                let named = self.options.peers.contains(&addr);
                 attempts.spawn(async move {
                     let result = timeout(METADATA_TIMEOUT, async {
-                        let stream = connect(addr).await?;
+                        let stream = transports.connect(addr, info_hash, named).await?;
                         metadata::fetch(stream, info_hash, our_id, budget).await
                     })
                     .await
@@ -1256,18 +1275,6 @@ fn parse_tracker(text: &str) -> Result<Url> {
     Ok(url)
 }
 
-async fn connect(addr: SocketAddr) -> Result<BoxedStream> {
-    // Tests on Windows run on the user's own computer, and must never reach a network.
-    #[cfg(all(test, windows))]
-    panic!("a test tried to connect to {addr}");
-    #[cfg_attr(all(test, windows), allow(unreachable_code))]
-    let stream = timeout(CONNECT_TIMEOUT, tcp_connect(addr, ConnectOpts::default()))
-        .await
-        .context("timed out connecting")??;
-    stream.set_nodelay(true)?;
-    Ok(Box::new(stream))
-}
-
 /// Finishes the handshake on a stream, then runs the connection. Returns whether the peer
 /// was any use.
 async fn serve_peer(
@@ -1309,7 +1316,7 @@ async fn connect_and_serve(live: Arc<Live>, addr: SocketAddr, permit: Permit) ->
     let cancel = live.cancel.clone();
     let connected = tokio::select! {
         _ = cancel.cancelled() => return false,
-        connected = connect(addr) => connected,
+        connected = live.core.context.peers.connect(addr, live.core.meta.info_hash, live.core.options.peers.contains(&addr)) => connected,
     };
     live.connecting.fetch_sub(1, Ordering::Relaxed);
     match connected {
@@ -1454,6 +1461,7 @@ async fn run_swarm(
     let mut seconds = 0u32;
     let mut uploaded_seen = HashMap::new();
     let mut finish_noted = core.picker.lock().is_finished();
+    let mut web_seed = Some(tokio::spawn(crate::webseed::run(live.clone())));
     if finish_noted {
         // Everything was on disk already, so this start is also the finish.
         save_in_background(&core).await;
@@ -1468,8 +1476,16 @@ async fn run_swarm(
         tokio::select! {
             biased;
             _ = cancel.cancelled() => break,
+            done = async { web_seed.as_mut().unwrap().await }, if web_seed.is_some() => {
+                web_seed = None;
+                if let Err(error)=done {
+                    outcome=Some(Phase::Error(format!("The web seed worker failed: {error}")));
+                    break;
+                }
+            },
             Some(event) = events.recv() => match event {
                 Event::PieceComplete(piece) => waiting.push_back(piece),
+                Event::WebVerified(piece) => live.piece_passed(piece),
                 Event::Fatal(message) => {
                     outcome = Some(Phase::Error(message));
                     break;
@@ -1480,11 +1496,6 @@ async fn run_swarm(
                 if let Some(message) = apply_hash(&live, done) {
                     outcome = Some(Phase::Error(message));
                     break;
-                }
-                let finished = core.picker.lock().is_finished();
-                if finished && !finish_noted {
-                    finish_noted = true;
-                    save_in_background(&core).await;
                 }
             }
             Some(done) = peers.join_next(), if !peers.is_empty() => {
@@ -1505,6 +1516,10 @@ async fn run_swarm(
                     peers.spawn(tracked(addr, serve_peer(live.clone(), stream, addr, hello, permit)));
                 }
             }
+        }
+        if core.picker.lock().is_finished() && !finish_noted {
+            finish_noted = true;
+            save_in_background(&core).await;
         }
         while hashing.len() < hash_workers() {
             let Some(piece) = waiting.pop_front() else {
@@ -1541,9 +1556,17 @@ async fn run_swarm(
     while let Some(done) = peers.join_next().await {
         peer_ended(&core, &mut book, done);
     }
+    if let Some(worker) = web_seed {
+        if let Err(error) = worker.await {
+            outcome = Some(Phase::Error(format!("The web seed worker failed: {error}")));
+        }
+    }
     while let Ok(event) = events.try_recv() {
-        if let Event::PieceComplete(piece) = event {
-            waiting.push_back(piece);
+        match event {
+            Event::PieceComplete(piece) => waiting.push_back(piece),
+            Event::WebVerified(piece) => live.piece_passed(piece),
+            Event::Fatal(message) => outcome = Some(Phase::Error(message)),
+            Event::Ban(_) => {}
         }
     }
     while let Some(done) = hashing.join_next().await {

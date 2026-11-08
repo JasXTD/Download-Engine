@@ -618,6 +618,48 @@ impl Desktop {
                                 });
                         });
                     });
+                    section(ui, p, tr("TRANSFERS"), |ui| {
+                        use de_torrent::mse::Encryption;
+                        let encryption = row(
+                            ui, p, tr("Peer encryption"),
+                            tr("Legacy MSE obfuscation. Does not hide your IP address."),
+                            "\u{e72e}", "",
+                        );
+                        #[cfg(feature = "screenshot")]
+                        if std::env::var("IDM_EX_TEST_FEATURE")
+                            .is_ok_and(|mode| mode.starts_with("torrent-transports"))
+                        {
+                            ui.scroll_to_rect(
+                                encryption.rect.expand2(vec2(0.0, 90.0)), Some(Align::Center),
+                            );
+                        }
+                        ui.scope_builder(
+                            egui::UiBuilder::new()
+                                .max_rect(trailing_slot(encryption.rect, 140.0))
+                                .layout(Layout::right_to_left(Align::Center)),
+                            |ui| {
+                                let label = |mode| match mode {
+                                    Encryption::Disabled => tr("Off"),
+                                    Encryption::Prefer => tr("Prefer encryption"),
+                                    Encryption::Required => tr("Require encryption"),
+                                };
+                                egui::ComboBox::from_id_salt("torrent-encryption")
+                                    .width(140.0)
+                                    .selected_text(label(torrents.encryption))
+                                    .show_ui(ui, |ui| {
+                                        for mode in [Encryption::Disabled, Encryption::Prefer, Encryption::Required] {
+                                            ui.selectable_value(&mut torrents.encryption, mode, label(mode));
+                                        }
+                                    });
+                            },
+                        );
+                        toggle(ui, p, tr("Allow uTP connections"),
+                            tr("Try UDP peers when TCP fails. Uses CUBIC congestion control."),
+                            "\u{e716}", &mut torrents.utp);
+                        toggle(ui, p, tr("Use web seeds"),
+                            tr("Fetch and verify pieces from HTTP/HTTPS sources listed in the torrent."),
+                            "\u{e774}", &mut torrents.web_seeds);
+                    });
                     section(ui, p, tr("FINDING PEERS"), |ui| {
                         let mut incoming = torrents.incoming_port.is_some();
                         let detail = if torrents.upnp {
@@ -633,7 +675,8 @@ impl Desktop {
                             torrents.upnp = false;
                         }
                         if let Some(port) = &mut torrents.incoming_port {
-                            let port_row = row(ui, p, tr("Incoming TCP port"), "1024–65535", "\u{e716}", "");
+                            let port_label = if torrents.utp { tr("Incoming TCP / UDP port") } else { tr("Incoming TCP port") };
+                            let port_row = row(ui, p, port_label, "1024–65535", "\u{e716}", "");
                             ui.new_child(egui::UiBuilder::new()
                                 .max_rect(trailing_slot(port_row.rect, 130.0))
                                 .layout(Layout::right_to_left(Align::Center)))

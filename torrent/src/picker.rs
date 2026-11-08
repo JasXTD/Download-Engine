@@ -5,7 +5,7 @@
 //! written the piece is hashed, and only a piece that passes counts as ours. Rarest pieces
 //! go first, so that what few peers hold spreads through the swarm before they leave.
 
-use std::collections::{BTreeMap, HashSet};
+use std::collections::{BTreeMap, HashMap, HashSet};
 use std::time::{Duration, Instant};
 
 use librqbit_core::lengths::Lengths;
@@ -78,6 +78,9 @@ pub struct Picker {
     availability: Vec<u32>,
     partial: BTreeMap<u32, PartialPiece>,
     verifying: HashSet<u32>,
+    web: HashSet<u32>,
+    writers: HashMap<u32, HashSet<u32>>,
+    web_cursor: u32,
     order: Vec<u32>,
     order_dirty: bool,
     order_built: Option<Instant>,
@@ -100,6 +103,9 @@ impl Picker {
             availability: vec![0; pieces],
             partial: BTreeMap::new(),
             verifying: HashSet::new(),
+            web: HashSet::new(),
+            writers: HashMap::new(),
+            web_cursor: 0,
             order: Vec::new(),
             order_dirty: true,
             order_built: None,
@@ -155,7 +161,85 @@ impl Picker {
     }
 
     fn is_needed(&self, piece: u32) -> bool {
-        self.wanted.get(piece) && !self.have.get(piece) && !self.verifying.contains(&piece)
+        self.wanted.get(piece)
+            && !self.have.get(piece)
+            && !self.verifying.contains(&piece)
+            && !self.web.contains(&piece)
+    }
+
+    /// Reserve a contiguous run for HTTP. Never race a peer's pending request or disk write.
+    pub(crate) fn reserve_web(&mut self, max_bytes: u64) -> Vec<u32> {
+        let total = self.lengths.total_pieces();
+        let available = |this: &Self, piece| {
+            this.is_needed(piece)
+                && !this.writers.contains_key(&piece)
+                && this.partial.get(&piece).is_none_or(|partial| {
+                    partial
+                        .chunks
+                        .iter()
+                        .all(|state| !matches!(state, ChunkState::Requested(_)))
+                })
+        };
+        let start = (0..total)
+            .map(|offset| (u64::from(self.web_cursor) + u64::from(offset)) % u64::from(total))
+            .map(|piece| piece as u32)
+            .find(|piece| available(self, *piece));
+        let Some(start) = start else {
+            return Vec::new();
+        };
+        let mut pieces = Vec::new();
+        let mut bytes = 0;
+        for piece in start..total {
+            if !available(self, piece) || pieces.len() >= 128 {
+                break;
+            }
+            let size = u64::from(
+                self.lengths
+                    .piece_length(self.lengths.validate_piece_index(piece).unwrap()),
+            );
+            if !pieces.is_empty() && bytes + size > max_bytes {
+                break;
+            }
+            bytes += size;
+            pieces.push(piece);
+            self.web.insert(piece);
+            self.partial.remove(&piece);
+        }
+        self.web_cursor = pieces.last().copied().unwrap() + 1;
+        pieces
+    }
+    pub(crate) fn web_wanted(&self, piece: u32) -> bool {
+        self.web.contains(&piece) && self.wanted.get(piece) && !self.have.get(piece)
+    }
+    pub(crate) fn release_web(&mut self, piece: u32) {
+        self.web.remove(&piece);
+    }
+    pub(crate) fn web_verified(&mut self, piece: u32) -> bool {
+        let wanted = self.web_wanted(piece);
+        self.web.remove(&piece);
+        if wanted {
+            self.verifying.insert(piece);
+        }
+        wanted
+    }
+    pub(crate) fn begin_write(&mut self, chunk: Chunk) -> bool {
+        if !self.wants_chunk(chunk) {
+            return false;
+        }
+        // Endgame peers can return the same block concurrently. A second write must
+        // never land after the first copy completed the piece and passed its hash.
+        self.writers
+            .entry(chunk.piece)
+            .or_default()
+            .insert(chunk.index)
+    }
+    pub(crate) fn end_write(&mut self, chunk: Chunk) {
+        if let Some(chunks) = self.writers.get_mut(&chunk.piece) {
+            chunks.remove(&chunk.index);
+            if chunks.is_empty() {
+                self.writers.remove(&chunk.piece);
+            }
+        }
     }
 
     fn next_random(&mut self) -> u64 {
@@ -429,10 +513,15 @@ impl Picker {
     /// Wanted pieces started but not finished, including ones waiting for their hash check.
     /// Skipped files keep their written chunks, and those don't count.
     pub fn in_progress_count(&self) -> usize {
-        self.partial
-            .keys()
+        self.web
+            .iter()
             .filter(|piece| self.wanted.get(**piece))
             .count()
+            + self
+                .partial
+                .keys()
+                .filter(|piece| self.wanted.get(**piece))
+                .count()
     }
 
     /// Forgets every finished and half-finished piece, so that only what passes a new check
@@ -441,6 +530,8 @@ impl Picker {
         self.have = Bitfield::new(self.lengths.total_pieces());
         self.partial.clear();
         self.verifying.clear();
+        self.web.clear();
+        self.web_cursor = 0;
         self.remaining = count_remaining(&self.have, &self.wanted);
         self.order_dirty = true;
         self.order_built = None;
@@ -453,6 +544,46 @@ mod tests {
     use librqbit_core::constants::CHUNK_SIZE;
 
     const PIECE: u32 = CHUNK_SIZE * 4;
+
+    #[test]
+    fn a_duplicate_block_cannot_write_over_a_piece_being_verified() {
+        let mut picker = picker_for(1);
+        let chunk = Chunk { piece: 0, index: 0 };
+        assert!(picker.begin_write(chunk));
+        assert!(
+            !picker.begin_write(chunk),
+            "A second disk write could finish after this piece's hash check"
+        );
+    }
+
+    #[test]
+    fn web_claims_do_not_race_peer_writes_or_requests() {
+        let mut picker = picker_for(3);
+        let chunk = Chunk { piece: 0, index: 0 };
+        assert!(picker.begin_write(chunk));
+        assert_eq!(picker.reserve_web(u64::from(PIECE)), vec![1]);
+        assert!(!picker.begin_write(Chunk { piece: 1, index: 0 }));
+        picker.release_web(1);
+        picker.end_write(chunk);
+        let requests = next(&mut picker, &holding(3, &[0]), 1);
+        assert_eq!(requests.len(), 1);
+        assert!(!picker.reserve_web(u64::from(PIECE) * 3).contains(&0));
+    }
+    #[test]
+    fn only_verified_web_pieces_count_and_selection_is_respected() {
+        let mut picker = picker_for(3);
+        picker.set_wanted(holding(3, &[1]));
+        assert_eq!(picker.reserve_web(1024 * 1024), vec![1]);
+        assert!(!picker.have().get(1));
+        assert!(picker.web_verified(1));
+        assert!(!picker.have().get(1));
+        picker.piece_passed(1);
+        assert!(picker.is_finished());
+        picker.set_wanted(holding(3, &[2]));
+        assert_eq!(picker.reserve_web(1024 * 1024), vec![2]);
+        picker.set_wanted(holding(3, &[0]));
+        assert!(!picker.web_verified(2));
+    }
 
     fn picker_for(pieces: u32) -> Picker {
         let lengths = Lengths::new(u64::from(pieces) * u64::from(PIECE), PIECE).unwrap();

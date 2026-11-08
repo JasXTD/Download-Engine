@@ -7,6 +7,7 @@ pub mod details;
 pub mod discovery;
 pub mod meta;
 mod metadata;
+pub mod mse;
 pub mod peer;
 pub mod picker;
 pub mod rate;
@@ -16,6 +17,8 @@ pub mod router;
 pub mod session;
 pub mod storage;
 pub mod torrent;
+pub mod transport;
+pub mod webseed;
 
 #[cfg(test)]
 mod details_tests;
@@ -27,6 +30,8 @@ mod network_tests;
 mod testkit;
 #[cfg(test)]
 mod transfer_tests;
+#[cfg(all(test, unix))]
+mod transport_tests;
 
 /// Whether to write diagnostics to stderr, for looking into a failed test run.
 pub fn debug_enabled() -> bool {

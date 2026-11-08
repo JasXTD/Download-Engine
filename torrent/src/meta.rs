@@ -30,6 +30,8 @@ pub struct TorrentFile {
     /// Padding and symlinks are part of the piece data but are never saved.
     pub virtual_file: bool,
     pub pieces: std::ops::Range<u32>,
+    /// Percent-encoded original path components for web seeds, never a filesystem path.
+    pub web_path: String,
 }
 
 pub struct TorrentMeta {
@@ -40,6 +42,9 @@ pub struct TorrentMeta {
     /// Private torrents may only find peers through their own trackers.
     pub private: bool,
     pub trackers: Vec<Url>,
+    pub web_seeds: Vec<crate::webseed::Seed>,
+    pub(crate) web_name: String,
+    pub(crate) multi_file: bool,
     /// The raw info dictionary, which peers can ask for when they start from a magnet link.
     pub info_bytes: Bytes,
     piece_hashes: Bytes,
@@ -65,12 +70,14 @@ impl TorrentMeta {
             .filter_map(usable_tracker)
             .collect();
         let info_bytes = Bytes::copy_from_slice(torrent.info.raw_bytes.as_ref());
-        Self::build(
+        let mut meta = Self::build(
             torrent.info_hash,
             torrent.info.data,
             info_bytes.clone(),
             trackers,
-        )
+        )?;
+        meta.web_seeds = crate::webseed::from_metainfo(bytes)?;
+        Ok(meta)
     }
 
     /// Reads an info dictionary fetched from peers. The hash is what makes it trustworthy,
@@ -115,6 +122,11 @@ impl TorrentMeta {
         let validated: ValidatedTorrentMetaV1Info<ByteBuf> =
             info.validate().context("This torrent is not valid")?;
         let lengths = *validated.lengths();
+        let multi_file = validated.info().files.is_some();
+        let web_name = validated.info().name.as_ref().map_or_else(
+            || "torrent-content".to_owned(),
+            |name| crate::webseed::encoded_component(name.as_ref()),
+        );
         let piece_hashes = Bytes::copy_from_slice(validated.info().pieces.as_ref());
         ensure!(
             piece_hashes.len() as u64 == u64::from(lengths.total_pieces()) * HASH_LEN as u64,
@@ -131,6 +143,13 @@ impl TorrentMeta {
                     offset: file.offset,
                     virtual_file: attrs.padding || (attrs.symlink && file.details.len == 0),
                     pieces: file.pieces,
+                    web_path: file
+                        .details
+                        .filename
+                        .iter_components_bytes()
+                        .map(crate::webseed::encoded_component)
+                        .collect::<Vec<_>>()
+                        .join("/"),
                 }
             })
             .collect();
@@ -163,6 +182,9 @@ impl TorrentMeta {
             files,
             private,
             trackers,
+            web_seeds: Vec::new(),
+            web_name,
+            multi_file,
             info_bytes,
             piece_hashes,
         })

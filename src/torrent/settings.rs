@@ -9,6 +9,9 @@ pub const PROXY_MESSAGE: &str = "Torrents can't start while a proxy is on, becau
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Settings {
+    pub encryption: de_torrent::mse::Encryption,
+    pub utp: bool,
+    pub web_seeds: bool,
     pub enabled: bool,
     /// Whether other people can download pieces from this computer while it downloads.
     pub upload: bool,
@@ -26,6 +29,9 @@ pub struct Settings {
 impl Default for Settings {
     fn default() -> Self {
         Self {
+            encryption: de_torrent::mse::Encryption::Disabled,
+            utp: false,
+            web_seeds: false,
             enabled: false,
             upload: true,
             upload_limit: None,
@@ -54,6 +60,15 @@ fn allowed(values: &[u32]) -> String {
 }
 
 pub(crate) fn initialize(conn: &Connection) -> Result<()> {
+    // Separate table keeps older profiles readable without rewriting existing settings.
+    conn.execute_batch(
+        "CREATE TABLE IF NOT EXISTS torrent_transport_settings (
+        id INTEGER PRIMARY KEY CHECK(id=1),
+        encryption TEXT NOT NULL CHECK(encryption IN ('disabled','prefer','required')),
+        utp INTEGER NOT NULL CHECK(utp IN (0,1)),
+        web_seeds INTEGER NOT NULL CHECK(web_seeds IN (0,1)));
+        INSERT OR IGNORE INTO torrent_transport_settings VALUES(1,'disabled',0,0);",
+    )?;
     conn.execute_batch(
         "CREATE TABLE IF NOT EXISTS torrent_settings (
         id INTEGER PRIMARY KEY CHECK(id=1),
@@ -132,9 +147,10 @@ pub(super) fn protect_profile(conn: &Connection) -> Result<()> {
 impl Store {
     pub fn torrent_settings(&self) -> Result<Settings> {
         Ok(self.connect()?.query_row(
-            "SELECT enabled,upload,upload_limit,dht,seed_completed,incoming_port,ratio,seconds,upnp
+            "SELECT enabled,upload,upload_limit,dht,seed_completed,incoming_port,ratio,seconds,upnp,encryption,utp,web_seeds
              FROM torrent_settings JOIN torrent_sharing_settings USING(id)
-             JOIN torrent_sharing_limits USING(id) JOIN torrent_router_settings USING(id) WHERE id=1",
+             JOIN torrent_sharing_limits USING(id) JOIN torrent_router_settings USING(id)
+             JOIN torrent_transport_settings USING(id) WHERE id=1",
             [],
             |row| {
                 Ok(Settings {
@@ -147,6 +163,14 @@ impl Store {
                     share_ratio: row.get(6)?,
                     share_seconds: row.get(7)?,
                     upnp: row.get(8)?,
+                    encryption: match row.get::<_, String>(9)?.as_str() {
+                        "disabled" => de_torrent::mse::Encryption::Disabled,
+                        "prefer" => de_torrent::mse::Encryption::Prefer,
+                        "required" => de_torrent::mse::Encryption::Required,
+                        _ => return Err(rusqlite::Error::InvalidQuery),
+                    },
+                    utp: row.get(10)?,
+                    web_seeds: row.get(11)?,
                 })
             },
         )?)
@@ -187,6 +211,10 @@ impl Store {
         tx.execute(
             "UPDATE torrent_router_settings SET upnp=?1 WHERE id=1",
             [value.upnp],
+        )?;
+        tx.execute(
+            "UPDATE torrent_transport_settings SET encryption=?1,utp=?2,web_seeds=?3 WHERE id=1",
+            params![value.encryption.as_str(), value.utp, value.web_seeds],
         )?;
         if value.seed_completed || value.incoming_port.is_some() {
             protect_profile(&tx)?;
@@ -270,6 +298,37 @@ fn windows_proxy_is_on() -> bool {
 
 #[cfg(test)]
 mod sharing_tests {
+    #[test]
+    fn transport_settings_start_off_round_trip_and_validate() {
+        use de_torrent::mse::Encryption;
+        let temp = tempfile::tempdir().unwrap();
+        let store = crate::store::Store::open(crate::paths::AppPaths {
+            data: temp.path().join("data"),
+            downloads: temp.path().join("downloads"),
+        })
+        .unwrap();
+        let initial = store.torrent_settings().unwrap();
+        assert_eq!(initial.encryption, Encryption::Disabled);
+        assert!(!initial.utp && !initial.web_seeds);
+        let changed = Settings {
+            encryption: Encryption::Required,
+            utp: true,
+            web_seeds: true,
+            ..initial
+        };
+        store.save_torrent_settings(changed).unwrap();
+        assert_eq!(store.torrent_settings().unwrap(), changed);
+        let conn = store.connect().unwrap();
+        for sql in [
+            "UPDATE torrent_transport_settings SET encryption='unknown'",
+            "UPDATE torrent_transport_settings SET utp=2",
+            "UPDATE torrent_transport_settings SET web_seeds=-1",
+        ] {
+            assert!(conn.execute(sql, []).is_err());
+        }
+        initialize(&conn).unwrap();
+        assert_eq!(store.torrent_settings().unwrap(), changed);
+    }
     use super::*;
     #[test]
     fn sharing_and_incoming_are_separate_off_by_default_and_validate_atomically() {

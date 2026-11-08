@@ -1,3 +1,11 @@
+## 3.17.0 — 2026-11-08
+
+### Kryptering mellan peers, uTP och webbkällor
+
+Lagt till valfri MSE/PE-kryptering, uTP-anslutningar och HTTP/HTTPS-webbkällor. Alla tre är avstängda som standard och kan aktiveras i torrentinställningarna. Delar verifieras och källor sparas för återupptagning efter omstart. Paus, återupptagning och stoppa alla har förbättrats. Kryptering döljer inte din IP-adress.
+
+[English details](../../../CHANGELOG.md#3170--2026-11-08)
+
 ## 3.16.1 — 2026-11-08
 
 ### Rättningar av inställningar och kontroller

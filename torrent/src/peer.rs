@@ -7,6 +7,7 @@
 //! peer.
 
 use std::collections::{HashMap, HashSet, VecDeque};
+use std::io;
 use std::net::SocketAddr;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, AtomicU32, AtomicU64, Ordering};
@@ -61,7 +62,7 @@ const MAX_UNSOLICITED: u32 = 64;
 const MAX_RELEASED: usize = 1024;
 const MAX_PEX_PEERS: usize = 50;
 
-/// Connections are plain TCP, and in-memory pipes in tests.
+/// TCP/uTP streams, optionally wrapped in MSE; in-memory pipes in Windows tests.
 pub trait PeerStream: AsyncRead + AsyncWrite + Send + Unpin + 'static {}
 impl<T: AsyncRead + AsyncWrite + Send + Unpin + 'static> PeerStream for T {}
 pub type BoxedStream = Box<dyn PeerStream>;
@@ -322,6 +323,20 @@ pub(crate) async fn run_connection(
         result = read_loop(&mut read_half, &mut reader) => result,
         result = write_loop(&mut write_half, &live, &link) => result,
     };
+    // Cancelling read_loop drops its await, not a blocking disk operation. Join it
+    // before releasing the connection so Pause/Stop all cannot return ahead of a write.
+    if let Some(write) = reader.pending_write.take() {
+        let error = match write.await {
+            Ok((Ok(()), _lease)) => None,
+            Ok((Err(error), _lease)) => {
+                Some(format!("Could not write to the download folder: {error}"))
+            }
+            Err(error) => Some(format!("A peer disk write failed: {error}")),
+        };
+        if let Some(error) = error {
+            let _ = live.events.send(Event::Fatal(error));
+        }
+    }
     if let Err(error) = result {
         debug_log!("peer {:?}: {error:#}", addr);
     }
@@ -507,6 +522,7 @@ enum Action {
 }
 
 struct Reader {
+    pending_write: Option<tokio::task::JoinHandle<(io::Result<()>, crate::torrent::WriteLease)>>,
     live: Arc<Live>,
     link: Arc<PeerLink>,
     pieces: u32,
@@ -530,6 +546,7 @@ impl Reader {
         let pieces = live.core.meta.lengths.total_pieces();
         let bitfield_message = pieces.div_ceil(8) as usize + 5;
         Self {
+            pending_write: None,
             live,
             link,
             pieces,
@@ -716,9 +733,19 @@ impl Reader {
         core.context.down.take(size as u32).await;
         core.options.allowance.take(size as u32).await;
 
+        let Some(write_lease) = core.lease_write(chunk) else {
+            core.count_downloaded(size);
+            core.wasted.fetch_add(size, Ordering::Relaxed);
+            return Ok(());
+        };
         let offset = lengths.chunk_absolute_offset(&info);
         let storage = core.storage.clone();
-        let written = tokio::task::spawn_blocking(move || storage.write(offset, &data)).await?;
+        self.pending_write = Some(tokio::task::spawn_blocking(move || {
+            (storage.write(offset, &data), write_lease)
+        }));
+        let written = self.pending_write.as_mut().unwrap().await;
+        self.pending_write.take();
+        let (written, _write_lease) = written?;
         if let Err(error) = written {
             let message = format!("Could not write to the download folder: {error}");
             let _ = self.live.events.send(Event::Fatal(message));

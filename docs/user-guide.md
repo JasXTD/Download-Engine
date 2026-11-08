@@ -139,6 +139,18 @@ Use 1 for servers that reject parallel requests. More connections do not guarant
 
 ### Download torrents
 
+**Optional transports (since 3.17.0):** Preferences → Torrents → Transfers has three
+options, initially off. **Peer encryption** offers Off, Prefer encryption (allows plaintext
+fallback), and Require encryption (refuses plaintext). MSE is a legacy compatibility protocol;
+it does not hide your IP address or authenticate peers. **Allow uTP connections** tries UDP
+when TCP fails; this implementation uses CUBIC congestion control. **Use web seeds** allows
+HTTP/HTTPS sources supplied by a `.torrent` file. Pieces still have to pass their torrent hashes.
+Saved web seeds survive a restart; raw `ws=` parameters in magnet links are not imported.
+Changing these options restarts the torrent helper after active workers settle.
+Incoming UDP uses the incoming port when enabled; automatic UPnP forwarding currently covers
+TCP only. All torrent transports stop while a proxy is enabled. Use Pause or Stop all to stop
+transfers and retain verified pieces.
+
 **Open from Windows (3.8.0):** In Preferences → Torrents, choose **Register this copy**, then **Choose defaults in Windows**. Select Download Engine for `.torrent` and `MAGNET`. Registration only offers the app as a handler; Windows keeps your current defaults until you change them. You can also use Explorer's **Open with** for a torrent file. The installer offers the same optional registration, initially unchecked. A portable copy must stay in the folder you registered; register it again after moving it.
 
 Opening a torrent or magnet brings up **Add download**, whether the app was closed or already running. Enable torrents if prompted, review the files, queue and destination, then confirm. Nothing is added until you confirm. If another dialog is open, finish it first; up to eight external requests can wait. Cancel dismisses that review. Reopening an existing torrent shows its existing download instead of adding a duplicate. Unfinished reviews survive restart and expire after one day. If an older running copy cannot accept a request, close it and open the item again.

@@ -1,3 +1,11 @@
+## 3.17.0 — 2026-11-08
+
+### Penyulitan rakan, uTP dan benih web
+
+Menambah pilihan penyulitan rakan MSE/PE, sambungan uTP dan benih web HTTP/HTTPS. Ketiga-tiganya dimatikan secara lalai dan boleh dihidupkan dalam keutamaan torrent. Setiap bahagian disahkan dan sumber disimpan untuk menyambung semula selepas aplikasi dimulakan semula. Jeda, sambung semula dan henti semua kini lebih dipercayai. Penyulitan tidak menyembunyikan alamat IP anda.
+
+[English details](../../../CHANGELOG.md#3170--2026-11-08)
+
 ## 3.16.1 — 2026-11-08
 
 ### Pembaikan tetapan dan kawalan

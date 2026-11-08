@@ -71,7 +71,11 @@ Torrent support is optional and off by default. Retain file-selection, upload an
 proxy limits in the FAQ. Connected browser extensions can hand off magnets and
 captured torrent files for review; scripts and MCP cannot add torrents. Clipboard
 offers remain Windows-only. Release links and structured data use the same
-version as the desktop packages. Publish the
+version as the desktop packages. The 3.17.0 transport cards cover optional MSE/PE
+peer encryption, TCP-first uTP fallback and HTTP/HTTPS web seeds. Keep all three
+off-by-default, plaintext-fallback, IP-visibility, CUBIC and TCP-only UPnP limits
+clear; do not describe encryption as anonymity. Web seeds come from torrent files,
+not raw magnet `ws=` parameters. Publish the
 matching release assets before deploying these new download links.
 
 The hosting section documents MEGA public files, public WeTransfer transfers and

@@ -1,3 +1,11 @@
+## 3.17.0 — 2026-11-08
+
+### Szyfrowanie połączeń, uTP i źródła HTTP
+
+Dodano opcjonalne szyfrowanie MSE/PE, połączenia uTP i źródła web seed HTTP/HTTPS. Wszystkie trzy opcje są domyślnie wyłączone i można je włączyć w ustawieniach torrentów. Fragmenty są weryfikowane, a źródła zapisywane, aby umożliwić wznowienie po ponownym uruchomieniu. Poprawiono wstrzymywanie, wznawianie i zatrzymywanie wszystkich transferów. Szyfrowanie nie ukrywa adresu IP.
+
+[English details](../../../CHANGELOG.md#3170--2026-11-08)
+
 ## 3.16.1 — 2026-11-08
 
 ### Poprawki ustawień i sterowania

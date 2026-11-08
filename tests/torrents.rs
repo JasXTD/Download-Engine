@@ -866,10 +866,29 @@ fn a_lone_file_lands_in_the_download_folder_and_nothing_stays_behind() {
     assert_eq!(finished.downloaded, 300_000);
     assert_eq!(bench.leftovers(), Vec::<String>::new());
     bench.wait_for_helper_to_stop();
+    let mut state_files = bench.state_files();
+    state_files.sort();
     assert_eq!(
-        bench.state_files(),
-        vec![format!("{}.info", details.info_hash)],
-        "only metadata remains for later read-only sharing"
+        state_files,
+        vec![
+            format!("{}.info", details.info_hash),
+            format!("{}.webseeds.json", details.info_hash),
+        ],
+        "only torrent and web-seed metadata remains for later read-only sharing"
+    );
+    let state = bench.store.paths.data.join("torrents");
+    assert_eq!(
+        std::fs::read(state.join(format!("{}.info", details.info_hash))).unwrap(),
+        bench.seeder.sample.info,
+    );
+    let seeds: serde_json::Value = serde_json::from_slice(
+        &std::fs::read(state.join(format!("{}.webseeds.json", details.info_hash))).unwrap(),
+    )
+    .unwrap();
+    assert_eq!(
+        seeds,
+        serde_json::json!([]),
+        "this fixture has no web seeds or resumable payload state"
     );
 }
 

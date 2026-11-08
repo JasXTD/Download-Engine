@@ -130,7 +130,12 @@ as a media file. These are capabilities of the shipped readers, not additional
 - **Limits:** torrents pause while a proxy is enabled, because the app's proxy does not carry
   torrent traffic. Adding torrents through the CLI, scripts or MCP is not supported.
 
-Peer encryption, uTP and web seeds are new in **3.17.0**. Each starts off; enable them in
+New in **3.18.0**: the Peers list shows actual TCP/uTP and encryption status. Optional
+**VPN/interface binding** keeps torrent peers, trackers, DHT, web seeds and DNS on one
+selected interface address, and stops transfers if it disappears. Configure the address
+and DNS server in Preferences → Torrents. [Setup and limitations](docs/user-guide.md#download-torrents).
+
+Peer encryption, uTP and web seeds were added in **3.17.0**. Each starts off; enable them in
 **Preferences → Torrents → Transfers**. See the [engine notes](torrent/README.md#optional-transports)
 for transport policies and limits.
 

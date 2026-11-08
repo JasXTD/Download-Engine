@@ -944,7 +944,7 @@ pub(crate) fn completed_folder_fixture() -> (tempfile::TempDir, Store, Job) {
     })
     .unwrap();
     store
-        .save_torrent_settings(Settings {
+        .save_torrent_settings(&Settings {
             enabled: true,
             dht: false,
             ..Default::default()
@@ -1001,7 +1001,7 @@ mod tests {
         .unwrap();
         store.set_queue_running("main", false).unwrap();
         store
-            .save_torrent_settings(Settings {
+            .save_torrent_settings(&Settings {
                 enabled: true,
                 dht: false,
                 ..Default::default()

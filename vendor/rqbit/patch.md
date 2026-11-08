@@ -177,6 +177,27 @@ keeps them in a crate that is not copied here.
 
 ## Testing
 
+### Download Engine 3.18.0 interface binding
+
+- `librqbit-dualstack-sockets` adds a local adapter/address inventory for Windows,
+  Linux and macOS. A binding holds the adapter name, interface index and one IP
+  address; missing or changed identities fail closed. TCP and UDP sockets bind the
+  source address and OS interface before use. Windows also restricts UDP receive
+  interfaces; these options require Windows 10 version 1803 or later.
+- The new bounded DNS resolver uses a numeric DNS server through the same bound
+  sockets, including TCP retry after truncation. It validates the transaction,
+  question, answer owners and CNAME chain; it does not trust additional records or
+  fall back to the system resolver. Unbound callers keep the system resolver.
+- DHT bootstrap and UDP trackers use that resolver and bound sockets. HTTP tracker
+  calls accept an optional `HttpTransport`; the application supplies its bound
+  HTTP/TLS implementation. The default HTTP path is unchanged.
+- The socket crate reuses the already locked `getrandom` and Windows API crates.
+  Native interface enumeration is read-only; no VPN, route, firewall or adapter
+  configuration is installed or changed.
+- Tests cover DNS truncation, aliases, malformed answers, Windows socket options,
+  and the two-interface offline lab in `tests/torrent-binding`. The application
+  tests persistence, compatibility guards and negotiated peer indicators.
+
 On Windows, run this from this directory:
 
 ```powershell

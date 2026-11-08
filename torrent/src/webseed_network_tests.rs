@@ -317,7 +317,7 @@ async fn rejects_redirect_wrong_range_oversized_body_and_honors_retry() {
             2=>("HTTP/1.1 206 Partial Content\r\nTransfer-Encoding: chunked\r\nContent-Range: bytes 0-3/5\r\nConnection: close\r\n\r\n".into(),b"5\r\nabcde\r\n0\r\n\r\n".to_vec()),
             _=>response("503 Unavailable","",b"120".to_vec()),
         }),false).await;
-        let error = Http::new(true)
+        let error = Http::new(true, None)
             .unwrap()
             .range(Url::parse(&server.base).unwrap(), 0, 4, 5, false, None)
             .await

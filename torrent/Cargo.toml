@@ -40,9 +40,15 @@ parking_lot = "0.12"
 # Reads the router's answers for router setup. The app already uses this version, so its
 # build gains no crate.
 quick-xml = "0.41"
-# The app's build adds HTTPS through its own reqwest features. Builds of this folder alone are
-# only for tests, and stay free of a TLS library.
-reqwest = { version = "0.13", default-features = false }
+# Unbound HTTPS uses the app's reqwest TLS features. Bound HTTPS uses the
+# native TLS stack below, including in standalone offline engine tests.
+reqwest = { version = "0.13", default-features = false, features = ["stream"] }
+# Reuse the app's locked HTTP/TLS stack for sockets bound on Windows too.
+hyper = { version = "1", features = ["client", "http1"] }
+hyper-util = { version = "0.1", features = ["tokio"] }
+http-body-util = "0.1"
+native-tls = "0.2.18"
+tokio-native-tls = "0.3.1"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 sha1w = { package = "librqbit-sha1-wrapper", version = "9.1.0" }

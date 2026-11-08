@@ -18,6 +18,7 @@ The formats and network protocols come from the crates copied into `../vendor/rq
 | `src/storage.rs` | Reads and writes across file boundaries. |
 | `src/peer.rs` | One connection to one peer. |
 | `src/mse.rs` | Bounded legacy MSE/PE negotiation and encrypted peer streams. |
+| `src/network.rs` | Interface configuration and bound HTTP/TLS; DNS/socket binding lives in the vendored dual-stack crate. |
 | `src/transport.rs` | Shared TCP/uTP policy, address filtering and shutdown. |
 | `src/webseed.rs` | Bounded HTTP(S) web-seed requests, piece verification and retry. |
 | `src/admission.rs` | Connection reservations and per-source-IP limits. |
@@ -196,7 +197,8 @@ silently leaking direct traffic. The tests use harmless fixtures in a network-no
 
 ## Remaining limits
 
-- HTTPS trackers and web seeds only work in the app's build, which brings the TLS library.
+- Unbound HTTPS trackers and web seeds use the app's reqwest TLS features. Bound
+  HTTPS also works in standalone builds through the native TLS connector.
   Standalone test builds of this folder use HTTP and UDP.
 - Router setup speaks UPnP IGD only (no
   NAT-PMP, PCP or IPv6 openings), and reads the routing table on Windows and Linux only.
@@ -205,3 +207,29 @@ silently leaking direct traffic. The tests use harmless fixtures in a network-no
   download.
 - A skipped file can appear on disk at full size, as a sparse file holding only the
   bytes of pieces shared with a chosen file.
+
+## Interface binding and peer indicators (3.18.0)
+
+The desktop passes `--bind-network` with a JSON object containing `interface`,
+`address` and `dns`. Names are Windows adapter GUIDs or Unix device names. A bound
+session uses one concrete IPv4 or IPv6 address; DNS must use that same family.
+No automatic interface/address replacement or system-DNS fallback is allowed.
+TCP/UDP sockets bind both the local address and the OS interface before I/O:
+SO_BINDTODEVICE on Linux, IP_BOUND_IF/IPV6_BOUND_IF on macOS, and
+IP_UNICAST_IF/IPV6_UNICAST_IF on Windows. Windows UDP reception is also restricted
+with IP_IFLIST/IPV6_IFLIST (Windows 10 version 1803 or newer). HTTP uses the same connector and the
+existing native TLS trust/hostname checks. DNS is bounded A/AAAA/CNAME parsing,
+with connected UDP and bound TCP on truncation. UPnP is refused while bound.
+
+The helper checks interface identity/address every 500 ms and joins transfers
+before exiting on loss. The kernel binding prevents fallback between checks.
+A restarted helper snapshots the reconnected interface and reuses verified progress.
+The app blocks older profile writers after binding has been enabled.
+
+Peer details carry `connection: {transport: "tcp"|"utp"|"unknown", encrypted: true|false|null}`.
+These are handshake outcomes, not preferred settings. Custom in-memory streams
+and old helpers remain unknown.
+
+The isolated reproducible test fixtures are in `tests/torrent-binding`. They use
+two internal Docker networks, generated harmless files, an ephemeral TLS certificate
+and an independently logged DNS/HTTP/UDP fixture. They never contact a public swarm.

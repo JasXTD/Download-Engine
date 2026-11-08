@@ -1,3 +1,13 @@
+## 3.18.0 — 2026-11-08
+
+### VPN / Netzwerkschnittstelle
+
+- Torrents an eine Schnittstellenadresse binden. Fällt sie weg, stoppen die Übertragungen; andere Downloads behalten ihre Einstellungen.
+- DNS nutzt ebenfalls diese Schnittstelle. Verwenden Sie dieselbe IP-Version wie die gewählte Adresse. Router-Portfreigaben sind während der Bindung deaktiviert.
+- TCP / uTP · Verschlüsselt / Klartext
+
+[English details](../../../CHANGELOG.md#3180--2026-11-08)
+
 ## 3.17.0 — 2026-11-08
 
 ### Peer-Verschlüsselung, uTP und Webseeds

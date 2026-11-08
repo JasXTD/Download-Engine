@@ -66,6 +66,8 @@ pub(super) struct State {
     original_startup: bool,
     original_start_hidden: bool,
     pub(super) torrents: download_engine::torrent::Settings,
+    pub(super) network_interfaces: Result<Vec<de_torrent::network::Interface>, String>,
+    pub(super) binding_dns: String,
     original_torrents: download_engine::torrent::Settings,
     pub(super) error: Option<String>,
     pub(super) advanced_saved: bool,
@@ -84,8 +86,17 @@ impl State {
             original_startup: app.startup.enabled(),
             start_hidden: app.startup.start_hidden(),
             original_start_hidden: app.startup.start_hidden(),
-            torrents: app.torrents.settings,
-            original_torrents: app.torrents.settings,
+            torrents: app.torrents.settings.clone(),
+            original_torrents: app.torrents.settings.clone(),
+            network_interfaces: de_torrent::network::interfaces()
+                .map_err(|error| error.to_string()),
+            binding_dns: app
+                .torrents
+                .settings
+                .binding
+                .as_ref()
+                .map(|binding| binding.dns.to_string())
+                .unwrap_or_default(),
             error: None,
             advanced_saved: false,
         }
@@ -97,6 +108,14 @@ impl State {
             || self.startup != self.original_startup
             || self.start_hidden != self.original_start_hidden
             || self.torrents != self.original_torrents
+            || (self.torrents.binding.is_some()
+                && self.binding_dns
+                    != self
+                        .original_torrents
+                        .binding
+                        .as_ref()
+                        .map(|binding| binding.dns.to_string())
+                        .unwrap_or_default())
     }
 
     fn reset_category(&mut self) {
@@ -116,7 +135,10 @@ impl State {
             Category::Downloads => {
                 self.interface.auto_download_status = defaults.auto_download_status
             }
-            Category::Torrents => self.torrents = Default::default(),
+            Category::Torrents => {
+                self.torrents = Default::default();
+                self.binding_dns.clear();
+            }
             Category::Browser => self.interface.clipboard_links = defaults.clipboard_links,
             Category::Startup => {
                 self.behavior = Preferences::default();
@@ -217,6 +239,22 @@ impl Desktop {
         let Some(mut state) = self.preferences_window.take() else {
             return;
         };
+        if let Some(binding) = &mut state.torrents.binding {
+            let result = state
+                .binding_dns
+                .trim()
+                .parse()
+                .map_err(|_| anyhow::anyhow!(tr("Enter a numeric DNS server IP address.")))
+                .and_then(|dns| {
+                    binding.dns = dns;
+                    binding.validate()
+                });
+            if let Err(error) = result {
+                state.error = Some(error.to_string());
+                self.preferences_window = Some(state);
+                return;
+            }
+        }
         let (interface, behavior) = state.merged(self);
         // One transaction for appearance and notification preferences; a failed
         // write leaves both live values and the draft intact for a retry.
@@ -231,13 +269,13 @@ impl Desktop {
             return;
         }
         if state.torrents != state.original_torrents {
-            if let Err(error) = self.store.save_torrent_settings(state.torrents) {
+            if let Err(error) = self.store.save_torrent_settings(&state.torrents.clone()) {
                 state.error = Some(tf!("Cannot save preferences: {error}", error = error));
                 self.preferences_window = Some(state);
                 return;
             }
-            self.torrents.settings = state.torrents;
-            state.original_torrents = state.torrents;
+            self.torrents.settings = state.torrents.clone();
+            state.original_torrents = state.torrents.clone();
             self.apply_torrent_settings();
         }
         let language_changed = interface.language != self.interface.language;

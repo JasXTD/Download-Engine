@@ -247,6 +247,7 @@ struct ClientLocked {
 }
 
 struct ClientShared {
+    bind_device: Option<BindDevice>,
     sock: UdpSocket,
     locked: RwLock<ClientLocked>,
     public_only: bool,
@@ -276,7 +277,9 @@ impl UdpTrackerClient {
         bind_device: Option<&BindDevice>,
         public_only: bool,
     ) -> anyhow::Result<Self> {
-        let addr = SocketAddr::new(IpAddr::V6(Ipv6Addr::UNSPECIFIED), 0);
+        let addr = bind_device
+            .map(|device| device.address(0))
+            .unwrap_or_else(|| SocketAddr::new(IpAddr::V6(Ipv6Addr::UNSPECIFIED), 0));
         let sock = UdpSocket::bind_udp(
             addr,
             librqbit_dualstack_sockets::BindOpts {
@@ -288,6 +291,7 @@ impl UdpTrackerClient {
 
         let client = Self {
             state: Arc::new(ClientShared {
+                bind_device: bind_device.cloned(),
                 sock,
                 locked: RwLock::new(Default::default()),
                 public_only,
@@ -304,6 +308,10 @@ impl UdpTrackerClient {
 
     pub(crate) fn public_only(&self) -> bool {
         self.state.public_only
+    }
+
+    pub(crate) fn bind_device(&self) -> Option<&BindDevice> {
+        self.state.bind_device.as_ref()
     }
 
     async fn run(self) -> anyhow::Result<()> {

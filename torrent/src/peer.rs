@@ -69,6 +69,7 @@ pub type BoxedStream = Box<dyn PeerStream>;
 
 #[derive(Clone, Copy, Debug)]
 pub struct Hello {
+    pub connection: crate::details::ConnectionInfo,
     pub peer_id: Id20,
     pub supports_extended: bool,
 }
@@ -94,6 +95,7 @@ pub async fn read_handshake(stream: &mut (impl AsyncRead + Unpin)) -> Result<(Id
         .context("timed out waiting for the handshake")??;
     let (handshake, _) = Handshake::deserialize(&buffer).map_err(|error| anyhow!("{error}"))?;
     let hello = Hello {
+        connection: Default::default(),
         peer_id: handshake.peer_id,
         supports_extended: handshake.supports_extended(),
     };
@@ -135,6 +137,7 @@ struct Outbox {
 
 /// What the rest of the engine can do with a connected peer.
 pub(crate) struct PeerLink {
+    pub connection: crate::details::ConnectionInfo,
     pub key: u64,
     pub peer_id: Id20,
     pub addr: Option<SocketAddr>,
@@ -162,6 +165,7 @@ pub(crate) struct PeerLink {
 impl PeerLink {
     pub fn new(key: u64, peer_id: Id20, addr: Option<SocketAddr>, incoming: bool) -> Self {
         Self {
+            connection: Default::default(),
             key,
             peer_id,
             addr,
@@ -196,6 +200,7 @@ impl PeerLink {
     pub fn details(&self) -> PeerDetails {
         let (download_bps, upload_bps) = self.rates.lock().per_second();
         PeerDetails {
+            connection: self.connection,
             address: self
                 .addr
                 .map(|addr| SocketAddr::new(addr.ip().to_canonical(), addr.port()).to_string()),
@@ -302,7 +307,8 @@ pub(crate) async fn run_connection(
     addr: Option<SocketAddr>,
     incoming: bool,
 ) -> bool {
-    let Some(link) = live.register(hello.peer_id, addr, incoming) else {
+    let Some(link) = live.register_connection(hello.peer_id, addr, incoming, hello.connection)
+    else {
         debug_log!("already connected to {:?}", addr);
         return false;
     };

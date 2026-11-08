@@ -1,3 +1,13 @@
+## 3.18.0 — 2026-11-08
+
+### VPN / nettverksgrensesnitt
+
+- Bind torrenter til én grensesnittadresse. Overføringer stopper hvis den forsvinner; andre nedlastinger beholder sine innstillinger.
+- DNS bruker også dette grensesnittet. Bruk samme IP-versjon som den valgte adressen. Ruterens porttilordning er deaktivert under bindingen.
+- TCP / uTP · Kryptert / Klartekst
+
+[English details](../../../CHANGELOG.md#3180--2026-11-08)
+
 ## 3.17.0 — 2026-11-08
 
 ### Kryptering mellom parter, uTP og webfrø

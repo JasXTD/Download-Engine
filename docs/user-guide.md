@@ -139,6 +139,13 @@ Use 1 for servers that reject parallel requests. More connections do not guarant
 
 ### Download torrents
 
+**Peer connection indicators (3.18.0):** Open a torrent’s status window, then **Show details → Peers**. The Connection column shows TCP or uTP and Encrypted or Plaintext for the actual negotiated connection. “Prefer encryption” can therefore show Plaintext. Encryption here means legacy MSE obfuscation; it does not hide your IP address or authenticate the peer. Unknown means the helper did not report a connection type.
+
+**VPN / interface binding (3.18.0):** Connect your VPN first, then open **Preferences → Torrents → Torrent network**. Choose its interface and local address, enter the numeric DNS server IP supplied by your VPN/network, and Save. The DNS server must use the same IP version as that address. One local address is selected at a time; an IPv4 selection does not use IPv6 peers, and vice versa. Use **Refresh interfaces** if the adapter list has changed.
+
+Binding covers torrent peers, incoming connections, trackers, DHT, web seeds and DNS. It never falls back to the system resolver or another interface. The helper stops and saves progress if the interface/address disappears. Reconnect, select the new address if it changed, then Resume. A temporarily unavailable saved selection stays blocked rather than being reset. Router port mapping is disabled while bound. Other downloads retain their existing settings. This selects an existing network connection; it does not create a VPN or verify a VPN provider’s encryption. Choose **System routing (not bound)** to stop binding future torrent sessions. A profile that enabled binding needs version 3.18.0 or newer, including after resetting the preference.
+
+
 **Optional transports (since 3.17.0):** Preferences → Torrents → Transfers has three
 options, initially off. **Peer encryption** offers Off, Prefer encryption (allows plaintext
 fallback), and Require encryption (refuses plaintext). MSE is a legacy compatibility protocol;

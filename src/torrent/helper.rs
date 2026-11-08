@@ -69,6 +69,14 @@ fn arguments(settings: &Settings, state_dir: &Path) -> Vec<std::ffi::OsString> {
     if settings.web_seeds {
         list.push("--web-seeds".into());
     }
+    if let Some(binding) = &settings.binding {
+        list.extend([
+            "--bind-network".into(),
+            serde_json::to_string(binding)
+                .expect("Binding contains only strings and IP addresses")
+                .into(),
+        ]);
+    }
     if settings.dht {
         list.push("--dht".into());
     }
@@ -91,6 +99,7 @@ fn arguments(settings: &Settings, state_dir: &Path) -> Vec<std::ffi::OsString> {
 }
 
 struct Helper {
+    binding: Option<de_torrent::network::Binding>,
     running: Mutex<Option<Running>>,
     input: Mutex<ChildStdin>,
     waiting: Arc<Mutex<VecDeque<Reply>>>,
@@ -102,7 +111,12 @@ fn lock<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
 }
 
 /// Hands each reply line to whoever has waited longest. The helper answers in order.
-fn read_replies(output: ChildStdout, waiting: Arc<Mutex<VecDeque<Reply>>>, alive: Arc<AtomicBool>) {
+fn read_replies(
+    output: ChildStdout,
+    waiting: Arc<Mutex<VecDeque<Reply>>>,
+    alive: Arc<AtomicBool>,
+    binding: Option<de_torrent::network::Binding>,
+) {
     use std::io::Read;
     let mut output = BufReader::new(output.take(MAX_REPLY));
     let mut line = String::new();
@@ -120,12 +134,21 @@ fn read_replies(output: ChildStdout, waiting: Arc<Mutex<VecDeque<Reply>>>, alive
     }
     alive.store(false, Ordering::Release);
     for waiter in lock(&waiting).drain(..) {
-        let _ = waiter.send(Err(stopped()));
+        let _ = waiter.send(Err(stopped_for(binding.as_ref())));
     }
 }
 
 fn stopped() -> anyhow::Error {
     crate::retry::incomplete("The torrent helper stopped unexpectedly.")
+}
+
+fn stopped_for(binding: Option<&de_torrent::network::Binding>) -> anyhow::Error {
+    if binding.is_some_and(|binding| binding.open().is_err()) {
+        return anyhow::anyhow!(
+            "The selected torrent interface/address is unavailable. Reconnect it and resume; saved progress is kept."
+        );
+    }
+    stopped()
 }
 
 /// Something the helper refused or stopped on. `code` names the engine's reason, for the
@@ -173,6 +196,9 @@ fn decode(line: &str) -> Result<Value> {
 
 impl Helper {
     fn start(settings: &Settings, state_dir: &Path) -> Result<Self> {
+        if let Some(binding) = &settings.binding {
+            binding.open()?;
+        }
         std::fs::create_dir_all(state_dir).context("Cannot create the torrent state folder")?;
         let mut command = Command::new(program()?);
         command
@@ -195,11 +221,13 @@ impl Helper {
         let waiting = Arc::new(Mutex::new(VecDeque::new()));
         let alive = Arc::new(AtomicBool::new(true));
         let (queue, flag) = (waiting.clone(), alive.clone());
+        let binding = settings.binding.clone();
         thread::Builder::new()
             .name("torrent-helper".into())
-            .spawn(move || read_replies(output, queue, flag))
+            .spawn(move || read_replies(output, queue, flag, binding))
             .context("Cannot start the torrent helper")?;
         Ok(Self {
+            binding: settings.binding.clone(),
             running: Mutex::new(Some(running)),
             input: Mutex::new(input),
             waiting,
@@ -215,13 +243,13 @@ impl Helper {
         let (reply, answer) = oneshot::channel();
         // One lock over both steps keeps replies in the order of the commands.
         let mut input = lock(&self.input);
-        ensure!(self.is_alive(), stopped());
+        ensure!(self.is_alive(), stopped_for(self.binding.as_ref()));
         lock(&self.waiting).push_back(reply);
         let line = format!("{command}\n");
         input
             .write_all(line.as_bytes())
             .and_then(|()| input.flush())
-            .map_err(|_| stopped())?;
+            .map_err(|_| stopped_for(self.binding.as_ref()))?;
         Ok(answer)
     }
 
@@ -264,8 +292,9 @@ const WATCH_FOR: Duration = Duration::from_secs(3);
 /// What a request came to: a message to show when it worked, or why it failed.
 pub type RequestOutcome = std::result::Result<Option<&'static str>, String>;
 
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq)]
 struct Network {
+    binding: Option<de_torrent::network::Binding>,
     dht: bool,
     port: Option<u16>,
     encryption: de_torrent::mse::Encryption,
@@ -275,6 +304,7 @@ struct Network {
 impl From<&Settings> for Network {
     fn from(settings: &Settings) -> Self {
         Self {
+            binding: settings.binding.clone(),
             dht: settings.dht,
             port: settings.incoming_port,
             encryption: settings.encryption,
@@ -514,9 +544,9 @@ mod tests {
             encryption: de_torrent::mse::Encryption::Required,
             utp: true,
             web_seeds: true,
-            ..defaults
+            ..defaults.clone()
         };
-        let arguments = args(changed);
+        let arguments = args(changed.clone());
         assert!(
             arguments
                 .windows(2)
@@ -525,7 +555,7 @@ mod tests {
         assert!(arguments.iter().any(|arg| arg == "--utp"));
         assert!(arguments.iter().any(|arg| arg == "--web-seeds"));
         assert!(
-            !args(defaults)
+            !args(defaults.clone())
                 .iter()
                 .any(|arg| arg == "--utp" || arg == "--web-seeds")
         );
@@ -534,21 +564,21 @@ mod tests {
             Network::from(&defaults)
                 != Network::from(&Settings {
                     web_seeds: true,
-                    ..defaults
+                    ..defaults.clone()
                 })
         );
         assert!(
             Network::from(&defaults)
                 != Network::from(&Settings {
                     utp: true,
-                    ..defaults
+                    ..defaults.clone()
                 })
         );
         assert!(
             Network::from(&defaults)
                 != Network::from(&Settings {
                     encryption: de_torrent::mse::Encryption::Required,
-                    ..defaults
+                    ..defaults.clone()
                 })
         );
     }

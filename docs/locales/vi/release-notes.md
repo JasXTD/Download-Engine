@@ -1,3 +1,13 @@
+## 3.18.0 — 2026-11-08
+
+### VPN / giao diện mạng
+
+- Gắn torrent với một địa chỉ giao diện. Truyền dữ liệu dừng nếu địa chỉ mất; các lượt tải khác giữ cài đặt riêng.
+- DNS cũng dùng giao diện này. Dùng cùng phiên bản IP với địa chỉ đã chọn. Ánh xạ cổng bộ định tuyến bị tắt khi gắn giao diện.
+- TCP / uTP · Đã mã hóa / Không mã hóa
+
+[English details](../../../CHANGELOG.md#3180--2026-11-08)
+
 ## 3.17.0 — 2026-11-08
 
 ### Mã hóa kết nối ngang hàng, uTP và web seed

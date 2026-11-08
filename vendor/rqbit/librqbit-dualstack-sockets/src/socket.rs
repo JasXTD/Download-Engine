@@ -86,6 +86,17 @@ impl<S> MaybeDualstackSocket<S> {
 
 impl MaybeDualstackSocket<Socket> {
     fn bind(addr: SocketAddr, opts: BindOpts, is_udp: bool) -> crate::Result<Self> {
+        let addr = if let Some(device) = opts.device {
+            let selected = device.address(addr.port());
+            if addr.is_ipv6() != selected.is_ipv6()
+                || (!addr.ip().is_unspecified() && addr.ip() != selected.ip())
+            {
+                return Err(Error::BindDeviceInvalid);
+            }
+            selected
+        } else {
+            addr
+        };
         let socket = Socket::new(
             if addr.is_ipv6() {
                 Domain::IPV6
@@ -295,7 +306,8 @@ impl MaybeDualstackSocket<tokio::net::UdpSocket> {
 
     /// A nonblocking datagram send, without replacing another sender's task waker.
     pub fn try_send_to(&self, buf: &[u8], target: SocketAddr) -> std::io::Result<usize> {
-        self.socket.try_send_to(buf, self.convert_addr_for_send(target))
+        self.socket
+            .try_send_to(buf, self.convert_addr_for_send(target))
     }
 
     pub fn poll_send_to(

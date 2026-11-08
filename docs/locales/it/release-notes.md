@@ -1,3 +1,13 @@
+## 3.18.0 — 2026-11-08
+
+### VPN / interfaccia di rete
+
+- Associa i torrent a un indirizzo di interfaccia. I trasferimenti si fermano se scompare; gli altri download mantengono le proprie impostazioni.
+- Anche DNS usa questa interfaccia. Usa la stessa versione IP dell’indirizzo selezionato. La mappatura delle porte del router è disattivata durante l’associazione.
+- TCP / uTP · Cifrato / In chiaro
+
+[English details](../../../CHANGELOG.md#3180--2026-11-08)
+
 ## 3.17.0 — 2026-11-08
 
 ### Cifratura dei peer, uTP e web seed

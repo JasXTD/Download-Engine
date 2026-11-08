@@ -7,8 +7,9 @@ use rusqlite::{Connection, params};
 pub const OFF_MESSAGE: &str = "Torrents are off. Turn them on to continue.";
 pub const PROXY_MESSAGE: &str = "Torrents can't start while a proxy is on, because peers and the DHT would connect directly and show your real IP address.";
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Settings {
+    pub binding: Option<de_torrent::network::Binding>,
     pub encryption: de_torrent::mse::Encryption,
     pub utp: bool,
     pub web_seeds: bool,
@@ -29,6 +30,7 @@ pub struct Settings {
 impl Default for Settings {
     fn default() -> Self {
         Self {
+            binding: None,
             encryption: de_torrent::mse::Encryption::Disabled,
             utp: false,
             web_seeds: false,
@@ -60,6 +62,9 @@ fn allowed(values: &[u32]) -> String {
 }
 
 pub(crate) fn initialize(conn: &Connection) -> Result<()> {
+    conn.execute_batch("CREATE TABLE IF NOT EXISTS torrent_network_binding (
+        id INTEGER PRIMARY KEY CHECK(id=1), config TEXT CHECK(config IS NULL OR length(config)<=1024));
+        INSERT OR IGNORE INTO torrent_network_binding VALUES(1,NULL);")?;
     // Separate table keeps older profiles readable without rewriting existing settings.
     conn.execute_batch(
         "CREATE TABLE IF NOT EXISTS torrent_transport_settings (
@@ -132,6 +137,11 @@ pub(crate) fn initialize(conn: &Connection) -> Result<()> {
     if has_torrents {
         protect_profile(conn)?;
     }
+    // These tables are created after the baseline migration installs its guards.
+    // An older connection must not overwrite the policy once binding is enabled.
+    for table in ["torrent_network_binding", "torrent_settings"] {
+        crate::store::migrations::guard_table(conn, table)?;
+    }
     Ok(())
 }
 
@@ -147,13 +157,18 @@ pub(super) fn protect_profile(conn: &Connection) -> Result<()> {
 impl Store {
     pub fn torrent_settings(&self) -> Result<Settings> {
         Ok(self.connect()?.query_row(
-            "SELECT enabled,upload,upload_limit,dht,seed_completed,incoming_port,ratio,seconds,upnp,encryption,utp,web_seeds
+            "SELECT enabled,upload,upload_limit,dht,seed_completed,incoming_port,ratio,seconds,upnp,encryption,utp,web_seeds,config
              FROM torrent_settings JOIN torrent_sharing_settings USING(id)
              JOIN torrent_sharing_limits USING(id) JOIN torrent_router_settings USING(id)
-             JOIN torrent_transport_settings USING(id) WHERE id=1",
+             JOIN torrent_transport_settings USING(id) JOIN torrent_network_binding USING(id) WHERE id=1",
             [],
             |row| {
                 Ok(Settings {
+                    binding: row.get::<_,Option<String>>(12)?.map(|json| {
+                        let binding: de_torrent::network::Binding = serde_json::from_str(&json).map_err(|_| rusqlite::Error::InvalidQuery)?;
+                        binding.validate().map_err(|_| rusqlite::Error::InvalidQuery)?;
+                        Ok::<_, rusqlite::Error>(binding)
+                    }).transpose()?,
                     enabled: row.get(0)?,
                     upload: row.get(1)?,
                     upload_limit: row.get(2)?,
@@ -178,7 +193,14 @@ impl Store {
 
     /// Saves the settings. Send `Command::TorrentSettings` after this, so that a running
     /// helper follows them and turning torrents off stops every torrent.
-    pub fn save_torrent_settings(&self, value: Settings) -> Result<()> {
+    pub fn save_torrent_settings(&self, value: &Settings) -> Result<()> {
+        if let Some(binding) = &value.binding {
+            binding.validate()?;
+        }
+        anyhow::ensure!(
+            value.binding.is_none() || !value.upnp,
+            "Turn off router port mapping before binding a torrent interface"
+        );
         crate::bandwidth::validate(value.upload_limit.map(u64::from))?;
         anyhow::ensure!(
             value.incoming_port.is_none_or(|port| port >= 1024),
@@ -195,6 +217,20 @@ impl Store {
         );
         let mut conn = self.connect()?;
         let tx = conn.transaction()?;
+        let changed = tx.execute(
+            "UPDATE torrent_network_binding SET config=?1 WHERE id=1",
+            [value
+                .binding
+                .as_ref()
+                .map(serde_json::to_string)
+                .transpose()?],
+        )?;
+        anyhow::ensure!(changed == 1, "Torrent network settings are unavailable");
+        if value.binding.is_some() {
+            // Older builds ignore the new setting. Never let them open this profile
+            // and start unbound torrents, including after a future setting reset.
+            tx.execute("UPDATE profile_format SET data_version=MAX(data_version,10),min_writer_version=MAX(min_writer_version,10) WHERE id=1", [])?;
+        }
         let count = tx.execute(
             "UPDATE torrent_settings SET enabled=?1,upload=?2,upload_limit=?3,dht=?4 WHERE id=1",
             params![value.enabled, value.upload, value.upload_limit, value.dht],
@@ -299,6 +335,60 @@ fn windows_proxy_is_on() -> bool {
 #[cfg(test)]
 mod sharing_tests {
     #[test]
+    fn binding_round_trip_validation_and_downgrade_guard() {
+        let temp = tempfile::tempdir().unwrap();
+        let store = crate::store::Store::open(crate::paths::AppPaths {
+            data: temp.path().join("data"),
+            downloads: temp.path().join("downloads"),
+        })
+        .unwrap();
+        let initial = store.torrent_settings().unwrap();
+        assert!(initial.binding.is_none());
+        // Saving a temporarily missing interface is allowed, starting it is not.
+        let changed = Settings {
+            binding: Some(de_torrent::network::Binding {
+                interface: "fixture-vpn".into(),
+                address: "192.0.2.2".parse().unwrap(),
+                dns: "192.0.2.53".parse().unwrap(),
+            }),
+            ..initial.clone()
+        };
+        store.save_torrent_settings(&changed).unwrap();
+        assert_eq!(store.torrent_settings().unwrap(), changed);
+        let mut bad = changed.clone();
+        bad.upnp = true;
+        assert!(store.save_torrent_settings(&bad).is_err());
+        bad.upnp = false;
+        bad.binding.as_mut().unwrap().dns = "::1".parse().unwrap();
+        assert!(store.save_torrent_settings(&bad).is_err());
+        assert_eq!(store.torrent_settings().unwrap(), changed);
+        store.save_torrent_settings(&initial).unwrap();
+        let conn = store.connect().unwrap();
+        let floor: i64 = conn
+            .query_row(
+                "SELECT min_writer_version FROM profile_format WHERE id=1",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(
+            floor, 10,
+            "Resetting the preference must not re-enable an unsafe downgrade"
+        );
+        conn.create_scalar_function(
+            "xdownloader_writer_version",
+            0,
+            rusqlite::functions::FunctionFlags::SQLITE_UTF8,
+            |_| Ok(9i64),
+        )
+        .unwrap();
+        assert!(
+            conn.execute("UPDATE torrent_settings SET enabled=1 WHERE id=1", [])
+                .is_err()
+        );
+    }
+
+    #[test]
     fn transport_settings_start_off_round_trip_and_validate() {
         use de_torrent::mse::Encryption;
         let temp = tempfile::tempdir().unwrap();
@@ -314,9 +404,9 @@ mod sharing_tests {
             encryption: Encryption::Required,
             utp: true,
             web_seeds: true,
-            ..initial
+            ..initial.clone()
         };
-        store.save_torrent_settings(changed).unwrap();
+        store.save_torrent_settings(&changed).unwrap();
         assert_eq!(store.torrent_settings().unwrap(), changed);
         let conn = store.connect().unwrap();
         for sql in [
@@ -343,11 +433,11 @@ mod sharing_tests {
         assert_eq!(initial.incoming_port, None);
         assert!(
             store
-                .save_torrent_settings(Settings {
+                .save_torrent_settings(&Settings {
                     enabled: true,
                     seed_completed: true,
                     incoming_port: Some(1023),
-                    ..initial
+                    ..initial.clone()
                 })
                 .is_err()
         );
@@ -355,18 +445,18 @@ mod sharing_tests {
         let sharing = Settings {
             enabled: true,
             seed_completed: true,
-            ..initial
+            ..initial.clone()
         };
-        store.save_torrent_settings(sharing).unwrap();
+        store.save_torrent_settings(&sharing).unwrap();
         assert_eq!(store.torrent_settings().unwrap(), sharing);
         let incoming = Settings {
             seed_completed: false,
             incoming_port: Some(45000),
             ..sharing
         };
-        store.save_torrent_settings(incoming).unwrap();
+        store.save_torrent_settings(&incoming).unwrap();
         assert_eq!(store.torrent_settings().unwrap(), incoming);
-        store.save_torrent_settings(initial).unwrap();
+        store.save_torrent_settings(&initial).unwrap();
         assert_eq!(store.torrent_settings().unwrap(), initial);
         assert!(
             !store.torrents.is_running(),
@@ -390,31 +480,31 @@ mod sharing_tests {
         for bad in [
             Settings {
                 share_ratio: Some(250),
-                ..initial
+                ..initial.clone()
             },
             Settings {
                 share_ratio: Some(0),
-                ..initial
+                ..initial.clone()
             },
             Settings {
                 share_seconds: Some(1),
-                ..initial
+                ..initial.clone()
             },
             Settings {
                 share_seconds: Some(0),
-                ..initial
+                ..initial.clone()
             },
         ] {
-            assert!(store.save_torrent_settings(bad).is_err(), "{bad:?}");
+            assert!(store.save_torrent_settings(&bad).is_err(), "{bad:?}");
             assert_eq!(store.torrent_settings().unwrap(), initial);
         }
         let changed = Settings {
             share_ratio: None,
             share_seconds: Some(3_600),
             upnp: true,
-            ..initial
+            ..initial.clone()
         };
-        store.save_torrent_settings(changed).unwrap();
+        store.save_torrent_settings(&changed).unwrap();
         assert_eq!(store.torrent_settings().unwrap(), changed);
         assert!(changed.sharing_limits().ratio_hundredths.is_none());
         // The database refuses what the window never offers, even written directly.

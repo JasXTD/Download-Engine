@@ -2,6 +2,16 @@
 
 Release notes are available offline in Help → Changelog. Newest releases appear first.
 
+## 3.18.0 — 2026-11-08
+
+### Torrent connection visibility and interface binding
+
+- The Peers list now reports each connection's actual TCP/uTP transport and whether MSE encryption was negotiated. Plaintext fallback is shown as plaintext; older helpers report unknown instead of guessing from preferences.
+- Added optional VPN/network interface binding in Preferences → Torrents. Choose an existing interface address and a numeric DNS server of the same IP version. Peer TCP/uTP, incoming sockets, trackers, DHT, web seeds and DNS all use that address and interface.
+- A missing interface/address blocks startup. Losing it stops the torrent helper after joining transfers and saving verified progress. Retrying after reconnecting resumes those files; traffic never falls back to system routing while bound.
+- Router port mapping is disabled while bound. Ordinary file/video downloads retain their existing network settings. Interface binding selects an existing connection; it does not install a VPN or provide encryption itself.
+- Protect profiles that have enabled binding against older app versions that would ignore the setting. Such profiles require 3.18.0 or newer, even after resetting the preference.
+
 ## 3.17.0 — 2026-11-08
 
 ### Peer encryption, uTP and web seeds

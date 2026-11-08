@@ -140,6 +140,7 @@ where
 }
 
 pub struct DiscoveryOptions {
+    pub binding: Option<Arc<librqbit_dualstack_sockets::BindDevice>>,
     pub peer_id: Id20,
     pub listen_port: Option<u16>,
     pub use_trackers: bool,
@@ -151,6 +152,7 @@ pub struct DiscoveryOptions {
 }
 
 pub struct Discovery {
+    bound_http: Option<Arc<crate::network::BoundHttp>>,
     options: DiscoveryOptions,
     http: reqwest::Client,
     udp: OnceCell<Option<UdpTrackerClient>>,
@@ -221,6 +223,14 @@ impl Resolve for PublicNames {
 
 impl Discovery {
     pub fn new(options: DiscoveryOptions, cancel: CancellationToken) -> Result<Arc<Self>> {
+        let bound_http = options
+            .binding
+            .as_ref()
+            .map(|device| {
+                crate::network::BoundHttp::new(device.clone(), options.allow_local_trackers)
+                    .map(Arc::new)
+            })
+            .transpose()?;
         // A tracker comes from a stranger, so it gets no say in where this client goes next.
         let mut http = reqwest::Client::builder()
             .user_agent(crate::peer::CLIENT_NAME)
@@ -233,6 +243,7 @@ impl Discovery {
         }
         let http = http.build()?;
         Ok(Arc::new(Self {
+            bound_http,
             options,
             http,
             udp: OnceCell::new(),
@@ -246,7 +257,7 @@ impl Discovery {
             .get_or_init(|| async {
                 UdpTrackerClient::new(
                     self.cancel.clone(),
-                    None,
+                    self.options.binding.as_deref(),
                     !self.options.allow_local_trackers,
                 )
                 .await
@@ -269,9 +280,18 @@ impl Discovery {
                             config_filename: state_dir.join("dht.json"),
                             allow_local_addresses: self.options.allow_local_trackers,
                         };
-                        PersistentDht::create(config, None, false, bootstrap, cancel, None).await
+                        PersistentDht::create(
+                            config,
+                            None,
+                            false,
+                            bootstrap,
+                            cancel,
+                            self.options.binding.as_deref(),
+                        )
+                        .await
                     }
                     None => DhtBuilder::with_config(DhtConfig {
+                        bind_device: self.options.binding.as_deref(),
                         bootstrap_addrs: bootstrap,
                         cancellation_token: cancel,
                         allow_local_addresses: self.options.allow_local_trackers,
@@ -344,6 +364,9 @@ impl Discovery {
                     this.http.clone(),
                     udp,
                     observer,
+                    this.bound_http
+                        .clone()
+                        .map(|http| http as Arc<dyn librqbit_tracker_comms::HttpTransport>),
                 );
                 if let Some(stream) = stream {
                     tokio::select! {

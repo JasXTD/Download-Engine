@@ -549,7 +549,7 @@ impl Bench {
                 download_engine::proxy::LoginChange::Remove,
             )
             .unwrap();
-        store.save_torrent_settings(settings).unwrap();
+        store.save_torrent_settings(&settings).unwrap();
         let runtime = tokio::runtime::Builder::new_multi_thread()
             .worker_threads(2)
             .enable_all()
@@ -742,7 +742,7 @@ impl Bench {
     fn set_enabled(&self, enabled: bool) {
         let settings = self.store.torrent_settings().unwrap();
         self.store
-            .save_torrent_settings(Settings {
+            .save_torrent_settings(&Settings {
                 enabled,
                 ..settings
             })

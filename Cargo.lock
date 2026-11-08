@@ -646,6 +646,9 @@ dependencies = [
  "bytes",
  "futures-util",
  "getrandom 0.4.3",
+ "http-body-util",
+ "hyper",
+ "hyper-util",
  "libc",
  "librqbit-bencode",
  "librqbit-buffers",
@@ -656,6 +659,7 @@ dependencies = [
  "librqbit-sha1-wrapper",
  "librqbit-tracker-comms",
  "librqbit-utp",
+ "native-tls",
  "num-bigint",
  "objc2-foundation 0.3.2",
  "parking_lot",
@@ -664,6 +668,7 @@ dependencies = [
  "serde",
  "serde_json",
  "tokio",
+ "tokio-native-tls",
  "tokio-util",
  "url",
  "windows-sys 0.61.2",
@@ -769,7 +774,7 @@ checksum = "75b325c5dbd37f80359721ad39aca5a29fb04c89279657cffdda8736d0c0b9d2"
 
 [[package]]
 name = "download-engine"
-version = "3.17.0"
+version = "3.18.0"
 dependencies = [
  "aes",
  "aes-gcm",
@@ -2049,11 +2054,13 @@ dependencies = [
 name = "librqbit-dualstack-sockets"
 version = "0.7.0"
 dependencies = [
+ "getrandom 0.4.3",
  "libc",
  "socket2",
  "thiserror 2.0.21",
  "tokio",
  "tracing",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]

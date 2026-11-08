@@ -29,9 +29,11 @@ pub async fn tcp_connect<'a>(
 
     if let Some(bd) = opts.bind_device {
         bd.bind_sref(&sref, addr.is_ipv6())?;
+        sock.bind(bd.address(opts.source_port.unwrap_or(0)))
+            .map_err(Error::Bind)?;
     }
 
-    if bind_addr.port() > 0 {
+    if bind_addr.port() > 0 && opts.bind_device.is_none() {
         #[cfg(not(windows))]
         sref.set_reuse_port(true).map_err(Error::ReusePort)?;
         sref.set_reuse_address(true).map_err(Error::ReuseAddress)?;

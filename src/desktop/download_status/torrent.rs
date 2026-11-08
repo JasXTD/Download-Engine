@@ -17,6 +17,24 @@ const MIN_LIST: f32 = 96.0;
 /// the helper only ever uses 32.
 const MAX_SHOWN_TRACKERS: usize = 64;
 
+pub(super) fn peer_connection(peer: &download_engine::torrent::Peer) -> String {
+    use de_torrent::details::PeerTransport;
+    if peer.connection.transport == PeerTransport::Unknown && peer.connection.encrypted.is_none() {
+        return tr("Unknown").to_owned();
+    }
+    let protocol = match peer.connection.transport {
+        PeerTransport::Tcp => "TCP",
+        PeerTransport::Utp => "uTP",
+        PeerTransport::Unknown => tr("Unknown"),
+    };
+    let protection = match peer.connection.encrypted {
+        Some(true) => tr("Encrypted"),
+        Some(false) => tr("Plaintext"),
+        None => tr("Unknown"),
+    };
+    format!("{protocol} · {protection}")
+}
+
 #[derive(Clone, Copy, Default, PartialEq, Eq, Debug)]
 pub(super) enum TorrentTab {
     #[default]
@@ -662,6 +680,26 @@ impl Window {
     }
 
     fn draw_peers(&mut self, ui: &mut egui::Ui, p: Palette, height: f32) {
+        ui.scope(|ui| {
+            // Reserve a visible scrollbar instead of covering the last peer row.
+            ui.spacing_mut().scroll.floating = false;
+            egui::ScrollArea::horizontal()
+                .id_salt("torrent-peers-horizontal")
+                .show(ui, |ui| {
+                    if self
+                        .torrent
+                        .details
+                        .as_ref()
+                        .is_some_and(|details| !details.peers.is_empty())
+                    {
+                        ui.set_min_width(ui.available_width().max(850.0));
+                    }
+                    self.draw_peer_table(ui, p, height);
+                });
+        });
+    }
+
+    fn draw_peer_table(&mut self, ui: &mut egui::Ui, p: Palette, height: f32) {
         let details = self.torrent.details.clone();
         let running = self.torrent_running();
         let empty = if !running {
@@ -713,13 +751,22 @@ impl Window {
             90.0,
         )
         .min(210.0);
-        let client = first_width(ui, address + has + down + up + flow, 5);
+        let connection = fit(
+            ui,
+            "Connection",
+            details.peers.iter().map(|peer| {
+                text_width(ui, &peer_connection(peer), egui::FontId::proportional(11.0))
+            }),
+            110.0,
+        );
+        let client = first_width(ui, address + has + down + up + flow + connection, 6);
         header(
             ui,
             p,
             &[
                 ("Address", address, false),
                 ("Client", client, false),
+                ("Connection", connection, false),
                 ("Has", has, true),
                 ("Download rate", down, true),
                 ("Upload rate", up, true),
@@ -752,6 +799,18 @@ impl Window {
                                 Some(name) => RichText::new(name).size(11.5),
                                 None => RichText::new(tr("Unknown")).size(11.5).color(p.muted),
                             },
+                            false,
+                        );
+                        cell(
+                            ui,
+                            connection,
+                            RichText::new(peer_connection(peer)).size(11.0).color(
+                                if peer.connection.encrypted == Some(true) {
+                                    p.accent
+                                } else {
+                                    p.muted
+                                },
+                            ),
                             false,
                         );
                         let share = if total == 0 {
@@ -1294,6 +1353,14 @@ impl Desktop {
         };
         let peer =
             |address: &str, client: Option<&str>, has: f64, down: u64, up: u64, incoming| Peer {
+                connection: de_torrent::details::ConnectionInfo {
+                    transport: if incoming {
+                        de_torrent::details::PeerTransport::Utp
+                    } else {
+                        de_torrent::details::PeerTransport::Tcp
+                    },
+                    encrypted: Some(up > 0),
+                },
                 address: Some(address.into()),
                 client: client.map(str::to_owned),
                 has_pieces: (f64::from(total_pieces) * has) as u32,
@@ -1513,11 +1580,15 @@ impl Desktop {
         } else {
             TorrentTab::Files
         };
-        if paused {
-            window.torrent.details = Some(Arc::new(details));
-            window.torrent.seen = Instant::now().checked_sub(Duration::from_secs(180));
-            window.torrent.progress = Some(progress);
-        }
+        // Seed the view too: a fast capture can precede the first asynchronous
+        // activity refresh. This fixture never starts a real torrent worker.
+        window.torrent.details = Some(Arc::new(details));
+        window.torrent.progress = Some(progress);
+        window.torrent.seen = if paused {
+            Instant::now().checked_sub(Duration::from_secs(180))
+        } else {
+            Some(Instant::now())
+        };
         if mode.contains("typed") {
             window.torrent.tracker_text = "udp://tracker.example.org:6969/announce".into();
         }

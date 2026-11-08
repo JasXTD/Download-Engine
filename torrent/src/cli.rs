@@ -9,7 +9,6 @@ use std::sync::Arc;
 use anyhow::{Context, Result, bail, ensure};
 use serde::Deserialize;
 use serde_json::{Value, json};
-use tokio::io::{AsyncBufReadExt, BufReader};
 use url::form_urlencoded;
 
 use crate::meta::TorrentMeta;
@@ -263,15 +262,28 @@ async fn handle(session: &Arc<Session>, command: Command) -> Result<Value> {
 
 async fn serve(options: SessionOptions) -> Result<()> {
     let session = Session::new(options).await?;
-    let mut lines = BufReader::new(tokio::io::stdin()).lines();
-    while let Some(line) = lines.next_line().await? {
+    let result = serve_commands(&session).await;
+    session.shutdown().await;
+    result
+}
+
+async fn serve_commands(session: &Arc<Session>) -> Result<()> {
+    let mut lines = command_lines()?;
+    let monitor = session.wait_for_interface_loss();
+    tokio::pin!(monitor);
+    while let Some(line) = tokio::select! {
+        line = lines.recv() => line.transpose()?,
+        _ = &mut monitor => {
+            bail!("The selected torrent interface/address is unavailable. Progress was saved; reconnect it before retrying.");
+        }
+    } {
         let command: Result<Command> = serde_json::from_str(&line).context("bad command");
         let done = matches!(command, Ok(Command::Exit));
         if done {
             session.shutdown().await;
         }
         let reply = match command {
-            Ok(command) => handle(&session, command).await,
+            Ok(command) => handle(session, command).await,
             Err(error) => Err(error),
         };
         let reply = match reply {
@@ -289,8 +301,47 @@ async fn serve(options: SessionOptions) -> Result<()> {
             return Ok(());
         }
     }
-    session.shutdown().await;
     Ok(())
+}
+
+/// Tokio's stdin uses an uncancellable blocking-pool read. Runtime shutdown waits
+/// for that read, so interface loss could save progress but leave the helper alive
+/// until its parent sent another line. A dedicated bounded input thread is not
+/// owned by the runtime; process exit can release a still-idle pipe reader safely.
+fn command_lines() -> Result<tokio::sync::mpsc::Receiver<std::io::Result<String>>> {
+    let (send, receive) = tokio::sync::mpsc::channel(1);
+    std::thread::Builder::new()
+        .name("torrent-commands".into())
+        .spawn(move || {
+            use std::io::{BufRead, Read};
+            const LIMIT: u64 = 2 * 1024 * 1024;
+            let stdin = std::io::stdin();
+            let mut input = stdin.lock();
+            loop {
+                let mut bytes = Vec::new();
+                let count = (&mut input).take(LIMIT + 1).read_until(b'\n', &mut bytes);
+                if matches!(count, Ok(0)) {
+                    break;
+                }
+                let line = count.and_then(|count| {
+                    if count as u64 > LIMIT {
+                        return Err(std::io::Error::new(
+                            std::io::ErrorKind::InvalidData,
+                            "Torrent command is too large",
+                        ));
+                    }
+                    String::from_utf8(bytes).map_err(|error| {
+                        std::io::Error::new(std::io::ErrorKind::InvalidData, error)
+                    })
+                });
+                let failed = line.is_err();
+                if send.blocking_send(line).is_err() || failed {
+                    break;
+                }
+            }
+        })
+        .context("Cannot start torrent command reader")?;
+    Ok(receive)
 }
 
 fn options_from(arguments: &[String]) -> Result<SessionOptions> {
@@ -317,6 +368,11 @@ fn options_from(arguments: &[String]) -> Result<SessionOptions> {
             "--upnp" => options.upnp = true,
             "--utp" => options.use_utp = true,
             "--web-seeds" => options.web_seeds = true,
+            "--bind-network" => {
+                options.binding = Some(
+                    serde_json::from_str(value()?).context("Invalid torrent interface settings")?,
+                )
+            }
             "--peer-encryption" => options.encryption = crate::mse::Encryption::parse(value()?)?,
             // Only the offline lab can accept loopback peers from another local client.
             // This switch is absent from normal helper/release builds.

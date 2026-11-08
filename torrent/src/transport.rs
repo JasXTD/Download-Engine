@@ -172,6 +172,7 @@ impl AsyncWrite for AbortOnDrop {
 }
 
 pub struct Peers {
+    pub binding: Option<Arc<librqbit_dualstack_sockets::BindDevice>>,
     pub encryption: Encryption,
     allow_local: bool,
     utp: Mutex<Option<Arc<Socket>>>,
@@ -183,6 +184,7 @@ pub struct Peers {
 impl Default for Peers {
     fn default() -> Self {
         Self {
+            binding: None,
             encryption: Encryption::Disabled,
             allow_local: false,
             utp: Mutex::new(None),
@@ -200,6 +202,7 @@ impl Peers {
         listen_port: Option<u16>,
         allow_local: bool,
         cancel: CancellationToken,
+        binding: Option<Arc<librqbit_dualstack_sockets::BindDevice>>,
     ) -> Result<Arc<Self>> {
         let named = Arc::default();
         let socket = if utp {
@@ -210,12 +213,16 @@ impl Peers {
             let port = listen_port.unwrap_or(0);
             let udp = UdpSocket::bind_udp(
                 SocketAddr::new(IpAddr::V6(Ipv6Addr::UNSPECIFIED), port),
-                BindOpts::default(),
+                BindOpts {
+                    device: binding.as_deref(),
+                    ..Default::default()
+                },
             )
             .or_else(|_| {
                 UdpSocket::bind_udp(
                     SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), port),
                     BindOpts {
+                        device: binding.as_deref(),
                         request_dualstack: false,
                         ..Default::default()
                     },
@@ -244,6 +251,7 @@ impl Peers {
             None
         };
         Ok(Arc::new(Self {
+            binding,
             encryption,
             allow_local,
             utp: Mutex::new(socket),
@@ -282,9 +290,18 @@ impl Peers {
                 _named: named,
             }))
         } else {
-            let stream = timeout(CONNECT_TIMEOUT, tcp_connect(addr, ConnectOpts::default()))
-                .await
-                .context("TCP connect timed out")??;
+            let stream = timeout(
+                CONNECT_TIMEOUT,
+                tcp_connect(
+                    addr,
+                    ConnectOpts {
+                        bind_device: self.binding.as_deref(),
+                        ..Default::default()
+                    },
+                ),
+            )
+            .await
+            .context("TCP connect timed out")??;
             stream.set_nodelay(true)?;
             Ok(Box::new(stream))
         }
@@ -296,23 +313,37 @@ impl Peers {
         hash: Id20,
         udp: bool,
         explicitly_named: bool,
-    ) -> Result<BoxedStream> {
+    ) -> Result<(BoxedStream, crate::details::ConnectionInfo)> {
         let stream = self.raw_connect(addr, udp, explicitly_named).await?;
-        match self.encryption {
-            Encryption::Disabled => Ok(stream),
-            Encryption::Required => mse::outgoing(stream, hash).await,
+        let (stream, encrypted) = match self.encryption {
+            Encryption::Disabled => (stream, false),
+            Encryption::Required => (mse::outgoing(stream, hash).await?, true),
             Encryption::Prefer => match mse::outgoing(stream, hash).await {
-                Ok(stream) => Ok(stream),
-                Err(_) => self.raw_connect(addr, udp, explicitly_named).await, // Fresh connection, only in Prefer mode.
+                Ok(stream) => (stream, true),
+                Err(_) => (self.raw_connect(addr, udp, explicitly_named).await?, false), // Fresh connection, only in Prefer mode.
             },
-        }
+        };
+        Ok((
+            stream,
+            crate::details::ConnectionInfo {
+                transport: if udp {
+                    crate::details::PeerTransport::Utp
+                } else {
+                    crate::details::PeerTransport::Tcp
+                },
+                encrypted: Some(encrypted),
+            },
+        ))
     }
     pub(crate) async fn connect(
         &self,
         addr: SocketAddr,
         hash: Id20,
         explicitly_named: bool,
-    ) -> Result<BoxedStream> {
+    ) -> Result<(BoxedStream, crate::details::ConnectionInfo)> {
+        if let Some(device) = &self.binding {
+            device.check()?;
+        }
         ensure!(
             self.allow_local || explicitly_named || is_public_endpoint(addr),
             "Torrent peer endpoint is blocked"

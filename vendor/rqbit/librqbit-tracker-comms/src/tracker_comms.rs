@@ -135,6 +135,7 @@ pub struct TrackerComms {
     // This MUST be set as trackers don't work with 0 port.
     announce_port: u16,
     reqwest_client: reqwest::Client,
+    http_transport: Option<Arc<dyn HttpTransport>>,
     key: u32,
     requests: Arc<Semaphore>,
     observer: Option<Arc<dyn TrackerObserver>>,
@@ -189,6 +190,14 @@ enum SupportedTracker {
     Http(Url),
 }
 
+/// Optional socket-bound HTTP implementation supplied by the application.
+pub trait HttpTransport: Send + Sync {
+    fn get(
+        &self,
+        request: reqwest::Request,
+    ) -> futures::future::BoxFuture<'_, anyhow::Result<reqwest::Response>>;
+}
+
 impl std::fmt::Debug for SupportedTracker {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -208,6 +217,7 @@ async fn udp_tracker_to_socket_addrs(
     host: url::Host<&str>,
     port: u16,
     public_only: bool,
+    bind_device: Option<&librqbit_dualstack_sockets::BindDevice>,
 ) -> anyhow::Result<UdpTrackerResolveResult> {
     let res = match host {
         url::Host::Domain(name) => {
@@ -215,9 +225,10 @@ async fn udp_tracker_to_socket_addrs(
 
             let mut v4: Option<SocketAddrV4> = None;
             let mut v6: Option<SocketAddrV6> = None;
-            for addr in tokio::net::lookup_host((name, port))
+            for addr in librqbit_dualstack_sockets::dns::lookup(bind_device, name, port)
                 .await
                 .with_context(|| format!("error looking up hostname {name}"))?
+                .into_iter()
                 .filter(|addr| !public_only || !is_local_address(addr.ip()))
             {
                 match (v4, v6, addr) {
@@ -254,6 +265,7 @@ impl TrackerComms {
         reqwest_client: reqwest::Client,
         udp_client: UdpTrackerClient,
         observer: Option<Arc<dyn TrackerObserver>>,
+        http_transport: Option<Arc<dyn HttpTransport>>,
     ) -> Option<BoxStream<'static, SocketAddr>> {
         // Callers validate at ingress too. Refuse an oversized set before spawning anything.
         if trackers.len() > MAX_TRACKERS
@@ -293,6 +305,7 @@ impl TrackerComms {
                 tx,
                 announce_port,
                 reqwest_client,
+                http_transport,
                 key: librqbit_core::random::random_u32(),
                 requests: Arc::new(Semaphore::new(MAX_TRACKER_REQUESTS)),
                 observer,
@@ -439,7 +452,11 @@ impl TrackerComms {
         url.set_query(Some(&queries));
 
         let permits = self.request_permits().await?;
-        let response: reqwest::Response = self.reqwest_client.get(url).send().await?;
+        let request = self.reqwest_client.get(url).build()?;
+        let response = match &self.http_transport {
+            Some(transport) => transport.get(request).await?,
+            None => self.reqwest_client.execute(request).await?,
+        };
         if !response.status().is_success() {
             anyhow::bail!("tracker responded with {:?}", response.status());
         }
@@ -500,11 +517,15 @@ impl TrackerComms {
             let addrs = loop {
                 self.report_asking(&url);
                 let permits = self.request_permits().await?;
-                let resolved =
-                    udp_tracker_to_socket_addrs(host.clone(), port, client.public_only())
-                        .instrument(trace_span!("resolve", ?host))
-                        .await
-                        .or_else(|err| prev_addrs.ok_or(err));
+                let resolved = udp_tracker_to_socket_addrs(
+                    host.clone(),
+                    port,
+                    client.public_only(),
+                    client.bind_device(),
+                )
+                .instrument(trace_span!("resolve", ?host))
+                .await
+                .or_else(|err| prev_addrs.ok_or(err));
                 drop(permits);
                 match resolved {
                     Ok(addrs) => break addrs,
@@ -688,6 +709,7 @@ mod tests {
             tx: tokio::sync::mpsc::channel(1).0,
             announce_port: 6881,
             reqwest_client: reqwest::Client::builder().no_proxy().build().unwrap(),
+            http_transport: None,
             key: 0,
             requests: Arc::new(Semaphore::new(MAX_TRACKER_REQUESTS)),
             observer: None,

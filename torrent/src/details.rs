@@ -255,6 +255,7 @@ pub struct SourceDetails {
 
 #[derive(Serialize, Debug, Clone, PartialEq, Eq)]
 pub struct PeerDetails {
+    pub connection: ConnectionInfo,
     /// None only for test connections, which have no address.
     pub address: Option<String>,
     /// The name the peer gave, cleaned for showing.
@@ -271,6 +272,22 @@ pub struct PeerDetails {
     pub receiving: bool,
     /// We let the peer download and it wants something we have.
     pub sending: bool,
+}
+
+/// Negotiated facts, independent of the preferred encryption policy. In-memory
+/// test streams and older helpers have no reported transport, hence Unknown.
+#[derive(Serialize, serde::Deserialize, Debug, Clone, Copy, Default, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum PeerTransport {
+    #[default]
+    Unknown,
+    Tcp,
+    Utp,
+}
+#[derive(Serialize, serde::Deserialize, Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct ConnectionInfo {
+    pub transport: PeerTransport,
+    pub encrypted: Option<bool>,
 }
 
 #[derive(Serialize, Debug, Clone, PartialEq, Eq)]

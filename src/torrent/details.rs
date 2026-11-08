@@ -30,6 +30,8 @@ pub struct Pieces {
 
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize)]
 pub struct Peer {
+    #[serde(default)]
+    pub connection: de_torrent::details::ConnectionInfo,
     pub address: Option<String>,
     /// The name the peer gave, already cleaned by the helper.
     pub client: Option<String>,
@@ -338,6 +340,32 @@ mod tests {
         );
         assert_eq!(details.trackers[0].state, TrackerState::Working);
         assert_eq!(details.dht.peers, 41);
+    }
+
+    #[test]
+    fn connection_indicators_use_reported_negotiation_and_old_helpers_stay_unknown() {
+        use de_torrent::details::{ConnectionInfo, PeerTransport};
+        assert_eq!(
+            TorrentDetails::parse(reply()).unwrap().peers[0].connection,
+            ConnectionInfo::default()
+        );
+        for (protocol, expected) in [("tcp", PeerTransport::Tcp), ("utp", PeerTransport::Utp)] {
+            for encrypted in [true, false] {
+                let mut value = reply();
+                value["peers"][0]["connection"] =
+                    json!({"transport":protocol,"encrypted":encrypted});
+                assert_eq!(
+                    TorrentDetails::parse(value).unwrap().peers[0].connection,
+                    ConnectionInfo {
+                        transport: expected,
+                        encrypted: Some(encrypted)
+                    }
+                );
+            }
+        }
+        let mut value = reply();
+        value["peers"][0]["connection"] = json!({"transport":"not-a-protocol","encrypted":true});
+        assert!(TorrentDetails::parse(value).is_err());
     }
 
     #[test]

@@ -538,7 +538,7 @@ mod tests {
 
     fn enable_sharing(store: &Store) {
         store
-            .save_torrent_settings(Settings {
+            .save_torrent_settings(&Settings {
                 enabled: true,
                 dht: false,
                 seed_completed: true,

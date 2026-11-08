@@ -415,6 +415,8 @@ impl Desktop {
                 | "torrent-router-working"
                 | "torrent-transports"
                 | "torrent-transports-required"
+                | "torrent-binding"
+                | "torrent-binding-missing"
         ) {
             self.open_preferences_window();
             let draft = self.preferences_window.as_mut().unwrap();
@@ -427,6 +429,23 @@ impl Desktop {
                 draft.torrents.encryption = de_torrent::mse::Encryption::Required;
                 draft.torrents.utp = true;
                 draft.torrents.web_seeds = true;
+            }
+            if mode.starts_with("torrent-binding") {
+                let address = "192.0.2.2".parse().unwrap();
+                draft.torrents.binding = Some(de_torrent::network::Binding {
+                    interface: "sample-vpn".into(),
+                    address,
+                    dns: "192.0.2.53".parse().unwrap(),
+                });
+                draft.binding_dns = "192.0.2.53".into();
+                draft.network_interfaces = Ok(vec![de_torrent::network::Interface {
+                    name: "sample-vpn".into(),
+                    label: "Example VPN".into(),
+                    index: 1,
+                    index_v6: 1,
+                    addresses: vec![address],
+                    up: mode != "torrent-binding-missing",
+                }]);
             }
             return;
         }
@@ -566,9 +585,9 @@ impl Desktop {
     fn turn_on_torrents(&mut self) -> bool {
         let settings = Settings {
             enabled: true,
-            ..self.torrents.settings
+            ..self.torrents.settings.clone()
         };
-        match self.store.save_torrent_settings(settings) {
+        match self.store.save_torrent_settings(&settings) {
             Ok(()) => {
                 self.torrents.settings = settings;
                 self.apply_torrent_settings();
@@ -1379,7 +1398,7 @@ mod tests {
             app.torrents.settings.enabled = true;
             app.torrents.settings.dht = false;
             app.store
-                .save_torrent_settings(app.torrents.settings)
+                .save_torrent_settings(&app.torrents.settings)
                 .unwrap();
             app.store.set_queue_running("main", false).unwrap();
             let link =

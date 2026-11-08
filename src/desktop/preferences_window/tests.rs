@@ -1,6 +1,48 @@
 use super::*;
 use crate::desktop::interaction_tests::{click, fixture, frame, text_rect};
 
+#[test]
+fn torrent_binding_validates_dns_before_saving_and_cancel_preserves_policy() {
+    let (_temp, mut app, ctx) = fixture();
+    let original = app.store.torrent_settings().unwrap();
+    let interface = app.interface;
+    app.open_preferences_window();
+    let draft = app.preferences_window.as_mut().unwrap();
+    draft.category = Category::Torrents;
+    draft.torrents.enabled = true;
+    draft.torrents.binding = Some(de_torrent::network::Binding {
+        interface: "offline-test-adapter".into(),
+        address: "192.0.2.2".parse().unwrap(),
+        dns: "192.0.2.53".parse().unwrap(),
+    });
+    draft.interface.compact_rows = !interface.compact_rows;
+    for invalid in ["dns.example.test", "", "::1", "0.0.0.0"] {
+        app.preferences_window.as_mut().unwrap().binding_dns = invalid.into();
+        app.save_preferences_window(&ctx);
+        assert!(app.preferences_window.as_ref().unwrap().error.is_some());
+        assert_eq!(app.store.torrent_settings().unwrap(), original);
+        assert_eq!(
+            app.interface, interface,
+            "Invalid DNS must not partially save preferences"
+        );
+    }
+    app.preferences_window.as_mut().unwrap().binding_dns = "192.0.2.53".into();
+    app.save_preferences_window(&ctx);
+    let saved = app.store.torrent_settings().unwrap();
+    assert_eq!(
+        saved.binding.as_ref().unwrap().dns.to_string(),
+        "192.0.2.53"
+    );
+    assert!(
+        !app.store.torrents.is_running(),
+        "Saving a missing interface must never start a helper or fall back"
+    );
+    app.open_preferences_window();
+    app.preferences_window.as_mut().unwrap().torrents.binding = None;
+    app.close_preferences_window(&ctx);
+    assert_eq!(app.store.torrent_settings().unwrap(), saved);
+}
+
 #[cfg(unix)]
 #[test]
 fn native_preferences_offer_updates_without_unavailable_windows_integrations() {

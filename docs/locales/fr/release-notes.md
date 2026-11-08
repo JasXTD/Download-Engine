@@ -1,3 +1,13 @@
+## 3.18.0 — 2026-11-08
+
+### VPN / interface réseau
+
+- Lier les torrents à une adresse d’interface. Les transferts s’arrêtent si elle disparaît ; les autres téléchargements conservent leurs paramètres.
+- DNS utilise aussi cette interface. Utilisez la même version IP que l’adresse sélectionnée. La redirection des ports du routeur est désactivée pendant la liaison.
+- TCP / uTP · Chiffré / En clair
+
+[English details](../../../CHANGELOG.md#3180--2026-11-08)
+
 ## 3.17.0 — 2026-11-08
 
 ### Chiffrement des pairs, uTP et sources web

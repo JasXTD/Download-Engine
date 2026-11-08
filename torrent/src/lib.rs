@@ -8,6 +8,7 @@ pub mod discovery;
 pub mod meta;
 mod metadata;
 pub mod mse;
+pub mod network;
 pub mod peer;
 pub mod picker;
 pub mod rate;
@@ -24,6 +25,8 @@ pub mod webseed;
 mod details_tests;
 #[cfg(test)]
 mod hard_tests;
+#[cfg(all(test, unix))]
+mod network_binding_tests;
 #[cfg(all(test, unix))]
 mod network_tests;
 #[cfg(test)]

@@ -660,6 +660,54 @@ impl Desktop {
                             tr("Fetch and verify pieces from HTTP/HTTPS sources listed in the torrent."),
                             "\u{e774}", &mut torrents.web_seeds);
                     });
+                    section(ui, p, tr("TORRENT NETWORK"), |ui| {
+                        egui::Frame::new().inner_margin(12).show(ui, |ui| {
+                        ui.set_min_width(ui.available_width());
+                        ui.spacing_mut().item_spacing.y = 6.0;
+                        let heading = ui.label(RichText::new(tr("VPN / network interface")).strong());
+                        #[cfg(feature = "screenshot")]
+                        if std::env::var("IDM_EX_TEST_FEATURE").is_ok_and(|mode| mode.starts_with("torrent-binding")) {
+                            ui.scroll_to_rect(heading.rect, Some(Align::TOP));
+                        }
+                        let _ = heading;
+                        ui.label(RichText::new(tr("Bind torrents to one interface address. Transfers stop if it disappears; other downloads keep their own settings.")).small().color(p.muted));
+                        let selected = torrents.binding.as_ref().map(|binding| {
+                            let label = state.network_interfaces.as_ref().ok().and_then(|items| items.iter().find(|item| item.name == binding.interface)).map_or(binding.interface.as_str(), |item| item.label.as_str());
+                            format!("{label} · {}", binding.address)
+                        }).unwrap_or_else(|| tr("System routing (not bound)").to_owned());
+                        egui::ComboBox::from_id_salt("torrent-interface")
+                            .width(ui.available_width().min(480.0))
+                            .selected_text(selected)
+                            .show_ui(ui, |ui| {
+                                if ui.selectable_label(torrents.binding.is_none(), tr("System routing (not bound)")).clicked() { torrents.binding = None; }
+                                if let Ok(items) = &state.network_interfaces {
+                                    for item in items.iter().filter(|item| item.up) {
+                                        for address in &item.addresses {
+                                            let selected = torrents.binding.as_ref().is_some_and(|binding| binding.interface == item.name && binding.address == *address);
+                                            if ui.selectable_label(selected, format!("{} · {address}", item.label)).clicked() {
+                                                torrents.binding = Some(de_torrent::network::Binding {
+                                                    interface: item.name.clone(), address: *address,
+                                                    dns: state.binding_dns.trim().parse().unwrap_or(std::net::IpAddr::V4(std::net::Ipv4Addr::UNSPECIFIED)),
+                                                });
+                                                torrents.upnp = false;
+                                            }
+                                        }
+                                    }
+                                }
+                            });
+                        if ui.button(tr("Refresh interfaces")).clicked() {
+                            state.network_interfaces = de_torrent::network::interfaces().map_err(|error| error.to_string());
+                        }
+                        if let Err(error) = &state.network_interfaces { ui.label(RichText::new(error).color(p.warning)); }
+                        if let Some(binding) = &torrents.binding {
+                            let available = state.network_interfaces.as_ref().is_ok_and(|items| items.iter().any(|item| item.name == binding.interface && item.up && item.addresses.contains(&binding.address)));
+                            if !available { ui.label(RichText::new(tr("Selected interface address is unavailable. Torrents will stay blocked.")).color(p.warning)); }
+                            ui.label(tr("DNS server IP"));
+                            ui.add(egui::TextEdit::singleline(&mut state.binding_dns).desired_width(ui.available_width().min(480.0)).hint_text(tr("Enter the DNS server IP supplied by your VPN or network.")));
+                            ui.label(RichText::new(tr("DNS uses this interface too. Use the same IP version as the selected address. Router port mapping is disabled while bound.")).small().color(p.muted));
+                        }
+                        });
+                    });
                     section(ui, p, tr("FINDING PEERS"), |ui| {
                         let mut incoming = torrents.incoming_port.is_some();
                         let detail = if torrents.upnp {
@@ -688,7 +736,7 @@ impl Desktop {
                                 ui.scroll_to_rect(port_row.rect, Some(Align::Center));
                             }
                         }
-                        ui.add_enabled_ui(torrents.incoming_port.is_some(), |ui| {
+                        ui.add_enabled_ui(torrents.incoming_port.is_some() && torrents.binding.is_none(), |ui| {
                             toggle(ui, p, tr("Set up my router (UPnP)"),
                                 tr("Asks your router to forward this port while torrents run, then removes it."),
                                 "\u{e839}", &mut torrents.upnp);

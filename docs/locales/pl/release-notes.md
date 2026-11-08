@@ -1,3 +1,13 @@
+## 3.18.0 — 2026-11-08
+
+### VPN / interfejs sieciowy
+
+- Przypisz torrenty do jednego adresu interfejsu. Gdy zniknie, transfery się zatrzymają; inne pobrania zachowają własne ustawienia.
+- DNS również używa tego interfejsu. Wybierz tę samą wersję IP co adres interfejsu. Mapowanie portów routera jest wyłączone podczas przypisania.
+- TCP / uTP · Szyfrowane / Nieszyfrowane
+
+[English details](../../../CHANGELOG.md#3180--2026-11-08)
+
 ## 3.17.0 — 2026-11-08
 
 ### Szyfrowanie połączeń, uTP i źródła HTTP

@@ -5,8 +5,8 @@ use anyhow::{Context, Result, ensure};
 use rusqlite::{Connection, OptionalExtension, TransactionBehavior, functions::FunctionFlags};
 
 const SCHEMA_VERSION: i64 = 1;
-const DATA_VERSION: i64 = 9;
-const WRITER_VERSION: i64 = 9;
+const DATA_VERSION: i64 = 10;
+const WRITER_VERSION: i64 = 10;
 
 pub(super) fn register_writer(conn: &Connection) -> Result<()> {
     conn.create_scalar_function(
@@ -163,16 +163,7 @@ fn install_guards(conn: &Connection) -> Result<()> {
         .query_map([], |row| row.get::<_, String>(0))?
         .collect::<rusqlite::Result<Vec<_>>>()?;
     for table in tables {
-        let quoted = table.replace('"', "\"\"");
-        for operation in ["INSERT", "UPDATE", "DELETE"] {
-            conn.execute_batch(&format!(
-                "CREATE TRIGGER \"writer_guard_{quoted}_{operation}\" BEFORE {operation} ON \"{quoted}\"
-                 BEGIN SELECT CASE WHEN xdownloader_writer_version() < COALESCE((SELECT min_writer_version FROM profile_format WHERE id=1),9223372036854775807)
-                 OR xdownloader_schema_version() < (SELECT schema_version FROM profile_format WHERE id=1)
-                 OR xdownloader_data_version() < (SELECT data_version FROM profile_format WHERE id=1)
-                 THEN RAISE(ABORT,'This profile requires a newer XDownloader writer') END; END;"
-            ))?;
-        }
+        guard_table(conn, &table)?;
     }
     conn.execute_batch(
         "CREATE TRIGGER profile_format_no_delete BEFORE DELETE ON profile_format
@@ -181,6 +172,22 @@ fn install_guards(conn: &Connection) -> Result<()> {
          WHEN NEW.schema_version<OLD.schema_version OR NEW.data_version<OLD.data_version OR NEW.min_writer_version<OLD.min_writer_version
          BEGIN SELECT RAISE(ABORT,'The profile format cannot be downgraded'); END;",
     )?;
+    Ok(())
+}
+
+/// Feature tables created after the baseline migration need the same persistent
+/// writer protection. Idempotent so existing profiles gain missing guards.
+pub(crate) fn guard_table(conn: &Connection, table: &str) -> Result<()> {
+    let quoted = table.replace('"', "\"\"");
+    for operation in ["INSERT", "UPDATE", "DELETE"] {
+        conn.execute_batch(&format!(
+            "CREATE TRIGGER IF NOT EXISTS \"writer_guard_{quoted}_{operation}\" BEFORE {operation} ON \"{quoted}\"
+             BEGIN SELECT CASE WHEN xdownloader_writer_version() < COALESCE((SELECT min_writer_version FROM profile_format WHERE id=1),9223372036854775807)
+             OR xdownloader_schema_version() < (SELECT schema_version FROM profile_format WHERE id=1)
+             OR xdownloader_data_version() < (SELECT data_version FROM profile_format WHERE id=1)
+             THEN RAISE(ABORT,'This profile requires a newer XDownloader writer') END; END;"
+        ))?;
+    }
     Ok(())
 }
 

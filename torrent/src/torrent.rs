@@ -420,11 +420,22 @@ pub(crate) struct Live {
 
 impl Live {
     /// Adds a connected peer, unless it is already connected or is ourselves.
+    #[cfg(test)]
     pub fn register(
         &self,
         peer_id: Id20,
         addr: Option<SocketAddr>,
         incoming: bool,
+    ) -> Option<Arc<PeerLink>> {
+        self.register_connection(peer_id, addr, incoming, Default::default())
+    }
+
+    pub fn register_connection(
+        &self,
+        peer_id: Id20,
+        addr: Option<SocketAddr>,
+        incoming: bool,
+        connection: crate::details::ConnectionInfo,
     ) -> Option<Arc<PeerLink>> {
         if peer_id == self.core.context.peer_id {
             return None;
@@ -434,7 +445,9 @@ impl Live {
             return None;
         }
         let key = self.next_key.fetch_add(1, Ordering::Relaxed);
-        let link = Arc::new(PeerLink::new(key, peer_id, addr, incoming));
+        let mut link = PeerLink::new(key, peer_id, addr, incoming);
+        link.connection = connection;
+        let link = Arc::new(link);
         links.insert(key, link.clone());
         Some(link)
     }
@@ -988,7 +1001,7 @@ impl Torrent {
                 let named = self.options.peers.contains(&addr);
                 attempts.spawn(async move {
                     let result = timeout(METADATA_TIMEOUT, async {
-                        let stream = transports.connect(addr, info_hash, named).await?;
+                        let (stream, _) = transports.connect(addr, info_hash, named).await?;
                         metadata::fetch(stream, info_hash, our_id, budget).await
                     })
                     .await
@@ -1283,6 +1296,7 @@ async fn serve_peer(
     addr: Option<SocketAddr>,
     hello: Option<Hello>,
     _permit: Permit,
+    connection: crate::details::ConnectionInfo,
 ) -> bool {
     let info_hash = live.core.meta.info_hash;
     let our_id = live.core.context.peer_id;
@@ -1293,7 +1307,8 @@ async fn serve_peer(
         match hello {
             Some(hello) => Ok(hello),
             None => {
-                let (their_hash, hello) = read_handshake(&mut stream).await?;
+                let (their_hash, mut hello) = read_handshake(&mut stream).await?;
+                hello.connection = connection;
                 anyhow::ensure!(their_hash == info_hash, "peer is on another torrent");
                 Ok(hello)
             }
@@ -1320,7 +1335,9 @@ async fn connect_and_serve(live: Arc<Live>, addr: SocketAddr, permit: Permit) ->
     };
     live.connecting.fetch_sub(1, Ordering::Relaxed);
     match connected {
-        Ok(stream) => serve_peer(live, stream, Some(addr), None, permit).await,
+        Ok((stream, connection)) => {
+            serve_peer(live, stream, Some(addr), None, permit, connection).await
+        }
         Err(error) => {
             debug_log!("could not connect to {addr}: {error:#}");
             false
@@ -1513,7 +1530,7 @@ async fn run_swarm(
             Some(peer) = found.recv() => book.add_found(peer, core.options.allow_loopback),
             Some(Incoming { stream, addr, hello, permit }) = incoming.recv() => {
                 if !addr.is_some_and(|addr| book.is_banned(addr)) {
-                    peers.spawn(tracked(addr, serve_peer(live.clone(), stream, addr, hello, permit)));
+                    peers.spawn(tracked(addr, serve_peer(live.clone(), stream, addr, hello, permit, Default::default())));
                 }
             }
         }
@@ -1661,6 +1678,7 @@ mod tests {
                 Box::new(server),
                 SocketAddr::from(([1, 2, 3, 4], 6000 + u16::from(index))),
                 Hello {
+                    connection: Default::default(),
                     peer_id: Id20::new([index + 10; 20]),
                     supports_extended: false,
                 },
@@ -1693,6 +1711,7 @@ mod tests {
                     Box::new(server),
                     SocketAddr::from(([1, 2, 3, index + 1], 6881)),
                     Hello {
+                        connection: Default::default(),
                         peer_id: Id20::new([index + 10; 20]),
                         supports_extended: false,
                     },
@@ -1717,6 +1736,7 @@ mod tests {
                 Box::new(server),
                 address("1.2.3.1:6881"),
                 Hello {
+                    connection: Default::default(),
                     peer_id: Id20::new([10; 20]),
                     supports_extended: false,
                 },
@@ -1746,6 +1766,7 @@ mod tests {
                     Box::new(server),
                     SocketAddr::from((ip, 6000 + u16::from(index))),
                     Hello {
+                        connection: Default::default(),
                         peer_id: Id20::new([index + 10; 20]),
                         supports_extended: false,
                     },
@@ -1762,6 +1783,7 @@ mod tests {
                 Box::new(server),
                 address("[::ffff:1.2.3.4]:9999"),
                 Hello {
+                    connection: Default::default(),
                     peer_id: Id20::new([100; 20]),
                     supports_extended: false,
                 },

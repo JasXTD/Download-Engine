@@ -233,13 +233,17 @@ impl std::fmt::Display for RetryAfter {
 impl std::error::Error for RetryAfter {}
 
 struct Http {
+    bound: Option<crate::network::BoundHttp>,
     client: reqwest::Client,
     allow_local: bool,
     slots: Arc<Semaphore>,
 }
 static REQUESTS: OnceLock<Arc<Semaphore>> = OnceLock::new();
 impl Http {
-    fn new(allow_local: bool) -> Result<Self> {
+    fn new(
+        allow_local: bool,
+        binding: Option<Arc<librqbit_dualstack_sockets::BindDevice>>,
+    ) -> Result<Self> {
         let mut builder = reqwest::Client::builder()
             .no_proxy()
             .redirect(reqwest::redirect::Policy::none())
@@ -250,6 +254,9 @@ impl Http {
             builder = builder.dns_resolver(Arc::new(PublicNames));
         }
         Ok(Self {
+            bound: binding
+                .map(|binding| crate::network::BoundHttp::new(binding, allow_local))
+                .transpose()?,
             client: builder.build()?,
             allow_local,
             slots: REQUESTS.get_or_init(|| Arc::new(Semaphore::new(4))).clone(),
@@ -291,7 +298,15 @@ impl Http {
                 format!("bytes={begin}-{}", begin + len as u64 - 1),
             );
         }
-        let mut response = request.send().await.map_err(|e| e.without_url())?;
+        let request = request.build()?;
+        let mut response = match &self.bound {
+            Some(bound) => bound.send(request).await?,
+            None => self
+                .client
+                .execute(request)
+                .await
+                .map_err(|e| e.without_url())?,
+        };
         if response.status() == reqwest::StatusCode::SERVICE_UNAVAILABLE {
             let seconds = response
                 .headers()
@@ -401,7 +416,10 @@ pub(crate) async fn run(live: Arc<Live>) {
     if !core.options.web_seeds || core.options.seed_only || core.meta.web_seeds.is_empty() {
         return;
     }
-    let http = match Http::new(core.options.allow_loopback) {
+    let http = match Http::new(
+        core.options.allow_loopback,
+        core.context.peers.binding.clone(),
+    ) {
         Ok(http) => http,
         Err(_) => {
             let _ = live.events.send(Event::Fatal(

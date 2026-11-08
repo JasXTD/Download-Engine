@@ -1,3 +1,13 @@
+## 3.18.0 — 2026-11-08
+
+### VPN / interfatscha da rait
+
+- Liar torrents ad ina adressa d’interfatscha. Ils transferiments sa ferman sche ella svanescha; autras telechargiadas mantegnan lur configuraziun.
+- DNS dovra er questa interfatscha. Duvra la medema versiun IP sco l’adressa tschernida. La redirecziun dals ports dal router è deactivada durant la colliaziun.
+- TCP / uTP · Criptà / Text cler
+
+[English details](../../../CHANGELOG.md#3180--2026-11-08)
+
 ## 3.17.0 — 2026-11-08
 
 ### Criptaziun tranter peers, uTP e funtaunas web

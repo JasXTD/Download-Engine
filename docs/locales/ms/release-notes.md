@@ -1,3 +1,13 @@
+## 3.18.0 — 2026-11-08
+
+### VPN / antara muka rangkaian
+
+- Ikat torrent pada satu alamat antara muka. Pemindahan berhenti jika alamat itu hilang; muat turun lain mengekalkan tetapannya.
+- DNS juga menggunakan antara muka ini. Gunakan versi IP yang sama dengan alamat terpilih. Pemetaan port penghala dimatikan semasa diikat.
+- TCP / uTP · Disulitkan / Teks biasa
+
+[English details](../../../CHANGELOG.md#3180--2026-11-08)
+
 ## 3.17.0 — 2026-11-08
 
 ### Penyulitan rakan, uTP dan benih web

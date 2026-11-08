@@ -15,6 +15,26 @@ const TRACKER: &str = "udp://tracker.example.org:1337/announce";
 const ADDED: &str = "udp://open.example.org:6969/announce";
 const SIZE: egui::Vec2 = egui::vec2(702.0, 640.0);
 
+#[test]
+fn peer_connection_labels_follow_negotiation_and_keep_unknown_distinct() {
+    use de_torrent::details::{ConnectionInfo, PeerTransport};
+    let _language = download_engine::i18n::scope(download_engine::i18n::Language::English);
+    let mut peer = details(false).peers.remove(0);
+    for (transport, encrypted, expected) in [
+        (PeerTransport::Tcp, Some(true), "TCP · Encrypted"),
+        (PeerTransport::Tcp, Some(false), "TCP · Plaintext"),
+        (PeerTransport::Utp, Some(true), "uTP · Encrypted"),
+        (PeerTransport::Utp, Some(false), "uTP · Plaintext"),
+        (PeerTransport::Unknown, None, "Unknown"),
+    ] {
+        peer.connection = ConnectionInfo {
+            transport,
+            encrypted,
+        };
+        assert_eq!(super::torrent::peer_connection(&peer), expected);
+    }
+}
+
 /// Draws one status window the way `download_status_windows` does, then lets it act.
 fn draw(
     app: &mut Desktop,
@@ -89,7 +109,7 @@ fn click_text(app: &mut Desktop, ctx: &egui::Context, id: &str, label: &str) -> 
 fn paused_torrent(app: &mut Desktop) -> Job {
     app.store.set_queue_running("main", false).unwrap();
     app.store
-        .save_torrent_settings(Settings {
+        .save_torrent_settings(&Settings {
             enabled: true,
             dht: false,
             ..Default::default()
@@ -141,6 +161,10 @@ fn details(private: bool) -> TorrentDetails {
             map: "99*".into(),
         }),
         peers: vec![Peer {
+            connection: de_torrent::details::ConnectionInfo {
+                transport: de_torrent::details::PeerTransport::Tcp,
+                encrypted: Some(true),
+            },
             address: Some("192.0.2.7:6881".into()),
             client: Some("qBittorrent/5.0.3".into()),
             has_pieces: 3,

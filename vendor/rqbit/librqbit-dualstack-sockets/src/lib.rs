@@ -4,7 +4,9 @@ mod tests;
 
 mod bind_device;
 mod connect;
+pub mod dns;
 mod error;
+pub mod interfaces;
 mod traits;
 pub use error::{Error, Result};
 

@@ -1044,6 +1044,7 @@ impl core::fmt::Debug for ResponseOrError {
 }
 
 struct DhtWorker {
+    bind_device: Option<BindDevice>,
     socket: UdpSocket,
     dht: Arc<DhtState>,
 }
@@ -1077,10 +1078,15 @@ impl DhtWorker {
     }
 
     async fn bootstrap_hostname(&self, hostname: &str) -> crate::Result<()> {
-        let addrs = tokio::net::lookup_host(hostname)
+        let (host, port) = hostname.rsplit_once(':').ok_or_else(|| {
+            Error::lookup(hostname, std::io::Error::other("Missing bootstrap port"))
+        })?;
+        let port = port
+            .parse::<u16>()
+            .map_err(|error| Error::lookup(hostname, std::io::Error::other(error)))?;
+        let addrs = librqbit_dualstack_sockets::dns::lookup(self.bind_device.as_ref(), host, port)
             .await
-            .map_err(|err| Error::lookup(hostname, err))?
-            .collect::<Vec<_>>();
+            .map_err(|err| Error::lookup(hostname, err))?;
         let v4 = RecursiveRequest::find_node_for_routing_table(
             self.dht.clone(),
             self.dht.id,
@@ -1419,7 +1425,9 @@ impl DhtState {
     pub fn with_config<'a>(mut config: DhtConfig<'a>) -> BoxFuture<'a, crate::Result<Arc<Self>>> {
         async move {
             let addr = config
-                .listen_addr
+                .bind_device
+                .map(|device| device.address(0))
+                .or(config.listen_addr)
                 .unwrap_or((Ipv6Addr::UNSPECIFIED, 0).into());
             let socket = UdpSocket::bind_udp(
                 addr,
@@ -1457,6 +1465,8 @@ impl DhtState {
             state.allow_local_addresses = config.allow_local_addresses;
             let state = Arc::new(state);
 
+            let bind_device = config.bind_device.cloned();
+
             spawn_with_cancel(
                 debug_span!("dht"),
                 "dht",
@@ -1464,7 +1474,11 @@ impl DhtState {
                 {
                     let state = state.clone();
                     async move {
-                        let worker = DhtWorker { socket, dht: state };
+                        let worker = DhtWorker {
+                            socket,
+                            dht: state,
+                            bind_device,
+                        };
                         worker.start(in_rx, &bootstrap_addrs).await
                     }
                 },

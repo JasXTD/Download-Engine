@@ -47,6 +47,12 @@ async fn done(session: &Session, name: &str) {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn mse_over_utp_fallback_pauses_resumes_and_releases_udp_port() {
+    for address in ["127.0.0.1", "::1"] {
+        encrypted_utp_on_address(address.parse().unwrap()).await;
+    }
+}
+
+async fn encrypted_utp_on_address(address: std::net::IpAddr) {
     let source = TempFolder::new();
     let output = TempFolder::new();
     let data = sample_bytes(2 * 1024 * 1024, 332);
@@ -61,7 +67,12 @@ async fn mse_over_utp_fallback_pauses_resumes_and_releases_udp_port() {
     .unwrap();
     seed.start().await;
     wait_until(&seed, "seed", is_done).await;
-    let incoming = port().await;
+    let incoming = TcpListener::bind(std::net::SocketAddr::new(address, 0))
+        .await
+        .unwrap()
+        .local_addr()
+        .unwrap()
+        .port();
     let cancel = CancellationToken::new();
     let server = Peers::new(
         Encryption::Required,
@@ -69,6 +80,20 @@ async fn mse_over_utp_fallback_pauses_resumes_and_releases_udp_port() {
         Some(incoming),
         true,
         cancel.clone(),
+        Some(Arc::new(
+            crate::network::Binding {
+                interface: if cfg!(target_os = "macos") {
+                    "lo0"
+                } else {
+                    "lo"
+                }
+                .into(),
+                address,
+                dns: address,
+            }
+            .open()
+            .unwrap(),
+        )),
     )
     .await
     .unwrap();
@@ -94,6 +119,16 @@ async fn mse_over_utp_fallback_pauses_resumes_and_releases_udp_port() {
     });
     // No TCP listener exists at this port: the production connector must fall back to uTP.
     let session = Session::new(SessionOptions {
+        binding: Some(crate::network::Binding {
+            interface: if cfg!(target_os = "macos") {
+                "lo0"
+            } else {
+                "lo"
+            }
+            .into(),
+            address,
+            dns: address,
+        }),
         use_utp: true,
         encryption: Encryption::Required,
         allow_loopback_peers: true,
@@ -107,7 +142,7 @@ async fn mse_over_utp_fallback_pauses_resumes_and_releases_udp_port() {
             &torrent,
             AddOptions {
                 output: output.path(),
-                peers: vec![format!("127.0.0.1:{incoming}").parse().unwrap()],
+                peers: vec![std::net::SocketAddr::new(address, incoming)],
                 ..Default::default()
             },
         )
@@ -120,6 +155,18 @@ async fn mse_over_utp_fallback_pauses_resumes_and_releases_udp_port() {
     })
     .await
     .unwrap();
+    assert!(
+        session
+            .torrent("download")
+            .unwrap()
+            .details()
+            .peers
+            .iter()
+            .any(
+                |peer| peer.connection.transport == crate::details::PeerTransport::Utp
+                    && peer.connection.encrypted == Some(true)
+            )
+    );
     session.pause("download").await.unwrap();
     let paused = session.stats().torrents["download"].progress_bytes;
     assert!(paused > 0 && paused < data.len() as u64);
@@ -139,7 +186,7 @@ async fn mse_over_utp_fallback_pauses_resumes_and_releases_udp_port() {
     cancel.cancel();
     listener.await.unwrap();
     server.shutdown().await;
-    let _rebound = std::net::UdpSocket::bind((std::net::Ipv4Addr::UNSPECIFIED, incoming)).unwrap();
+    let _rebound = std::net::UdpSocket::bind(std::net::SocketAddr::new(address, incoming)).unwrap();
 }
 
 #[tokio::test]
@@ -164,14 +211,17 @@ async fn prefer_uses_a_fresh_plain_connection_required_never_downgrades() {
                 assert_eq!(&text, b"plain");
             }
         });
-        let peers = Peers::new(mode, false, None, true, CancellationToken::new())
+        let peers = Peers::new(mode, false, None, true, CancellationToken::new(), None)
             .await
             .unwrap();
         let result = peers
             .connect(addr, librqbit_core::hash_id::Id20::new([8; 20]), false)
             .await;
         if mode == Encryption::Prefer {
-            result.unwrap().write_all(b"plain").await.unwrap();
+            let (mut stream, info) = result.unwrap();
+            assert_eq!(info.transport, crate::details::PeerTransport::Tcp);
+            assert_eq!(info.encrypted, Some(false));
+            stream.write_all(b"plain").await.unwrap();
         } else {
             assert!(result.is_err());
         }

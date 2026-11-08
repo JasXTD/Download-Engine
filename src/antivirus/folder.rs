@@ -360,7 +360,7 @@ mod sharing_regression {
             .save_antivirus_report(&job, &settings, &report)
             .unwrap();
         store
-            .save_torrent_settings(crate::torrent::Settings {
+            .save_torrent_settings(&crate::torrent::Settings {
                 seed_completed: true,
                 ..store.torrent_settings().unwrap()
             })

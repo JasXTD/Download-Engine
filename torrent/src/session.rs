@@ -34,6 +34,7 @@ const MAX_PENDING_HANDSHAKES: usize = 32;
 
 #[derive(Clone, Default)]
 pub struct SessionOptions {
+    pub binding: Option<crate::network::Binding>,
     pub encryption: Encryption,
     pub use_utp: bool,
     pub web_seeds: bool,
@@ -182,10 +183,21 @@ impl Session {
     pub async fn new(options: SessionOptions) -> Result<Arc<Self>> {
         let cancel = CancellationToken::new();
         let startup = cancel.clone().drop_guard();
+        let binding = options
+            .binding
+            .as_ref()
+            .map(crate::network::Binding::open)
+            .transpose()?
+            .map(Arc::new);
+        anyhow::ensure!(
+            binding.is_none() || !options.upnp,
+            "Router port mapping is unavailable while a torrent interface is bound"
+        );
         let peer_id = librqbit_core::peer_id::generate_azereus_style(*b"DE", (0, 1, 0, 0));
         let discovery = if options.use_trackers || options.use_dht {
             Some(Discovery::new(
                 DiscoveryOptions {
+                    binding: binding.clone(),
                     peer_id,
                     listen_port: options.listen_port,
                     use_trackers: options.use_trackers,
@@ -206,6 +218,7 @@ impl Session {
                 options.listen_port,
                 options.allow_loopback_peers,
                 cancel.clone(),
+                binding.clone(),
             )
             .await?,
             peer_id,
@@ -227,7 +240,7 @@ impl Session {
             router: Mutex::new(None),
         });
         if let Some(port) = session.options.listen_port {
-            let listener = match bind(port) {
+            let listener = match bind(port, binding.as_deref()) {
                 Ok(listener) => listener,
                 Err(error) => {
                     session.context.peers.shutdown().await;
@@ -251,6 +264,9 @@ impl Session {
     /// Turns router setup on or off while the session runs. Turning it off waits until the
     /// rule is removed, or until the router had its chance to answer.
     pub async fn set_upnp(&self, on: bool) {
+        if on && self.options.binding.is_some() {
+            return;
+        }
         let stopping = {
             let mut router = self.router.lock();
             match (on, router.is_some(), self.options.listen_port) {
@@ -273,6 +289,21 @@ impl Session {
             .lock()
             .as_ref()
             .map(|router| *router.state.lock())
+    }
+
+    /// The JSON helper exits after joining its transfers on interface loss. A retry
+    /// starts a new snapshot; the old session never switches to a different adapter.
+    pub async fn wait_for_interface_loss(&self) {
+        let Some(device) = self.context.peers.binding.as_ref() else {
+            std::future::pending::<()>().await;
+            return;
+        };
+        loop {
+            if device.check().is_err() {
+                return;
+            }
+            tokio::time::sleep(Duration::from_millis(500)).await;
+        }
     }
 
     fn torrent_options(&self, add: AddOptions) -> TorrentOptions {
@@ -556,7 +587,7 @@ impl Session {
                 }
                 let result = tokio::select! {
                     _ = session.cancel.cancelled() => return,
-                    result = session.accept(Box::new(stream), addr) => result,
+                    result = session.accept(Box::new(stream), addr, crate::details::PeerTransport::Tcp) => result,
                 };
                 if let Err(error) = result {
                     debug_log!("incoming peer {addr}: {error:#}");
@@ -586,7 +617,7 @@ impl Session {
                 let _permit = permit;
                 tokio::select! {
                     _ = session.cancel.cancelled() => {},
-                    result = session.accept(stream, addr) => {
+                    result = session.accept(stream, addr, crate::details::PeerTransport::Utp) => {
                         if let Err(error) = result { debug_log!("incoming uTP peer failed: {error:#}"); }
                     },
                 }
@@ -594,7 +625,12 @@ impl Session {
         }
     }
 
-    async fn accept(&self, stream: crate::peer::BoxedStream, addr: SocketAddr) -> Result<()> {
+    async fn accept(
+        &self,
+        stream: crate::peer::BoxedStream,
+        addr: SocketAddr,
+        transport: crate::details::PeerTransport,
+    ) -> Result<()> {
         let hashes = self
             .all()
             .into_iter()
@@ -602,7 +638,11 @@ impl Session {
             .collect();
         let (mut stream, encrypted_hash) =
             mse::incoming(stream, self.options.encryption, hashes).await?;
-        let (info_hash, hello) = read_handshake(&mut stream).await?;
+        let (info_hash, mut hello) = read_handshake(&mut stream).await?;
+        hello.connection = crate::details::ConnectionInfo {
+            transport,
+            encrypted: Some(encrypted_hash.is_some()),
+        };
         anyhow::ensure!(
             encrypted_hash.is_none_or(|hash| hash == info_hash),
             "Peer changed torrent after encryption negotiation"
@@ -617,11 +657,19 @@ impl Session {
     }
 }
 
-fn bind(port: u16) -> Result<TcpListener> {
+fn bind(port: u16, device: Option<&librqbit_dualstack_sockets::BindDevice>) -> Result<TcpListener> {
     let both = SocketAddr::new(IpAddr::V6(Ipv6Addr::UNSPECIFIED), port);
-    TcpListener::bind_tcp(both, BindOpts::default()).or_else(|_| {
+    TcpListener::bind_tcp(
+        both,
+        BindOpts {
+            device,
+            ..Default::default()
+        },
+    )
+    .or_else(|_| {
         let only_v4 = SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), port);
         let options = BindOpts {
+            device,
             request_dualstack: false,
             ..Default::default()
         };

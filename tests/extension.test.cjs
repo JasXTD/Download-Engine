@@ -2,6 +2,17 @@ const { test } = require("node:test");
 const assert = require("node:assert/strict");
 require("../extension/core.js");
 const { normalizeUrl, makeRequest, handoff } = globalThis.IDMCore;
+test("v2 and hybrid magnets keep full identities and require review", () => {
+  const v1="urn:btih:"+"ab".repeat(20),v2="urn:btmh:1220"+"cd".repeat(32);
+  for(const topic of [v2,v1+"&xt="+v2,v2.toUpperCase(),"urn:btih:c12fe1c06bba254a9dc9f519b335aa7c1367a88a&xt=URN:BTIH:YEX6DQDLXISUVHOJ6UM3GNNKPQJWPKEK"]) {
+    const url="magnet:?xt="+topic;
+    assert.equal(makeRequest(url,"review").url,url);
+    assert.equal(makeRequest(url,"review").action,"review_torrent");
+  }
+  for(const topic of ["urn:btmh:1220"+"cd".repeat(31),"urn:btmh:1120"+"cd".repeat(32),v2+"&xt=urn:btmh:1220"+"ef".repeat(32)]) {
+    assert.throws(()=>makeRequest("magnet:?xt="+topic,"review"));
+  }
+});
 test("magnet handoff requests review and requires its own acknowledgement", async () => {
   const url = "magnet:?xt=urn:btih:0123456789012345678901234567890123456789&dn=Sample";
   const request = makeRequest(url, "torrent-review");

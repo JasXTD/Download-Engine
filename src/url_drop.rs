@@ -670,6 +670,8 @@ mod tests {
     use super::*;
     #[test]
     fn local_torrents_and_magnets_are_validated_without_reading_files() {
+        let v2 = format!("magnet:?xt=urn:btmh:1220{}", "ab".repeat(32));
+        assert_eq!(urls(&v2).unwrap(), v2);
         let path = std::env::temp_dir().join("not-created-by-test.torrent");
         let link = "magnet:?xt=urn:btih:0123456789012345678901234567890123456789";
         let input = format!("{}\n{link}", path.display());

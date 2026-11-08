@@ -14,6 +14,14 @@ fn target(n: usize) -> Target {
 #[test]
 fn parser_accepts_unicode_paths_and_valid_magnets_only() {
     let (dir, _) = fixture();
+    let v2 = format!("magnet:?xt=urn:btmh:1220{}", "ab".repeat(32));
+    assert_eq!(
+        Target::parse(OsStr::new(&v2), dir.path())
+            .unwrap()
+            .text()
+            .unwrap(),
+        v2
+    );
     assert!(
         matches!(Target::parse(OsStr::new("sample 文件.TORRENT"), dir.path()).unwrap(), Target::TorrentFile(p) if p==dir.path().join("sample 文件.TORRENT"))
     );

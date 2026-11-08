@@ -6,6 +6,7 @@ use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
 
+#[cfg(test)]
 use librqbit_core::hash_id::Id20;
 use serde::{Deserialize, Serialize};
 use url::Url;
@@ -20,18 +21,37 @@ const VERSION: u32 = 1;
 #[derive(Serialize, Deserialize)]
 struct Saved {
     version: u32,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    v2_hash: Option<String>,
     info_hash: String,
     have: String,
     files: Vec<Option<FileStamp>>,
 }
 
-fn path_for(state_dir: &Path, info_hash: Id20) -> PathBuf {
-    state_dir.join(format!("{}.resume.json", info_hash.as_string()))
+fn path_for(state_dir: &Path, info_hash: impl Into<crate::v2::InfoHashes>) -> PathBuf {
+    state_dir.join(format!("{}.resume.json", info_hash.into().key()))
 }
 
 /// The torrent's details, saved so that coming back to it needs nothing from strangers.
-fn info_path_for(state_dir: &Path, info_hash: Id20) -> PathBuf {
-    state_dir.join(format!("{}.info", info_hash.as_string()))
+fn info_path_for(state_dir: &Path, info_hash: impl Into<crate::v2::InfoHashes>) -> PathBuf {
+    state_dir.join(format!("{}.info", info_hash.into().key()))
+}
+
+/// Full identities from authenticated local metadata, for removing all cache aliases.
+pub fn cached_hashes(
+    state_dir: &Path,
+    hashes: crate::v2::InfoHashes,
+) -> Option<crate::v2::InfoHashes> {
+    let meta = load_info(state_dir, hashes, vec![])?;
+    let mut known = meta.hashes;
+    // A btih-only hybrid is intentionally transferred in v1 mode. Its authenticated
+    // raw dictionary still identifies the same hybrid when opened through btmh.
+    if known.v2.is_none() && crate::v2::is_v2(&meta.info_bytes).ok()? {
+        known.v2 = Some(librqbit_core::hash_id::Id32::new(crate::v2::digest(
+            &meta.info_bytes,
+        )));
+    }
+    Some(known)
 }
 
 fn to_hex(bytes: &[u8]) -> String {
@@ -67,19 +87,20 @@ pub fn save(
 ) -> io::Result<()> {
     fs::create_dir_all(state_dir)?;
     let saved = Saved {
-        version: VERSION,
-        info_hash: meta.info_hash.as_string(),
+        version: if meta.hashes.v2.is_some() { 2 } else { VERSION },
+        v2_hash: meta.hashes.v2.map(|h| h.as_string()),
+        info_hash: meta.hashes.key(),
         have: to_hex(have.as_bytes()),
         files: storage.stamps(),
     };
-    let path = path_for(state_dir, meta.info_hash);
+    let path = path_for(state_dir, meta.hashes);
     let temporary = path.with_extension("tmp");
     fs::write(&temporary, serde_json::to_vec(&saved)?)?;
     fs::rename(&temporary, &path)
 }
 
 /// Removes the record, so that the next start reads every file. A missing record is fine.
-pub fn forget(state_dir: &Path, info_hash: Id20) -> io::Result<()> {
+pub fn forget(state_dir: &Path, info_hash: impl Into<crate::v2::InfoHashes>) -> io::Result<()> {
     match fs::remove_file(path_for(state_dir, info_hash)) {
         Err(error) if error.kind() != io::ErrorKind::NotFound => Err(error),
         _ => Ok(()),
@@ -88,10 +109,11 @@ pub fn forget(state_dir: &Path, info_hash: Id20) -> io::Result<()> {
 
 /// Returns the saved pieces, if the record is good and the files haven't changed.
 pub fn load(state_dir: &Path, meta: &TorrentMeta, storage: &Storage) -> Option<Bitfield> {
-    let bytes = fs::read(path_for(state_dir, meta.info_hash)).ok()?;
+    let bytes = fs::read(path_for(state_dir, meta.hashes)).ok()?;
     let saved: Saved = serde_json::from_slice(&bytes).ok()?;
-    if saved.version != VERSION
-        || saved.info_hash != meta.info_hash.as_string()
+    if saved.version != if meta.hashes.v2.is_some() { 2 } else { VERSION }
+        || saved.v2_hash != meta.hashes.v2.map(|h| h.as_string())
+        || saved.info_hash != meta.hashes.key()
         || saved.files != storage.stamps()
     {
         return None;
@@ -102,10 +124,33 @@ pub fn load(state_dir: &Path, meta: &TorrentMeta, storage: &Storage) -> Option<B
 /// Saves a torrent's details.
 pub fn save_info(state_dir: &Path, meta: &TorrentMeta) -> io::Result<()> {
     fs::create_dir_all(state_dir)?;
-    let path = info_path_for(state_dir, meta.info_hash);
+    let path = info_path_for(state_dir, meta.hashes);
     let temporary = path.with_extension("tmp");
     fs::write(&temporary, &meta.info_bytes)?;
     fs::rename(&temporary, &path)?;
+    if meta.hashes.v2.is_some() {
+        let layers = crate::v2::encode_layers(meta).map_err(io::Error::other)?;
+        let target = path.with_extension("layers");
+        let temporary = target.with_extension("layers.tmp");
+        fs::write(&temporary, &layers)?;
+        fs::rename(temporary, target)?;
+        if meta.hashes.v1.is_some() {
+            let alias = info_path_for(
+                state_dir,
+                crate::v2::InfoHashes {
+                    v1: None,
+                    v2: meta.hashes.v2,
+                },
+            );
+            let temporary = alias.with_extension("tmp");
+            fs::write(&temporary, &meta.info_bytes)?;
+            fs::rename(temporary, &alias)?;
+            let target = alias.with_extension("layers");
+            let temporary = target.with_extension("layers.tmp");
+            fs::write(&temporary, layers)?;
+            fs::rename(temporary, target)?;
+        }
+    }
     let seeds = path.with_extension("webseeds.json");
     let temporary = seeds.with_extension("tmp");
     fs::write(&temporary, serde_json::to_vec(&meta.web_seeds)?)?;
@@ -113,13 +158,27 @@ pub fn save_info(state_dir: &Path, meta: &TorrentMeta) -> io::Result<()> {
 }
 
 /// Returns a torrent's saved details. They only count if they still match the hash.
-pub fn load_info(state_dir: &Path, info_hash: Id20, trackers: Vec<Url>) -> Option<TorrentMeta> {
+pub fn load_info(
+    state_dir: &Path,
+    info_hash: impl Into<crate::v2::InfoHashes>,
+    trackers: Vec<Url>,
+) -> Option<TorrentMeta> {
+    let info_hash = info_hash.into();
     let path = info_path_for(state_dir, info_hash);
     if fs::metadata(&path).ok()?.len() > u64::from(MAX_METADATA_SIZE) {
         return None;
     }
-    let bytes = fs::read(path).ok()?;
-    let mut meta = TorrentMeta::from_info_bytes(info_hash, bytes.into(), trackers).ok()?;
+    let bytes = fs::read(&path).ok()?;
+    let mut meta = TorrentMeta::from_hashes(info_hash, bytes.into(), trackers).ok()?;
+    if meta.hashes.v2.is_some() {
+        use std::io::Read;
+        let file = fs::File::open(path.with_extension("layers")).ok()?;
+        let mut layers = Vec::new();
+        file.take((crate::v2::MAX_LAYER_BYTES + 1024 * 1024 + 1) as u64)
+            .read_to_end(&mut layers)
+            .ok()?;
+        crate::v2::install_layers(&mut meta, &layers).ok()?;
+    }
     // Seeds live outside the hashed info dictionary. Bound and revalidate the optional
     // sidecar; a missing/corrupt sidecar must not prevent recovering verified pieces.
     use std::io::Read;

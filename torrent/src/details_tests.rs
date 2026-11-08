@@ -82,6 +82,8 @@ async fn a_peer_that_connected_to_us_shows_its_address_in_plain_form() {
             Box::new(server),
             "[::ffff:192.0.2.7]:6000".parse().unwrap(),
             Hello {
+                hash: torrent.info_hash(),
+                supports_v2: false,
                 connection: Default::default(),
                 peer_id: Id20::new([9; 20]),
                 supports_extended: false,

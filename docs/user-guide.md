@@ -139,6 +139,14 @@ Use 1 for servers that reject parallel requests. More connections do not guarant
 
 ### Download torrents
 
+**V1, v2 and hybrid torrents (3.19.0):** Use the same Add download window for all three formats. Open a .torrent file or paste a magnet, review the file list and destination, then add it. A v2 magnet uses `xt=urn:btmh:1220` followed by the full 64 hexadecimal SHA-256 characters. A hybrid magnet may include both its `btih` and `btmh` topics. Browser extensions pass these links to the same review.
+
+V2 downloads authenticate piece hashes to each file's SHA-256 root before trusting progress. Hybrid torrent files verify both hash formats and can exchange data with v1-only peers. A magnet containing only `btih` intentionally uses the v1 representation, so older peers can supply its metadata; a magnet containing `btmh` cannot silently fall back to SHA-1 verification. Pure v2 torrents require v2-capable peers.
+
+File selection, pause/resume, Stop all, saved-progress recovery, optional peer encryption/uTP, and web seeds work with these formats. Known hybrid identities refer to one download. If two initially unrelated magnets later resolve to the same hybrid, the engine refuses the second active copy before starting file writers. Empty files within a torrent are supported; an entirely empty torrent is rejected. Corrupt or missing v2 hash layers are reported rather than downloaded without verification.
+
+After adding a v2/hybrid magnet, the profile requires 3.19.0 or newer. Keep the whole portable folder when upgrading. SHA-256 integrity does not make files trustworthy or hide your IP address; the existing torrent risk notice and sharing permissions still apply.
+
 **Peer connection indicators (3.18.0):** Open a torrent’s status window, then **Show details → Peers**. The Connection column shows TCP or uTP and Encrypted or Plaintext for the actual negotiated connection. “Prefer encryption” can therefore show Plaintext. Encryption here means legacy MSE obfuscation; it does not hide your IP address or authenticate the peer. Unknown means the helper did not report a connection type.
 
 **VPN / interface binding (3.18.0):** Connect your VPN first, then open **Preferences → Torrents → Torrent network**. Choose its interface and local address, enter the numeric DNS server IP supplied by your VPN/network, and Save. The DNS server must use the same IP version as that address. One local address is selected at a time; an IPv4 selection does not use IPv6 peers, and vice versa. Use **Refresh interfaces** if the adapter list has changed.

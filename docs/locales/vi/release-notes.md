@@ -1,3 +1,9 @@
+## 3.19.0 — 2026-11-08
+
+- Hỗ trợ torrent v2 và lai với xác minh SHA-256, chọn tệp, tiếp tục tải và khôi phục. Giữ nguyên hỗ trợ v1 và cài đặt chia sẻ.
+
+[English details](../../../CHANGELOG.md#3190--2026-11-08)
+
 ## 3.18.1 — 2026-11-08
 
 - Tải lên bị tắt theo mặc định. Bạn có thể bật trong Tùy chọn → Torrent.

@@ -33,9 +33,7 @@ use crate::details::{
 use crate::discovery::{Discovery, PeerCandidates, Search};
 use crate::meta::{TorrentMeta, usable_tracker};
 use crate::metadata;
-use crate::peer::{
-    BoxedStream, Hello, Out, PeerLink, read_handshake, run_connection, send_handshake,
-};
+use crate::peer::{BoxedStream, Hello, Out, PeerLink, read_handshake, run_connection};
 use crate::picker::{Chunk, Picker};
 use crate::rate::{Allowance, ByteLimiter};
 use crate::reason;
@@ -252,18 +250,26 @@ impl TorrentCore {
         context: Context,
         only: Option<Vec<usize>>,
     ) -> Result<Arc<Self>> {
+        meta.require_complete_layers()?;
         let wanted = meta.wanted_pieces(if options.seed_only {
             None
         } else {
             only.as_deref()
         })?;
         let have = Bitfield::new(meta.lengths.total_pieces());
-        let picker = Picker::new(
+        let mut picker = Picker::new(
             meta.lengths,
             have,
             wanted,
             u64::from(librqbit_core::random::random_u32()) << 16 | 1,
         );
+        if meta.hashes.v2.is_some() {
+            picker.set_data_lengths(
+                (0..meta.lengths.total_pieces())
+                    .map(|p| meta.piece_data_length(p).expect("validated v2 layout"))
+                    .collect(),
+            );
+        }
         anyhow::ensure!(
             options.seed_only || options.file_name.is_none(),
             "Renamed paths are only supported for read-only seeding"
@@ -304,7 +310,7 @@ impl TorrentCore {
         self.checked.store(false, Ordering::Release);
         self.distrust_saved.store(true, Ordering::Release);
         if let Some(state_dir) = &self.options.state_dir
-            && let Err(error) = resume::forget(state_dir, self.meta.info_hash)
+            && let Err(error) = resume::forget(state_dir, self.meta.hashes)
         {
             // The flag above still makes this run read every piece.
             debug_log!("could not remove saved progress: {error}");
@@ -332,13 +338,8 @@ impl TorrentCore {
     }
 
     pub fn request_for(&self, chunk: Chunk) -> Option<Request> {
-        let lengths = &self.meta.lengths;
-        let piece = lengths.validate_piece_index(chunk.piece)?;
-        Some(Request::new(
-            chunk.piece,
-            lengths.chunk_offset_in_piece(piece, chunk.index)?,
-            lengths.chunk_size(piece, chunk.index)?,
-        ))
+        self.meta
+            .chunk_request(chunk.piece, chunk.index.checked_mul(crate::v2::BLOCK)?)
     }
 
     fn live(&self) -> Option<Arc<Live>> {
@@ -688,6 +689,8 @@ struct AddedTracker {
 
 pub struct Torrent {
     info_hash: Id20,
+    hashes: crate::v2::InfoHashes,
+    registry: OnceLock<std::sync::Weak<crate::session::Registry>>,
     context: Context,
     options: TorrentOptions,
     trackers: Vec<Url>,
@@ -711,8 +714,9 @@ impl Torrent {
         options: TorrentOptions,
         context: Context,
     ) -> Result<Arc<Self>> {
+        meta.require_complete_layers()?;
         meta.wanted_pieces(options.only.as_deref())?;
-        let torrent = Self::blank(meta.info_hash, meta.trackers.clone(), options, context);
+        let torrent = Self::blank(meta.hashes, meta.trackers.clone(), options, context);
         let _ = torrent.meta.set(meta.clone());
         if meta.private {
             torrent.drop_added_trackers();
@@ -721,16 +725,16 @@ impl Torrent {
     }
 
     pub fn from_magnet(
-        info_hash: Id20,
+        hashes: impl Into<crate::v2::InfoHashes>,
         trackers: Vec<Url>,
         options: TorrentOptions,
         context: Context,
     ) -> Arc<Self> {
-        Arc::new(Self::blank(info_hash, trackers, options, context))
+        Arc::new(Self::blank(hashes.into(), trackers, options, context))
     }
 
     fn blank(
-        info_hash: Id20,
+        hashes: crate::v2::InfoHashes,
         trackers: Vec<Url>,
         options: TorrentOptions,
         context: Context,
@@ -753,7 +757,9 @@ impl Torrent {
             });
         }
         Self {
-            info_hash,
+            info_hash: hashes.wire(),
+            hashes,
+            registry: OnceLock::new(),
             context,
             selection: Mutex::new(options.only.clone()),
             options,
@@ -784,6 +790,35 @@ impl Torrent {
 
     pub fn info_hash(&self) -> Id20 {
         self.info_hash
+    }
+
+    pub fn hashes(&self) -> crate::v2::InfoHashes {
+        self.meta.get().map_or(self.hashes, |m| m.hashes)
+    }
+    pub fn key(&self) -> String {
+        self.hashes.key()
+    }
+
+    pub(crate) fn set_registry(&self, registry: std::sync::Weak<crate::session::Registry>) {
+        let _ = self.registry.set(registry);
+    }
+    fn install_metadata(&self, meta: Arc<TorrentMeta>) -> Result<()> {
+        meta.require_complete_layers()?;
+        let registry = self.registry.get().and_then(std::sync::Weak::upgrade);
+        let guard = registry.as_ref().map(|r| r.lock());
+        if let Some(others) = &guard {
+            anyhow::ensure!(
+                !others
+                    .values()
+                    .any(|other| !std::ptr::eq(self, other.as_ref())
+                        && other.hashes().wire_overlaps(meta.hashes)),
+                "This torrent was already added through another v1/v2 identity"
+            );
+        }
+        // Keep the check and publication under the same registry lock: simultaneous
+        // btih/btmh magnet resolutions must not start writers for the same content.
+        let _ = self.meta.set(meta);
+        Ok(())
     }
 
     /// The torrent's details, once they are known.
@@ -890,12 +925,12 @@ impl Torrent {
                 // Checked before anything is saved or started, so a private torrent found
                 // this way leaves nothing behind that could lead it on later.
                 check_searched_details(&self.options, &meta)?;
+                self.install_metadata(meta.clone())?;
                 if let Some(state_dir) = &self.options.state_dir
                     && let Err(error) = resume::save_info(state_dir, &meta)
                 {
                     debug_log!("could not save the torrent's details: {error}");
                 }
-                let _ = self.meta.set(meta.clone());
                 meta
             }
         };
@@ -940,18 +975,20 @@ impl Torrent {
             PeerCandidates::channel(book.peers.keys().copied(), self.options.allow_loopback);
         // Trackers the user added wait until the details say the torrent is public.
         if let Some(discovery) = &self.context.discovery {
-            discovery.start(Search {
-                info_hash: self.info_hash,
-                trackers: self.trackers.clone(),
-                private: None,
-                stats: Box::new(()),
-                found: found_tx.clone(),
-                cancel: cancel.clone(),
-                ask_dht: true,
-                search_only: self.options.dht_search,
-                board: Some(self.board.clone()),
-                dht_found: Some(self.dht_found.clone()),
-            });
+            for info_hash in self.hashes.wires() {
+                discovery.start(Search {
+                    info_hash,
+                    trackers: self.trackers.clone(),
+                    private: None,
+                    stats: Box::new(()),
+                    found: found_tx.clone(),
+                    cancel: cancel.clone(),
+                    ask_dht: true,
+                    search_only: self.options.dht_search,
+                    board: Some(self.board.clone()),
+                    dht_found: Some(self.dht_found.clone()),
+                });
+            }
         }
         let allow_loopback = self.options.allow_loopback;
         let budget = metadata::Budget::default();
@@ -979,7 +1016,9 @@ impl Torrent {
                         continue;
                     };
                     let meta = result.and_then(|info| {
-                        TorrentMeta::from_info_bytes(self.info_hash, info.bytes.clone(), self.trackers.clone())
+                        let mut meta=TorrentMeta::from_hashes(self.hashes, info.bytes.clone(), self.trackers.clone())?;
+                        if let Some(layers)=info.layers {crate::v2::install_layers(&mut meta,&layers)?;}
+                        Ok(meta)
                     });
                     match meta {
                         Ok(meta) => return Ok(Some(Arc::new(meta))),
@@ -995,14 +1034,27 @@ impl Torrent {
                 let Some(addr) = book.next_ready(Instant::now()) else {
                     break;
                 };
-                let (info_hash, our_id) = (self.info_hash, self.context.peer_id);
+                let our_id = self.context.peer_id;
+                let hashes = self.hashes;
                 let budget = budget.clone();
                 let transports = self.context.peers.clone();
                 let named = self.options.peers.contains(&addr);
                 attempts.spawn(async move {
                     let result = timeout(METADATA_TIMEOUT, async {
-                        let (stream, _) = transports.connect(addr, info_hash, named).await?;
-                        metadata::fetch(stream, info_hash, our_id, budget).await
+                        let mut last = anyhow!("No compatible torrent swarm");
+                        for wire in hashes.wires() {
+                            let result = async {
+                                let (stream, _) = transports.connect(addr, wire, named).await?;
+                                metadata::fetch_on(stream, hashes, wire, our_id, budget.clone())
+                                    .await
+                            }
+                            .await;
+                            match result {
+                                Ok(info) => return Ok(info),
+                                Err(error) => last = error,
+                            }
+                        }
+                        Err(last)
                     })
                     .await
                     .unwrap_or_else(|_| Err(anyhow!("timed out")));
@@ -1244,18 +1296,20 @@ impl Torrent {
         let live = core.live()?;
         let discovery = self.context.discovery.as_ref()?;
         let cancel = live.cancel.child_token();
-        discovery.start(Search {
-            info_hash: self.info_hash,
-            trackers: vec![url.clone()],
-            private: Some(false),
-            stats: Box::new(CoreStats(core.clone())),
-            found: live.search_found.clone(),
-            cancel: cancel.clone(),
-            ask_dht: false,
-            search_only: false,
-            board: Some(self.board.clone()),
-            dht_found: None,
-        });
+        for info_hash in self.hashes().wires() {
+            discovery.start(Search {
+                info_hash,
+                trackers: vec![url.clone()],
+                private: Some(false),
+                stats: Box::new(CoreStats(core.clone())),
+                found: live.search_found.clone(),
+                cancel: cancel.clone(),
+                ask_dht: false,
+                search_only: false,
+                board: Some(self.board.clone()),
+                dht_found: None,
+            });
+        }
         Some(cancel)
     }
 
@@ -1288,6 +1342,28 @@ fn parse_tracker(text: &str) -> Result<Url> {
     Ok(url)
 }
 
+/// The swarm reserves this slot before spawning an outgoing attempt. Keep it through
+/// transport and handshake fallbacks; release on a valid handshake or cancellation.
+struct PendingConnection<'a> {
+    counter: &'a AtomicUsize,
+    pending: bool,
+}
+
+impl PendingConnection<'_> {
+    fn finish(&mut self) {
+        if self.pending {
+            self.pending = false;
+            self.counter.fetch_sub(1, Ordering::Relaxed);
+        }
+    }
+}
+
+impl Drop for PendingConnection<'_> {
+    fn drop(&mut self) {
+        self.finish();
+    }
+}
+
 /// Finishes the handshake on a stream, then runs the connection. Returns whether the peer
 /// was any use.
 async fn serve_peer(
@@ -1295,21 +1371,30 @@ async fn serve_peer(
     mut stream: BoxedStream,
     addr: Option<SocketAddr>,
     hello: Option<Hello>,
-    _permit: Permit,
+    pending: Option<&mut PendingConnection<'_>>,
     connection: crate::details::ConnectionInfo,
+    wire_hash: Id20,
 ) -> bool {
-    let info_hash = live.core.meta.info_hash;
+    let hashes = live.core.meta.hashes;
+    let info_hash = hello.map_or(wire_hash, |h| h.hash);
     let our_id = live.core.context.peer_id;
     // Only the listener reads a handshake before handing a connection over.
     let incoming = hello.is_some();
     let handshake = async {
-        send_handshake(&mut stream, info_hash, our_id).await?;
+        crate::peer::send_v2_handshake(&mut stream, info_hash, our_id, hashes.v2.is_some()).await?;
         match hello {
             Some(hello) => Ok(hello),
             None => {
                 let (their_hash, mut hello) = read_handshake(&mut stream).await?;
                 hello.connection = connection;
-                anyhow::ensure!(their_hash == info_hash, "peer is on another torrent");
+                anyhow::ensure!(
+                    their_hash == info_hash
+                        || hashes.v1 == Some(info_hash)
+                            && hashes
+                                .v2
+                                .is_some_and(|h| h.truncate_for_dht() == their_hash),
+                    "peer is on another torrent"
+                );
                 Ok(hello)
             }
         }
@@ -1319,7 +1404,12 @@ async fn serve_peer(
         result = handshake => result,
     };
     match shaken {
-        Ok(hello) => run_connection(live, stream, hello, addr, incoming).await,
+        Ok(hello) => {
+            if let Some(pending) = pending {
+                pending.finish();
+            }
+            run_connection(live, stream, hello, addr, incoming).await
+        }
         Err(error) => {
             debug_log!("handshake with {addr:?} failed: {error:#}");
             false
@@ -1327,22 +1417,47 @@ async fn serve_peer(
     }
 }
 
-async fn connect_and_serve(live: Arc<Live>, addr: SocketAddr, permit: Permit) -> bool {
+async fn connect_and_serve(live: Arc<Live>, addr: SocketAddr, _permit: Permit) -> bool {
     let cancel = live.cancel.clone();
-    let connected = tokio::select! {
-        _ = cancel.cancelled() => return false,
-        connected = live.core.context.peers.connect(addr, live.core.meta.info_hash, live.core.options.peers.contains(&addr)) => connected,
+    let hashes = live.core.meta.hashes;
+    let choices: Vec<_> = hashes
+        .v1
+        .into_iter()
+        .chain(hashes.v2.map(|h| h.truncate_for_dht()))
+        .collect();
+    let mut pending = PendingConnection {
+        counter: &live.connecting,
+        pending: true,
     };
-    live.connecting.fetch_sub(1, Ordering::Relaxed);
-    match connected {
-        Ok((stream, connection)) => {
-            serve_peer(live, stream, Some(addr), None, permit, connection).await
-        }
-        Err(error) => {
-            debug_log!("could not connect to {addr}: {error:#}");
-            false
+    for wire_hash in choices {
+        let connected = tokio::select! {
+            _ = cancel.cancelled() => return false,
+            connected = live.core.context.peers.connect(addr, wire_hash, live.core.options.peers.contains(&addr)) => connected,
+        };
+        match connected {
+            Ok((stream, connection)) => {
+                let useful = serve_peer(
+                    live.clone(),
+                    stream,
+                    Some(addr),
+                    None,
+                    Some(&mut pending),
+                    connection,
+                    wire_hash,
+                )
+                .await;
+                // A completed handshake has already selected a compatible swarm.
+                // Only failed handshakes should try the other hybrid wire identity.
+                if !pending.pending {
+                    return useful;
+                }
+            }
+            Err(error) => {
+                debug_log!("could not connect to {addr}: {error:#}");
+            }
         }
     }
+    false
 }
 
 /// Works out what is already on disk. Returns false if it was stopped before the end.
@@ -1450,18 +1565,20 @@ async fn run_swarm(
 
     let search_cancel = cancel.child_token();
     if let Some(discovery) = &core.context.discovery {
-        discovery.start(Search {
-            info_hash: core.meta.info_hash,
-            trackers: core.meta.trackers.clone(),
-            private: Some(core.meta.private),
-            stats: Box::new(CoreStats(core.clone())),
-            found: found_tx.clone(),
-            cancel: search_cancel.clone(),
-            ask_dht: true,
-            search_only: false,
-            board: Some(torrent.board.clone()),
-            dht_found: Some(torrent.dht_found.clone()),
-        });
+        for info_hash in core.meta.hashes.wires() {
+            discovery.start(Search {
+                info_hash,
+                trackers: core.meta.trackers.clone(),
+                private: Some(core.meta.private),
+                stats: Box::new(CoreStats(core.clone())),
+                found: found_tx.clone(),
+                cancel: search_cancel.clone(),
+                ask_dht: true,
+                search_only: false,
+                board: Some(torrent.board.clone()),
+                dht_found: Some(torrent.dht_found.clone()),
+            });
+        }
     }
     // The details of a magnet link only now say whether the torrent is private.
     if core.meta.private {
@@ -1530,7 +1647,12 @@ async fn run_swarm(
             Some(peer) = found.recv() => book.add_found(peer, core.options.allow_loopback),
             Some(Incoming { stream, addr, hello, permit }) = incoming.recv() => {
                 if !addr.is_some_and(|addr| book.is_banned(addr)) {
-                    peers.spawn(tracked(addr, serve_peer(live.clone(), stream, addr, hello, permit, Default::default())));
+                    let live=live.clone();
+                    peers.spawn(tracked(addr, async move {
+                        let _permit = permit;
+                        let hash = live.core.meta.info_hash;
+                        serve_peer(live, stream, addr, hello, None, Default::default(), hash).await
+                    }));
                 }
             }
         }
@@ -1678,6 +1800,8 @@ mod tests {
                 Box::new(server),
                 SocketAddr::from(([1, 2, 3, 4], 6000 + u16::from(index))),
                 Hello {
+                    hash: torrent.info_hash(),
+                    supports_v2: false,
                     connection: Default::default(),
                     peer_id: Id20::new([index + 10; 20]),
                     supports_extended: false,
@@ -1711,6 +1835,8 @@ mod tests {
                     Box::new(server),
                     SocketAddr::from(([1, 2, 3, index + 1], 6881)),
                     Hello {
+                        hash: torrent.info_hash(),
+                        supports_v2: false,
                         connection: Default::default(),
                         peer_id: Id20::new([index + 10; 20]),
                         supports_extended: false,
@@ -1736,6 +1862,8 @@ mod tests {
                 Box::new(server),
                 address("1.2.3.1:6881"),
                 Hello {
+                    hash: torrent.info_hash(),
+                    supports_v2: false,
                     connection: Default::default(),
                     peer_id: Id20::new([10; 20]),
                     supports_extended: false,
@@ -1766,6 +1894,8 @@ mod tests {
                     Box::new(server),
                     SocketAddr::from((ip, 6000 + u16::from(index))),
                     Hello {
+                        hash: torrent.info_hash(),
+                        supports_v2: false,
                         connection: Default::default(),
                         peer_id: Id20::new([index + 10; 20]),
                         supports_extended: false,
@@ -1783,6 +1913,8 @@ mod tests {
                 Box::new(server),
                 address("[::ffff:1.2.3.4]:9999"),
                 Hello {
+                    hash: torrent.info_hash(),
+                    supports_v2: false,
                     connection: Default::default(),
                     peer_id: Id20::new([100; 20]),
                     supports_extended: false,
@@ -2002,6 +2134,103 @@ mod tests {
             next_key: AtomicU64::new(0),
             connecting: AtomicUsize::new(0),
         })
+    }
+
+    #[tokio::test]
+    async fn pending_connection_limit_covers_failed_handshakes_and_cancellation() {
+        let folder = TempFolder::new();
+        let live = live_for_tests(&folder);
+        live.connecting.store(MAX_CONNECTING, Ordering::Relaxed);
+        let mut pending = PendingConnection {
+            counter: &live.connecting,
+            pending: true,
+        };
+        let (client, mut remote) = tokio::io::duplex(4096);
+        let server = async {
+            read_handshake(&mut remote).await.unwrap();
+            assert!(!may_connect(0, live.connecting.load(Ordering::Relaxed)));
+            crate::peer::send_handshake(&mut remote, Id20::new([9; 20]), Id20::new([2; 20]))
+                .await
+                .unwrap();
+        };
+        let (useful, ()) = tokio::join!(
+            serve_peer(
+                live.clone(),
+                Box::new(client),
+                None,
+                None,
+                Some(&mut pending),
+                Default::default(),
+                live.core.meta.info_hash
+            ),
+            server,
+        );
+        assert!(!useful);
+        assert!(
+            !may_connect(0, live.connecting.load(Ordering::Relaxed)),
+            "a failed v1 handshake must keep its slot for the v2 fallback"
+        );
+        live.cancel.cancel();
+        let (client, _remote) = tokio::io::duplex(4096);
+        assert!(
+            !serve_peer(
+                live.clone(),
+                Box::new(client),
+                None,
+                None,
+                Some(&mut pending),
+                Default::default(),
+                live.core.meta.info_hash
+            )
+            .await
+        );
+        drop(pending);
+        assert_eq!(live.connecting.load(Ordering::Relaxed), MAX_CONNECTING - 1);
+        assert!(may_connect(0, live.connecting.load(Ordering::Relaxed)));
+    }
+
+    #[tokio::test]
+    async fn pending_connection_slot_releases_before_established_peer_finishes() {
+        use tokio::io::AsyncReadExt;
+        let folder = TempFolder::new();
+        let live = live_for_tests(&folder);
+        live.connecting.store(MAX_CONNECTING, Ordering::Relaxed);
+        let mut pending = PendingConnection {
+            counter: &live.connecting,
+            pending: true,
+        };
+        let (client, mut remote) = tokio::io::duplex(4096);
+        let server = async {
+            let (hash, _) = read_handshake(&mut remote).await.unwrap();
+            assert!(!may_connect(0, live.connecting.load(Ordering::Relaxed)));
+            crate::peer::send_handshake(&mut remote, hash, Id20::new([2; 20]))
+                .await
+                .unwrap();
+            // A post-handshake frame proves the connection is now established.
+            let mut byte = [0u8; 1];
+            remote.read_exact(&mut byte).await.unwrap();
+            assert_eq!(live.connecting.load(Ordering::Relaxed), MAX_CONNECTING - 1);
+            assert!(may_connect(0, live.connecting.load(Ordering::Relaxed)));
+            live.cancel.cancel();
+        };
+        let _ = tokio::join!(
+            serve_peer(
+                live.clone(),
+                Box::new(client),
+                None,
+                None,
+                Some(&mut pending),
+                Default::default(),
+                live.core.meta.info_hash
+            ),
+            server,
+        );
+        drop(pending);
+        assert_eq!(
+            live.connecting.load(Ordering::Relaxed),
+            MAX_CONNECTING - 1,
+            "shutdown must not release the same slot twice"
+        );
     }
 
     #[test]

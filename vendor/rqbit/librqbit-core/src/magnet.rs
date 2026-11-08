@@ -95,12 +95,27 @@ impl Magnet {
         for (key, value) in url.query_pairs() {
             match key.as_ref() {
                 "xt" => {
-                    if let Some(ih) = value.as_ref().strip_prefix("urn:btih:") {
+                    let lower = value.to_ascii_lowercase();
+                    if lower.starts_with("urn:btih:") {
+                        let ih = &value[9..];
                         let i = Id20::from_str(ih)?;
+                        anyhow::ensure!(
+                            id20.is_none_or(|old| old == i),
+                            "Conflicting v1 magnet hashes"
+                        );
                         id20.replace(i);
                         info_hash_found = true;
-                    } else if let Some(ih) = value.as_ref().strip_prefix("urn:btmh:1220") {
+                    } else if lower.starts_with("urn:btmh:1220") {
+                        let ih = &value[13..];
+                        anyhow::ensure!(
+                            ih.len() == 64 && ih.bytes().all(|c| c.is_ascii_hexdigit()),
+                            "Invalid SHA-256 multihash"
+                        );
                         let i = Id32::from_str(ih)?;
+                        anyhow::ensure!(
+                            id32.is_none_or(|old| old == i),
+                            "Conflicting v2 magnet hashes"
+                        );
                         id32.replace(i);
                         info_hash_found = true;
                     } else {

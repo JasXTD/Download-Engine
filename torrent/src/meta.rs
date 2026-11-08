@@ -11,7 +11,6 @@ use librqbit_core::torrent_limits::{MAX_TRACKER_URL_BYTES, MAX_TRACKERS};
 use librqbit_core::torrent_metainfo::{
     TorrentMetaV1Info, ValidatedTorrentMetaV1Info, torrent_from_bytes,
 };
-use sha1w::{ISha1, Sha1};
 use url::Url;
 
 use crate::bitfield::Bitfield;
@@ -36,6 +35,9 @@ pub struct TorrentFile {
 
 pub struct TorrentMeta {
     pub info_hash: Id20,
+    pub hashes: crate::v2::InfoHashes,
+    pub v2: Vec<crate::v2::FileTree>,
+    pub(crate) v2_memory: Option<std::sync::Arc<tokio::sync::OwnedSemaphorePermit>>,
     pub name: String,
     pub lengths: Lengths,
     pub files: Vec<TorrentFile>,
@@ -57,6 +59,9 @@ impl TorrentMeta {
             bytes.len() <= 64 * 1024 * 1024,
             "Torrent file exceeds the size limit"
         );
+        if let Some(info) = crate::v2::file_info(bytes)? {
+            return crate::v2::from_file(bytes, info);
+        }
         let torrent = torrent_from_bytes(bytes).context("This is not a valid torrent file")?;
         for tracker in torrent.iter_announce() {
             ensure!(
@@ -83,6 +88,14 @@ impl TorrentMeta {
     /// Reads an info dictionary fetched from peers. The hash is what makes it trustworthy,
     /// so nothing else is looked at until the hash matches.
     pub fn from_info_bytes(info_hash: Id20, info_bytes: Bytes, trackers: Vec<Url>) -> Result<Self> {
+        Self::from_hashes(info_hash.into(), info_bytes, trackers)
+    }
+
+    pub fn from_hashes(
+        hashes: crate::v2::InfoHashes,
+        info_bytes: Bytes,
+        trackers: Vec<Url>,
+    ) -> Result<Self> {
         ensure!(
             info_bytes.len() <= crate::metadata::MAX_METADATA_SIZE as usize,
             "Torrent metadata exceeds the size limit"
@@ -94,20 +107,22 @@ impl TorrentMeta {
                     .all(|t| t.as_str().len() <= MAX_TRACKER_URL_BYTES),
             "Tracker list exceeds the safety limits"
         );
-        let mut hash = Sha1::new();
-        hash.update(&info_bytes);
-        ensure!(
-            hash.finish() == info_hash.0,
-            "The torrent data does not match its hash"
-        );
+        hashes.verify(&info_bytes)?;
+        if crate::v2::is_v2(&info_bytes)? && hashes.v2.is_some() {
+            return crate::v2::metadata(info_bytes, trackers, Some(hashes), None);
+        }
+        // A btih-only magnet deliberately uses the v1 representation of a hybrid.
+        // Older peers can provide its metadata without supporting BEP 52 hash messages.
+        // A magnet carrying btmh must never silently downgrade this way.
+        ensure!(hashes.v2.is_none(), "A v2 magnet requires v2 metadata");
         let info: TorrentMetaV1Info<ByteBuf> =
             bencode::from_bytes(&info_bytes).map_err(|error| error.into_kind())?;
-        Self::build(info_hash, info, info_bytes.clone(), trackers)
+        Self::build(hashes.wire(), info, info_bytes.clone(), trackers)
     }
 
-    fn build(
+    pub(crate) fn build<Buf: AsRef<[u8]>>(
         info_hash: Id20,
-        info: TorrentMetaV1Info<ByteBuf>,
+        info: TorrentMetaV1Info<Buf>,
         info_bytes: Bytes,
         trackers: Vec<Url>,
     ) -> Result<Self> {
@@ -119,7 +134,7 @@ impl TorrentMeta {
                     .all(|t| t.as_str().len() <= MAX_TRACKER_URL_BYTES),
             "Tracker list exceeds the safety limits"
         );
-        let validated: ValidatedTorrentMetaV1Info<ByteBuf> =
+        let validated: ValidatedTorrentMetaV1Info<Buf> =
             info.validate().context("This torrent is not valid")?;
         let lengths = *validated.lengths();
         let multi_file = validated.info().files.is_some();
@@ -175,6 +190,9 @@ impl TorrentMeta {
         }
         Ok(Self {
             info_hash,
+            hashes: info_hash.into(),
+            v2: Vec::new(),
+            v2_memory: None,
             name: validated
                 .safe_name()
                 .unwrap_or_else(|| info_hash.as_string()),
@@ -193,6 +211,48 @@ impl TorrentMeta {
     pub fn piece_hash(&self, piece: u32) -> Option<&[u8]> {
         let start = piece as usize * HASH_LEN;
         self.piece_hashes.get(start..start + HASH_LEN)
+    }
+
+    pub(crate) fn clear_v1_hashes(&mut self) {
+        self.piece_hashes = Bytes::new();
+    }
+
+    pub(crate) fn require_complete_layers(&self) -> Result<()> {
+        ensure!(
+            self.hashes.v2.is_none() || !self.v2.is_empty(),
+            "Missing v2 file trees"
+        );
+        ensure!(
+            self.v2
+                .iter()
+                .all(|f| f.hashes.len() == f.piece_count as usize),
+            "V2 piece hashes must be authenticated before starting"
+        );
+        Ok(())
+    }
+
+    /// Data bytes in this piece. BEP 52 alignment gaps are never requested from peers.
+    pub fn piece_data_length(&self, piece: u32) -> Option<u32> {
+        let valid = self.lengths.validate_piece_index(piece)?;
+        if self.hashes.v2.is_none() {
+            return Some(self.lengths.piece_length(valid));
+        }
+        self.v2
+            .iter()
+            .find(|f| piece >= f.first_piece && piece - f.first_piece < f.piece_count)
+            .map(|f| f.piece_size(piece - f.first_piece, self.lengths.default_piece_length()))
+    }
+
+    pub fn chunk_request(&self, piece: u32, begin: u32) -> Option<librqbit_peer_protocol::Request> {
+        let len = self.piece_data_length(piece)?;
+        if begin >= len || begin % crate::v2::BLOCK != 0 {
+            return None;
+        }
+        Some(librqbit_peer_protocol::Request::new(
+            piece,
+            begin,
+            (len - begin).min(crate::v2::BLOCK),
+        ))
     }
 
     /// The pieces needed for the chosen files, or for all of them. The numbers come from
@@ -217,8 +277,8 @@ impl TorrentMeta {
     /// How many bytes of the torrent these pieces hold.
     pub fn bytes_in(&self, pieces: impl Iterator<Item = u32>) -> u64 {
         pieces
-            .filter_map(|piece| self.lengths.validate_piece_index(piece))
-            .map(|piece| u64::from(self.lengths.piece_length(piece)))
+            .filter_map(|piece| self.piece_data_length(piece))
+            .map(u64::from)
             .sum()
     }
 

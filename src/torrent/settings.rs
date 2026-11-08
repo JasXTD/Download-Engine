@@ -126,6 +126,24 @@ pub(crate) fn initialize(conn: &Connection) -> Result<()> {
         ratio = limits::DEFAULT_RATIO,
         time = limits::DEFAULT_TIME,
     ))?;
+    // Preserve per-download consent while allowing full SHA-256 identities. Serialize
+    // migration with other app instances and never expose a half-rebuilt table.
+    let consent_tx =
+        rusqlite::Transaction::new_unchecked(conn, rusqlite::TransactionBehavior::Immediate)?;
+    let consent_schema: String = consent_tx.query_row(
+        "SELECT sql FROM sqlite_master WHERE type='table' AND name='torrent_dht_consent'",
+        [],
+        |row| row.get(0),
+    )?;
+    if !consent_schema.contains("40,64") {
+        consent_tx.execute_batch("ALTER TABLE torrent_dht_consent RENAME TO torrent_dht_consent_v1;
+            CREATE TABLE torrent_dht_consent (job_id TEXT PRIMARY KEY REFERENCES jobs(id) ON DELETE CASCADE,
+            info_hash TEXT NOT NULL CHECK(length(info_hash) IN (40,64)));
+            INSERT INTO torrent_dht_consent SELECT job_id,info_hash FROM torrent_dht_consent_v1;
+            DROP TABLE torrent_dht_consent_v1;")?;
+    }
+    crate::store::migrations::guard_table(&consent_tx, "torrent_dht_consent")?;
+    consent_tx.commit()?;
     // Development builds could save torrents before the version guard existed. Upgrade
     // those profiles too, without changing profiles that have never saved a torrent.
     let has_torrents: bool = conn.query_row(

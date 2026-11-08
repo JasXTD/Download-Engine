@@ -9,6 +9,28 @@ pub const MAX_FRAME: usize = 1024 * 1024;
 mod torrent_review_tests {
     use super::*;
     #[test]
+    fn v2_browser_handoff_preserves_full_hash_without_starting_downloads() {
+        let temp = tempfile::tempdir().unwrap();
+        let store = Store::open(crate::paths::AppPaths {
+            data: temp.path().join("profile"),
+            downloads: temp.path().join("files"),
+        })
+        .unwrap();
+        let link = format!("magnet:?xt=urn:btmh:1220{}", "ab".repeat(32));
+        let reply = handle_request(
+            &store,
+            Request::ReviewTorrent {
+                request_id: "v2-review".into(),
+                url: link,
+            },
+        );
+        assert!(reply.ok, "{}", reply.message);
+        assert_eq!(reply.preview_id.as_deref(), Some("v2-review"));
+        assert!(store.list().unwrap().is_empty());
+        assert!(!store.torrents.is_running());
+        assert!(!store.torrent_settings().unwrap().enabled);
+    }
+    #[test]
     fn browser_magnets_are_only_deduplicated_review_offers_never_downloads() {
         let temp = tempfile::tempdir().unwrap();
         let store = Store::open(crate::paths::AppPaths {

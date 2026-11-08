@@ -14,6 +14,7 @@ The formats and network protocols come from the crates copied into `../vendor/rq
 | File | What it does |
 | --- | --- |
 | `src/meta.rs` | Reads and checks torrents. Everything else trusts what comes out of it. |
+| `src/v2.rs`, `src/v2_wire.rs` | BEP 52 identities, canonical metadata, authenticated Merkle trees and bounded hash proofs. |
 | `src/picker.rs` | Chooses what to ask each peer for. Pure logic with no network or disk. |
 | `src/storage.rs` | Reads and writes across file boundaries. |
 | `src/peer.rs` | One connection to one peer. |
@@ -60,7 +61,10 @@ The formats and network protocols come from the crates copied into `../vendor/rq
   It asks for one TCP rule to this computer with a one-hour lease, renewed every 30
   minutes, refuses permanent-only routers, never touches another device's rule, and on
   shutdown removes only a rule it still owns, named with its own process number.
-- A piece counts only after its SHA-1 matches.
+- A v1 piece counts only after its SHA-1 matches; v2 checks SHA-256 Merkle roots, and full
+  hybrid metadata checks both. A btih-only hybrid magnet remains v1-only. Btmh identities
+  always use all 32 hash bytes for metadata validation and saved state; truncation is only
+  for the 20-byte peer/tracker/DHT wire format.
 - File names on disk come only from `TorrentFile::path`. `display` is for showing.
 - Reading from a peer must never wait on writing to it, or two peers can block each other.
 - However a connection ends, what it held must go back to the picker. `Reader`'s `Drop`
@@ -93,6 +97,15 @@ The formats and network protocols come from the crates copied into `../vendor/rq
   final contiguous result: 64 MiB per torrent and 128 MiB across the process. Reservations
   remain held through hash/structure validation and release on error or cancellation.
   A repeated metadata handshake ends that peer's attempt.
+- V2 piece layers are limited to 32 MiB of hashes and authenticated before becoming live.
+  Layer fetching shares the metadata budget above. Live/temporary v2 trees reserve a
+  conservative 320 bytes per piece against a process-wide 512 MiB budget. Canonical
+  bencode has a depth/node limit; duplicate keys, unsafe paths and inconsistent hybrid
+  layouts are rejected. Entirely empty torrents remain unsupported.
+- Hash requests have at most 512 hashes, 32 proof levels and 64 requests/second/peer.
+  Two blocking proof workers serve the whole process, with bounded subtree caches.
+  Cancellation is checked between block reads; Stop joins those workers. Final v2
+  block alignment bytes are explicitly zero-filled, including reused output buffers.
 - The desktop starts the Windows helper with a 1 GiB process-memory limit as a backstop.
   Reaching it can stop the helper; the app reports that failure and retains staged data.
 
@@ -170,6 +183,15 @@ scenarios passed with generated harmless files: TCP/uTP transfers, encryption-po
 fallback/refusal, encrypted connections in both directions, Pause/Resume, repeated
 Stop all, saved-progress recovery and final SHA-256 checks. Libtorrent confirmed the
 negotiated RC4 and uTP flags; rqbit alone cannot verify encrypted transfers.
+
+## BEP 52 validation
+
+`tests/torrent-v2/interop.py` creates harmless v1/v2/hybrid fixtures with the approved Debian
+libtorrent 2.0.8 peer inside a Docker container with no external network. It checks both
+transfer directions, old v1 peers, full and btih-only magnets, file selection, empty and
+short files, large piece-layer proofs, encryption/uTP, web seeds, pause/resume, crash
+recovery, Stop all, and rejected malformed metadata. Every completed output is compared
+by SHA-256. See that folder’s README for reproduction and cleanup.
 
 ## Optional transports
 

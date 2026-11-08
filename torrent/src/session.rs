@@ -167,10 +167,11 @@ pub struct SessionStats {
     pub router: Option<RouterState>,
 }
 
+pub(crate) type Registry = Mutex<BTreeMap<String, Arc<Torrent>>>;
 pub struct Session {
     options: SessionOptions,
     context: Context,
-    torrents: Mutex<BTreeMap<String, Arc<Torrent>>>,
+    torrents: Arc<Registry>,
     cancel: CancellationToken,
     listener: tokio::sync::Mutex<Option<tokio::task::JoinHandle<()>>>,
     utp_listener: tokio::sync::Mutex<Option<tokio::task::JoinHandle<()>>>,
@@ -231,7 +232,7 @@ impl Session {
         let session = Arc::new(Self {
             options,
             context,
-            torrents: Mutex::default(),
+            torrents: Arc::default(),
             cancel,
             listener: tokio::sync::Mutex::new(None),
             utp_listener: tokio::sync::Mutex::new(None),
@@ -345,10 +346,11 @@ impl Session {
         }
         if torrents
             .values()
-            .any(|other| other.info_hash() == torrent.info_hash())
+            .any(|other| other.hashes().wire_overlaps(torrent.hashes()))
         {
             bail!("this torrent was already added");
         }
+        torrent.set_registry(Arc::downgrade(&self.torrents));
         torrents.insert(name, torrent.clone());
         Ok(torrent)
     }
@@ -380,15 +382,20 @@ impl Session {
         let torrent = Torrent::from_meta(meta, options, self.context.clone())?;
         let torrent = self.insert(name, torrent)?;
         torrent.start().await;
-        Ok(torrent.info_hash().as_string())
+        Ok(torrent.key())
     }
 
     /// Adds a magnet link and starts fetching its details.
     pub async fn add_magnet(&self, name: String, link: &str, add: AddOptions) -> Result<String> {
         let magnet = Magnet::parse(link).context("This is not a valid magnet link")?;
-        let info_hash = magnet
-            .as_id20()
-            .context("This magnet link has no version 1 hash")?;
+        let hashes = crate::v2::InfoHashes {
+            v1: magnet.as_id20(),
+            v2: magnet.as_id32(),
+        };
+        anyhow::ensure!(
+            hashes.v1.is_some() || hashes.v2.is_some(),
+            "This magnet link has no supported torrent hash"
+        );
         let trackers: Vec<Url> = magnet
             .trackers
             .iter()
@@ -402,7 +409,7 @@ impl Session {
             .options
             .state_dir
             .as_deref()
-            .and_then(|state_dir| resume::load_info(state_dir, info_hash, trackers.clone()));
+            .and_then(|state_dir| resume::load_info(state_dir, hashes, trackers.clone()));
         anyhow::ensure!(
             !options.seed_only || saved.is_some(),
             "Seeding needs saved metadata. Open the original .torrent file again."
@@ -429,11 +436,11 @@ impl Session {
         }
         let torrent = match saved {
             Some(meta) => Torrent::from_meta(Arc::new(meta), options, self.context.clone())?,
-            None => Torrent::from_magnet(info_hash, trackers, options, self.context.clone()),
+            None => Torrent::from_magnet(hashes, trackers, options, self.context.clone()),
         };
         let torrent = self.insert(name, torrent)?;
         torrent.start().await;
-        Ok(torrent.info_hash().as_string())
+        Ok(torrent.key())
     }
 
     pub fn torrent(&self, name: &str) -> Result<Arc<Torrent>> {
@@ -634,7 +641,10 @@ impl Session {
         let hashes = self
             .all()
             .into_iter()
-            .map(|(_, torrent)| torrent.info_hash())
+            .flat_map(|(_, torrent)| {
+                let h = torrent.hashes();
+                h.v1.into_iter().chain(h.v2.map(|h| h.truncate_for_dht()))
+            })
             .collect();
         let (mut stream, encrypted_hash) =
             mse::incoming(stream, self.options.encryption, hashes).await?;
@@ -651,7 +661,7 @@ impl Session {
             .all()
             .into_iter()
             .map(|(_, torrent)| torrent)
-            .find(|torrent| torrent.info_hash() == info_hash)
+            .find(|torrent| torrent.hashes().contains(info_hash))
             .context("peer asked for a torrent we don't have")?;
         torrent.offer(stream, addr, hello)
     }

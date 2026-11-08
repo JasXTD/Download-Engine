@@ -22,8 +22,23 @@
     if (typeof url === "string" && /^magnet:/i.test(url.trim())) {
       if (url.length > 16384 || /[\u0000-\u0020\u007f]/.test(url.trim())) throw new Error("Invalid magnet link.");
       const magnet = new URL(url.trim());
-      const topic = magnet.searchParams.getAll("xt").find(value => value.startsWith("urn:btih:"));
-      if (!topic || !/^urn:btih:(?:[a-f0-9]{40}|[a-z2-7]{32})$/i.test(topic)) throw new Error("Invalid magnet link.");
+      const topics = magnet.searchParams.getAll("xt");
+      if (!topics.length || topics.some(topic => !/^urn:btih:(?:[a-f0-9]{40}|[a-z2-7]{32})$/i.test(topic) && !/^urn:btmh:1220[a-f0-9]{64}$/i.test(topic))) throw new Error("Invalid magnet link.");
+      for (const prefix of ["urn:btih:", "urn:btmh:"]) {
+        const hashes = topics.filter(topic => topic.toLowerCase().startsWith(prefix)).map(topic => {
+          const value = topic.slice(prefix.length).toLowerCase();
+          if (prefix !== "urn:btih:" || value.length !== 32) return value;
+          // Hex and base32 can name the same v1 identity in repeated xt fields.
+          let bits = 0, buffer = 0, hex = "";
+          for (const char of value) {
+            buffer = (buffer << 5) | "abcdefghijklmnopqrstuvwxyz234567".indexOf(char);
+            bits += 5;
+            if (bits >= 8) { bits -= 8; hex += ((buffer >>> bits) & 255).toString(16).padStart(2, "0"); }
+          }
+          return hex;
+        });
+        if (new Set(hashes).size > 1) throw new Error("Invalid magnet link.");
+      }
       return { action: "review_torrent", request_id: requestId, url: url.trim() };
     }
     const normalized = normalizeUrl(url);

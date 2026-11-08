@@ -570,6 +570,11 @@ mod tests {
     use super::*;
     #[test]
     fn magnets_are_offered_once_and_invalid_or_private_copies_are_ignored() {
+        let v2 = format!("magnet:?xt=urn:btmh:1220{}", "ab".repeat(32));
+        assert_eq!(
+            Filter::default().offer(Some(&v2), Source::Other).as_deref(),
+            Some(v2.as_str())
+        );
         let link =
             "magnet:?xt=urn:btih:0123456789012345678901234567890123456789&dn=Harmless%20sample";
         let mut filter = Filter::default();

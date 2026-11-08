@@ -1,3 +1,9 @@
+## 3.19.0 — 2026-11-08
+
+- Sokongan torrent v2 dan hibrid dengan pengesahan SHA-256, pemilihan fail, sambung semula dan pemulihan. Sokongan v1 dan tetapan perkongsian dikekalkan.
+
+[English details](../../../CHANGELOG.md#3190--2026-11-08)
+
 ## 3.18.1 — 2026-11-08
 
 - Muat naik dimatikan secara lalai. Anda boleh mendayakannya dalam Keutamaan → Torrent.

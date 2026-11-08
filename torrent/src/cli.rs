@@ -128,18 +128,15 @@ fn file_list(meta: &TorrentMeta) -> Value {
         })
         .collect();
     let encode = |text: &str| form_urlencoded::byte_serialize(text.as_bytes()).collect::<String>();
-    let mut magnet = format!(
-        "magnet:?xt=urn:btih:{}&dn={}",
-        meta.info_hash.as_string(),
-        encode(&meta.name)
-    );
+    let mut magnet = format!("{}&dn={}", meta.hashes.magnet(), encode(&meta.name));
     for tracker in &meta.trackers {
         magnet.push_str("&tr=");
         magnet.push_str(&encode(tracker.as_str()));
     }
     json!({
         "files": files,
-        "info_hash": meta.info_hash.as_string(),
+        "info_hash": meta.hashes.key(),
+        "torrent_version": if meta.hashes.v2.is_none(){"v1"}else if meta.hashes.v1.is_some(){"hybrid"}else{"v2"},
         "name": meta.name,
         "magnet": magnet,
     })

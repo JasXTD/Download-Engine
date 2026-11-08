@@ -71,6 +71,7 @@ pub enum Written {
 
 pub struct Picker {
     lengths: Lengths,
+    data_lengths: Option<Vec<u32>>,
     have: Bitfield,
     wanted: Bitfield,
     /// Wanted pieces not yet ours. Kept up to date, because this is checked for each piece.
@@ -97,6 +98,7 @@ impl Picker {
         let remaining = count_remaining(&have, &wanted);
         Self {
             lengths,
+            data_lengths: None,
             have,
             wanted,
             remaining,
@@ -115,6 +117,11 @@ impl Picker {
 
     pub fn have(&self) -> &Bitfield {
         &self.have
+    }
+
+    pub fn set_data_lengths(&mut self, lengths: Vec<u32>) {
+        assert_eq!(lengths.len(), self.lengths.total_pieces() as usize);
+        self.data_lengths = Some(lengths);
     }
 
     pub fn wanted(&self) -> &Bitfield {
@@ -277,14 +284,31 @@ impl Picker {
 
     fn request_for(&self, piece: u32, index: u32) -> Option<ChunkRequest> {
         let valid = self.lengths.validate_piece_index(piece)?;
+        let begin = self.lengths.chunk_offset_in_piece(valid, index)?;
+        let length = if let Some(lengths) = &self.data_lengths {
+            lengths
+                .get(piece as usize)?
+                .checked_sub(begin)?
+                .min(crate::v2::BLOCK)
+        } else {
+            self.lengths.chunk_size(valid, index)?
+        };
+        if length == 0 {
+            return None;
+        }
         Some(ChunkRequest {
             chunk: Chunk { piece, index },
-            begin: self.lengths.chunk_offset_in_piece(valid, index)?,
-            length: self.lengths.chunk_size(valid, index)?,
+            begin,
+            length,
         })
     }
 
     fn chunks_in(&self, piece: u32) -> u32 {
+        if let Some(lengths) = &self.data_lengths {
+            return lengths
+                .get(piece as usize)
+                .map_or(0, |n| n.div_ceil(crate::v2::BLOCK));
+        }
         self.lengths
             .validate_piece_index(piece)
             .map_or(0, |valid| self.lengths.chunks_per_piece(valid))

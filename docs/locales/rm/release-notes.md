@@ -1,3 +1,9 @@
+## 3.19.0 — 2026-11-08
+
+- Sustegn per torrents v2 ed ibrids cun verificaziun SHA-256, selecziun da datotecas e cuntinuaziun da telechargiadas. Il sustegn v1 e las preferenzas da cundivisiun restan.
+
+[English details](../../../CHANGELOG.md#3190--2026-11-08)
+
 ## 3.18.1 — 2026-11-08
 
 - Il chargiar si è deactivà sco standard. Vus al pudais activar en Preferenzas → Torrents.

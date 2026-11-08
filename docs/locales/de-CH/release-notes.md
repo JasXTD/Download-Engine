@@ -1,3 +1,9 @@
+## 3.19.0 — 2026-11-08
+
+- Unterstützung für v2- und Hybrid-Torrents mit SHA-256-Prüfung, Dateiauswahl, Fortsetzen und Wiederherstellung. V1 und die bisherigen Freigabeeinstellungen bleiben erhalten.
+
+[English details](../../../CHANGELOG.md#3190--2026-11-08)
+
 ## 3.18.1 — 2026-11-08
 
 - Uploads sind standardmässig ausgeschaltet. Sie können sie unter Einstellungen → Torrents aktivieren.

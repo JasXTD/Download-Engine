@@ -84,6 +84,11 @@ is gone, because hashing now has one implementation and is always available.
 
 ### Problems fixed
 
+- BEP 52 magnet validation: `librqbit-core/src/magnet.rs` requires the complete 32-byte
+  SHA-256 multihash after `urn:btmh:1220` and rejects conflicting repeated btih/btmh
+  topics. V2 metadata, Merkle verification and hash messages are implemented in the
+  first-party `torrent/src/v2*.rs` modules, not copied into these protocol crates.
+
 All of these come from data that strangers control, and each has a regression test.
 
 - Torrent resource limits: `librqbit-core/src/torrent_limits.rs` bounds file, path and

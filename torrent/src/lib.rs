@@ -14,11 +14,16 @@ pub mod picker;
 pub mod rate;
 pub mod reason;
 mod resume;
+pub use resume::cached_hashes;
 pub mod router;
 pub mod session;
 pub mod storage;
 pub mod torrent;
 pub mod transport;
+pub mod v2;
+#[cfg(test)]
+mod v2_tests;
+mod v2_wire;
 pub mod webseed;
 
 #[cfg(test)]

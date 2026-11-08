@@ -57,7 +57,7 @@ and read the [changelog](CHANGELOG.md) for release and development notes.
   [Link discovery](docs/user-guide.md#find-files-on-a-website)
 - **Video:** YouTube, TikTok, Bilibili, Twitch and compatible HLS and DASH streams, with a choice of
   quality and audio. [Supported sites](#supported-video-sites-and-formats)
-- **Torrents:** optional and off by default. [Torrent downloads](#torrent-downloads)
+- **Torrents:** v1, v2 and hybrid torrents; optional and off by default. [Torrent downloads](#torrent-downloads)
 - **Queues and schedules:** named queues, one-time or recurring schedules, speed limits, data
   quotas and completion actions. [Queues guide](docs/user-guide.md#queues--schedules)
 - **Browser:** send links and capture downloads from Chrome, Edge, Brave and Firefox, find media on
@@ -111,6 +111,8 @@ as a media file. These are capabilities of the shipped readers, not additional
 > peers. Antivirus scans cannot guarantee that a file is safe. Torrent support is
 > optional; uploading, seeding after completion, incoming connections and UPnP are off by default for new profiles.
 
+- **Formats:** v1, v2 and hybrid `.torrent` files, plus `btih` and full SHA-256 `btmh` magnets.
+  V2 pieces use authenticated SHA-256 Merkle trees; hybrid files work with v1 peers too.
 - **Open** a torrent file with **Tasks → Open torrent file…**, from your file manager or by dropping
   it on the window, or paste a magnet link into **Add download**. Connected browser extensions send
   clicked magnet links and captured torrent files for review; Windows also offers copied magnets.
@@ -132,7 +134,11 @@ as a media file. These are capabilities of the shipped readers, not additional
 - **Limits:** torrents pause while a proxy is enabled, because the app's proxy does not carry
   torrent traffic. Adding torrents through the CLI, scripts or MCP is not supported.
 
-New in **3.18.0**: the Peers list shows actual TCP/uTP and encryption status. Optional
+New in **3.19.0**: v2 and hybrid support with file selection, verified recovery and the same
+transfer controls. A `btih`-only magnet uses v1; a magnet containing `btmh` requires v2
+verification. Hash checks establish file integrity, not safety or privacy.
+
+Added in **3.18.0**: the Peers list shows actual TCP/uTP and encryption status. Optional
 **VPN/interface binding** keeps torrent peers, trackers, DHT, web seeds and DNS on one
 selected interface address, and stops transfers if it disappears. Configure the address
 and DNS server in Preferences → Torrents. [Setup and limitations](docs/user-guide.md#download-torrents).

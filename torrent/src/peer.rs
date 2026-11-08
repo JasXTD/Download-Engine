@@ -69,6 +69,8 @@ pub type BoxedStream = Box<dyn PeerStream>;
 
 #[derive(Clone, Copy, Debug)]
 pub struct Hello {
+    pub hash: Id20,
+    pub supports_v2: bool,
     pub connection: crate::details::ConnectionInfo,
     pub peer_id: Id20,
     pub supports_extended: bool,
@@ -79,8 +81,21 @@ pub async fn send_handshake(
     info_hash: Id20,
     our_id: Id20,
 ) -> Result<()> {
+    send_v2_handshake(stream, info_hash, our_id, false).await
+}
+
+pub(crate) async fn send_v2_handshake(
+    stream: &mut (impl AsyncWrite + Unpin),
+    info_hash: Id20,
+    our_id: Id20,
+    v2: bool,
+) -> Result<()> {
     let mut buffer = [0u8; HANDSHAKE_LEN];
-    let len = Handshake::new(info_hash, our_id).serialize_unchecked_len(&mut buffer);
+    let mut handshake = Handshake::new(info_hash, our_id);
+    if v2 {
+        handshake.reserved |= 0x10;
+    }
+    let len = handshake.serialize_unchecked_len(&mut buffer);
     timeout(HANDSHAKE_TIMEOUT, stream.write_all(&buffer[..len]))
         .await
         .context("timed out sending the handshake")??;
@@ -95,6 +110,8 @@ pub async fn read_handshake(stream: &mut (impl AsyncRead + Unpin)) -> Result<(Id
         .context("timed out waiting for the handshake")??;
     let (handshake, _) = Handshake::deserialize(&buffer).map_err(|error| anyhow!("{error}"))?;
     let hello = Hello {
+        hash: handshake.info_hash,
+        supports_v2: handshake.reserved & 0x10 != 0,
         connection: Default::default(),
         peer_id: handshake.peer_id,
         supports_extended: handshake.supports_extended(),
@@ -114,6 +131,8 @@ pub(crate) fn frame_len(buffer: &[u8], max: usize) -> Result<Option<usize>> {
 }
 
 pub(crate) enum Out {
+    Hashes(Bytes),
+    Reject(Request),
     KeepAlive,
     Choke,
     Unchoke,
@@ -137,6 +156,7 @@ struct Outbox {
 
 /// What the rest of the engine can do with a connected peer.
 pub(crate) struct PeerLink {
+    v2: AtomicBool,
     pub connection: crate::details::ConnectionInfo,
     pub key: u64,
     pub peer_id: Id20,
@@ -165,6 +185,7 @@ pub(crate) struct PeerLink {
 impl PeerLink {
     pub fn new(key: u64, peer_id: Id20, addr: Option<SocketAddr>, incoming: bool) -> Self {
         Self {
+            v2: AtomicBool::new(false),
             connection: Default::default(),
             key,
             peer_id,
@@ -249,8 +270,13 @@ impl PeerLink {
     pub fn choke(&self) {
         if !self.choking.swap(true, Ordering::AcqRel) {
             let mut outbox = self.outbox.lock();
-            outbox.uploads.clear();
             outbox.control.push_back(Out::Choke);
+            if self.v2.load(Ordering::Relaxed) {
+                let queued = std::mem::take(&mut outbox.uploads);
+                outbox.control.extend(queued.into_iter().map(Out::Reject));
+            } else {
+                outbox.uploads.clear();
+            }
             drop(outbox);
             self.writer_wake.notify_one();
         }
@@ -277,6 +303,14 @@ impl PeerLink {
             outbox.uploads.push_back(request);
             drop(outbox);
             self.writer_wake.notify_one();
+        } else if self.v2.load(Ordering::Relaxed) {
+            if outbox.control.len() >= MAX_UPLOAD_QUEUE {
+                self.kick();
+            } else {
+                outbox.control.push_back(Out::Reject(request));
+                drop(outbox);
+                self.writer_wake.notify_one();
+            }
         }
     }
 
@@ -313,6 +347,14 @@ pub(crate) async fn run_connection(
         return false;
     };
     let (mut read_half, mut write_half) = tokio::io::split(stream);
+    link.v2.store(
+        live.core
+            .meta
+            .hashes
+            .v2
+            .is_some_and(|h| h.truncate_for_dht() == hello.hash),
+        Ordering::Relaxed,
+    );
     if hello.supports_extended {
         link.push(Out::ExtendedHandshake);
     }
@@ -329,6 +371,10 @@ pub(crate) async fn run_connection(
         result = read_loop(&mut read_half, &mut reader) => result,
         result = write_loop(&mut write_half, &live, &link) => result,
     };
+    reader.hash_cancel.cancel();
+    if let Some(hash) = reader.pending_hash.take() {
+        let _ = hash.await;
+    }
     // Cancelling read_loop drops its await, not a blocking disk operation. Join it
     // before releasing the connection so Pause/Stop all cannot return ahead of a write.
     if let Some(write) = reader.pending_write.take() {
@@ -444,8 +490,13 @@ async fn read_block(live: &Arc<Live>, request: Request, mut block: Vec<u8>) -> R
     block[5..9].copy_from_slice(&request.index.to_be_bytes());
     block[9..13].copy_from_slice(&request.begin.to_be_bytes());
     let storage = core.storage.clone();
+    // V2 clients may request the last block through its 16 KiB alignment gap.
+    // Never reuse old buffer bytes for that virtual padding.
+    block[PIECE_HEADER..].fill(0);
+    let readable = (core.meta.lengths.total_length().saturating_sub(offset))
+        .min(u64::from(request.length)) as usize;
     let (block, result) = tokio::task::spawn_blocking(move || {
-        let result = storage.read(offset, &mut block[PIECE_HEADER..]);
+        let result = storage.read(offset, &mut block[PIECE_HEADER..PIECE_HEADER + readable]);
         (block, result)
     })
     .await?;
@@ -464,6 +515,7 @@ fn serialize_control(live: &Live, link: &PeerLink, buffer: &mut Vec<u8>) -> Resu
         };
         let needed = match &out {
             Out::Bitfield(bytes) => bytes.len() + 5,
+            Out::Hashes(bytes) => bytes.len(),
             _ => MAX_MSG_LEN,
         };
         if buffer.len() < used + needed {
@@ -483,6 +535,18 @@ fn serialize_one(
 ) -> Result<usize> {
     let info = &live.core.meta.info_bytes;
     let message = match out {
+        Out::Hashes(bytes) => {
+            buffer[..bytes.len()].copy_from_slice(bytes);
+            return Ok(bytes.len());
+        }
+        Out::Reject(request) => {
+            buffer[..4].copy_from_slice(&13u32.to_be_bytes());
+            buffer[4] = 16;
+            for (offset, n) in [(5, request.index), (9, request.begin), (13, request.length)] {
+                buffer[offset..offset + 4].copy_from_slice(&n.to_be_bytes());
+            }
+            return Ok(17);
+        }
         Out::KeepAlive => Message::KeepAlive,
         Out::Choke => Message::Choke,
         Out::Unchoke => Message::Unchoke,
@@ -528,6 +592,10 @@ enum Action {
 }
 
 struct Reader {
+    hash_cancel: tokio_util::sync::CancellationToken,
+    pending_hash: Option<tokio::task::JoinHandle<Result<Bytes>>>,
+    hash_requests: u32,
+    hash_window: Instant,
     pending_write: Option<tokio::task::JoinHandle<(io::Result<()>, crate::torrent::WriteLease)>>,
     live: Arc<Live>,
     link: Arc<PeerLink>,
@@ -552,11 +620,17 @@ impl Reader {
         let pieces = live.core.meta.lengths.total_pieces();
         let bitfield_message = pieces.div_ceil(8) as usize + 5;
         Self {
+            hash_cancel: tokio_util::sync::CancellationToken::new(),
+            pending_hash: None,
             pending_write: None,
+            hash_requests: 0,
+            hash_window: Instant::now(),
             live,
             link,
             pieces,
-            max_frame: bitfield_message.max(MAX_MSG_LEN),
+            max_frame: bitfield_message
+                .max(MAX_MSG_LEN)
+                .max(crate::v2_wire::MAX_FRAME),
             peer_has: Bitfield::new(pieces),
             peer_choking: true,
             am_interested: false,
@@ -572,6 +646,58 @@ impl Reader {
     }
 
     async fn handle_frame(&mut self, frame: Bytes) -> Result<()> {
+        if frame.get(4) == Some(&21) {
+            if self.hash_window.elapsed() >= Duration::from_secs(1) {
+                self.hash_requests = 0;
+                self.hash_window = Instant::now();
+            }
+            self.hash_requests += 1;
+            ensure!(
+                self.hash_requests <= 64,
+                "Peer exceeded hash request rate limit"
+            );
+            ensure!(frame.len() == 53, "Incorrect hash request length");
+            let request = crate::v2_wire::Request::parse(&frame)?;
+            ensure!(
+                self.link.outbox.lock().control.len() < 32,
+                "Too many pending control messages"
+            );
+            let storage = self.live.core.storage.clone();
+            let meta = self.live.core.meta.clone();
+            let have = self.live.core.picker.lock().have().clone();
+            let permit = crate::v2_wire::hash_worker().await?;
+            let cancel = self.hash_cancel.clone();
+            self.pending_hash = Some(tokio::task::spawn_blocking(move || {
+                let _permit = permit;
+                crate::v2_wire::answer_cancellable(request, &storage, &meta, &have, &cancel)
+            }));
+            let result = self.pending_hash.as_mut().unwrap().await;
+            self.pending_hash.take();
+            let response = result?.unwrap_or_else(|_| request.frame(23, &[]));
+            self.live.core.context.up.take(response.len() as u32).await;
+            self.link.push(Out::Hashes(response));
+            return Ok(());
+        }
+        if frame.get(4) == Some(&16) {
+            ensure!(frame.len() == 17, "Incorrect request rejection length");
+            let number = |offset| u32::from_be_bytes(frame[offset..offset + 4].try_into().unwrap());
+            let (piece, begin, length) = (number(5), number(9), number(13));
+            let request = self
+                .live
+                .core
+                .meta
+                .chunk_request(piece, begin)
+                .context("Invalid rejected block")?;
+            ensure!(length == request.length, "Invalid rejected block length");
+            let chunk = Chunk {
+                piece,
+                index: begin / CHUNK_SIZE,
+            };
+            if self.in_flight.remove(&chunk).is_some() {
+                self.live.core.picker.lock().release(chunk);
+            }
+            return Ok(());
+        }
         let action = self.parse_frame(&frame)?;
         if let Action::Block { index, begin, data } = action {
             self.on_block(index, begin, data).await?;
@@ -656,14 +782,30 @@ impl Reader {
             .begin
             .checked_add(request.length)
             .context("peer asked for a block past the end of a piece")?;
+        let available = if self.link.v2.load(Ordering::Relaxed) {
+            core.meta
+                .piece_data_length(request.index)
+                .context("Invalid v2 piece")?
+                .next_multiple_of(CHUNK_SIZE)
+        } else {
+            lengths.piece_length(piece)
+        };
         ensure!(
-            request.length > 0
-                && request.length <= CHUNK_SIZE
-                && end <= lengths.piece_length(piece),
-            "peer asked for a block that doesn't fit its piece"
+            request.length > 0 && request.length <= CHUNK_SIZE && end <= available,
+            "peer asked for a block that doesn't fit its piece (index={}, begin={}, length={}, piece_length={})",
+            request.index,
+            request.begin,
+            request.length,
+            lengths.piece_length(piece)
         );
         if !self.link.is_choking() && core.picker.lock().have().get(request.index) {
             self.link.queue_upload(request);
+        } else if self.link.v2.load(Ordering::Relaxed) {
+            ensure!(
+                self.link.outbox.lock().control.len() < MAX_UPLOAD_QUEUE,
+                "Too many pending rejected blocks"
+            );
+            self.link.push(Out::Reject(request));
         }
         Ok(())
     }
@@ -712,12 +854,17 @@ impl Reader {
         let piece = lengths
             .validate_piece_index(index)
             .context("peer sent a block for a piece that doesn't exist")?;
-        let info = lengths
-            .chunk_info_from_received_data(piece, begin, data.len() as u32)
+        let request = core
+            .meta
+            .chunk_request(index, begin)
             .context("peer sent a block that doesn't match any request")?;
+        ensure!(
+            request.length as usize == data.len(),
+            "Peer sent an incorrect block length"
+        );
         let chunk = Chunk {
             piece: index,
-            index: info.chunk_index,
+            index: begin / CHUNK_SIZE,
         };
         let expected = self.in_flight.remove(&chunk).is_some() | self.released.remove(&chunk);
         if !expected {
@@ -744,7 +891,7 @@ impl Reader {
             core.wasted.fetch_add(size, Ordering::Relaxed);
             return Ok(());
         };
-        let offset = lengths.chunk_absolute_offset(&info);
+        let offset = lengths.piece_offset(piece) + u64::from(begin);
         let storage = core.storage.clone();
         self.pending_write = Some(tokio::task::spawn_blocking(move || {
             (storage.write(offset, &data), write_lease)

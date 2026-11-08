@@ -2,6 +2,17 @@
 
 Release notes are available offline in Help → Changelog. Newest releases appear first.
 
+## 3.19.0 — 2026-11-08
+
+### BitTorrent v2 and hybrid support
+
+- Open v2 and hybrid .torrent files and full SHA-256 btmh magnets through the existing Add download, browser, file association, drag-and-drop and clipboard workflows. Existing v1 torrents keep working.
+- Verify v2 data using BEP 52 SHA-256 Merkle trees and authenticate magnet piece layers against file roots. Hybrid files validate both SHA-1 and SHA-256 and can transfer with v1-only peers. A btih-only magnet deliberately stays in v1 mode; including btmh requires v2 verification.
+- Preserve file selection, short final blocks, virtual padding, pause/resume, crash recovery and Stop all. Optional encrypted TCP/uTP and web seeds use the same verified-piece checks. Uploading and incoming-connection defaults are unchanged.
+- Keep full v2 identities in saved state, detect known v1/v2 aliases before adding duplicate downloads, and remove both identities' cached state when forgetting a hybrid torrent. Profiles storing v2/hybrid magnets require this version or newer.
+- Reject malformed or conflicting metadata, unsafe/colliding paths, missing or altered piece layers and mismatched hash proofs. Bound hash messages, metadata memory and proof workers; cancel and join proof work during Stop. Keep pending peer connections bounded through hybrid handshake fallbacks.
+- Verified with generated harmless files in an isolated Docker lab using Debian libtorrent 2.0.8 and the previous v1 engine. No public swarms, tracker accounts, firewall changes or new Windows software were used.
+
 ## 3.18.1 — 2026-11-08
 
 ### Torrent upload defaults and network confirmations

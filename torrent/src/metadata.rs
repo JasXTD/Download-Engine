@@ -1,6 +1,9 @@
-//! Fetches a torrent's details from a peer, which is how a magnet link becomes a torrent.
+//!  Fetches a torrent's details from a peer, which is how a magnet link becomes a torrent.
 //! Only the hash is known at the start, and the peer is a stranger, so its claims are limited
 //! here and the result counts for nothing until it matches the hash.
+
+#[cfg(test)]
+use crate::peer::send_handshake;
 
 use anyhow::{Context as _, Result, anyhow, bail, ensure};
 use buffers::ByteBuf;
@@ -15,7 +18,7 @@ use std::sync::{Arc, OnceLock};
 use tokio::io::{AsyncReadExt, AsyncWrite, AsyncWriteExt};
 use tokio::sync::{OwnedSemaphorePermit, Semaphore};
 
-use crate::peer::{BoxedStream, CLIENT_NAME, frame_len, read_handshake, send_handshake};
+use crate::peer::{BoxedStream, CLIENT_NAME, frame_len, read_handshake};
 
 /// Real torrents need far less. This stops a peer from claiming a size that fills the memory.
 pub(crate) const MAX_METADATA_SIZE: u32 = 32 * 1024 * 1024;
@@ -72,7 +75,9 @@ impl Budget {
 
 pub(crate) struct Fetched {
     pub bytes: Bytes,
+    pub layers: Option<Vec<u8>>,
     _reservation: Reservation,
+    _layer_reservation: Option<Reservation>,
 }
 
 /// Collects the pieces of the info dictionary.
@@ -133,7 +138,9 @@ impl Collector {
         }
         Ok(Fetched {
             bytes: bytes.into(),
+            layers: None,
             _reservation: self.reservation,
+            _layer_reservation: None,
         })
     }
 }
@@ -162,15 +169,28 @@ async fn request(
 
 /// Asks one peer for the torrent's details. The caller limits how long this may take, and
 /// must check the result against the info hash.
+#[cfg(test)]
 pub(crate) async fn fetch(
+    stream: BoxedStream,
+    hashes: impl Into<crate::v2::InfoHashes>,
+    our_id: Id20,
+    budget: Budget,
+) -> Result<Fetched> {
+    let hashes = hashes.into();
+    let info_hash = hashes.wire();
+    fetch_on(stream, hashes, info_hash, our_id, budget).await
+}
+
+pub(crate) async fn fetch_on(
     mut stream: BoxedStream,
+    hashes: crate::v2::InfoHashes,
     info_hash: Id20,
     our_id: Id20,
     budget: Budget,
 ) -> Result<Fetched> {
-    send_handshake(&mut stream, info_hash, our_id).await?;
+    crate::peer::send_v2_handshake(&mut stream, info_hash, our_id, hashes.v2.is_some()).await?;
     let (their_hash, hello) = read_handshake(&mut stream).await?;
-    ensure!(their_hash == info_hash, "peer is on another torrent");
+    ensure!(hashes.contains(their_hash), "peer is on another torrent");
     ensure!(hello.peer_id != our_id, "connected to ourselves");
     ensure!(hello.supports_extended, "peer can't send torrent details");
 
@@ -219,10 +239,30 @@ pub(crate) async fn fetch(
                         .as_mut()
                         .context("peer sent torrent details before its handshake")?;
                     if current.store(&data)? {
-                        return collector
+                        let mut fetched = collector
                             .take()
                             .context("the torrent details went missing")?
-                            .finish();
+                            .finish()?;
+                        let mut meta = crate::meta::TorrentMeta::from_hashes(
+                            hashes,
+                            fetched.bytes.clone(),
+                            Vec::new(),
+                        )?;
+                        if meta.hashes.v2.is_some() {
+                            let layer_bytes = meta
+                                .v2
+                                .iter()
+                                .filter(|f| f.piece_count > 1)
+                                .try_fold(0u32, |n, f| {
+                                    n.checked_add(f.piece_count.checked_mul(32)?)
+                                })
+                                .context("V2 layer size overflow")?;
+                            fetched._layer_reservation = Some(budget.reserve(layer_bytes)?);
+                            crate::v2_wire::fetch_layers(&mut stream, &mut buffer, &mut meta)
+                                .await?;
+                            fetched.layers = Some(crate::v2::encode_layers(&meta)?);
+                        }
+                        return Ok(fetched);
                     }
                     if next_piece < current.pieces() {
                         request(&mut stream, next_piece, ids).await?;

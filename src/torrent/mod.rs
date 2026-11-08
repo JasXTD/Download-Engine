@@ -40,7 +40,7 @@ use tokio::time::{Instant, MissedTickBehavior};
 use tokio_util::sync::CancellationToken;
 
 const MAX_LINK: usize = 16384;
-const HASH_LEN: usize = 40;
+
 const INVALID_LINK: &str = "That magnet link isn't valid. Copy the whole link and try again.";
 const STATS_EVERY: Duration = Duration::from_millis(500);
 const SAVE_EVERY: Duration = Duration::from_secs(1);
@@ -60,51 +60,18 @@ pub fn is_magnet(value: &str) -> bool {
 }
 
 fn is_hash(value: &str) -> bool {
-    value.len() == HASH_LEN
+    matches!(value.len(), 40 | 64)
         && value
             .bytes()
             .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte))
 }
 
-fn base32_to_hex(text: &str) -> Option<String> {
-    let mut hex = String::with_capacity(HASH_LEN);
-    let (mut buffer, mut bits) = (0u32, 0u32);
-    for byte in text.bytes() {
-        let value = match byte.to_ascii_uppercase() {
-            letter @ b'A'..=b'Z' => letter - b'A',
-            digit @ b'2'..=b'7' => digit - b'2' + 26,
-            _ => return None,
-        };
-        buffer = buffer << 5 | u32::from(value);
-        bits += 5;
-        if bits >= 8 {
-            bits -= 8;
-            hex.push_str(&format!("{:02x}", (buffer >> bits) & 0xff));
-            buffer &= (1 << bits) - 1;
-        }
-    }
-    Some(hex)
-}
-
-/// The info hash of a magnet link, as lowercase hex. The engine reads the rest of the link.
+/// Canonical full identity: SHA-1 for v1/hybrid, full SHA-256 for v2-only magnets.
 pub fn info_hash(link: &str) -> Result<String> {
-    ensure!(link.len() <= MAX_LINK, INVALID_LINK);
-    let url = Url::parse(link.trim()).context(INVALID_LINK)?;
-    ensure!(url.scheme() == "magnet", INVALID_LINK);
-    let hash = url
-        .query_pairs()
-        .find_map(|(key, value)| {
-            (key == "xt")
-                .then(|| value.strip_prefix("urn:btih:").map(str::to_owned))
-                .flatten()
-        })
-        .context(INVALID_LINK)?;
-    let hash = match hash.len() {
-        32 => base32_to_hex(&hash).context(INVALID_LINK)?,
-        _ => hash.to_ascii_lowercase(),
-    };
-    ensure!(is_hash(&hash), INVALID_LINK);
-    Ok(hash)
+    ensure!(link.len() <= MAX_LINK && is_magnet(link), INVALID_LINK);
+    Ok(de_torrent::v2::InfoHashes::parse_magnet(link)
+        .context(INVALID_LINK)?
+        .key())
 }
 
 /// Router setup as the helper reports it: only addresses and a port, never the router's
@@ -347,7 +314,10 @@ impl Details {
             files: Vec<Entry>,
         }
         let reply: Reply = serde_json::from_value(value).context("Invalid torrent details")?;
-        ensure!(is_hash(&reply.info_hash), "Invalid torrent details");
+        ensure!(
+            is_hash(&reply.info_hash) && info_hash(&reply.magnet)? == reply.info_hash,
+            "Invalid torrent details"
+        );
         let files = reply
             .files
             .into_iter()
@@ -450,9 +420,17 @@ impl Store {
         request_id: String,
         stage: Stage,
     ) -> Result<Job> {
-        let hash = info_hash(link)?;
-        if let Some(existing) = self.torrent_job(&hash)? {
-            bail!("Already in your list: {}", existing.name);
+        info_hash(link)?;
+        let hashes = de_torrent::v2::InfoHashes::parse_magnet(link)?;
+        for hash in hashes
+            .v1
+            .map(|h| h.as_string())
+            .into_iter()
+            .chain(hashes.v2.map(|h| h.as_string()))
+        {
+            if let Some(existing) = self.torrent_job(&hash)? {
+                bail!("Already in your list: {}", existing.name);
+            }
         }
         let directory = match folder {
             Some(folder) => {
@@ -491,6 +469,12 @@ impl Store {
         // Commit the new format and its compatibility guard together. An older open
         // connection must not rewrite a torrent as an ordinary download.
         settings::protect_profile(&tx)?;
+        if de_torrent::v2::InfoHashes::parse_magnet(&job.url)?
+            .v2
+            .is_some()
+        {
+            tx.execute("UPDATE profile_format SET data_version=MAX(data_version,11),min_writer_version=MAX(min_writer_version,11) WHERE id=1", [])?;
+        }
         tx.commit()?;
         Ok(job)
     }
@@ -558,9 +542,18 @@ impl Store {
     /// The download for this torrent, if there is one.
     pub fn torrent_job(&self, info_hash: &str) -> Result<Option<Job>> {
         Ok(self.list()?.into_iter().find(|job| {
-            job.torrent
-                .as_ref()
-                .is_some_and(|state| state.info_hash == info_hash)
+            job.torrent.as_ref().is_some_and(|state| {
+                state.info_hash == info_hash
+                    || de_torrent::v2::InfoHashes::parse_magnet(&job.url).is_ok_and(|h| {
+                        h.v1.is_some_and(|v| v.as_string() == info_hash)
+                            || h.v2.is_some_and(|v| v.as_string() == info_hash)
+                            || de_torrent::cached_hashes(&self.paths.data.join("torrents"), h)
+                                .is_some_and(|known| {
+                                    known.v1.is_some_and(|v| v.as_string() == info_hash)
+                                        || known.v2.is_some_and(|v| v.as_string() == info_hash)
+                                })
+                    })
+            })
         }))
     }
 
@@ -724,26 +717,42 @@ pub(crate) async fn transfer(
 /// Removes what the engine remembers about a torrent.
 pub(crate) fn forget(store: &Store, job: &Job) -> Result<()> {
     forget_progress(store, job)?;
-    let Some(state) = &job.torrent else {
-        return Ok(());
-    };
     let folder = store.paths.data.join("torrents");
-    match std::fs::remove_file(folder.join(format!("{}.info", state.info_hash))) {
-        Err(error) if error.kind() != std::io::ErrorKind::NotFound => {
-            return Err(error).context("Cannot remove the torrent's saved details");
+    for hash in remembered_hashes(store, job)? {
+        for suffix in ["info", "layers", "webseeds.json"] {
+            if let Err(error) = std::fs::remove_file(folder.join(format!("{hash}.{suffix}")))
+                && error.kind() != std::io::ErrorKind::NotFound
+            {
+                return Err(error).context("Cannot remove the torrent's saved details");
+            }
         }
-        _ => {}
     }
     Ok(())
 }
 
+fn remembered_hashes(store: &Store, job: &Job) -> Result<std::collections::BTreeSet<String>> {
+    let mut keys = std::collections::BTreeSet::new();
+    let Some(state) = &job.torrent else {
+        return Ok(keys);
+    };
+    ensure!(is_hash(&state.info_hash), "Invalid saved torrent identity");
+    keys.insert(state.info_hash.clone());
+    let hashes = de_torrent::v2::InfoHashes::parse_magnet(&job.url)?;
+    let cached = de_torrent::cached_hashes(&store.paths.data.join("torrents"), hashes);
+    for hashes in [Some(hashes), cached].into_iter().flatten() {
+        keys.extend(hashes.v1.map(|h| h.as_string()));
+        keys.extend(hashes.v2.map(|h| h.as_string()));
+    }
+    Ok(keys)
+}
+
 fn forget_progress(store: &Store, job: &Job) -> Result<()> {
-    if let Some(state) = &job.torrent {
+    for hash in remembered_hashes(store, job)? {
         let path = store
             .paths
             .data
             .join("torrents")
-            .join(format!("{}.resume.json", state.info_hash));
+            .join(format!("{hash}.resume.json"));
         if let Err(error) = std::fs::remove_file(path)
             && error.kind() != std::io::ErrorKind::NotFound
         {
@@ -991,6 +1000,131 @@ mod tests {
     use super::*;
 
     const HEX: &str = "c12fe1c06bba254a9dc9f519b335aa7c1367a88a";
+
+    #[test]
+    fn v2_identity_consent_and_downgrade_guard_survive_reopen() {
+        let (_temp, store) = profile();
+        let hash = "ab".repeat(32);
+        let link = format!("magnet:?xt=urn:btmh:1220{hash}");
+        let job = store
+            .add_magnet_for_later(&link, None, "main", "v2-test".into(), true)
+            .unwrap();
+        assert_eq!(job.torrent.as_ref().unwrap().info_hash, hash);
+        job.torrent.as_ref().unwrap().validate(&link).unwrap();
+        assert!(store.torrent_dht_consent(&job).unwrap());
+        let version: i64 = store
+            .connect()
+            .unwrap()
+            .query_row(
+                "SELECT min_writer_version FROM profile_format WHERE id=1",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(version, 11);
+        let reopened = Store::open(store.paths.clone()).unwrap();
+        assert!(reopened.torrent_dht_consent(&job).unwrap());
+        assert_eq!(reopened.torrent_job(&hash).unwrap().unwrap().id, job.id);
+    }
+
+    #[test]
+    fn v1_consent_survives_the_full_hash_schema_migration() {
+        let (_temp, store) = profile();
+        let job = store
+            .add_magnet_for_later(
+                &format!("magnet:?xt=urn:btih:{HEX}"),
+                None,
+                "main",
+                "old-consent".into(),
+                true,
+            )
+            .unwrap();
+        {
+            let conn = store.connect().unwrap();
+            conn.execute_batch("DROP TABLE torrent_dht_consent;
+                CREATE TABLE torrent_dht_consent(job_id TEXT PRIMARY KEY REFERENCES jobs(id) ON DELETE CASCADE,
+                info_hash TEXT NOT NULL CHECK(length(info_hash)=40));").unwrap();
+            conn.execute(
+                "INSERT INTO torrent_dht_consent VALUES(?1,?2)",
+                params![job.id, HEX],
+            )
+            .unwrap();
+        }
+        let reopened = Store::open(store.paths.clone()).unwrap();
+        assert!(reopened.torrent_dht_consent(&job).unwrap());
+        let v2 = reopened
+            .add_magnet_for_later(
+                &format!("magnet:?xt=urn:btmh:1220{}", "ab".repeat(32)),
+                None,
+                "main",
+                "new-consent".into(),
+                true,
+            )
+            .unwrap();
+        assert!(reopened.torrent_dht_consent(&v2).unwrap());
+        assert!(reopened.torrent_dht_consent(&job).unwrap());
+    }
+
+    #[test]
+    fn hybrid_and_v2_aliases_do_not_create_duplicate_downloads() {
+        let (_temp, store) = profile();
+        let v2 = "ac".repeat(32);
+        let hybrid = format!("magnet:?xt=urn:btih:{HEX}&xt=urn:btmh:1220{v2}");
+        let job = store
+            .add_magnet_for_later(&hybrid, None, "main", "hybrid".into(), false)
+            .unwrap();
+        assert_eq!(job.torrent.as_ref().unwrap().info_hash, HEX);
+        assert!(
+            store
+                .add_magnet_for_later(
+                    &format!("magnet:?xt=urn:btmh:1220{v2}"),
+                    None,
+                    "main",
+                    "duplicate".into(),
+                    false
+                )
+                .is_err()
+        );
+        let (_temp, store) = profile();
+        store
+            .add_magnet_for_later(
+                &format!("magnet:?xt=urn:btmh:1220{v2}"),
+                None,
+                "main",
+                "v2-first".into(),
+                false,
+            )
+            .unwrap();
+        assert!(
+            store
+                .add_magnet_for_later(&hybrid, None, "main", "hybrid-later".into(), false)
+                .is_err()
+        );
+    }
+
+    #[test]
+    fn forgetting_hybrid_removes_both_cache_identities_only() {
+        let (_temp, store) = profile();
+        let v2 = "ac".repeat(32);
+        let hybrid = format!("magnet:?xt=urn:btih:{HEX}&xt=urn:btmh:1220{v2}");
+        let job = store
+            .add_magnet_for_later(&hybrid, None, "main", "hybrid".into(), false)
+            .unwrap();
+        let folder = store.paths.data.join("torrents");
+        std::fs::create_dir_all(&folder).unwrap();
+        for hash in [HEX, v2.as_str()] {
+            for suffix in ["info", "layers", "resume.json", "webseeds.json"] {
+                std::fs::write(folder.join(format!("{hash}.{suffix}")), b"test").unwrap();
+            }
+        }
+        std::fs::write(folder.join("unrelated.info"), b"keep").unwrap();
+        forget(&store, &job).unwrap();
+        assert_eq!(std::fs::read_dir(&folder).unwrap().count(), 1);
+        assert_eq!(
+            std::fs::read(folder.join("unrelated.info")).unwrap(),
+            b"keep"
+        );
+    }
 
     fn profile() -> (tempfile::TempDir, Store) {
         let temp = tempfile::tempdir().unwrap();
@@ -1326,6 +1460,15 @@ mod tests {
     #[test]
     fn details_with_an_unsafe_path_are_refused() {
         assert!(Details::parse(details_reply("../../outside.dll")).is_err());
+    }
+
+    #[test]
+    fn details_must_keep_the_full_magnet_identity() {
+        let mut reply = details_reply("a.bin");
+        reply["magnet"] = format!("magnet:?xt=urn:btmh:1220{}", "ac".repeat(32)).into();
+        assert!(Details::parse(reply.clone()).is_err());
+        reply["info_hash"] = "ac".repeat(32).into();
+        assert_eq!(Details::parse(reply).unwrap().info_hash.len(), 64);
     }
 
     #[test]

@@ -56,6 +56,9 @@ pub struct Storage {
     #[cfg(unix)]
     native_root: unix::Root,
     open: Mutex<OpenFiles>,
+    // Leaf proofs are derived from verified data. Bound the cache independently of
+    // torrent size, so repeated requests cannot repeatedly hash a whole large piece.
+    hash_nodes: Mutex<HashMap<(u32, u32, u32), crate::v2::Hash>>,
     read_only: bool,
     file_name: Option<String>,
     allowed: Option<Vec<bool>>,
@@ -69,6 +72,7 @@ impl Storage {
             native_root: unix::Root::new(root.clone()),
             root,
             open: Mutex::default(),
+            hash_nodes: Mutex::default(),
             read_only: false,
             file_name: None,
             allowed: None,
@@ -264,6 +268,9 @@ impl Storage {
                 "Seeding cannot modify completed files",
             ));
         }
+        if self.meta.hashes.v2.is_some() {
+            self.hash_nodes.lock().clear();
+        }
         let mut rest = data;
         for span in self.spans(offset, data.len()) {
             let (part, tail) = rest.split_at(span.len);
@@ -273,6 +280,18 @@ impl Storage {
             }
         }
         Ok(())
+    }
+
+    pub(crate) fn cached_hash(&self, file: u32, level: u32, index: u32) -> Option<crate::v2::Hash> {
+        self.hash_nodes.lock().get(&(file, level, index)).copied()
+    }
+
+    pub(crate) fn cache_hash(&self, file: u32, level: u32, index: u32, hash: crate::v2::Hash) {
+        let mut nodes = self.hash_nodes.lock();
+        if nodes.len() >= 32_768 {
+            nodes.clear();
+        }
+        nodes.insert((file, level, index), hash);
     }
 
     /// Reads bytes at a position in the torrent. Padding reads as zeros.
@@ -297,8 +316,15 @@ impl Storage {
         let Some(valid) = lengths.validate_piece_index(piece) else {
             return Ok(false);
         };
-        let Some(expected) = self.meta.piece_hash(piece) else {
+        let expected = self.meta.piece_hash(piece);
+        if expected.is_none() && self.meta.hashes.v2.is_none() {
             return Ok(false);
+        }
+        if self.meta.hashes.v2.is_some() && !self.v2_piece_matches(piece)? {
+            return Ok(false);
+        }
+        let Some(expected) = expected else {
+            return Ok(true);
         };
         let mut left = lengths.piece_length(valid) as usize;
         let mut offset = lengths.piece_offset(valid);
@@ -316,6 +342,41 @@ impl Storage {
             left -= take;
         }
         Ok(hash.finish() == expected)
+    }
+
+    fn v2_piece_matches(&self, piece: u32) -> io::Result<bool> {
+        let Some(file) = self
+            .meta
+            .v2
+            .iter()
+            .find(|f| piece >= f.first_piece && piece - f.first_piece < f.piece_count)
+        else {
+            return Ok(false);
+        };
+        let index = piece - file.first_piece;
+        let Some(expected) = file.hashes.get(index as usize) else {
+            return Ok(false);
+        };
+        let piece_length = self.meta.lengths.default_piece_length();
+        let mut left = file.piece_size(index, piece_length) as usize;
+        let mut offset = file.offset + u64::from(index) * u64::from(piece_length);
+        let mut hashes = Vec::new();
+        let mut buffer = vec![0; crate::v2::BLOCK as usize];
+        while left > 0 {
+            let take = left.min(buffer.len());
+            match self.read(offset, &mut buffer[..take]) {
+                Ok(()) => {}
+                Err(e) if is_absent(&e) => return Ok(false),
+                Err(e) => return Err(e),
+            }
+            hashes.push(crate::v2::digest(&buffer[..take]));
+            left -= take;
+            offset += take as u64;
+        }
+        if file.piece_count > 1 {
+            hashes.resize((piece_length / crate::v2::BLOCK) as usize, [0; 32]);
+        }
+        Ok(crate::v2::root(hashes, [0; 32]) == *expected)
     }
 
     /// Whether any real file of this torrent exists yet, so a new download can skip checking.

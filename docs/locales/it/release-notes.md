@@ -1,3 +1,9 @@
+## 3.19.0 — 2026-11-08
+
+- Supporto per torrent v2 e ibridi con verifica SHA-256, selezione dei file, ripresa e recupero. Il supporto v1 e le impostazioni di condivisione restano invariati.
+
+[English details](../../../CHANGELOG.md#3190--2026-11-08)
+
 ## 3.18.1 — 2026-11-08
 
 - Il caricamento è disattivato per impostazione predefinita. Puoi attivarlo in Preferenze → Torrent.

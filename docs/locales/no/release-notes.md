@@ -1,3 +1,9 @@
+## 3.19.0 — 2026-11-08
+
+- Støtte for v2- og hybridtorrenter med SHA-256-kontroll, filvalg, gjenopptaking og gjenoppretting. V1 og eksisterende delingsinnstillinger beholdes.
+
+[English details](../../../CHANGELOG.md#3190--2026-11-08)
+
 ## 3.18.1 — 2026-11-08
 
 - Opplasting er av som standard. Du kan aktivere den i Innstillinger → Torrenter.

@@ -1,3 +1,9 @@
+## 3.19.0 — 2026-11-08
+
+- Obsługa torrentów v2 i hybrydowych z weryfikacją SHA-256, wyborem plików, wznawianiem i odzyskiwaniem. Obsługa v1 oraz ustawienia udostępniania pozostają bez zmian.
+
+[English details](../../../CHANGELOG.md#3190--2026-11-08)
+
 ## 3.18.1 — 2026-11-08
 
 - Wysyłanie jest domyślnie wyłączone. Możesz je włączyć w Preferencje → Torrenty.

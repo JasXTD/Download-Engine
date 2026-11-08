@@ -54,6 +54,11 @@ impl Desktop {
         self.form_error = result.err().map(|e| e.to_string());
     }
     pub(super) fn bandwidth_event(&mut self, event: bandwidth::Event) {
+        if event.result.is_ok() {
+            // A pending snapshot may have read the old limits before the save.
+            // Reject it for both the main dialog and per-download status windows.
+            self.invalidate_snapshot();
+        }
         if self.status_bandwidth_event(&event) {
             return;
         }

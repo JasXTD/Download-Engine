@@ -81,7 +81,7 @@ fn help_export_cancel_error_retry_and_review_preserve_downloads() {
     settle(&mut app, &ctx);
     assert!(app.crash_reports.error.is_some());
     app.folder_picker.response = Some(Ok(Some(temp.path().display().to_string())));
-    click(&mut app, &ctx, "Export report…");
+    click(&mut app, &ctx, "Export report");
     app.export_crash_report(&ctx); // duplicate input cannot start another writer
     settle(&mut app, &ctx);
     assert!(app.crash_reports.error.is_none());
@@ -157,7 +157,7 @@ fn empty_launch_is_quiet_and_report_states_fit_shared_modal() {
                 let bounds = egui::Rect::from_min_size(egui::Pos2::ZERO, size);
                 for label in [
                     "Crash reports",
-                    "Export report…",
+                    "Export report",
                     "Refresh",
                     "Report an issue",
                     if filled {

@@ -11,6 +11,39 @@ use std::{
 };
 
 #[test]
+fn review_regression_stop_menus_accept_completed_seeding_selections() {
+    for multiple in [false, true] {
+        let (_temp, mut app, ctx) = fixture();
+        let mut jobs = app.jobs[..2].to_vec();
+        for job in &mut jobs {
+            job.status = Status::Complete;
+            job.url = "magnet:?xt=urn:btih:0123456789012345678901234567890123456789".into();
+            job.torrent = Some(download_engine::torrent::State {
+                info_hash: "0123456789012345678901234567890123456789".into(),
+                stage: download_engine::torrent::Stage::Chosen,
+            });
+            app.store.enqueue(job).unwrap();
+            app.store
+                .activity
+                .seed_preview(&job.id, Phase::Seeding, vec![]);
+        }
+        app.refresh_and_wait();
+        app.set_selection(Some(jobs[0].id.clone()));
+        if multiple {
+            app.selection.additional.insert(jobs[1].id.clone());
+        }
+        app.interface.show_details = false;
+        click(&mut app, &ctx, if multiple { "⋮" } else { "Tasks" });
+        let revision = app.download_status.revision;
+        click(&mut app, &ctx, "Stop selected");
+        assert!(
+            app.download_status.revision > revision,
+            "Stop was disabled for seeding: multiple={multiple}"
+        );
+    }
+}
+
+#[test]
 fn completed_sharing_window_shows_upload_speed_and_stop_sharing() {
     let (_temp, mut app, ctx) = fixture();
     let mut job = app.jobs[1].clone();

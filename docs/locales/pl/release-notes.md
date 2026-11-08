@@ -1,3 +1,11 @@
+## 3.16.1 — 2026-11-08
+
+### Poprawki ustawień i sterowania
+
+Ustawienia rozszerzeń zapisują teraz pusty tekst i cały formularz w jednej transakcji. Niezapisane zmiany pozostają po przełączeniu rozszerzenia. Przycisk zapisu jest widoczny w małych oknach, a aktualizacje odświeżają wartości domyślne. Naprawiono menu zatrzymywania seedowanych torrentów i widok limitów prędkości, ograniczono powtarzające się zapisy postępu. Uproszczono etykietę eksportu raportu i poprawiono opisy ochrony systemowej oraz ustawień aktualizacji.
+
+[English details](../../../CHANGELOG.md#3161--2026-11-08)
+
 ## 3.16.0 — 2026-11-07
 
 ### Przykładowe rozszerzenia Lua i zarządzanie uprawnieniami

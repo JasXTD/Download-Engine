@@ -70,6 +70,13 @@ struct Pending {
 }
 
 #[derive(Default)]
+struct SettingsDraft {
+    values: BTreeMap<String, String>,
+    secrets: BTreeMap<String, String>,
+    error: Option<String>,
+}
+
+#[derive(Default)]
 pub(super) struct State {
     discovery: discovery::State,
     loaded: bool,
@@ -82,6 +89,8 @@ pub(super) struct State {
     removing: Option<String>,
     /// Plain settings being edited, as text, by setting ID.
     values: BTreeMap<String, String>,
+    original_values: BTreeMap<String, String>,
+    drafts: BTreeMap<String, SettingsDraft>,
     /// New values for protected settings. Saved ones are never read back.
     secrets: BTreeMap<String, String>,
     settings_error: Option<String>,
@@ -100,6 +109,9 @@ impl State {
     }
     pub(super) fn loaded(&self) -> bool {
         self.loaded
+    }
+    fn settings_dirty(&self) -> bool {
+        self.values != self.original_values || self.secrets.values().any(|text| !text.is_empty())
     }
 }
 
@@ -400,9 +412,9 @@ fn settings(ui: &mut egui::Ui, state: &mut State, index: usize, p: Palette) -> O
                                 });
                                 ui.label(
                                     RichText::new(if matches!(setting, Setting::Secret { .. }) {
-                                        tr("Protected by Windows. Only this extension's web jobs can read it.")
+                                        tr("Protected by your operating system. Only this extension's web jobs can read it.")
                                     } else {
-                                        tr("Protected by Windows. Only its provider jobs can use it, and it can't be shown again.")
+                                        tr("Protected by your operating system. Only its provider jobs can use it, and it can't be shown again.")
                                     })
                                     .small()
                                     .color(p.muted),
@@ -414,13 +426,6 @@ fn settings(ui: &mut egui::Ui, state: &mut State, index: usize, p: Palette) -> O
                 }
             });
     });
-    if let Some(error) = &state.settings_error {
-        ui.colored_label(p.warning, error);
-    }
-    ui.add_space(8.0);
-    if ui.add(primary(tr("Save settings"), p)).clicked() {
-        act = Some(Act::SaveSettings(id));
-    }
     act
 }
 
@@ -506,6 +511,50 @@ fn turned_off(ui: &mut egui::Ui, id: &str, p: Palette) -> Option<Act> {
 }
 
 fn detail(
+    ui: &mut egui::Ui,
+    state: &mut State,
+    index: usize,
+    queues: &[DownloadQueue],
+    p: Palette,
+) -> Option<Act> {
+    if state.detail != Detail::Settings {
+        return detail_body(ui, state, index, queues, p);
+    }
+    // Reserve Save first. The header and fields can then scroll together, so a
+    // long description or error cannot leave the form unusable in small windows.
+    ui.with_layout(Layout::bottom_up(Align::Min), |ui| {
+        let mut action = None;
+        if !state.entries[index].installed.package.settings.is_empty() {
+            ui.horizontal(|ui| {
+                if ui.add(primary(tr("Save settings"), p)).clicked() {
+                    action = Some(Act::SaveSettings(state.entries[index].id().to_owned()));
+                }
+                if state.settings_dirty() {
+                    ui.label(RichText::new(tr("Unsaved changes")).small().color(p.muted));
+                }
+            });
+            if let Some(error) = &state.settings_error {
+                ui.colored_label(p.warning, error);
+            }
+            ui.separator();
+        }
+        let body = egui::ScrollArea::vertical()
+            .id_salt("extension-settings-form")
+            .min_scrolled_height(0.0)
+            .auto_shrink([false, false])
+            .show(ui, |ui| {
+                ui.with_layout(Layout::top_down(Align::Min), |ui| {
+                    detail_body(ui, state, index, queues, p)
+                })
+                .inner
+            })
+            .inner;
+        action.or(body)
+    })
+    .inner
+}
+
+fn detail_body(
     ui: &mut egui::Ui,
     state: &mut State,
     index: usize,
@@ -616,19 +665,28 @@ fn detail(
                 .show(ui, |ui| overview(ui, state, index, queues, p))
                 .inner
         }
-        Detail::Settings => {
-            egui::ScrollArea::vertical()
-                .id_salt("extension-settings-form")
-                .auto_shrink([false, false])
-                .show(ui, |ui| settings(ui, state, index, p))
-                .inner
-        }
+        Detail::Settings => settings(ui, state, index, p),
         Detail::Code => code(ui, state, index, p),
     };
     act.or(next)
 }
 
 fn select(state: &mut State, id: String) {
+    if state.selected.as_deref() == Some(&id) {
+        return;
+    }
+    if state.settings_dirty()
+        && let Some(previous) = &state.selected
+    {
+        state.drafts.insert(
+            previous.clone(),
+            SettingsDraft {
+                values: std::mem::take(&mut state.values),
+                secrets: std::mem::take(&mut state.secrets),
+                error: state.settings_error.take(),
+            },
+        );
+    }
     state.selected = Some(id);
     state.detail = Detail::Overview;
     state.file = None;
@@ -641,6 +699,7 @@ fn select(state: &mut State, id: String) {
 
 fn load_values(state: &mut State) {
     state.values.clear();
+    state.original_values.clear();
     state.secrets.clear();
     state.settings_error = None;
     let Some(entry) = state
@@ -665,6 +724,13 @@ fn load_values(state: &mut State) {
             other => other.to_string(),
         };
         state.values.insert(setting.id().to_owned(), text);
+    }
+    state.original_values = state.values.clone();
+    if let Some(draft) = state.drafts.remove(entry.id()) {
+        state.values = draft.values;
+        state.secrets = draft.secrets;
+        state.settings_error = draft.error;
+        state.detail = Detail::Settings;
     }
 }
 
@@ -709,6 +775,9 @@ impl Desktop {
             Ok(entries) => state.entries = entries,
             Err(error) => state.error = Some(error.to_string()),
         }
+        state
+            .drafts
+            .retain(|id, _| state.entries.iter().any(|entry| entry.id() == id));
         if state
             .selected
             .as_deref()
@@ -979,6 +1048,9 @@ impl Desktop {
         if self.extensions.settings_error.is_none() {
             self.refresh_extensions();
             if saving {
+                if let Some(id) = &self.extensions.selected {
+                    self.extensions.drafts.remove(id);
+                }
                 load_values(&mut self.extensions);
             }
         }
@@ -987,32 +1059,32 @@ impl Desktop {
     fn save_extension_settings(&mut self, id: &str) -> anyhow::Result<()> {
         let state = &mut self.extensions;
         state.settings_error = None;
-        let package = self.store.extension(id)?.package;
         let result = (|| -> anyhow::Result<()> {
+            let package = self.store.extension(id)?.package;
+            let mut values = BTreeMap::new();
+            let mut secrets = Vec::new();
             for setting in &package.settings {
                 if setting.protected() {
                     let text = state.secrets.get(setting.id()).map_or("", String::as_str);
                     if !text.is_empty() {
-                        self.store
-                            .set_extension_secret(id, setting.id(), text)
-                            .map_err(|e| anyhow::anyhow!("{}: {e}", setting.label()))?;
+                        secrets.push((setting.id(), text));
                     }
                 } else {
                     let text = state.values.get(setting.id()).map_or("", String::as_str);
-                    if text.is_empty() {
+                    // An unset optional numeric/choice field stays unset. Empty
+                    // text is a real value and must replace a previous string.
+                    if text.is_empty() && !matches!(setting, Setting::String { .. }) {
                         continue;
                     }
                     let value = plain_value(setting, text)
                         .map_err(|e| anyhow::anyhow!("{}: {e}", setting.label()))?;
-                    self.store
-                        .set_extension_setting(id, setting.id(), &value)
-                        .map_err(|e| anyhow::anyhow!("{}: {e}", setting.label()))?;
+                    values.insert(setting.id().to_owned(), value);
                 }
             }
-            Ok(())
+            self.store.set_extension_settings(id, &values, &secrets)
         })();
         if let Err(error) = result {
-            state.settings_error = Some(error.to_string());
+            state.settings_error = Some(format!("{error:#}"));
         }
         Ok(())
     }
@@ -1134,7 +1206,13 @@ impl Desktop {
                     self.extensions.pending = None;
                     self.dialog = None;
                     self.refresh_extensions();
+                    self.extensions.drafts.remove(&installed.package.id);
                     select(&mut self.extensions, installed.package.id);
+                    // Approved updates may replace fields or reset defaults.
+                    // Reload even when the updated extension was already selected.
+                    load_values(&mut self.extensions);
+                    self.extensions.detail = Detail::Overview;
+                    self.extensions.file = None;
                 }
                 Err(error) => pending.error = Some(format!("{error:#}")),
             }

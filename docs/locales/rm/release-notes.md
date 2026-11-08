@@ -1,3 +1,11 @@
+## 3.16.1 — 2026-11-08
+
+### Correcturas da las configuraziuns e da la controlla
+
+Las configuraziuns d’extensiuns memoriseschan ussa text vid e l’entir formular en ina suletta transacziun. Midadas betg memorisadas restan tar il midar extensiun. Il buttun per memorisar resta visibel en fanestras pitschnas; actualisaziuns chargian da nov las valurs da standard. Ils menus per fermar torrents cundividids e l’indicaziun da las limitas da sveltezza èn curregids. Ins ha reducì scrittiras repetidas dal progress e curregì ils texts davart l’export dal rapport, la protecziun dal sistem e las actualisaziuns.
+
+[English details](../../../CHANGELOG.md#3161--2026-11-08)
+
 ## 3.16.0 — 2026-11-07
 
 ### Extensiuns Lua d’exempel e controlla da permissiuns

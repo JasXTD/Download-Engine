@@ -1,3 +1,11 @@
+## 3.16.1 — 2026-11-08
+
+### Correzioni alle impostazioni e ai comandi
+
+Le impostazioni delle estensioni salvano ora il testo vuoto e l’intero modulo in una sola transazione. Le modifiche non salvate restano quando si cambia estensione. Il pulsante Salva rimane visibile nelle finestre piccole e gli aggiornamenti ricaricano i valori predefiniti. Corretti i menu di arresto dei torrent condivisi e la visualizzazione dei limiti di velocità; ridotte le scritture ripetute dell’avanzamento. Semplificata l’etichetta di esportazione del rapporto e corrette le indicazioni sulla protezione del sistema e sugli aggiornamenti.
+
+[English details](../../../CHANGELOG.md#3161--2026-11-08)
+
 ## 3.16.0 — 2026-11-07
 
 ### Estensioni Lua introduttive e autorizzazioni

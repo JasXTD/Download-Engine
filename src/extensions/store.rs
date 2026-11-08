@@ -635,38 +635,74 @@ impl Store {
         key: &str,
         value: &serde_json::Value,
     ) -> Result<()> {
-        let (_, setting) = self.setting_for(id, key)?;
-        setting.check(value)?;
-        self.connect()?.execute(
-            "INSERT INTO extension_settings(extension_id,key,value,protected) VALUES(?1,?2,?3,0)
-             ON CONFLICT(extension_id,key) DO UPDATE SET value=excluded.value,protected=0",
-            params![id, key, serde_json::to_vec(value)?],
-        )?;
-        Ok(())
+        self.set_extension_settings(id, &[(key.to_owned(), value.clone())].into(), &[])
     }
 
     /// Seals a secret or AES key. It can be replaced or cleared but never read back here.
     pub fn set_extension_secret(&self, id: &str, key: &str, value: &str) -> Result<()> {
-        let (installed, setting) = self.setting_for(id, key)?;
-        let sealed = match setting {
-            Setting::Secret { .. } => {
-                ensure!(
-                    !value.is_empty() && value.len() <= 4096,
-                    "Enter 1 to 4096 characters"
-                );
-                let mut bytes = zeroize::Zeroizing::new(value.as_bytes().to_vec());
-                crate::protected_data::seal(installed.key_scope, &mut bytes)?.to_vec()
-            }
-            Setting::AesKey { .. } => {
-                crate::provider::seal_key(installed.key_scope, value.trim())?.into_bytes()
-            }
-            _ => bail!("This setting is not protected"),
+        self.set_extension_settings(id, &BTreeMap::new(), &[(key, value)])
+    }
+
+    /// One settings-form submission: validation, sealing and writes either all
+    /// succeed or leave the previous settings intact. Secret protection happens
+    /// before taking the database write lock (the OS may need to unlock a vault).
+    pub fn set_extension_settings(
+        &self,
+        id: &str,
+        values: &BTreeMap<String, serde_json::Value>,
+        secrets: &[(&str, &str)],
+    ) -> Result<()> {
+        let installed = self.extension(id)?;
+        let setting = |key| {
+            installed
+                .package
+                .setting(key)
+                .context("This extension has no such setting")
         };
-        self.connect()?.execute(
-            "INSERT INTO extension_settings(extension_id,key,value,protected) VALUES(?1,?2,?3,1)
-             ON CONFLICT(extension_id,key) DO UPDATE SET value=excluded.value,protected=1",
-            params![id, key, sealed],
-        )?;
+        let mut rows = Vec::new();
+        for (key, value) in values {
+            let field = setting(key)?;
+            field
+                .check(value)
+                .with_context(|| field.label().to_owned())?;
+            rows.push((key.as_str(), serde_json::to_vec(value)?, false));
+        }
+        for &(key, value) in secrets {
+            let field = setting(key)?;
+            let sealed = (|| -> Result<Vec<u8>> {
+                Ok(match field {
+                    Setting::Secret { .. } => {
+                        ensure!(
+                            !value.is_empty() && value.len() <= 4096,
+                            "Enter 1 to 4096 characters"
+                        );
+                        let mut bytes = zeroize::Zeroizing::new(value.as_bytes().to_vec());
+                        crate::protected_data::seal(installed.key_scope, &mut bytes)?.to_vec()
+                    }
+                    Setting::AesKey { .. } => {
+                        crate::provider::seal_key(installed.key_scope, value.trim())?.into_bytes()
+                    }
+                    _ => bail!("This setting is not protected"),
+                })
+            })()
+            .with_context(|| field.label().to_owned())?;
+            rows.push((key, sealed, true));
+        }
+        let mut conn = self.connect()?;
+        let tx = conn.transaction_with_behavior(TransactionBehavior::Immediate)?;
+        let current = read(&tx, id)?.context("Extension no longer exists")?;
+        ensure!(
+            current.package == installed.package && current.key_scope == installed.key_scope,
+            "Extension changed while saving settings; reopen its settings and try again"
+        );
+        for (key, value, protected) in rows {
+            tx.execute(
+                "INSERT INTO extension_settings(extension_id,key,value,protected) VALUES(?1,?2,?3,?4)
+                 ON CONFLICT(extension_id,key) DO UPDATE SET value=excluded.value,protected=excluded.protected",
+                params![id, key, value, protected],
+            )?;
+        }
+        tx.commit()?;
         Ok(())
     }
 

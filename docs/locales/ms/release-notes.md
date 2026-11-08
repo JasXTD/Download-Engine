@@ -1,3 +1,11 @@
+## 3.16.1 — 2026-11-08
+
+### Pembaikan tetapan dan kawalan
+
+Tetapan sambungan kini menyimpan teks kosong dan semua medan dalam satu transaksi, serta mengekalkan suntingan yang belum disimpan apabila bertukar sambungan. Butang Simpan kekal kelihatan dalam tetingkap kecil; kemas kini memuatkan semula nilai lalai. Menu Henti untuk torrent yang sedang dikongsi dan paparan had kelajuan telah dibaiki. Penulisan kemajuan berulang dikurangkan. Teks Eksport laporan, perlindungan sistem dan lokasi tetapan kemas kini turut diperbetulkan.
+
+[English details](../../../CHANGELOG.md#3161--2026-11-08)
+
 ## 3.16.0 — 2026-11-07
 
 ### Sambungan permulaan Lua dan kawalan kebenaran

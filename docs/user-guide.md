@@ -964,7 +964,7 @@ Play a sound when downloads finish is off by default. When it is on, Download En
 
 For crashes, open **Help → Crash reports** (also available from Logs). The desktop
 offers unreviewed reports on the next launch. Select a report, expand **Review
-report contents**, then **Copy report** or **Export report…** if you want to share
+report contents**, then **Copy report** or **Export report** if you want to share
 it. **Report an issue** opens an empty GitHub issue form; attach the exported JSON
 yourself after reviewing it. Closing the dialog acknowledges the reports without
 deleting them. Reports stay local and are never uploaded automatically.

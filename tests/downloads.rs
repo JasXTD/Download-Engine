@@ -560,6 +560,68 @@ async fn pause_and_resume_after_store_reopen_preserves_all_bytes() {
             .any(|r| r.to_ascii_lowercase().contains(&wanted))
     );
 }
+
+#[tokio::test]
+async fn waiting_for_range_data_does_not_rewrite_identical_progress() {
+    let fixture = Fixture::pausable_range(1024 * 1024, 0).await;
+    let (_temp, store) = setup();
+    let job = enqueue(&store, &fixture.url);
+    let id = job.id.clone();
+    let db = fixture_database::open(store.paths.data.join("queue.sqlite3")).unwrap();
+    db.busy_timeout(Duration::from_secs(5)).unwrap();
+    db.execute_batch("CREATE TABLE progress_writes(n INTEGER); INSERT INTO progress_writes VALUES(0);
+        CREATE TRIGGER count_progress_writes AFTER UPDATE ON jobs BEGIN UPDATE progress_writes SET n=n+1; END;").unwrap();
+    let cancel = CancellationToken::new();
+    let worker = tokio::spawn(engine::run(
+        store.clone(),
+        job,
+        cancel.clone(),
+        download_engine::bandwidth::Limiter::new(&store.bandwidth_limits().unwrap()).unwrap(),
+    ));
+    let deadline = tokio::time::Instant::now() + PROGRESS_LIMIT;
+    loop {
+        if read_job(&store, &id).await.unwrap().downloaded == 128 * 1024 {
+            break;
+        }
+        assert!(
+            !worker.is_finished(),
+            "Transfer ended before reaching the controlled boundary"
+        );
+        assert!(
+            tokio::time::Instant::now() < deadline,
+            "No initial checkpoint"
+        );
+        tokio::time::sleep(Duration::from_millis(20)).await;
+    }
+    let writes = || {
+        db.query_row("SELECT n FROM progress_writes", [], |r| r.get::<_, i64>(0))
+            .unwrap()
+    };
+    let before = writes();
+    // Observe several real checkpoint periods while the response body stays gated.
+    tokio::time::sleep(Duration::from_millis(1600)).await;
+    let after = writes();
+    cancel.cancel();
+    tokio::time::timeout(PROGRESS_LIMIT, worker)
+        .await
+        .unwrap()
+        .unwrap()
+        .unwrap();
+    let paused = read_job(&store, &id).await.unwrap();
+    assert_eq!(paused.status, Status::Paused);
+    assert_eq!(paused.downloaded, 128 * 1024);
+    assert_eq!(
+        after, before,
+        "An idle transfer repeatedly took the database write lock"
+    );
+    fixture.release_body();
+    let completed = run(&store, paused).await;
+    assert_eq!(completed.status, Status::Complete, "{:?}", completed.error);
+    assert_eq!(
+        std::fs::read(completed.saved_path.unwrap()).unwrap(),
+        *fixture.data
+    );
+}
 #[tokio::test]
 async fn changed_file_is_rejected_on_resume() {
     let fixture = Fixture::pausable_range(1024 * 1024, 0).await;

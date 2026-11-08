@@ -1,3 +1,11 @@
+## 3.16.1 — 2026-11-08
+
+### Korrekturen an Einstellungen und Steuerung
+
+Erweiterungseinstellungen speichern leeren Text und das gesamte Formular atomar. Ungespeicherte Änderungen bleiben beim Wechsel erhalten; die Schaltfläche zum Speichern bleibt in kleinen Fenstern sichtbar. Updates laden Standardwerte neu. Stoppmenüs für geteilte Torrents und die Anzeige von Geschwindigkeitslimits wurden korrigiert, wiederholte Fortschrittsschreibvorgänge reduziert. Die Beschriftung zum Berichtexport wurde vereinfacht; Hinweise zum Systemschutz und zu Update-Einstellungen wurden berichtigt.
+
+[English details](../../../CHANGELOG.md#3161--2026-11-08)
+
 ## 3.16.0 — 2026-11-07
 
 ### Lua-Beispielerweiterungen und Berechtigungen

@@ -1,3 +1,11 @@
+## 3.16.1 — 2026-11-08
+
+### Corrections des paramètres et commandes
+
+Les paramètres des extensions enregistrent désormais le texte vide et tout le formulaire en une seule transaction. Les modifications non enregistrées sont conservées lors du changement d’extension. Le bouton Enregistrer reste visible dans les petites fenêtres et les mises à jour rechargent les valeurs par défaut. Les menus d’arrêt des torrents partagés et l’affichage des limites de vitesse sont corrigés, et les écritures répétées de progression sont réduites. Le libellé d’export du rapport et les indications de protection et de mise à jour sont corrigés.
+
+[English details](../../../CHANGELOG.md#3161--2026-11-08)
+
 ## 3.16.0 — 2026-11-07
 
 ### Extensions Lua de démarrage et autorisations

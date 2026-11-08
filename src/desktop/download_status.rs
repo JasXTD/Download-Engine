@@ -528,6 +528,13 @@ impl Desktop {
         }
     }
 
+    pub(super) fn can_stop_download(&self, job: &Job) -> bool {
+        matches!(job.status, Status::Downloading | Status::Queued)
+            || (job.torrent.is_some()
+                && job.status == Status::Complete
+                && self.store.activity.get(&job.id).is_some())
+    }
+
     pub(super) fn stop_selected_downloads(&mut self) {
         self.download_status.revision = self.download_status.revision.wrapping_add(1);
         for job in self.selected_jobs() {

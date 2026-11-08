@@ -155,6 +155,7 @@ pub(crate) async fn run(
     let mut tasks = JoinSet::new();
     let mut splitting = None;
     let mut tick = tokio::time::interval(Duration::from_millis(500));
+    tick.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
     let mut first_error = None;
     store.activity.set(&job.id, Phase::Downloading);
     loop {
@@ -218,10 +219,16 @@ pub(crate) async fn run(
         }
         tokio::select! {
             _ = tick.tick() => {
-                job.downloaded = progress.load(Ordering::Relaxed);
-                if let Err(error) = store.checkpoint(job).await {
-                    retry::merge_error(&mut first_error, error);
-                    workers_cancel.cancel();
+                let downloaded = progress.load(Ordering::Relaxed);
+                if downloaded != job.downloaded {
+                    job.downloaded = downloaded;
+                    if let Err(error) = store.checkpoint(job).await {
+                        retry::merge_error(&mut first_error, error);
+                        workers_cancel.cancel();
+                    }
+                    // Slow commits must not build up catch-up writes that
+                    // compete with Pause/Stop. Terminal saves still run below.
+                    tick.reset();
                 }
             }
             result = tasks.join_next() => {

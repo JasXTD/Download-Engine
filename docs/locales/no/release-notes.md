@@ -1,3 +1,11 @@
+## 3.16.1 — 2026-11-08
+
+### Rettelser i innstillinger og kontroller
+
+Utvidelsesinnstillinger lagrer nå tom tekst og hele skjemaet i én transaksjon. Ulagrede endringer beholdes når du bytter utvidelse. Lagre-knappen er synlig i små vinduer, og oppdateringer laster inn standardverdier på nytt. Stoppmenyer for delte torrenter og visningen av hastighetsgrenser er rettet; gjentatte fremdriftsskrivinger er redusert. Teksten for rapporteksport og informasjonen om systembeskyttelse og oppdateringsinnstillinger er korrigert.
+
+[English details](../../../CHANGELOG.md#3161--2026-11-08)
+
 ## 3.16.0 — 2026-11-07
 
 ### Lua-eksempler og tilgangskontroll

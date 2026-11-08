@@ -496,6 +496,9 @@ fn an_update_names_a_new_publisher_changed_jobs_and_reset_settings() {
         "Your other settings, keys and stored values are kept.",
     );
     text_rect(&output, "Approve and update");
+    click(&mut app, &ctx, "Approve and update");
+    assert_eq!(app.extensions.values["quality"], "1080p");
+    assert!(!app.extensions.settings_dirty());
 }
 
 #[test]
@@ -558,6 +561,193 @@ fn settings_save_plain_values_and_seal_secrets() {
     assert_eq!(saved["quality"], json!("720p"));
     assert_eq!(saved["api_token"], Value::Null);
     assert!(app.extensions.secrets.values().all(String::is_empty));
+}
+
+#[test]
+fn review_regression_empty_setting_is_saved_and_failed_save_changes_nothing() {
+    let (_temp, mut app, ctx) = fixture();
+    let mut value: Value =
+        serde_json::from_slice(&package("1.2.0", &["videohost.example"])).unwrap();
+    value["settings"] = json!([
+        {"id":"next_queue","type":"string","label":"Next queue","default":"","max_length":64},
+        {"id":"count","type":"integer","label":"Count","default":1,"min":1,"max":10}
+    ]);
+    app.store
+        .install_extension(&serde_json::to_vec(&value).unwrap(), &Grants::default())
+        .unwrap();
+    app.store
+        .set_extension_setting(ID, "next_queue", &json!("Morning"))
+        .unwrap();
+    open(&mut app);
+    click(&mut app, &ctx, "Settings");
+    app.extensions
+        .values
+        .insert("next_queue".into(), String::new());
+    click(&mut app, &ctx, "Save settings");
+    assert_eq!(
+        app.store.extension_settings(ID).unwrap()["next_queue"],
+        json!("")
+    );
+    app.extensions
+        .values
+        .insert("next_queue".into(), "Evening".into());
+    app.extensions
+        .values
+        .insert("count".into(), "not a number".into());
+    click(&mut app, &ctx, "Save settings");
+    assert!(app.extensions.settings_error.is_some());
+    assert_eq!(
+        app.store.extension_settings(ID).unwrap()["next_queue"],
+        json!("")
+    );
+    assert_eq!(app.extensions.values["next_queue"], "Evening");
+}
+
+#[test]
+fn review_regression_switching_extensions_keeps_unsaved_settings_and_errors() {
+    let (_temp, mut app, ctx) = fixture();
+    app.store
+        .install_extension(
+            &package("1.2.0", &["videohost.example"]),
+            &Grants::default(),
+        )
+        .unwrap();
+    let mut other: Value =
+        serde_json::from_slice(&package("1.2.0", &["videohost.example"])).unwrap();
+    other["id"] = json!("example.other");
+    other["name"] = json!("Other extension");
+    app.store
+        .install_extension(&serde_json::to_vec(&other).unwrap(), &Grants::default())
+        .unwrap();
+    open(&mut app);
+    click(&mut app, &ctx, "Settings");
+    app.extensions.values.insert("quality".into(), "4K".into());
+    app.extensions
+        .secrets
+        .insert("api_token".into(), "unsaved-test-token".into());
+    click(&mut app, &ctx, "Save settings");
+    let error = app.extensions.settings_error.clone();
+    assert!(error.is_some());
+    click(&mut app, &ctx, "Other extension");
+    assert!(app.extensions.secrets.is_empty());
+    app.extension_action(Act::Select(ID.into()));
+    assert_eq!(app.extensions.values["quality"], "4K");
+    assert_eq!(app.extensions.secrets["api_token"], "unsaved-test-token");
+    assert_eq!(app.extensions.settings_error, error);
+    app.extension_action(Act::Select(ID.into()));
+    assert_eq!(app.extensions.values["quality"], "4K");
+    app.extensions
+        .values
+        .insert("quality".into(), "720p".into());
+    app.extension_action(Act::SaveSettings(ID.into()));
+    app.extension_action(Act::Select("example.other".into()));
+    app.extension_action(Act::Select(ID.into()));
+    assert_eq!(app.extensions.values["quality"], "720p");
+    assert!(app.extensions.secrets.is_empty());
+    assert!(app.extensions.settings_error.is_none());
+}
+
+#[test]
+fn review_regression_settings_save_stays_visible_at_minimum_size() {
+    for language in [
+        download_engine::i18n::Language::English,
+        download_engine::i18n::Language::German,
+    ] {
+        for bundled in [false, true] {
+            let (_temp, mut app, ctx) = fixture();
+            let bytes = if bundled {
+                include_bytes!("../../../examples/extensions/queue-finished.de-extension.json")
+                    .to_vec()
+            } else {
+                package("1.2.0", &["videohost.example"])
+            };
+            let first_field = Package::decode(&bytes).unwrap().settings[0]
+                .label()
+                .to_owned();
+            let fields_end_above = |output: &egui::FullOutput, bottom: f32| {
+                let field = output.shapes.iter().find(|shape| matches!(&shape.shape, egui::Shape::Text(text) if text.galley.job.text.trim() == first_field)).unwrap();
+                assert!(
+                    field.clip_rect.intersects(text_rect(output, &first_field)),
+                    "The setting must be reachable by scrolling"
+                );
+                assert!(
+                    field.clip_rect.bottom() <= bottom,
+                    "Settings paint over the fixed footer: {:?}, footer starts at {bottom}",
+                    field.clip_rect
+                );
+            };
+            let mut grants = Grants::default();
+            if bundled {
+                grants.queues.insert("notify".into(), MAIN_QUEUE.into());
+            }
+            app.store.install_extension(&bytes, &grants).unwrap();
+            app.interface.language = language;
+            open(&mut app);
+            app.extensions.detail = Detail::Settings;
+            let small = egui::vec2(860.0, 600.0);
+            let scroll_form = |app: &mut Desktop, save: egui::Rect| {
+                frame(
+                    app,
+                    &ctx,
+                    small,
+                    vec![
+                        egui::Event::PointerMoved(egui::pos2(save.center().x, save.top() - 80.0)),
+                        egui::Event::MouseWheel {
+                            unit: egui::MouseWheelUnit::Point,
+                            phase: egui::TouchPhase::Move,
+                            delta: egui::vec2(0.0, -1000.0),
+                            modifiers: egui::Modifiers::NONE,
+                        },
+                    ],
+                );
+                for _ in 0..8 {
+                    frame(app, &ctx, small, vec![]);
+                }
+                frame(app, &ctx, small, vec![])
+            };
+            for _ in 0..8 {
+                frame(&mut app, &ctx, small, vec![]);
+            }
+            let output = frame(&mut app, &ctx, small, vec![]);
+            let _scope = download_engine::i18n::scope(language);
+            let label = tr("Save settings");
+            let rect = text_rect(&output, label);
+            let clipped = output.shapes.iter().find(|shape| matches!(&shape.shape, egui::Shape::Text(text) if text.galley.job.text.trim() == label)).unwrap();
+            assert!(
+                clipped.clip_rect.contains_rect(rect),
+                "Save is clipped: {rect:?}"
+            );
+            assert!(
+                rect.bottom() < 570.0,
+                "Save is under the status bar: {rect:?}"
+            );
+            let output = scroll_form(&mut app, rect);
+            assert_eq!(
+                text_rect(&output, label),
+                rect,
+                "Save must stay fixed while scrolling"
+            );
+            fields_end_above(&output, rect.top());
+            app.extensions.settings_error =
+                Some("Correct the invalid setting and try saving again.".into());
+            app.extensions.values.insert(
+                if bundled { "next_queue" } else { "quality" }.into(),
+                "720p".into(),
+            );
+            for _ in 0..8 {
+                frame(&mut app, &ctx, small, vec![]);
+            }
+            let output = frame(&mut app, &ctx, small, vec![]);
+            let save = text_rect(&output, label);
+            let error = text_rect(&output, "Correct the invalid setting and try saving again.");
+            let clip = output.shapes.iter().find(|shape| matches!(&shape.shape, egui::Shape::Text(text) if text.galley.job.text.trim() == label)).unwrap().clip_rect;
+            assert!(clip.contains_rect(save) && save.bottom() < 570.0);
+            assert!(error.bottom() < save.top());
+            let output = scroll_form(&mut app, save);
+            assert_eq!(text_rect(&output, label), save);
+            fields_end_above(&output, error.top());
+        }
+    }
 }
 
 #[test]

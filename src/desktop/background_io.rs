@@ -17,6 +17,51 @@ mod tests {
     };
 
     #[test]
+    fn review_regression_saved_bandwidth_rejects_an_older_snapshot() {
+        let (_temp, mut app, _ctx) = fixture();
+        app.wait_for_io();
+        // Capture actual database state before the real scheduler saves the edit,
+        // but deliver it only after the successful acknowledgement.
+        let old = Snapshot::load(
+            &app.store,
+            app.queue_id.clone(),
+            app.background_io.generation,
+            true,
+            false,
+            true,
+        );
+        let (release, gate) = mpsc::channel();
+        app.background_io.task = Some(
+            Task::spawn(None, move || {
+                gate.recv_timeout(Duration::from_secs(15))?;
+                Ok(old)
+            })
+            .unwrap(),
+        );
+        app.open_speed_limits();
+        let form = app.speed_limits.as_mut().unwrap();
+        form.download = None;
+        form.global.enabled = true;
+        form.global.kib = "2048".into();
+        app.save_speed_limits();
+        let event = app
+            .scheduler
+            .bandwidth_events
+            .recv_timeout(Duration::from_secs(15))
+            .unwrap();
+        assert!(event.result.is_ok(), "{:?}", event.result);
+        app.bandwidth_event(event);
+        assert_eq!(app.limits.global, Some(2 * 1024 * 1024));
+        release.send(()).unwrap();
+        app.wait_for_io();
+        assert_eq!(app.limits.global, Some(2 * 1024 * 1024));
+        assert_eq!(
+            app.store.bandwidth_limits().unwrap().global,
+            app.limits.global
+        );
+    }
+
+    #[test]
     fn queue_switch_discards_an_older_inflight_snapshot() {
         let (_temp, mut app, ctx) = fixture();
         let main_job = app.jobs[0].clone();

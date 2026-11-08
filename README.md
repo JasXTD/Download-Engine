@@ -161,7 +161,8 @@ Some upgrades change the profile in a way that older versions refuse, so back up
 going back to an older version. Versions 3.0 and 3.6 need extra steps; see the
 [upgrade notes by version](docs/reference.md#upgrade-notes-by-version).
 
-The app checks for updates when it opens; turn this off in **Preferences → Updates**, or
+The app checks for updates when it opens; turn this off in **Preferences → Startup & tray** on Windows
+(**Preferences → Updates** on macOS/Linux), or
 check manually from **Help → Check for updates**. Updates are downloaded and installed manually
 from the official GitHub release page.
 

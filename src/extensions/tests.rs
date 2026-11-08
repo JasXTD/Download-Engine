@@ -1205,6 +1205,57 @@ fn a_job_only_receives_the_settings_its_kind_may_hold() {
 }
 
 #[test]
+fn settings_form_is_atomic_on_validation_and_database_failures() {
+    let (_temp, store) = fixture();
+    let id = "example.videohost";
+    let mut package = example();
+    package["settings"]
+        .as_array_mut()
+        .unwrap()
+        .push(json!({"id":"a_note","type":"string","label":"Note"}));
+    store
+        .install_extension(&bytes(&package), &Grants::default())
+        .unwrap();
+    store
+        .set_extension_setting(id, "quality", &json!("1080p"))
+        .unwrap();
+    let values = [
+        ("a_note".into(), json!("new")),
+        ("quality".into(), json!("720p")),
+    ]
+    .into();
+    assert!(
+        store
+            .set_extension_settings(id, &values, &[("content_key", "invalid")])
+            .is_err()
+    );
+    assert_eq!(
+        store.extension_settings(id).unwrap(),
+        [("quality".into(), json!("1080p"))].into()
+    );
+    let conn = store.connect().unwrap();
+    conn.execute_batch("CREATE TRIGGER refuse_test_setting BEFORE INSERT ON extension_settings WHEN NEW.key='quality' BEGIN SELECT RAISE(ABORT, 'fixture write failure'); END;").unwrap();
+    assert!(
+        store
+            .set_extension_settings(id, &values, &[("api_token", "fixture-token")])
+            .is_err()
+    );
+    assert_eq!(
+        store.extension_settings(id).unwrap(),
+        [("quality".into(), json!("1080p"))].into()
+    );
+    conn.execute_batch("DROP TRIGGER refuse_test_setting")
+        .unwrap();
+    store
+        .set_extension_settings(id, &values, &[("api_token", "fixture-token")])
+        .unwrap();
+    let saved = store.extension_settings(id).unwrap();
+    assert_eq!(saved["quality"], json!("720p"));
+    assert_eq!(saved["a_note"], json!("new"));
+    assert_eq!(saved["api_token"], Value::Null);
+}
+
+#[test]
 fn settings_are_checked_against_the_manifest() {
     let (_temp, store) = fixture();
     let id = "example.videohost";

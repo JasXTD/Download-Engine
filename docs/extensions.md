@@ -71,6 +71,13 @@ its files and instructions are under `plugins/offline-episode/README.md`.
 
 ## Install, update and remove
 
+In an installed extension's **Settings** tab, choose **Save settings** to apply
+the form together. A refused value leaves all saved settings unchanged. Clearing
+a text field saves an empty string; a blank protected field keeps its saved
+secret, and **Clear** removes that secret. Unsaved edits stay available when you
+switch extensions during the same app session. Imported credentials and Clear
+actions save immediately.
+
 Open **Extensions** in the top toolbar. Choose **Review install** for a discovered
 package, or **Install from file…** to pick a `.de-extension.json` from elsewhere.
 

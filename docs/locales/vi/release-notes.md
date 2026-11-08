@@ -1,3 +1,11 @@
+## 3.16.1 — 2026-11-08
+
+### Sửa lỗi cài đặt và điều khiển
+
+Cài đặt tiện ích giờ lưu được văn bản trống và lưu toàn bộ biểu mẫu trong một giao dịch. Bản sửa chưa lưu được giữ khi chuyển tiện ích; nút Lưu luôn hiện trong cửa sổ nhỏ và giá trị mặc định được tải lại sau cập nhật. Đã sửa menu dừng torrent đang chia sẻ và hiển thị giới hạn tốc độ, giảm việc ghi tiến độ trùng lặp. Rút gọn nhãn Xuất báo cáo và sửa hướng dẫn về bảo vệ hệ thống, cài đặt cập nhật.
+
+[English details](../../../CHANGELOG.md#3161--2026-11-08)
+
 ## 3.16.0 — 2026-11-07
 
 ### Tiện ích Lua mẫu và quản lý quyền

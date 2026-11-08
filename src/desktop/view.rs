@@ -1509,7 +1509,7 @@ impl Desktop {
                 ui.close();
             }
             if ui.add_enabled(
-                selected.iter().any(|job| matches!(job.status, Status::Downloading | Status::Queued)),
+                selected.iter().any(|job| self.can_stop_download(job)),
                 egui::Button::new(tr("Stop selected")),
             ).on_hover_text(tr("Stop the selected downloads and close their status windows. Saved progress is kept.")).clicked() {
                 self.stop_selected_downloads();

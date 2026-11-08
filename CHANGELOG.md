@@ -2,6 +2,16 @@
 
 Release notes are available offline in Help → Changelog. Newest releases appear first.
 
+## 3.16.1 — 2026-11-08
+
+### Settings and control fixes
+
+- Extension settings now save empty text correctly and commit a form as one transaction, so invalid fields or storage errors cannot leave only part of a save applied. Unsaved settings and validation errors survive switching between extensions.
+- Kept the extension settings Save button visible in small windows, with the fields scrolling separately and an unsaved-changes indicator.
+- Made Stop selected available for active seeding torrents in Tasks and multiple-selection menus, matching the toolbar. Saved speed limits no longer revert on screen when an older background refresh finishes.
+- Avoided repeated unchanged progress saves and catch-up writes after slow disk commits in parallel file and video downloads, reducing database contention with Pause, Resume and Stop all.
+- Renamed the crash-report action to “Export report”, corrected protected-setting descriptions for every operating system, and fixed the README path to update preferences.
+
 ## 3.16.0 — 2026-11-07
 
 ### Lua starter extensions and permission controls

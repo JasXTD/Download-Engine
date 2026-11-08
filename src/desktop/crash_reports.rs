@@ -243,7 +243,7 @@ impl Desktop {
                 }
             });
             form_dialog::controls(ui, |ui| {
-                export = form_dialog::primary_enabled(ui, !busy && !state.reports.is_empty(), tr("Export report…")).clicked();
+                export = form_dialog::primary_enabled(ui, !busy && !state.reports.is_empty(), tr("Export report")).clicked();
                 refresh = form_dialog::secondary_enabled(ui, !busy, tr("Refresh")).clicked();
                 if form_dialog::secondary_enabled(ui, !busy, tr("Report an issue")).clicked() {
                     // Open the issue form without embedding the report or any user data.

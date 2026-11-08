@@ -35,6 +35,7 @@ pub(super) async fn run(
     let mut tasks = JoinSet::new();
     let mut first_error = None;
     let mut tick = tokio::time::interval(Duration::from_millis(500));
+    tick.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
     store
         .activity
         .set(&job.id, crate::transfer_activity::Phase::Downloading);
@@ -85,10 +86,15 @@ pub(super) async fn run(
         }
         tokio::select! {
             _ = tick.tick() => {
-                job.downloaded = progress.load(Ordering::Relaxed);
-                if let Err(error) = store.checkpoint(job).await {
-                    retry::merge_error(&mut first_error, error);
-                    workers_cancel.cancel();
+                let downloaded = progress.load(Ordering::Relaxed);
+                if downloaded != job.downloaded {
+                    job.downloaded = downloaded;
+                    if let Err(error) = store.checkpoint(job).await {
+                        retry::merge_error(&mut first_error, error);
+                        workers_cancel.cancel();
+                    }
+                    // Do not queue catch-up writes after a slow disk commit.
+                    tick.reset();
                 }
             }
             result = tasks.join_next() => {

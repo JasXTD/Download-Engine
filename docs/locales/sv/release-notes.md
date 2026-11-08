@@ -1,3 +1,11 @@
+## 3.16.1 — 2026-11-08
+
+### Rättningar av inställningar och kontroller
+
+Tilläggsinställningar sparar nu tom text och hela formuläret i en enda transaktion. Osparade ändringar behålls när du byter tillägg. Spara-knappen är synlig i små fönster och uppdateringar läser in standardvärden igen. Stoppmenyer för delade torrenter och visningen av hastighetsgränser har rättats; upprepade förloppsskrivningar har minskats. Rapportexportens text och informationen om systemskydd och uppdateringsinställningar har korrigerats.
+
+[English details](../../../CHANGELOG.md#3161--2026-11-08)
+
 ## 3.16.0 — 2026-11-07
 
 ### Lua-exempel och behörighetskontroll

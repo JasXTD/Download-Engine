@@ -35,6 +35,7 @@ case "${1:-}" in
     ;;
   test-package)
     cd /source
+    mkdir -p artifacts
     export DOWNLOAD_ENGINE_NATIVE_FFMPEG=/native-ffmpeg DOWNLOAD_ENGINE_FFMPEG_PATH=/native-ffmpeg/ffmpeg
     DOWNLOAD_ENGINE_FFMPEG_SHA256=$(awk '/  ffmpeg$/ {print $1}' /native-ffmpeg/build-record/binaries.sha256)
     export DOWNLOAD_ENGINE_FFMPEG_SHA256
@@ -56,7 +57,10 @@ case "${1:-}" in
     done
     [[ "$ready" == 1 ]] || { echo 'Isolated test keyring did not start' >&2; exit 1; }
     node --test scripts/Run-NativeCi.test.cjs scripts/LicenseNotices.test.cjs
-    node --test tests/dailymotion.test.cjs tests/page_links.test.cjs tests/media.test.cjs tests/media_security.test.cjs tests/video_button.test.cjs tests/background.test.cjs tests/extension.test.cjs tests/capture.test.cjs tests/permission_flow.test.cjs tests/browser_login.test.cjs
+    node --test tests/dailymotion.test.cjs tests/page_links.test.cjs tests/media.test.cjs tests/video_button.test.cjs tests/background.test.cjs tests/extension.test.cjs tests/capture.test.cjs tests/permission_flow.test.cjs tests/browser_login.test.cjs
+    if [[ "${DOWNLOAD_ENGINE_SKIP_FFMPEG_TESTS:-0}" != 1 ]]; then
+      XDOWNLOADER_MEDIA_HELPER="$DOWNLOAD_ENGINE_FFMPEG_PATH" node --test tests/media_security.test.cjs
+    fi
     cargo test --locked --offline --manifest-path torrent/Cargo.toml -j 2 -- --test-threads=2
     cargo test --locked --offline --test hls --test browser_video -j 2 -- --test-threads=2
     cargo test --locked --offline --bin de desktop::hls::tests -j 2 -- --test-threads=2

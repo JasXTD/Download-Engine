@@ -141,6 +141,13 @@
       if (/^(audio|video)\/[a-z0-9.+-]+$/.test(row.mime || "")) link.mime = row.mime.slice(0, 100);
       if (row.hls === true || /\.m3u8$/i.test(new URL(url).pathname)) link.hls = true;
       if (row.dash === true || /\.mpd$/i.test(new URL(url).pathname)) link.dash = true;
+      if (row.fallback_urls !== undefined) {
+        if (!Array.isArray(row.fallback_urls) || row.fallback_urls.length > 4 || !link.hls || link.dash ||
+            !root.IDMDailymotion?.matchesVideo(value.url, url)) throw Error("Invalid video alternatives.");
+        const alternatives = [...new Set(row.fallback_urls.map(value => IDMCore.normalizeUrl(value)))].filter(value => value !== url);
+        if (alternatives.some(candidate => !root.IDMDailymotion.matchesVideo(value.url, candidate))) throw Error("Invalid video alternatives.");
+        if (alternatives.length) link.fallback_urls = alternatives;
+      }
       links.push(link);
     }
     const scan = { url: IDMCore.normalizeUrl(value.url), title: text(value.title), links, truncated: value.truncated === true, mode: value.mode === "videos" ? "videos" : "links" };
@@ -177,9 +184,13 @@
     return { indices: [...indices].sort((a, b) => a - b), queue_id: queue, destination };
   }
   class Manager {
-    constructor({ api, native, uuid = () => crypto.randomUUID(), detected = async () => [] }) {
+    constructor({ api, native, uuid = () => crypto.randomUUID(), detected = async () => [], resolveVideo = null, trace = () => {} }) {
       this.api = api; this.native = native; this.uuid = uuid; this.detected = detected;
+      this.resolveVideo = resolveVideo; this.trace = trace; this.activeScan = null;
       this.inflight = new Set(); this.scanning = false;
+    }
+    cancelScan(tabId) {
+      if (this.activeScan?.tabId === tabId) this.activeScan.controller.abort();
     }
     key(id) {
       if (typeof id !== "string" || !UUID.test(id)) throw Error(__xdL.t("Invalid link picker identifier."));
@@ -217,13 +228,33 @@
         if (!result?.result || result.error) throw Error(__xdL.t("The browser could not read this page. Try an ordinary web page."));
         const scan = normalizeScan(result.result);
         if (mode === "videos" && scan.url === IDMCore.normalizeUrl(tab.url)) {
+          const dom = scan.links.length;
+          let resolved = null;
+          if (this.resolveVideo) {
+            const controller = new AbortController();
+            this.activeScan = { tabId: tab.id, controller };
+            resolved = await this.resolveVideo(tab, controller.signal);
+            const current = await this.api.tabs.get(tab.id).catch(() => null);
+            if (controller.signal.aborted || !current || current.incognito || IDMCore.normalizeUrl(current.url) !== scan.url) {
+              this.trace("scan_cancelled", { tab: tab.id });
+              throw Error(__xdL.t("The page changed. Click its video button again."));
+            }
+          }
           const observed = await this.detected(tab);
-          scan.links = normalizeScan({ ...scan, links: [...scan.links, ...observed].slice(0, 1000) }).links;
+          if (this.activeScan?.controller.signal.aborted) throw Error(__xdL.t("The page changed. Click its video button again."));
+          if (resolved && !resolved.links.length) this.trace("metadata_fallback", { tab: tab.id, reason: resolved.reason, observed: observed.length });
+          const browserLinks = [...scan.links, ...observed];
+          const links = resolved && root.IDMDailymotion ? root.IDMDailymotion.groupStreams(scan.url, resolved.links, browserLinks) : browserLinks;
+          scan.links = normalizeScan({ ...scan, links: links.slice(0, 1000) }).links;
+          const alternatives = scan.links.reduce((sum, row) => sum + (row.fallback_urls?.length || 0), 0);
+          if (alternatives) this.trace("desktop_alternatives", { tab: tab.id, count: alternatives });
+          this.trace("scan_result", { tab: tab.id, dom, observed: observed.length, metadata: !!resolved?.links.length, count: scan.links.length });
+          if (resolved && !scan.links.length) throw Error(__xdL.t("Dailymotion did not provide a playable stream. Start playback, then retry. Open Diagnostic log in the extension for details."));
         }
         // If a navigation raced the scan, show what was actually scanned rather
         // than silently attributing another document's links to the first page.
         return await this.openScan(scan);
-      } finally { this.scanning = false; }
+      } finally { this.activeScan = null; this.scanning = false; }
     }
     async openScan(value) {
       if (this.opening) throw Error(__xdL.t("A review is already opening."));
@@ -242,11 +273,33 @@
     }
     async openVideoReview(scan) {
       if ((await this.api.storage.session.get(VIDEO_PENDING))[VIDEO_PENDING]) throw Error(__xdL.t("A video review is awaiting confirmation. Use Browser options → Recover handoffs first."));
+      let items = scan.links.map(link => ({ url: link.url, filename: link.filename, label: link.text,
+        kind: link.dash ? "dash" : link.hls ? "hls" : "file", size: link.size ?? null,
+        ...(link.fallback_urls?.length ? { fallback_urls: link.fallback_urls } : {}) }));
+      if (items.some(item => item.fallback_urls?.length)) {
+        const host = await this.native({ action: "ping" });
+        if (this.activeScan?.controller.signal.aborted) throw Error(__xdL.t("The page changed. Click its video button again."));
+        if (!Array.isArray(host.capabilities) || !host.capabilities.includes("browser_video_alternatives_v1")) {
+          // Store extensions can update before the desktop. Older native hosts
+          // reject unknown fields, so retain these streams as explicit choices.
+          // Negotiate before saving the request: retries must keep its exact body.
+          const separate = new Map();
+          for (const { fallback_urls = [], ...item } of items) {
+            if (!separate.has(item.url)) separate.set(item.url, item);
+            for (const [index, url] of fallback_urls.entries()) if (!separate.has(url)) {
+              separate.set(url, { ...item, url, size: null,
+                label: __xdL.t("HLS · alternate playlist") + " " + (index + 1) });
+            }
+            if (separate.size > 1000) throw Error(__xdL.t("This page contains too much video data. Try a smaller page."));
+          }
+          items = [...separate.values()];
+          this.trace("desktop_legacy", { count: items.length });
+        }
+      }
       const request = {
         action: "review_browser_video", request_id: "video:" + this.uuid(),
         review: { page_url: scan.url, page_title: scan.title, truncated: scan.truncated,
-          items: scan.links.map(link => ({ url: link.url, filename: link.filename, label: link.text,
-            kind: link.dash ? "dash" : link.hls ? "hls" : "file", size: link.size ?? null })) }
+          items }
       };
       if (new TextEncoder().encode(JSON.stringify(request)).length > 900000) throw Error(__xdL.t("This page contains too much video data. Try a smaller page."));
       // Save before sending: a lost reply must reuse the same desktop receipt.
@@ -257,11 +310,14 @@
       if (this.inflight.has(VIDEO_PENDING)) throw Error(__xdL.t("A video review is already opening in Download Engine."));
       this.inflight.add(VIDEO_PENDING);
       try {
+        this.trace("handoff", { count: request.review.items.length });
         const reply = await this.native(request);
         if (reply.preview_id !== request.request_id) throw Error(__xdL.t("The desktop app did not confirm the video review. Update Download Engine, then use Recover handoffs."));
         await this.api.storage.session.remove(VIDEO_PENDING);
+        this.trace("acknowledged", { count: request.review.items.length });
         return {ok:true,message:reply.message || __xdL.t("Review the video in Download Engine. Nothing has been downloaded.")};
       } catch (error) {
+        this.trace("handoff_failed", { count: request.review.items.length });
         if (error.definitive) await this.api.storage.session.remove(VIDEO_PENDING);
         throw error;
       } finally { this.inflight.delete(VIDEO_PENDING); }

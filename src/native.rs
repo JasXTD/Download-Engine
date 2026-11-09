@@ -264,6 +264,7 @@ fn process(store: &Store, request: Request) -> Result<Reply> {
                 "hls_preview_v1".into(),
                 "video_preview_v1".into(),
                 "browser_video_review_v1".into(),
+                "browser_video_alternatives_v1".into(),
                 "browser_link_recovery_v1".into(),
                 "torrent_review_v1".into(),
             ]);

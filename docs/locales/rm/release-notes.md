@@ -1,3 +1,9 @@
+## 3.19.1 — 2026-11-10
+
+- Curregì la detecziun da videos Dailymotion ed il buttun per telechargiar. Sche l’emprim link na funcziuna betg, l’app emprova ina glista alternativa dal medem video. Meglierà ils protocols da diagnosa senza memorisar datas sensiblas.
+
+[English details](../../../CHANGELOG.md#3191--2026-11-10)
+
 ## 3.19.0 — 2026-11-08
 
 ### Support per BitTorrent v2 e torrents ibrids

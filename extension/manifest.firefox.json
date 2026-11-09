@@ -1,7 +1,7 @@
 {
   "manifest_version": 2,
   "name": "__MSG_extensionName__",
-  "version": "3.19.0",
+  "version": "3.19.1",
   "description": "__MSG_extensionDescription__",
   "icons": {
     "16": "icons/icon-16.png",
@@ -33,6 +33,8 @@
       "video-button-manager.js",
       "github-download.js",
       "media.js",
+      "media-diagnostics.js",
+      "dailymotion.js",
       "permission-flow.js",
       "background.js"
     ]
@@ -63,7 +65,7 @@
   "optional_permissions": [
     "cookies"
   ],
-  "content_security_policy": "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; object-src 'none'; connect-src 'none'; base-uri 'none'; form-action 'none'",
+  "content_security_policy": "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; object-src 'none'; connect-src https://www.dailymotion.com https://*.dailymotion.com https://dmcdn.net https://*.dmcdn.net; base-uri 'none'; form-action 'none'",
   "default_locale": "en",
   "content_scripts": [
     {

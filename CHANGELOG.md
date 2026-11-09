@@ -2,6 +2,18 @@
 
 Release notes are available offline in Help → Changelog. Newest releases appear first.
 
+## 3.19.1 — 2026-11-10
+
+### Dailymotion detection and video preview fixes
+
+- Restore the Download video button beside Dailymotion's embedded player in Chrome, Edge and Firefox. Request public video metadata when scanning, with browser-captured streams as a fallback.
+- Keep captured playlists available through the ad-to-video transition. Group only recognized entry points for the same video, exclude initialization fragments and short previews, and refresh expired captured URLs without hiding other choices.
+- Try retained same-video alternatives when a desktop request receives HTTP 401/403 or a successful response that is not a playlist. Preserve cancellation, network restrictions and errors inside an actual playlist; inspection never adds a duplicate download.
+- Keep automatic extension updates compatible with older desktops: unsupported grouped alternatives become separate selectable playlists until the desktop is upgraded.
+- Identify HLS and DASH from playlist contents instead of assuming XML error responses are DASH manifests. Show clearer errors without guessing that login is required.
+- Add bounded extension diagnostics and desktop lookup-attempt logs without recording signed URLs, cookies, headers or response bodies. Update the privacy policy and browser guide.
+- Verified with isolated download, pause/resume, cancellation and UI regression tests. Dailymotion playback and downloading were also confirmed by the user in Chrome, Edge and Firefox.
+
 ## 3.19.0 — 2026-11-08
 
 ### BitTorrent v2 and hybrid support

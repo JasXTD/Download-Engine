@@ -1080,7 +1080,52 @@ live), never on channel banners or hover previews; on Bilibili, only beside the
 main player of a `/video/` or `/bangumi/play/` page, never on card previews; on
 Twitch, only beside the player of a `/videos/…` page, never on live channels or
 previews; on TikTok, only beside the video a `/@user/video/…` page is about, not
-the next video it preloads.
+the next video it preloads. Dailymotion's embedded player also gets a button
+beside its frame. Clicking **Download video** or **Find videos on this page**
+first requests public Dailymotion metadata, without browser cookies, and checks
+the returned playlist. A readable automatic HLS playlist becomes one video entry;
+use **Choose quality** in the desktop app to see its available qualities.
+The lookup is bounded to eight seconds and never downloads video segments.
+If metadata is missing, blocked, malformed or returns an unreadable playlist,
+the review falls back to links and streams captured by the browser. Enable
+**Detect media while browsing**, reload the page and start playback for this
+fallback. The button does not inspect the cross-origin frame's contents.
+Dailymotion setup fragments and short player previews are excluded. Known
+playlist URLs for the same video are grouped into one review entry. Up to four
+browser-captured alternatives are retained even when the metadata playlist is
+readable in the browser: the desktop may receive a different response. If the
+desktop receives HTTP 401/403 or a successful response containing an error page
+or no playlist, it tries those alternatives, preferring a captured CDN rendition.
+Invalid or unsupported content inside an actual playlist, cancellation and
+network security failures stop the lookup. A rendition fallback offers the quality
+the player actually loaded; change playback quality and scan again to capture
+another quality. Older desktops receive the retained alternatives as separate
+choices instead of the new grouped message. Update the desktop to 3.19.1 or newer
+for automatic fallback. Other video
+IDs, unknown URL layouts and explicitly listed metadata qualities are not silently
+substituted: they remain separate choices, as do captures beyond the four-alternative
+limit. Metadata success alone never hides an unmatched captured playlist. If an
+ad is playing, wait for the main video to start and scan again; the player may not
+have requested the main video's playlist yet. Refreshed URLs for the same CDN asset and rendition replace the old
+entry. **Logs** records each desktop lookup attempt, its result and HTTP status;
+quality-preview failures are recorded separately. These diagnostics contain no
+signed URLs, headers or response bodies. A rejection does not establish that
+login is required or the URL expired.
+These playlists describe video segments;
+an unknown playlist size does not mean the video is empty. If a signed link
+returns an error page, reload the video page and start playback to capture a
+fresh link. Change playback quality in the player to discover another rendition. A signed Firefox
+Add-ons installation uses the same detection code as the developer extension;
+local source changes reach store users only after a new signed update.
+
+For detection problems, open **Diagnostic log** at the bottom of the extension
+popup, then **Refresh log**. The trace shows the metadata request, playlist
+validation, HTTP status or failure reason, browser fallback counts and desktop
+acknowledgement. A successful desktop acknowledgement only means the review was
+received; it does not mean a video was downloaded. **Select log**, then Ctrl+C,
+copies the report. Discovery traces keep the last 120 events for the current
+browser session and exclude URLs, page titles, cookies and tokens. **Clear log**
+also clears these traces. Private windows do not perform metadata lookups.
 Manual URL entry and browser connection/recovery controls are in the popup's
 collapsible **Add a file URL** and **Browser options** sections.
 
@@ -1090,7 +1135,7 @@ off choice for that site's HTTP or HTTPS host, covering its ports. If access is
 missing, **Allow this site** requests that optional permission after a click;
 opening the popup never requests access. Existing pages and future visits with
 access show buttons automatically unless disabled for that site. Buttons appear just above
-visible top-frame video players and open the same desktop review; clicking a button
+visible top-frame video players or recognized Dailymotion embeds and open the same desktop review; clicking a button
 never queues a file. At the viewport edge they move below or beside the player.
 If no outside space is available (including a full-screen player), the button
 hides; the extension's **Find videos on this page** remains available. Buttons

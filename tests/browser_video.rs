@@ -22,6 +22,22 @@ fn fixture() -> (tempfile::TempDir, Store) {
 fn id() -> String {
     format!("video:{}", uuid::Uuid::new_v4())
 }
+
+#[test]
+fn native_ping_advertises_video_alternative_support_without_queuing() {
+    let (_temp, store) = fixture();
+    let reply = native::handle_request(&store, native::Request::Ping);
+    assert!(reply.ok);
+    assert!(
+        reply
+            .capabilities
+            .iter()
+            .any(|value| value == "browser_video_alternatives_v1")
+    );
+    assert!(store.list().unwrap().is_empty());
+    assert!(store.next_browser_video_review().unwrap().is_none());
+}
+
 fn review() -> Review {
     Review {
         public_only: false,
@@ -30,6 +46,7 @@ fn review() -> Review {
         truncated: false,
         items: vec![
             Item {
+                fallback_urls: Vec::new(),
                 url: "https://cdn.example.test/video.mp4?token=private".into(),
                 filename: "video.mp4".into(),
                 label: "Video".into(),
@@ -37,6 +54,7 @@ fn review() -> Review {
                 size: Some(42),
             },
             Item {
+                fallback_urls: Vec::new(),
                 url: "https://cdn.example.test/master.m3u8".into(),
                 filename: "Stream".into(),
                 label: "Choose quality".into(),
@@ -54,6 +72,86 @@ fn send(store: &Store, id: &str, review: &Review) -> native::Reply {
         )
         .unwrap(),
     )
+}
+
+#[test]
+fn same_video_alternatives_survive_native_receipt_and_are_never_queued_as_files() {
+    let (_temp, store) = fixture();
+    let mut value = review();
+    value.page_url = "https://www.dailymotion.com/video/xbv5ovm".into();
+    value.items.remove(0);
+    value.items[0].url =
+        "https://cdndirector.dailymotion.com/cdn/manifest/video/xbv5ovm.m3u8".into();
+    let fallback =
+        "https://vod.dmcdn.net/sec/cloud/fmp4/717461554/h264_aac_hd/1/manifest.m3u8?token=private";
+    value.items[0].fallback_urls = vec![fallback.into()];
+    let request = id();
+    let reply = send(&store, &request, &value);
+    assert!(reply.ok, "{}", reply.message);
+    let pending = store.next_browser_video_review().unwrap().unwrap();
+    assert_eq!(pending.review.public_only, value.public_only);
+    assert_eq!(pending.review.items.len(), 1);
+    assert!(
+        store
+            .add_browser_video_selection(&request, &[0], "main", Destination::Automatic)
+            .is_err()
+    );
+    let stream = store.take_browser_video_stream(&request, 0).unwrap();
+    assert_eq!(stream.fallback_urls, [fallback]);
+    assert_eq!(stream.url, value.items[0].url);
+    assert!(store.take_browser_video_stream(&request, 0).is_err());
+    assert!(store.list().unwrap().is_empty());
+}
+
+#[test]
+fn native_rejects_unrelated_or_unbounded_video_alternatives() {
+    let (_temp, store) = fixture();
+    let mut value = review();
+    value.page_url = "https://www.dailymotion.com/video/xbv5ovm".into();
+    value.items.remove(0);
+    value.items[0].url =
+        "https://cdndirector.dailymotion.com/cdn/manifest/video/xbv5ovm.m3u8".into();
+    let good = "https://vod.dmcdn.net/cloud/fmp4/717461554/h264_aac_hd/1/manifest.m3u8";
+    for bad in [
+        good.replace("717461554", "717479018"),
+        good.replace("manifest.m3u8", "init.mp4"),
+        good.replace("dmcdn.net", "dmcdn.net.evil.test"),
+        good.replace("https:", "http:"),
+        good.replace("vod.dmcdn.net", "user:password@vod.dmcdn.net"),
+        good.replace("vod.dmcdn.net", "vod.dmcdn.net:444"),
+        "https://127.0.0.1/video.m3u8".into(),
+        "https://vod.dmcdn.net/unknown/manifest.m3u8".into(),
+    ] {
+        value.items[0].fallback_urls = vec![bad];
+        assert!(!send(&store, &id(), &value).ok);
+    }
+    for urls in [
+        vec![good.to_owned(); 5],
+        vec![good.to_owned(); 2],
+        vec![value.items[0].url.clone()],
+    ] {
+        value.items[0].fallback_urls = urls;
+        assert!(!send(&store, &id(), &value).ok);
+    }
+    value.items[0].fallback_urls = vec![good.into()];
+    value.items[0].kind = Kind::File;
+    assert!(!send(&store, &id(), &value).ok);
+    assert!(store.next_browser_video_review().unwrap().is_none());
+    assert!(store.list().unwrap().is_empty());
+}
+
+#[test]
+fn older_extensions_without_alternatives_keep_their_existing_contract() {
+    let value = review();
+    let encoded = serde_json::to_value(&value).unwrap();
+    assert!(encoded["items"][0].get("fallback_urls").is_none());
+    let decoded: Review = serde_json::from_value(encoded).unwrap();
+    assert!(
+        decoded
+            .items
+            .iter()
+            .all(|item| item.fallback_urls.is_empty())
+    );
 }
 
 #[test]
@@ -170,7 +268,7 @@ fn stream_choice_only_opens_quality_preview_and_expired_reviews_cannot_be_used()
         .unwrap();
     assert!(store.take_browser_video_stream(&first, 0).is_err());
     assert_eq!(
-        store.take_browser_video_stream(&first, 1).unwrap(),
+        store.take_browser_video_stream(&first, 1).unwrap().url,
         review().items[1].url
     );
     assert!(store.list().unwrap().is_empty());

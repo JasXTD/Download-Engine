@@ -7,11 +7,45 @@
   const GRANT = { permissions: ["webRequest"], origins: ["https://*/*", "http://*/*"] };
   const FILTER = { urls: GRANT.origins, types: ["main_frame", "sub_frame", "media", "xmlhttprequest", "other"] };
   function pageUrl(value) { return IDMCore.normalizeUrl(value); }
+  function dailymotionMedia(value) {
+    let url; try { url=new URL(value); } catch { return null; }
+    if(url.protocol!=="https:" || url.username || url.password || url.port)return null;
+    if(/(^|\.)dmcdn\.net$/.test(url.hostname)) {
+      const stream=/\/(video|cloud)\/fmp4\/(\d+)\/([a-zA-Z0-9_-]+)\/(\d+)\/(manifest\.m3u8|init\.mp4)$/.exec(url.pathname);
+      if(stream)return {kind:stream[5]==="init.mp4"?"init":"stream",
+        key:`${stream[1]}/${stream[2]}/${stream[3]}/${stream[4]}${url.search}`,format:stream[3]};
+      if(/\/preview\/fmp4\/\d+\/[a-zA-Z0-9_-]+\/\d+\.pmp4$/.test(url.pathname))return {kind:"preview"};
+    }
+    if(["dmxleo.dailymotion.com","cdndirector.dailymotion.com"].includes(url.hostname)) {
+      if(/^\/cdn\/manifest\/video\/x[a-z0-9]+\.m3u8$/.test(url.pathname))
+        return {kind:"entry",player:url.hostname==="dmxleo.dailymotion.com"};
+    }
+    return null;
+  }
+  function compactMedia(items) {
+    const result=[],positions=new Map();
+    for(const item of items) {
+      const info=dailymotionMedia(item.url);
+      if(info?.kind==="init" || info?.kind==="preview")continue;
+      // Response metadata cannot prove which playlist is replayable outside the
+      // player. Keep alternative entry points even after a CDN rendition appears.
+      // CDN host and signed path prefixes can change for the same asset. Keep
+      // the latest observed URL and stable row ID, but retain distinct renditions.
+      const key=info?.kind==="stream"?`dm:${info.key}`:item.url;
+      if(positions.has(key)) {
+        const index=positions.get(key),previous=result[index];
+        if(item.seen>=previous.seen)result[index]={...item,id:previous.id};
+      } else { positions.set(key,result.length);result.push(item); }
+    }
+    return result;
+  }
   function describe(details) {
     if (details.method !== "GET" || ![200, 206].includes(details.statusCode)) return null;
     let url;
     try { url = new URL(pageUrl(details.url)); } catch { return null; }
     if (url.href.length > 4096 || /\.(ts|m4s|cmfv|cmfa|key)$/i.test(url.pathname)) return null;
+    const dm=dailymotionMedia(url.href);
+    if(dm?.kind==="init" || dm?.kind==="preview")return null;
     const headers = details.responseHeaders || [];
     const header = name => String(headers.find(h => h.name.toLowerCase() === name)?.value || "");
     const mime = header("content-type").split(";")[0].trim().toLowerCase();
@@ -27,21 +61,23 @@
     try { filename = decodeURIComponent(filename); } catch { /* Keep a literal malformed escape. */ }
     if (suffix && !/\.[a-z0-9]{2,5}$/i.test(filename)) filename += "." + suffix;
     filename = Array.from(filename.toWellFormed().replace(/[\u0000-\u001f\u007f\u061c\u200e\u200f\u202a-\u202e\u2066-\u2069]/g, " ")).slice(0, 160).join("");
+    const label=dm?.kind==="stream" ? "HLS · "+(dm.format.match(/_(ld|sd|hq|hd|fhd|uhd)$/i)?.[1].toUpperCase() || dm.format)
+      : dm?.kind==="entry" ? __xdL.t(dm.player?"HLS · player playlist":"HLS · alternate playlist") : filename;
     const sizeText = details.statusCode === 206 ? /^bytes \d+-\d+\/(\d+)$/i.exec(header("content-range"))?.[1] : header("content-length");
     const size = /^\d+$/.test(sizeText || "") ? Number(sizeText) : 0;
-    return { url: url.href, filename, text: filename, kind, mime: mime.slice(0, 100), hls, dash,
+    return { url: url.href, filename, text: label, kind, mime: mime.slice(0, 100), hls, dash,
       size: Number.isSafeInteger(size) && size > 0 && !hls && !dash ? size : null, source: "network" };
   }
   class Manager {
-    constructor({ api, now = () => Date.now(), uuid = () => crypto.randomUUID() }) {
-      Object.assign(this, { api, now, uuid });
+    constructor({ api, now = () => Date.now(), uuid = () => crypto.randomUUID(), trace = () => {} }) {
+      Object.assign(this, { api, now, uuid, trace });
       this.action = api.action || api.browserAction;
       this.enabled = false; this.revision = 0; this.attention = false;
       this.tabs = new Map(); this.requests = new Map(); this.epochs = new Map();
       this.tail = Promise.resolve(); this.listeners = false;
     }
     serial(run) { const task = this.tail.then(run); this.tail = task.catch(() => {}); return task; }
-    event(run) { void this.serial(run).catch(() => { this.error = __xdL.t("Media discovery could not update its list. Turn detection off and on to retry."); }); }
+    event(run) { void this.serial(run).catch(() => { this.error = __xdL.t("Media discovery could not update its list. Turn detection off and on to retry."); this.trace("discovery_error"); }); }
     start() {
       // Register during worker evaluation so a later network event can wake MV3.
       this.install();
@@ -59,6 +95,7 @@
         }
         if (!this.enabled) await this.clearAll();
         else await this.prune();
+        this.trace("ready", { enabled: this.enabled, allowed, count: this.tabs.size });
       });
     }
     install() {
@@ -111,7 +148,7 @@
       const cutoff = this.now() - TTL;
       for (const [id, record] of this.tabs) {
         if (!Number.isFinite(record.updated) || record.updated < cutoff || record.updated > this.now()) { await this.remove(id); continue; }
-        const items = record.items.filter(item => item.seen >= cutoff && item.seen <= this.now()).slice(-ITEM_LIMIT);
+        const items = compactMedia(record.items.filter(item => item.seen >= cutoff && item.seen <= this.now())).slice(-ITEM_LIMIT);
         if (!items.length) await this.remove(id);
         else if (items.length !== record.items.length) {
           const updated = { ...record, items };
@@ -137,9 +174,17 @@
       const request = this.requests.get(d.requestId);
       if (d.statusCode >= 300 && d.statusCode < 400) return;
       this.requests.delete(d.requestId);
-      if (!this.enabled || !request || d.incognito || request.tabId !== d.tabId || request.epoch !== (this.epochs.get(d.tabId) || 0)) return;
+      if (d.incognito || d.tabId < 0) return;
       const item = describe(d);
-      if (!item) return;
+      const dm = dailymotionMedia(d.url);
+      const candidate = item || dm || /\.(m3u8|mpd)(?:[?#]|$)/i.test(d.url || "");
+      const reason = !this.enabled ? "disabled" : !request ? "no_request" :
+        request.tabId !== d.tabId || request.epoch !== (this.epochs.get(d.tabId) || 0) ? "stale_navigation" :
+        !item ? dm?.kind === "init" ? "init" : dm?.kind === "preview" ? "preview" : "unsupported" : null;
+      if (reason) {
+        if (candidate) this.trace("network_ignored", { tab: d.tabId, reason, status: d.statusCode, cached: d.fromCache === true });
+        return;
+      }
       const tab = await this.api.tabs.get(d.tabId).catch(() => null);
       if (!tab || tab.incognito || !/^https?:\/\//.test(tab.url || "")) return;
       const revision = this.revision;
@@ -151,11 +196,12 @@
       const next = { ...item, id: existing?.id || this.uuid(), seen: this.now() };
       if (existing) items[items.indexOf(existing)] = next;
       else items.push(next);
-      const record = { url, title: (tab.title || __xdL.t("Media on this page")).slice(0, 200), updated: this.now(), items: items.slice(-ITEM_LIMIT) };
+      const record = { url, title: (tab.title || __xdL.t("Media on this page")).slice(0, 200), updated: this.now(), items: compactMedia(items).slice(-ITEM_LIMIT) };
       while (this.tabs.size >= TAB_LIMIT && !this.tabs.has(tab.id)) await this.remove(this.tabs.keys().next().value);
       await this.api.storage.session.set({ [PREFIX + tab.id]: record });
       this.tabs.delete(tab.id); this.tabs.set(tab.id, record);
       await this.badge(tab.id, record.items.length);
+      this.trace("network_saved", { tab: tab.id, count: record.items.length, format: item.kind, status: d.statusCode, cached: d.fromCache === true });
     }
     closed(tabId) {
       this.event(async () => {

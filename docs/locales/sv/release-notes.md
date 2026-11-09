@@ -1,3 +1,9 @@
+## 3.19.1 — 2026-11-10
+
+- Rättat Dailymotion-identifieringen och nedladdningsknappen. Om en länk inte fungerar provar appen en alternativ spellista för samma video. Förbättrade diagnostikloggar utan att spara känsliga uppgifter.
+
+[English details](../../../CHANGELOG.md#3191--2026-11-10)
+
 ## 3.19.0 — 2026-11-08
 
 ### BitTorrent v2 och hybridtorrenter

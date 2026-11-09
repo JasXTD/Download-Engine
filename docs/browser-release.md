@@ -21,11 +21,11 @@ proof of browser-store approval or Firefox signing.
    the corresponding browser's connection panel.
 3. Submit `download-engine-firefox-<version>.zip` from the public release folder
    to Mozilla for signing (not a `.7z` archive), keeping the existing
-   `download-engine@xetro` add-on ID for the first public listing. Keep this ID
-   for later updates. Choose a listed release on AMO or
+   `download-engine@xetro` add-on ID. Upload updates to the existing listing;
+   do not create a new add-on identity. Choose a listed release on AMO or
    a signed unlisted XPI for direct distribution. Verify the current submission
    validation before uploading. The package requires Firefox 142 or newer;
-   select Windows as the supported platform, not Android. The release preflight
+   select the supported desktop platforms (Windows, macOS and Linux), not Android. The release preflight
    checks the data declaration and minimum version.
 4. Supply the publisher name, support/contact URL, privacy policy URL, store
    artwork, and final signing identity. These have not been invented or published.
@@ -43,6 +43,14 @@ proof of browser-store approval or Firefox signing.
    signing does not sign a Firefox extension or publish any browser-store listing.
 
 ## Data handling for the publisher's privacy declaration
+
+For 3.19.1, describe the Dailymotion detection, playlist fallback and diagnostic
+fixes. The extension checks the desktop's capabilities before sending grouped
+alternatives; older desktops receive separate playlist choices. Recommend the
+3.19.1 desktop update for automatic fallback. Dailymotion metadata requests are
+anonymous and user-initiated, and the diagnostic trace excludes signed URLs and
+response contents. Keep the existing extension IDs and review the updated
+privacy policy with the store submission.
 
 The published [privacy policy](../PRIVACY.md) covers the extension's data handling,
 local desktop integration, retention and user controls. Use

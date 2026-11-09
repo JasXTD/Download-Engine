@@ -82,6 +82,25 @@ pub fn is_manifest_url(value: &str) -> bool {
     crate::model::validate_url(value)
         .is_ok_and(|url| url.path().to_ascii_lowercase().ends_with(".mpd"))
 }
+/// Sniff only the document element; the full parser still enforces namespaces,
+/// size/complexity limits and the prohibition on DTDs and external references.
+pub(crate) fn is_manifest_document(text: &str) -> bool {
+    use quick_xml::events::Event;
+    if text.len() > crate::hls::MAX_PLAYLIST_BYTES {
+        return false;
+    }
+    let mut reader = quick_xml::Reader::from_str(text.trim_start_matches('\u{feff}'));
+    loop {
+        match reader.read_event() {
+            Ok(Event::Start(element) | Event::Empty(element)) => {
+                return element.local_name().as_ref() == b"MPD";
+            }
+            Ok(Event::Decl(_) | Event::Comment(_) | Event::PI(_) | Event::DocType(_)) => {}
+            Ok(Event::Text(value)) if value.iter().all(u8::is_ascii_whitespace) => {}
+            _ => return false,
+        }
+    }
+}
 pub(crate) fn parse(source: &str, url: &str, text: &str) -> Result<Inspection> {
     let root = xml::parse(text)?;
     ensure!(

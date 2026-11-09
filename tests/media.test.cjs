@@ -17,6 +17,18 @@ function fixture(){
   f.capture=async d=>{await f.before(d);await f.headers(d);};
   return f;
 }
+test('discovery traces distinguish lost request ownership, stale navigation, initialization fragments and cached success',async()=>{
+  const f=fixture(),events=[];f.manager.trace=(...event)=>events.push(event);await f.begin();
+  const stream=f.request('https://vod.dmcdn.net/token/cloud/fmp4/123/h264_aac_hd/1/manifest.m3u8',{fromCache:true});
+  await f.headers(stream);assert.equal(events.at(-1)[1].reason,'no_request');
+  await f.before(stream);f.manager.navigated(7,{url:'https://page.test/new'});await f.manager.tail;
+  await f.headers(stream);assert.equal(events.at(-1)[1].reason,'stale_navigation');
+  await f.capture(f.request('https://vod.dmcdn.net/token/cloud/fmp4/123/h264_aac_hd/1/init.mp4'));
+  assert.equal(events.at(-1)[1].reason,'init');
+  await f.capture(stream);assert.equal(events.at(-1)[0],'network_saved');assert.equal(events.at(-1)[1].cached,true);
+  assert(!JSON.stringify(events).includes('https:'));
+});
+
 test('media discovery defaults on with access, but saved off and denied access stay off',async()=>{
   const f=fixture();await f.begin();await f.capture(f.request());assert.equal((await f.manager.status()).items.length,1);
   for (const saved of [false, undefined]) {
@@ -36,6 +48,65 @@ test('range responses report full file size, never segment size or manifest size
   assert.equal(describe(f.request(undefined,{statusCode:206,responseHeaders:headers})).size,1000);
   assert.equal(describe(f.request(undefined,{statusCode:206})).size,null);
   assert.equal(describe(f.request('https://cdn.test/master.m3u8')).size,null);
+});
+
+test('Dailymotion initialization fragments are excluded without hiding ordinary MP4 files',()=>{
+  const f=fixture();
+  const path='/signed-token/video/fmp4/717461554/h264_aac_hd/1/init.mp4';
+  assert.equal(describe(f.request('https://vod3.cf.dmcdn.net'+path)),null);
+  assert.equal(describe(f.request('https://vod2.cf.dmcdn.net'+path.replace('/video/','/cloud/'))),null);
+  assert.equal(describe(f.request('https://vod2.cf.dmcdn.net/token/preview/fmp4/717479018/h264_aac_hq/1.pmp4')),null);
+  for(const url of ['https://example.test/init.mp4','https://vod3.cf.dmcdn.net/ordinary/init.mp4',
+    'https://vod3.cf.dmcdn.net.attacker.test'+path,'https://vod3.cf.dmcdn.net'+path.replace('init.mp4','movie.mp4')]) {
+    assert.equal(describe(f.request(url)).kind,'video',url);
+  }
+});
+
+test('Dailymotion manifest refreshes replace one stream while different assets and qualities stay separate',async()=>{
+  const f=fixture();await f.begin();
+  const base='/video/fmp4/717461554/h264_aac_hd/1/manifest.m3u8';
+  const first='https://vod3.cf.dmcdn.net/old-token'+base;
+  const fresh='https://vod4.cf.dmcdn.net/new-token'+base;
+  const details={responseHeaders:[{name:'Content-Type',value:'application/vnd.apple.mpegurl'}]};
+  await f.capture(f.request(first,details));const id=(await f.manager.status()).items[0].id;
+  await f.capture(f.request(fresh,details));
+  const items=(await f.manager.status()).items;assert.equal(items.length,1);assert.equal(items[0].id,id);assert.equal(items[0].url,fresh);
+  for(const url of [fresh.replace('h264_aac_hd','h264_aac_fhd'),fresh.replace('717461554','717461555'),
+    fresh+'?variant=other',fresh.replace('/video/','/cloud/'),'https://example.test/one'+base,'https://example.test/two'+base]) {
+    await f.capture(f.request(url,details));
+  }
+  assert.equal((await f.manager.status()).items.length,7);
+  await f.manager.review(7,id,{openScan:async scan=>assert.equal(scan.links[0].url,fresh)});
+});
+
+test('Dailymotion alternative playlists remain available when a rendition is observed',async()=>{
+  const f=fixture();await f.begin();
+  const entry='https://dmxleo.dailymotion.com/cdn/manifest/video/xbv62cq.m3u8?fixture=one';
+  const director='https://cdndirector.dailymotion.com/cdn/manifest/video/xbv62cq.m3u8?sec=fixture';
+  const stream='https://vod2.cf.dmcdn.net/token/cloud/fmp4/717479018/h264_aac_hd/1/manifest.m3u8';
+  const details={responseHeaders:[{name:'Content-Type',value:'application/vnd.apple.mpegurl'}]};
+  await f.capture(f.request(entry,details));await f.capture(f.request(director,details));
+  assert.equal((await f.manager.status()).items.length,2);
+  await f.capture(f.request(stream,details));
+  let items=(await f.manager.status()).items;assert.deepEqual(items.map(i=>i.url),[entry,director,stream]);
+  assert.equal(items[0].text,'HLS · player playlist');assert.equal(items[1].text,'HLS · alternate playlist');assert.equal(items[2].text,'HLS · HD');
+  await f.capture(f.request(entry,details));assert.equal((await f.manager.status()).items.length,3);assert.equal(f.badge(7),'3');
+  const another=entry.replace('xbv62cq','xatdymm');await f.capture(f.request(another,details));
+  assert.equal((await f.manager.status()).items.length,4,'Different videos must not be merged');
+  const anotherStream=stream.replace('/cloud/','/video/').replace('717479018','654022030').replace('h264_aac_hd','h264_aac_hq');
+  await f.capture(f.request(anotherStream,details));
+  items=(await f.manager.status()).items;assert.deepEqual(items.map(i=>i.url),[entry,director,stream,another,anotherStream]);assert.equal(items[4].text,'HLS · HQ');
+  await f.manager.review(7,items[0].id,{openScan:async scan=>assert.equal(scan.links[0].url,entry)});
+});
+
+test('restarting discovery cleans old Dailymotion fragments and repeated manifests from session storage',async()=>{
+  const f=fixture(),stream='https://vod2.cf.dmcdn.net/token/cloud/fmp4/717479018/h264_aac_hd/1/manifest.m3u8';
+  const urls=['https://cdndirector.dailymotion.com/cdn/manifest/video/xbv62cq.m3u8',stream,
+    stream.replace('manifest.m3u8','init.mp4'),stream.replace('/token/','/refreshed/')];
+  f.session['media-tab:7']={url:f.tabs.get(7).url,title:'Watch',updated:f.time,
+    items:urls.map((url,i)=>({url,id:String(i),seen:f.time-10+i}))};
+  await f.begin();const items=(await f.manager.status()).items;
+  assert.equal(items.length,2);assert.equal(items[0].url,urls[0]);assert.equal(items[1].id,'1');assert.equal(items[1].url,urls[3]);assert.equal(f.badge(7),'2');
 });
 
 test('media labels neutralize directional controls without splitting Unicode characters',()=>{
@@ -58,6 +129,38 @@ test('deduplicated tab list and badge use session storage without copying respon
 test('private, untabbed and unmatched responses never enter the list',async()=>{
   const f=fixture();await f.begin();await f.enable();await f.capture(f.request(undefined,{incognito:true}));await f.capture(f.request(undefined,{tabId:-1}));await f.headers(f.request());
   f.tabs.get(7).incognito=true;await f.capture(f.request());assert.deepEqual(f.session,{});
+});
+
+test('Firefox embedded-player HLS metadata reaches desktop review from an empty top page',async()=>{
+  require('../extension/page-links.js');require('../extension/video-button-manager.js');
+  const f=fixture(),requests=[],page='https://www.dailymotion.com/video/xbv5ovm';
+  f.tabs.get(7).url=page;
+  // Firefox MV2 exposes browserAction rather than action.
+  f.api.browserAction=f.api.action;delete f.api.action;
+  f.manager=new IDMMedia.Manager({api:f.api,now:()=>f.time,uuid:()=>String(++f.seq)});
+  f.api.scripting={executeScript:async spec=>{
+    assert.deepEqual(spec.target,{tabId:7,frameIds:[0]});
+    return [{frameId:0,documentId:'top-document',result:{url:page,title:'Embedded player',mode:spec.args[0],links:[]}}];
+  }};
+  const links=new IDMPageLinks.Manager({api:f.api,detected:tab=>f.manager.list(tab),
+    uuid:()=> '00000000-0000-4000-8000-000000000001',native:async request=>{
+      requests.push(request);return {ok:true,version:1,preview_id:request.request_id};
+    }});
+  const buttons=new IDMVideoButtons.Manager({api:f.api,pageLinks:links});
+  await f.begin();
+  const stream='https://cdn.test/stream/master.m3u8?fixture=public';
+  await f.capture(f.request(stream,{frameId:2,parentFrameId:0,originUrl:'https://geo.dailymotion.com/player/xtv3w.html',
+    responseHeaders:[{name:'Content-Type',value:'application/vnd.apple.mpegurl'}]}));
+  await buttons.open({frameId:0,url:page,tab:f.tabs.get(7),documentId:'top-document'});
+  assert.equal(requests.length,1);assert.equal(requests[0].action,'review_browser_video');
+  assert.equal(requests[0].review.page_url,page);
+  assert.deepEqual(requests[0].review.items.map(item=>({url:item.url,kind:item.kind})),[{url:stream,kind:'hls'}]);
+  assert.equal(f.session['pending-video-review'],undefined);
+  // No GET permission or stale responses from a previous top document may be reused.
+  const stale=f.request('https://cdn.test/stale.m3u8',{frameId:2});await f.before(stale);
+  f.tabs.get(7).url='https://www.dailymotion.com/video/next';
+  f.manager.navigated(7,{url:f.tabs.get(7).url});await f.manager.tail;await f.headers(stale);
+  assert.deepEqual(await f.manager.list(f.tabs.get(7)),[]);
 });
 test('navigation invalidates in-flight media even for a POST navigation',async()=>{
   const f=fixture();await f.begin();await f.enable();const old=f.request();await f.before(old);

@@ -73,6 +73,50 @@ function holdNativePing(api) {
   };
   return { started, release };
 }
+for(const variant of ['firefox','chromium']) {
+  for(const compatible of [true,false]) test(variant+': browser-readable metadata sends '+(compatible?'grouped alternatives':'separate streams for an older desktop')+' in the actual native message',async()=>{
+    const {state,api}=background(variant,{},true);await flush();
+    const tab={id:7,url:'https://www.dailymotion.com/video/xbv5ovm'};
+    const primary='https://cdndirector.dailymotion.com/cdn/manifest/video/xbv5ovm.m3u8?token=SECRET';
+    const alternate='https://vod.dmcdn.net/cloud/fmp4/717461554/h264_aac_hd/1/manifest.m3u8?token=SECRET';
+    api.tabs.get=async()=>({...tab});api.tabs.query=async()=>[{...tab}];
+    api.scripting={executeScript:async()=>[{frameId:0,result:{url:tab.url,title:'Fixture video',mode:'videos',links:[]}}]};
+    let fetches=0;
+    state.fetch=async()=>++fetches===1?new Response(JSON.stringify({qualities:{auto:[{url:primary}]}}),{headers:{'content-type':'application/json'}}):new Response('#EXTM3U\n#EXTINF:1,\nvideo.ts\n#EXT-X-ENDLIST');
+    const captured={requestId:'dm',tabId:7,method:'GET',type:'xmlhttprequest',statusCode:200,url:alternate,responseHeaders:[{name:'content-type',value:'video/mp4'}]};
+    api.webRequest.onBeforeRequest.emit(captured);api.webRequest.onHeadersReceived.emit(captured);await flush();
+    api.runtime.sendNativeMessage=async(host,request)=>{state.native.push(request);return {ok:true,version:1,preview_id:request.request_id,capabilities:compatible?['browser_video_alternatives_v1']:[]};};
+    const result=await state.request({action:'scan_videos'});assert(result.ok,result.message);
+    assert.equal(state.native.length,2);assert.equal(state.native[0].action,'ping');
+    const items=state.native[1].review.items;
+    assert.equal(items.length,compatible?1:2);
+    if(compatible)assert.deepEqual(Array.from(items[0].fallback_urls),[alternate]);
+    else { assert.deepEqual(Array.from(items,item=>item.url),[primary,alternate]);assert(items.every(item=>!Object.hasOwn(item,'fallback_urls'))); }
+    const log=await state.request({action:'diagnostics_get'});
+    assert(log.trace.some(row=>row.message.includes('Same-video alternatives retained for desktop preview; tab=7, count=1')));
+    assert(!JSON.stringify(log).includes('SECRET'));
+  });
+  for(const fallback of [false,true]) test(variant+': Dailymotion review uses '+(fallback?'browser fallback after blocked metadata playlist':'validated metadata')+' and exposes a redacted trace',async()=>{
+    const {state,api}=background(variant,{},true);await flush();
+    const tab={id:7,url:'https://www.dailymotion.com/video/xbv5ovm'};
+    api.tabs.get=async()=>({...tab});api.tabs.query=async()=>[{...tab}];
+    api.scripting={executeScript:async()=>[{frameId:0,result:{url:tab.url,title:'Fixture video',mode:'videos',links:[]}}]};
+    let fetches=0;
+    state.fetch=async()=>++fetches===1?new Response(JSON.stringify({qualities:{auto:[{url:'https://cdndirector.dailymotion.com/master.m3u8?token=SECRET'}]}}),{headers:{'content-type':'application/json'}}):
+      fallback?new Response('',{status:403}):new Response('#EXTM3U\n#EXTINF:1,\nvideo.ts\n#EXT-X-ENDLIST');
+    if(fallback){const d={requestId:'dm',tabId:7,method:'GET',type:'xmlhttprequest',statusCode:200,url:'https://vod.dmcdn.net/browser/manifest.m3u8?token=SECRET',responseHeaders:[{name:'content-type',value:'video/mp4'}]};api.webRequest.onBeforeRequest.emit(d);api.webRequest.onHeadersReceived.emit(d);await flush();}
+    api.runtime.sendNativeMessage=async(host,request)=>{state.native.push(request);return {ok:true,version:1,preview_id:request.request_id,message:'Review opened'};};
+    const reply=await state.request({action:'scan_videos'});assert(reply.ok,reply.message);
+    assert.equal(state.native.length,1);assert.equal(state.native[0].review.items.length,1);
+    assert.equal(state.native[0].review.items[0].kind,'hls');
+    assert.match(state.native[0].review.items[0].url,fallback?/browser/:/master/);
+    const log=await state.request({action:'diagnostics_get'});
+    assert(!JSON.stringify(log).includes('SECRET'));assert(!JSON.stringify(log).includes(tab.url));
+    assert(log.trace.some(row=>row.message.includes(fallback?'Using browser detection fallback':'Dailymotion metadata resolved')));
+    assert(log.trace.some(row=>row.message.includes('Desktop accepted video review; count=1')));
+    await state.request({action:'diagnostics_clear'});assert.equal((await state.request({action:'diagnostics_get'})).trace.length,0);
+  });
+}
 for (const variant of ["chromium", "firefox"]) {
   test(variant + ": fresh install captures clicked downloads and detects media without toggling", async () => {
     const { state, downloads, item } = background(variant, {}, true);
@@ -233,10 +277,10 @@ function background(variant, values = {}, granted = false) {
   };
   Object.defineProperty(api, "downloads", { get: () => state.granted ? downloads : undefined });
   const context = vm.createContext({ [variant === "firefox" ? "browser" : "chrome"]: api,
-    URL, performance, structuredClone, TextEncoder, crypto: { randomUUID: () => "random" }, setTimeout, clearTimeout, console });
+    URL, performance, structuredClone, TextEncoder, TextDecoder, AbortController, fetch: (...args) => state.fetch(...args), crypto: { randomUUID: () => "random" }, setTimeout, clearTimeout, console });
   const load = name => vm.runInContext(fs.readFileSync(path.join(__dirname, "../extension", name), "utf8"), context, { filename: name });
   if (variant === "chromium") context.importScripts = (...files) => files.forEach(load);
-  else { load("core.js"); load("capture.js"); load("link-recovery.js"); load("page-links.js"); load("browser-login.js"); load("video-button-manager.js"); load("github-download.js"); load("media.js"); load("permission-flow.js"); }
+  else { load("core.js"); load("capture.js"); load("link-recovery.js"); load("page-links.js"); load("browser-login.js"); load("video-button-manager.js"); load("github-download.js"); load("media.js"); load("media-diagnostics.js"); load("dailymotion.js"); load("permission-flow.js"); }
   load("background.js");
   state.request = message => new Promise(resolve => {
     const handled = api.runtime.onMessage.emit(message, {
@@ -440,7 +484,9 @@ for (const variant of ["chromium", "firefox"]) {
     api.webRequest.onBeforeRequest.emit(details);api.webRequest.onHeadersReceived.emit(details);await flush();
     assert.equal((await state.request({action:'media_status'})).items.length,1);
     state.granted=false;api.permissions.onRemoved.emit({permissions:['webRequest']});await flush();
-    assert.equal((await state.request({action:'media_status'})).enabled,false);assert.deepEqual(state.session,{});assert.equal(state.native.length,0);
+    assert.equal((await state.request({action:'media_status'})).enabled,false);
+    assert.deepEqual(Object.keys(state.session).filter(key=>key!=='mediaDiagnostics'),[]);
+    assert(!JSON.stringify(state.session).includes('example.test'));assert.equal(state.native.length,0);
   });
   test(variant + ": page collection and batch commands require their exact extension page", async () => {
     const { state, api } = background(variant);

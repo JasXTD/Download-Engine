@@ -1,3 +1,9 @@
+## 3.19.1 — 2026-11-10
+
+- Correction de la détection des vidéos Dailymotion et du bouton de téléchargement. Si un lien échoue, l’application essaie une autre liste de lecture de la même vidéo. Les journaux de diagnostic sont améliorés sans enregistrer de données sensibles.
+
+[English details](../../../CHANGELOG.md#3191--2026-11-10)
+
 ## 3.19.0 — 2026-11-08
 
 ### BitTorrent v2 et torrents hybrides

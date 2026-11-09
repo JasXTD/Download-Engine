@@ -412,6 +412,477 @@ async fn pause_at_part(server: &Server, store: &Store, job: Job, part: &hls::Par
 }
 
 #[tokio::test]
+async fn stream_inspection_rejects_error_pages_without_calling_them_dash() {
+    let server = Server::new().await;
+    let cancel = CancellationToken::new();
+    for body in [
+        "<html><body>Expired link</body></html>",
+        "<!DOCTYPE html><html><body>Sign in</body></html>",
+        "<?xml version=\"1.0\"?><Error><Code>ExpiredToken</Code></Error>",
+        "<!-- <MPD/> --><html><MPD/></html>",
+        "{\"error\":\"expired\"}",
+        "",
+    ] {
+        for path in ["/manifest.m3u8", "/manifest.mpd", "/opaque"] {
+            server.set(path, Reply::bytes(body));
+            let error = hls::inspect(&server.url(path), &cancel)
+                .await
+                .unwrap_err()
+                .to_string();
+            assert!(error.contains("did not return a video playlist"), "{error}");
+            assert!(!error.contains("DASH"), "{error}");
+            assert!(
+                !error.contains("ExpiredToken"),
+                "Do not echo server content"
+            );
+        }
+    }
+}
+
+#[tokio::test]
+async fn browser_alternatives_recover_native_rejection_and_download_the_selected_source_once() {
+    let server = Server::new().await;
+    let (_temp, store) = fixture();
+    server.set(
+        "/metadata.m3u8",
+        Reply {
+            status: 403,
+            ..Reply::bytes("private server message")
+        },
+    );
+    server.set(
+        "/player.m3u8",
+        Reply {
+            status: 401,
+            ..Reply::bytes([])
+        },
+    );
+    server.set("/cdn.m3u8", Reply::bytes(media(&["part.ts"])));
+    let bytes = ts(12, 4);
+    server.set("/part.ts", Reply::bytes(&bytes));
+    let inspection = hls::inspect_candidates_via(
+        &server.url("/metadata.m3u8"),
+        &[server.url("/player.m3u8"), server.url("/cdn.m3u8")],
+        Some("http://page.example.test/watch?private=secret"),
+        false,
+        &CancellationToken::new(),
+        download_engine::proxy::Route::direct(),
+    )
+    .await
+    .unwrap();
+    assert_eq!(inspection.source, server.url("/cdn.m3u8"));
+    assert_eq!(
+        inspection.playlist.as_ref().unwrap().source,
+        inspection.source
+    );
+    assert_eq!(
+        server.count("/part.ts"),
+        0,
+        "a review must not download media"
+    );
+    assert!(store.list().unwrap().is_empty());
+    // A captured rendition is already a media playlist; the desktop uses it
+    // directly instead of asking a master playlist for a numbered quality.
+    let preview = inspection.playlist.unwrap();
+    let job = enqueue(&store, &preview);
+    let saved = run(&store, job).await;
+    assert_eq!(saved.status, Status::Complete, "{:?}", saved.error);
+    assert_eq!(std::fs::read(saved.saved_path.unwrap()).unwrap(), bytes);
+    assert_eq!(store.list().unwrap().len(), 1);
+    assert_eq!(server.count("/metadata.m3u8"), 1);
+    assert_eq!(server.count("/player.m3u8"), 1);
+    for request in server.requests.lock().unwrap().iter().take(3) {
+        let request = request.to_ascii_lowercase();
+        assert!(request.contains("referer: http://page.example.test/\r\n"));
+        assert!(
+            !request.contains("cookie:")
+                && !request.contains("authorization:")
+                && !request.contains("private=secret")
+        );
+    }
+}
+
+#[tokio::test]
+async fn browser_alternatives_report_real_http_status_without_claiming_login_or_leaking_content() {
+    let server = Server::new().await;
+    server.set(
+        "/one?token=secret",
+        Reply {
+            status: 403,
+            ..Reply::bytes("SECRET response")
+        },
+    );
+    server.set(
+        "/two",
+        Reply {
+            status: 401,
+            ..Reply::bytes([])
+        },
+    );
+    let error = hls::inspect_candidates_via(
+        &server.url("/one?token=secret"),
+        &[server.url("/two")],
+        None,
+        false,
+        &CancellationToken::new(),
+        download_engine::proxy::Route::direct(),
+    )
+    .await
+    .unwrap_err();
+    let text = format!("{error:#}");
+    assert!(
+        text.contains("2 same-video attempts") && text.contains("HTTP 401"),
+        "{text}"
+    );
+    assert!(!text.contains("requires login") && !text.to_lowercase().contains("secret"));
+    let direct = hls::inspect(&server.url("/one?token=secret"), &CancellationToken::new())
+        .await
+        .unwrap_err();
+    assert_eq!(
+        download_engine::diagnostics::Failure::error(&direct).http_status,
+        Some(403)
+    );
+    assert_eq!(server.count("/two"), 1);
+}
+
+#[tokio::test]
+async fn browser_alternatives_skip_nonplaylist_responses_and_download_once() {
+    let server = Server::new().await;
+    let (_temp, store) = fixture();
+    server.set("/good.m3u8", Reply::bytes(media(&["part.ts"])));
+    let bytes = ts(12, 5);
+    server.set("/part.ts", Reply::bytes(&bytes));
+    let mut selected = None;
+    for body in [
+        "<!DOCTYPE html><html>Private error response</html>",
+        "<?xml version=\"1.0\"?><Error>Private error response</Error>",
+        "{\"error\":\"private error response\"}",
+        "",
+    ] {
+        server.set("/entry.m3u8", Reply::bytes(body));
+        let inspection = hls::inspect_candidates_via(
+            &server.url("/entry.m3u8"),
+            &[server.url("/good.m3u8"), server.url("/unused")],
+            Some("http://page.example.test/watch"),
+            false,
+            &CancellationToken::new(),
+            download_engine::proxy::Route::direct(),
+        )
+        .await
+        .unwrap();
+        assert_eq!(inspection.source, server.url("/good.m3u8"));
+        assert_eq!(
+            inspection.page.as_deref(),
+            Some("http://page.example.test/watch")
+        );
+        assert_eq!(
+            inspection.playlist.as_ref().unwrap().source,
+            inspection.source
+        );
+        selected = inspection.playlist;
+    }
+    assert_eq!(server.count("/entry.m3u8"), 4);
+    assert_eq!(server.count("/good.m3u8"), 4);
+    assert_eq!(server.count("/unused"), 0);
+    assert_eq!(
+        server.count("/part.ts"),
+        0,
+        "inspection must not download media"
+    );
+    assert!(store.list().unwrap().is_empty());
+    let saved = run(&store, enqueue(&store, &selected.unwrap())).await;
+    assert_eq!(saved.status, Status::Complete, "{:?}", saved.error);
+    assert_eq!(std::fs::read(saved.saved_path.unwrap()).unwrap(), bytes);
+    assert_eq!(store.list().unwrap().len(), 1);
+}
+
+#[tokio::test]
+async fn browser_alternatives_report_nonplaylist_exhaustion_without_leaking_content() {
+    let server = Server::new().await;
+    server.set("/entry", Reply::bytes("<html>SECRET response</html>"));
+    server.set(
+        "/blocked",
+        Reply {
+            status: 403,
+            ..Reply::bytes("SECRET response")
+        },
+    );
+    server.set("/empty", Reply::bytes([]));
+    let error = hls::inspect_candidates_via(
+        &server.url("/entry"),
+        &[server.url("/blocked"), server.url("/empty")],
+        None,
+        false,
+        &CancellationToken::new(),
+        download_engine::proxy::Route::direct(),
+    )
+    .await
+    .unwrap_err();
+    let message = format!("{error:#}");
+    assert!(message.contains("3 same-video attempts"), "{message}");
+    assert!(
+        message.contains("did not return a video playlist"),
+        "{message}"
+    );
+    assert!(!message.contains("SECRET") && !message.contains(&server.base));
+    assert_eq!(server.count("/entry"), 1);
+    assert_eq!(server.count("/blocked"), 1);
+    assert_eq!(server.count("/empty"), 1);
+}
+
+#[tokio::test]
+async fn browser_alternatives_do_not_hide_invalid_manifests_or_bypass_network_scope() {
+    let server = Server::new().await;
+    let other = Server::new().await;
+    server.set(
+        "/blocked",
+        Reply {
+            status: 403,
+            ..Reply::bytes([])
+        },
+    );
+    server.set("/good", Reply::bytes(media(&["part.ts"])));
+    other.set("/private", Reply::bytes(media(&["part.ts"])));
+    for body in [
+        "#EXTM3U\n#EXT-X-KEY:METHOD=AES-128,URI=\"key\"\n#EXTINF:6,\npart.ts\n#EXT-X-ENDLIST\n",
+        "#EXTM3U\n#EXT-X-STREAM-INF:BANDWIDTH=invalid\npart.m3u8\n",
+        "<!DOCTYPE MPD SYSTEM \"external\"><MPD/>",
+        "<p:MPD/>",
+    ] {
+        server.set("/invalid", Reply::bytes(body));
+        let error = hls::inspect_candidates_via(
+            &server.url("/invalid"),
+            &[server.url("/good")],
+            None,
+            false,
+            &CancellationToken::new(),
+            download_engine::proxy::Route::direct(),
+        )
+        .await
+        .unwrap_err();
+        assert!(
+            !error
+                .to_string()
+                .contains("did not return a video playlist")
+        );
+        assert_eq!(
+            server.count("/good"),
+            0,
+            "invalid or protected playlists must stay fatal"
+        );
+    }
+    assert_eq!(server.count("/key"), 0);
+    assert_eq!(server.count("/part.ts"), 0);
+    assert_eq!(server.count("/part.m3u8"), 0);
+    assert_eq!(server.count("/external"), 0);
+    let error = hls::inspect_candidates_via(
+        &server.url("/blocked"),
+        &[other.url("/private"), server.url("/good")],
+        None,
+        false,
+        &CancellationToken::new(),
+        download_engine::proxy::Route::direct(),
+    )
+    .await
+    .unwrap_err();
+    assert!(format!("{error:#}").contains("different local or special-use server"));
+    assert_eq!(other.count("/private"), 0);
+    assert_eq!(server.count("/good"), 0);
+    assert!(
+        hls::inspect_candidates_via(
+            &server.url("/good"),
+            &[],
+            None,
+            true,
+            &CancellationToken::new(),
+            download_engine::proxy::Route::direct()
+        )
+        .await
+        .is_err()
+    );
+    assert_eq!(
+        server.count("/good"),
+        0,
+        "public-only discovery must refuse local roots"
+    );
+}
+
+#[tokio::test]
+async fn browser_alternatives_stop_when_cancelled_after_a_nonplaylist_response() {
+    let server = Server::new().await;
+    server.set("/entry", Reply::bytes("<html>Not a playlist</html>"));
+    server.set(
+        "/slow",
+        Reply {
+            gate: Some(Arc::new(tokio::sync::Semaphore::new(0))),
+            ..Reply::bytes(media(&["part.ts"]))
+        },
+    );
+    let cancel = CancellationToken::new();
+    let primary = server.url("/entry");
+    let alternatives = [server.url("/slow"), server.url("/unused")];
+    let future = hls::inspect_candidates_via(
+        &primary,
+        &alternatives,
+        None,
+        false,
+        &cancel,
+        download_engine::proxy::Route::direct(),
+    );
+    let cancel_after_fallback = async {
+        tokio::time::timeout(Duration::from_secs(2), async {
+            while server.count("/slow") == 0 {
+                tokio::task::yield_now().await;
+            }
+        })
+        .await
+        .unwrap();
+        cancel.cancel();
+    };
+    let (result, ()) = tokio::time::timeout(Duration::from_secs(4), async {
+        tokio::join!(future, cancel_after_fallback)
+    })
+    .await
+    .unwrap();
+    assert!(result.unwrap_err().to_string().contains("cancelled"));
+    assert_eq!(server.count("/entry"), 1);
+    assert_eq!(server.count("/slow"), 1);
+    assert_eq!(server.count("/unused"), 0);
+    assert_eq!(server.count("/part.ts"), 0);
+}
+
+#[tokio::test]
+async fn browser_alternatives_validate_bounds_and_cancel_without_extra_requests() {
+    let server = Server::new().await;
+    let cancel = CancellationToken::new();
+    for alternatives in [
+        vec![server.url("/other"); 5],
+        vec![server.url("/other"); 2],
+        vec!["file:///private.m3u8".into()],
+    ] {
+        assert!(
+            hls::inspect_candidates_via(
+                &server.url("/start"),
+                &alternatives,
+                None,
+                false,
+                &cancel,
+                download_engine::proxy::Route::direct()
+            )
+            .await
+            .is_err()
+        );
+    }
+    assert!(server.requests.lock().unwrap().is_empty());
+    let gate = Arc::new(tokio::sync::Semaphore::new(0));
+    server.set(
+        "/slow",
+        Reply {
+            gate: Some(gate),
+            ..Reply::bytes(media(&["part.ts"]))
+        },
+    );
+    let primary = server.url("/slow");
+    let alternatives = [server.url("/unused")];
+    let future = hls::inspect_candidates_via(
+        &primary,
+        &alternatives,
+        None,
+        false,
+        &cancel,
+        download_engine::proxy::Route::direct(),
+    );
+    tokio::pin!(future);
+    let cancel_after_request = async {
+        tokio::time::timeout(Duration::from_secs(2), async {
+            while server.count("/slow") == 0 {
+                tokio::task::yield_now().await;
+            }
+        })
+        .await
+        .unwrap();
+        cancel.cancel();
+    };
+    let (result, ()) = tokio::join!(future, cancel_after_request);
+    assert!(result.unwrap_err().to_string().contains("cancelled"));
+    assert_eq!(server.count("/unused"), 0);
+    assert!(
+        hls::inspect_candidates_via(
+            &primary,
+            &alternatives,
+            None,
+            false,
+            &cancel,
+            download_engine::proxy::Route::direct()
+        )
+        .await
+        .is_err()
+    );
+    assert_eq!(server.count("/slow"), 1);
+}
+
+#[tokio::test]
+async fn stream_inspection_preserves_dash_xml_security_checks() {
+    let server = Server::new().await;
+    let cancel = CancellationToken::new();
+    for (body, expected) in [
+        (
+            format!(
+                "<!DOCTYPE MPD SYSTEM \"{}\"><MPD/>",
+                server.url("/external")
+            ),
+            "document types",
+        ),
+        (
+            "<?custom processing?><MPD/>".into(),
+            "processing instructions",
+        ),
+        ("<p:MPD/>".into(), "undeclared namespace"),
+    ] {
+        server.set("/opaque", Reply::bytes(body));
+        let error = hls::inspect(&server.url("/opaque"), &cancel)
+            .await
+            .unwrap_err()
+            .to_string();
+        assert!(error.contains(expected), "{error}");
+    }
+    assert_eq!(server.requests.lock().unwrap().len(), 3);
+    assert_eq!(server.count("/external"), 0);
+}
+
+#[tokio::test]
+async fn stream_inspection_uses_manifest_content_despite_unreliable_url_or_mime() {
+    let server = Server::new().await;
+    let cancel = CancellationToken::new();
+    let playlist = "#EXTM3U\n#EXT-X-VERSION:7\n#EXT-X-TARGETDURATION:6\n#EXT-X-MEDIA-SEQUENCE:0\n#EXT-X-PLAYLIST-TYPE:VOD\n#EXT-X-MAP:URI=\"init.mp4\"\n#EXTINF:6,\n1.m4s\n#EXTINF:2,\n2.m4s\n#EXT-X-ENDLIST\n";
+    for path in ["/manifest.m3u8", "/misleading.mpd", "/opaque"] {
+        server.set(
+            path,
+            Reply {
+                headers: "Content-Type: video/mp4\r\n".into(),
+                ..Reply::bytes(playlist)
+            },
+        );
+        let inspection = hls::inspect(&server.url(path), &cancel).await.unwrap();
+        let parsed = inspection.playlist.unwrap();
+        assert_eq!(parsed.media_count(), 2);
+        assert_eq!(parsed.parts.len(), 3);
+        assert!(parsed.parts[0].initialization);
+        assert!(inspection.dash.is_none());
+    }
+    let mpd = "\u{feff}<?xml version=\"1.0\"?><!-- player manifest --><d:MPD xmlns:d=\"urn:mpeg:dash:schema:mpd:2011\" type=\"static\" mediaPresentationDuration=\"PT6S\"><d:Period><d:AdaptationSet mimeType=\"video/mp4\" codecs=\"avc1.64001e\"><d:SegmentTemplate duration=\"2\" initialization=\"init.mp4\" media=\"part-$Number$.m4s\"/><d:Representation id=\"v\" bandwidth=\"1000000\" width=\"640\" height=\"360\"/></d:AdaptationSet></d:Period></d:MPD>";
+    server.set("/opaque", Reply::bytes(mpd));
+    let inspection = hls::inspect(&server.url("/opaque"), &cancel).await.unwrap();
+    assert!(inspection.dash.is_some());
+    assert_eq!(inspection.variants.len(), 1);
+    assert_eq!(
+        server.requests.lock().unwrap().len(),
+        4,
+        "Inspection must not fetch media pieces"
+    );
+}
+
+#[tokio::test]
 async fn quality_preview_fetches_no_segments_or_jobs_until_reviewed_and_downloads_exact_selected_bytes()
  {
     let server = Server::new().await;

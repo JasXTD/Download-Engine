@@ -278,6 +278,8 @@ Source: "{#SourceRoot}\extension\torrent-links.js"; DestDir: "{app}\extensions\c
 Source: "{#SourceRoot}\extension\github-download.js"; DestDir: "{app}\extensions\chrome"; Flags: ignoreversion
 Source: "{#SourceRoot}\extension\link-recovery.js"; DestDir: "{app}\extensions\chrome"; Flags: ignoreversion
 Source: "{#SourceRoot}\extension\media.js"; DestDir: "{app}\extensions\chrome"; Flags: ignoreversion
+Source: "{#SourceRoot}\extension\media-diagnostics.js"; DestDir: "{app}\extensions\chrome"; Flags: ignoreversion
+Source: "{#SourceRoot}\extension\dailymotion.js"; DestDir: "{app}\extensions\chrome"; Flags: ignoreversion
 Source: "{#SourceRoot}\extension\permission-flow.js"; DestDir: "{app}\extensions\chrome"; Flags: ignoreversion
 Source: "{#SourceRoot}\extension\background.js"; DestDir: "{app}\extensions\chrome"; Flags: ignoreversion
 Source: "{#SourceRoot}\extension\popup.html"; DestDir: "{app}\extensions\chrome"; Flags: ignoreversion
@@ -299,6 +301,8 @@ Source: "{#SourceRoot}\extension\torrent-links.js"; DestDir: "{app}\extensions\e
 Source: "{#SourceRoot}\extension\github-download.js"; DestDir: "{app}\extensions\edge"; Flags: ignoreversion
 Source: "{#SourceRoot}\extension\link-recovery.js"; DestDir: "{app}\extensions\edge"; Flags: ignoreversion
 Source: "{#SourceRoot}\extension\media.js"; DestDir: "{app}\extensions\edge"; Flags: ignoreversion
+Source: "{#SourceRoot}\extension\media-diagnostics.js"; DestDir: "{app}\extensions\edge"; Flags: ignoreversion
+Source: "{#SourceRoot}\extension\dailymotion.js"; DestDir: "{app}\extensions\edge"; Flags: ignoreversion
 Source: "{#SourceRoot}\extension\permission-flow.js"; DestDir: "{app}\extensions\edge"; Flags: ignoreversion
 Source: "{#SourceRoot}\extension\background.js"; DestDir: "{app}\extensions\edge"; Flags: ignoreversion
 Source: "{#SourceRoot}\extension\popup.html"; DestDir: "{app}\extensions\edge"; Flags: ignoreversion
@@ -320,6 +324,8 @@ Source: "{#SourceRoot}\extension\torrent-links.js"; DestDir: "{app}\extensions\b
 Source: "{#SourceRoot}\extension\github-download.js"; DestDir: "{app}\extensions\brave"; Flags: ignoreversion
 Source: "{#SourceRoot}\extension\link-recovery.js"; DestDir: "{app}\extensions\brave"; Flags: ignoreversion
 Source: "{#SourceRoot}\extension\media.js"; DestDir: "{app}\extensions\brave"; Flags: ignoreversion
+Source: "{#SourceRoot}\extension\media-diagnostics.js"; DestDir: "{app}\extensions\brave"; Flags: ignoreversion
+Source: "{#SourceRoot}\extension\dailymotion.js"; DestDir: "{app}\extensions\brave"; Flags: ignoreversion
 Source: "{#SourceRoot}\extension\permission-flow.js"; DestDir: "{app}\extensions\brave"; Flags: ignoreversion
 Source: "{#SourceRoot}\extension\background.js"; DestDir: "{app}\extensions\brave"; Flags: ignoreversion
 Source: "{#SourceRoot}\extension\popup.html"; DestDir: "{app}\extensions\brave"; Flags: ignoreversion
@@ -341,6 +347,8 @@ Source: "{#SourceRoot}\extension\torrent-links.js"; DestDir: "{app}\extensions\f
 Source: "{#SourceRoot}\extension\github-download.js"; DestDir: "{app}\extensions\firefox"; Flags: ignoreversion
 Source: "{#SourceRoot}\extension\link-recovery.js"; DestDir: "{app}\extensions\firefox"; Flags: ignoreversion
 Source: "{#SourceRoot}\extension\media.js"; DestDir: "{app}\extensions\firefox"; Flags: ignoreversion
+Source: "{#SourceRoot}\extension\media-diagnostics.js"; DestDir: "{app}\extensions\firefox"; Flags: ignoreversion
+Source: "{#SourceRoot}\extension\dailymotion.js"; DestDir: "{app}\extensions\firefox"; Flags: ignoreversion
 Source: "{#SourceRoot}\extension\permission-flow.js"; DestDir: "{app}\extensions\firefox"; Flags: ignoreversion
 Source: "{#SourceRoot}\extension\background.js"; DestDir: "{app}\extensions\firefox"; Flags: ignoreversion
 Source: "{#SourceRoot}\extension\popup.html"; DestDir: "{app}\extensions\firefox"; Flags: ignoreversion

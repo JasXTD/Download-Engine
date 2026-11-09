@@ -1,3 +1,9 @@
+## 3.19.1 — 2026-11-10
+
+- Rettet Dailymotion-gjenkjenning og nedlastingsknappen. Hvis en lenke ikke kan brukes, prøver appen en alternativ spilleliste for samme video. Diagnoseloggene er forbedret uten å lagre sensitive data.
+
+[English details](../../../CHANGELOG.md#3191--2026-11-10)
+
 ## 3.19.0 — 2026-11-08
 
 ### BitTorrent v2 og hybride torrenter

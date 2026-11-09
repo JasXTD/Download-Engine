@@ -1,6 +1,6 @@
 # Privacy policy
 
-Last updated: 2026-11-03
+Last updated: 2026-11-09
 
 This policy covers the official Download Engine project website, browser extensions
 and their integration with Download Engine for Windows, macOS and Linux. The project
@@ -31,6 +31,7 @@ for the hosting provider's practices.
 | File capture and link recovery | Download and source-page URLs, filenames, browser download identifiers, file types, reported sizes and handoff status | Send eligible downloads to the desktop app, recover interrupted handoffs and avoid duplicate downloads |
 | Page-link and video selection | Page URLs and titles, link text, filenames, image/audio/video resource addresses, media types and reported sizes | Show downloadable items, let you choose files and prepare video reviews |
 | Media detection | Media response URLs, content types, reported sizes and the associated tab | List detected media so you can decide what to download |
+| Dailymotion video lookup | The video ID from the page you choose, public metadata and bounded playlist responses | Resolve a video on request, validate its playlist and fall back to browser detection when unavailable |
 | Preferences and diagnostics | Language, capture filters, site choices, feature settings, timestamps, operation outcomes and diagnostic messages | Remember your choices and help diagnose connection or handoff failures |
 | Desktop downloads | URLs, filenames, save paths, queue details, progress and completion/error state | Store your downloads and resume or manage them later |
 | Optional browser login | Matching website authentication cookies, after permission and explicit approval | Allow the desktop app to make the approved authenticated file download |
@@ -51,6 +52,14 @@ bodies. User-requested page scans inspect links and media resources already
 present on that page. The on-page video control observes video elements and their
 layout. The extension does not record general keystrokes or build advertising
 profiles from browsing activity.
+
+When you request a video review on a Dailymotion video page, the extension
+contacts Dailymotion's public metadata endpoint and its HTTPS media hosts to
+check playlists. These requests omit browser cookies and referrers. No media
+segments are fetched by this lookup. Dailymotion and its CDN receive normal
+connection information, including your IP address and the requested video or
+playlist URL. The lookup runs only when requested, not during general browsing,
+and is unavailable in private/incognito windows.
 
 ## Transfers to the desktop app and websites
 
@@ -153,6 +162,10 @@ copy, use the desktop download's authentication controls or remove its job.
 - Local diagnostics keep bounded recent operation records. Extension diagnostic
   messages redact addresses and Windows paths, but you should still review any
   logs or screenshots before sharing them.
+  Media-discovery traces retain at most 120 events in browser session storage,
+  including counts, HTTP statuses, tab identifiers and fixed failure reasons.
+  They exclude URLs, page titles, cookies, tokens and response bodies, and can
+  be removed with **Clear log** in the extension popup.
 - Local crash reports contain app version, platform, component, timestamps and,
   for Rust panics, a relative code location when available. They exclude panic
   messages, download URLs/names, personal paths, credentials and process memory.

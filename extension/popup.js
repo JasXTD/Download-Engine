@@ -222,6 +222,7 @@ api.storage.onChanged?.addListener((changes, area) => {
       (area === "local" && changes.mediaDetection)) void refreshMedia().catch(error => show(false, error.message));
   if (area === "local" && (changes.videoButtonDisabledSites || changes.videoButtonPermissions)) void refreshVideoButton().catch(error => show(false,error.message));
   if (area === "local" && (changes.settingDiagnostics || changes.lastPopupError) && $("diagnostics").open) void refreshDiagnostics();
+  if (area === "session" && changes.mediaDiagnostics && $("diagnostics").open) void refreshDiagnostics();
 });
 api.permissions.onRemoved?.addListener(() => {
   permissionAccess.capture = permissionAccess.media = permissionAccess.video = false;
@@ -235,8 +236,12 @@ async function refreshDiagnostics(action = "diagnostics_get") {
     const reply = await api.runtime.sendMessage({ action });
     if (!reply?.ok || !Array.isArray(reply.entries)) throw Error(reply?.message || __xdL.t("Diagnostic log is unavailable. Reload the extension."));
     const labels = { capture: __xdL.t("Automatic capture"), media: __xdL.t("Media detection"), video: __xdL.t("Video button"), connection: __xdL.t("Connection check"), review: __xdL.t("Video review"), recovery: __xdL.t("Link recovery") };
-    $("diagnostic-log").value = reply.entries.length ? reply.entries.map(entry =>
-      new Date(entry.time).toISOString() + " | " + (labels[entry.setting] || __xdL.t("Setting")) + (typeof entry.enabled === "boolean" ? " → " + (entry.enabled ? "on" : "off") : "") + " | " + (entry.ok ? "OK" : "ERROR") + "\n" + entry.message).join("\n\n") : __xdL.t("No activity recorded yet.");
+    const entries = reply.entries.map(entry => ({ time: entry.time, message:
+      (labels[entry.setting] || __xdL.t("Setting")) + (typeof entry.enabled === "boolean" ? " → " + (entry.enabled ? "on" : "off") : "") + " | " + (entry.ok ? "OK" : "ERROR") + "\n" + entry.message }));
+    entries.push(...(Array.isArray(reply.trace) ? reply.trace : []));
+    entries.sort((a, b) => a.time - b.time);
+    $("diagnostic-log").value = (reply.traceError ? __xdL.t("Discovery logging is unavailable. Reload the extension to retry.") + "\n\n" : "") +
+      (entries.length ? entries.map(entry => new Date(entry.time).toISOString() + " | " + entry.message).join("\n\n") : __xdL.t("No activity recorded yet."));
   } catch (error) { $("diagnostic-log").value = error.message; }
 }
 $("diagnostics").addEventListener("toggle", () => { if ($("diagnostics").open) void refreshDiagnostics(); });

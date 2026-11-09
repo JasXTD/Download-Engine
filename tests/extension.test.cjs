@@ -2,6 +2,34 @@ const { test } = require("node:test");
 const assert = require("node:assert/strict");
 require("../extension/core.js");
 const { normalizeUrl, makeRequest, handoff } = globalThis.IDMCore;
+test('Windows and Unix packaging include both discovery modules and Firefox loads them before background',()=>{
+  const fs=require('node:fs'),path=require('node:path');
+  const manifest=require('../extension/manifest.firefox.json');
+  for(const module of ['dailymotion.js','media-diagnostics.js']){
+    assert(manifest.background.scripts.indexOf(module)>=0);
+    assert(manifest.background.scripts.indexOf(module)<manifest.background.scripts.indexOf('background.js'));
+    for(const script of ['Package.ps1','Package-Unix.sh'])assert(fs.readFileSync(path.join(__dirname,'../scripts',script),'utf8').includes(module));
+  }
+});
+test("Windows installer includes every background script in each browser payload", () => {
+  const fs = require("node:fs"), path = require("node:path");
+  const root = path.join(__dirname, "..");
+  const installer = fs.readFileSync(path.join(root, "installer/DownloadEngine.iss"), "utf8");
+  const background = fs.readFileSync(path.join(root, "extension/background.js"), "utf8");
+  const imports = JSON.parse("[" + /importScripts\(([^)]+)\)/.exec(background)[1] + "]");
+  for (const browser of ["chrome", "edge", "brave", "firefox"]) {
+    const variant = browser === "firefox" ? "firefox" : "chromium";
+    const manifest = require("../extension/manifest." + variant + ".json");
+    const scripts = manifest.background.scripts || [manifest.background.service_worker, ...imports];
+    const entries = new Set();
+    for (const line of installer.split(/\r?\n/)) {
+      const entry = /^Source: "\{#SourceRoot\}\\extension\\([^"\\]+\.js)"; DestDir: "\{app\}\\extensions\\([^"]+)";/.exec(line);
+      if (entry?.[2] === browser) entries.add(entry[1]);
+    }
+    for (const script of scripts) assert(entries.has(script), `${browser} installer payload is missing ${script}`);
+  }
+});
+
 test("v2 and hybrid magnets keep full identities and require review", () => {
   const v1="urn:btih:"+"ab".repeat(20),v2="urn:btmh:1220"+"cd".repeat(32);
   for(const topic of [v2,v1+"&xt="+v2,v2.toUpperCase(),"urn:btih:c12fe1c06bba254a9dc9f519b335aa7c1367a88a&xt=URN:BTIH:YEX6DQDLXISUVHOJ6UM3GNNKPQJWPKEK"]) {
@@ -109,12 +137,14 @@ test("extension and native registration use the same branded identities", () => 
 
 
 
-test("extension pages permit only local scripts and no web requests or embedded objects", () => {
+test("extension pages permit local scripts and only Dailymotion metadata/CDN connections", () => {
   for (const variant of ["chromium", "firefox"]) {
     const manifest = require("../extension/manifest." + variant + ".json");
     const policy = variant === "chromium" ? manifest.content_security_policy.extension_pages : manifest.content_security_policy;
     for (const directive of ["default-src 'none'", "script-src 'self'", "object-src 'none'",
-      "connect-src 'none'", "base-uri 'none'", "form-action 'none'"]) assert(policy.includes(directive));
+      "base-uri 'none'", "form-action 'none'"]) assert(policy.includes(directive));
+    assert.equal(policy.split(';').map(part=>part.trim()).find(part=>part.startsWith('connect-src ')),
+      'connect-src https://www.dailymotion.com https://*.dailymotion.com https://dmcdn.net https://*.dmcdn.net');
     assert(!policy.includes("unsafe-inline") && !policy.includes("unsafe-eval"));
     assert.equal(manifest.externally_connectable, undefined);
     assert.equal(manifest.web_accessible_resources, undefined);

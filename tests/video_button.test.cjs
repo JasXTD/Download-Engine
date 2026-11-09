@@ -140,7 +140,7 @@ test('content UI exits before observing a private document',()=>{
 
 // Fake layout: a button is 40 px plus 7 px per character of its label.
 const fakeWidth=text=>40+7*text.length;
-async function contentFixture(rectangles,site={hostname:'example.test',pathname:'/video'},{translate}={}) {
+async function contentFixture(rectangles,site={hostname:'example.test',pathname:'/video'},{translate,frames=[]}={}) {
   const vm=require('node:vm'),fs=require('node:fs');
   const script=fs.readFileSync(require('node:path').join(__dirname,'../extension/video-button.js'),'utf8');
   const events={},timers=new Map(),buttons=[],hosts=[],replies=[];let sequence=0,enabled=true,permitted=true,changed;
@@ -149,10 +149,14 @@ async function contentFixture(rectangles,site={hostname:'example.test',pathname:
     attachShadow(){return{append:node=>{if(node.tagName==='button')buttons.push(node);}};}});
   const videos=rectangles.map(box=>({getBoundingClientRect:()=>({...box,width:box.right-box.left,height:box.bottom-box.top}),
     closest:selector=>box.main && selector.split(', ').includes(box.main)?{}:null}));
+  const iframes=frames.map(box=>({localName:'iframe',getAttribute:name=>name==='src'?box.src:null,
+    getBoundingClientRect:()=>({...box,width:box.right-box.left,height:box.bottom-box.top}),
+    get contentDocument(){throw Error('Must not read an embedded document');},
+    get contentWindow(){throw Error('Must not access an embedded window');}}));
   const location={protocol:'https:',...site};
-  const document={documentElement:element(),createElement:tag=>{const node=element(tag);if(tag==='div')hosts.push(node);return node;},createElementNS:(_,tag)=>element(tag),querySelectorAll:()=>videos,addEventListener:(name,fn)=>events[name]=fn,removeEventListener:name=>delete events[name]};
+  const document={baseURI:`https://${location.hostname}${location.pathname}`,documentElement:element(),createElement:tag=>{const node=element(tag);if(tag==='div')hosts.push(node);return node;},createElementNS:(_,tag)=>element(tag),querySelectorAll:selector=>selector==='video'?videos:selector==='iframe[src]'?iframes:[],addEventListener:(name,fn)=>events[name]=fn,removeEventListener:name=>delete events[name]};
   const browser={runtime:{sendMessage:async()=>replies.length?replies.shift():{ok:true,enabled:enabled&&permitted}},storage:{onChanged:{addListener:fn=>changed=fn}}};
-  const context={browser,document,location,innerHeight:850,innerWidth:1100,
+  const context={browser,document,location,URL,innerHeight:850,innerWidth:1100,
     window:{addEventListener(){},removeEventListener(){}},getComputedStyle:()=>({}),MutationObserver:class{observe(){}disconnect(){}},
     setTimeout:fn=>{timers.set(++sequence,fn);return sequence;},clearTimeout:id=>timers.delete(id)};
   if(translate)context.IDMI18n={ready:Promise.resolve(),language:'de',t:translate};
@@ -163,6 +167,33 @@ async function contentFixture(rectangles,site={hostname:'example.test',pathname:
     async permission(value){permitted=value;changed({videoButtonPermissions:{}},'local');await settle();},
     layout(){events.scroll();for(const [id,callback] of [...timers]){timers.delete(id);callback();}}};
 }
+
+test('Dailymotion iframe players get a top-page button without reading their documents',async()=>{
+  for(const src of ['https://geo.dailymotion.com/player/xtv3w.html?', 'https://www.dailymotion.com/embed/video/xbv5ovm']) {
+    const frame={src,top:100,bottom:460,left:200,right:840};
+    const f=await contentFixture([],{hostname:'www.dailymotion.com',pathname:'/video/xbv5ovm'},{frames:[frame]});
+    assert.equal(f.buttons.filter(b=>!b.removed).length,1,src);
+    assert.equal(f.buttons.at(-1).style.top,'58px');
+    frame.top=0;frame.bottom=360;f.layout();assert.equal(f.buttons.at(-1).style.top,'366px');
+    frame.src='https://example.test/unrelated';f.layout();assert(f.buttons.every(b=>b.removed));
+  }
+});
+
+test('embedded player detection rejects unrelated frames and respects visibility and site opt-outs',async()=>{
+  for(const src of ['https://geo.dailymotion.com.attacker.test/player/xtv3w.html',
+    'https://geo.dailymotion.com@attacker.test/player/xtv3w.html',
+    'https://user:password@geo.dailymotion.com/player/xtv3w.html',
+    'https://geo.dailymotion.com/ads/xtv3w.html','https://example.test/player/xtv3w.html',
+    'javascript:alert(1)','http://geo.dailymotion.com/player/xtv3w.html']) {
+    const f=await contentFixture([],undefined,{frames:[{src,top:100,bottom:460,left:200,right:840}]});
+    assert.equal(f.buttons.filter(b=>!b.removed).length,0,src);
+  }
+  const frame={src:'https://geo.dailymotion.com/player/xtv3w.html',top:100,bottom:460,left:200,right:840};
+  const f=await contentFixture([],undefined,{frames:[frame]});
+  await f.enable(false);assert.equal(f.hosts.filter(h=>!h.removed).length,0);
+  await f.enable(true);assert.equal(f.hosts.filter(h=>!h.removed).length,1);
+  frame.bottom=frame.top;f.layout();assert(f.buttons.at(-1).removed);
+});
 
 test('revocation removes an existing overlay and an older refresh cannot resurrect a disabled overlay',async()=>{
   const f=await contentFixture([{top:100,bottom:460,left:0,right:640}]);

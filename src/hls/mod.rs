@@ -217,7 +217,35 @@ async fn inspect_with_policy(
     route: crate::proxy::Route,
     public_only: bool,
 ) -> Result<Inspection> {
+    inspect_candidates_via(url, &[], page, public_only, cancel, route).await
+}
+
+/// Try bounded entry points retained by the browser for one selected video.
+/// Access rejections and responses that are not playlists permit another entry
+/// point. Errors inside an identified playlist, cancellation and network-scope
+/// failures must remain visible. All attempts use
+/// the original root's network policy, including redirect/DNS/proxy checks.
+pub async fn inspect_candidates_via(
+    url: &str,
+    fallbacks: &[String],
+    page: Option<&str>,
+    public_only: bool,
+    cancel: &CancellationToken,
+    route: crate::proxy::Route,
+) -> Result<Inspection> {
+    use crate::diagnostics::{self, Details, Event, Failure, Level};
+    ensure!(fallbacks.len() <= 4, "Too many video alternatives");
     let source = crate::model::validate_url(url)?.to_string();
+    let mut candidates = vec![source.clone()];
+    for fallback in fallbacks {
+        ensure!(fallback.len() <= 4096, "Video alternative URL is too long");
+        let candidate = crate::model::validate_url(fallback)?.to_string();
+        ensure!(
+            !candidates.contains(&candidate),
+            "Duplicate video alternative"
+        );
+        candidates.push(candidate);
+    }
     let page = page
         .map(|page| crate::model::validate_url(page).map(|page| page.to_string()))
         .transpose()?;
@@ -225,25 +253,91 @@ async fn inspect_with_policy(
         .await?
         .with_page(page.as_deref())
         .with_public_only(public_only)?;
-    let (final_url, text) = network.playlist(&source, cancel).await?;
-    let mut inspection = inspection_from(source, &final_url, &text)?;
-    inspection.page = page;
-    inspection.public_only = public_only;
-    if let Some(playlist) = &mut inspection.playlist {
-        playlist.public_only = public_only;
+    for (index, candidate) in candidates.iter().enumerate() {
+        ensure!(!cancel.is_cancelled(), "Video stream preview cancelled");
+        let attempt = Some((index + 1) as u8);
+        diagnostics::record(
+            Level::Info,
+            Event::VideoLookupStarted,
+            Details {
+                attempt,
+                ..Default::default()
+            },
+        );
+        let result = async {
+            let (final_url, text) = network.playlist(candidate, cancel).await?;
+            inspection_from(candidate.clone(), &final_url, &text)
+        }
+        .await;
+        match result {
+            Ok(mut inspection) => {
+                inspection.page = page;
+                inspection.public_only = public_only;
+                if let Some(playlist) = &mut inspection.playlist {
+                    playlist.public_only = public_only;
+                }
+                diagnostics::record(
+                    Level::Info,
+                    Event::VideoLookupSucceeded,
+                    Details {
+                        attempt,
+                        ..Default::default()
+                    },
+                );
+                return Ok(inspection);
+            }
+            Err(error) => {
+                diagnostics::record(
+                    Level::Warn,
+                    Event::VideoLookupFailed,
+                    Details {
+                        attempt,
+                        failure: Some(Failure::error(&error)),
+                        ..Default::default()
+                    },
+                );
+                if cancel.is_cancelled() {
+                    anyhow::bail!("Video stream preview cancelled");
+                }
+                let can_try_alternative =
+                    error.is::<network::AccessDenied>() || error.is::<NotPlaylistResponse>();
+                if !can_try_alternative || index + 1 == candidates.len() {
+                    return Err(if index > 0 {
+                        error.context(format!(
+                            "No usable stream after {} same-video attempts",
+                            index + 1
+                        ))
+                    } else {
+                        error
+                    });
+                }
+            }
+        }
     }
-    Ok(inspection)
+    unreachable!("the primary candidate is always present")
 }
+
+/// A signed entry point can return an error page with a successful HTTP status.
+/// Keep this distinct from invalid/unsupported content inside a real playlist:
+/// only the former allows another browser-supplied entry point to be tried.
+#[derive(Debug)]
+struct NotPlaylistResponse;
+impl std::fmt::Display for NotPlaylistResponse {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("This link did not return a video playlist. Reload the video page, start playback, and try again.")
+    }
+}
+impl std::error::Error for NotPlaylistResponse {}
 
 /// Parse a playlist or DASH manifest that was already fetched from `final_url`.
 pub(crate) fn inspection_from(source: String, final_url: &str, text: &str) -> Result<Inspection> {
-    if crate::dash::is_manifest_url(final_url)
-        || text
-            .trim_start_matches('\u{feff}')
-            .trim_start()
-            .starts_with('<')
-    {
+    if crate::dash::is_manifest_document(text) {
         return crate::dash::parse(&source, final_url, text);
+    }
+    // Signed stream URLs can expire into HTML/XML error responses with HTTP 200.
+    // A leading '<' or .mpd suffix alone does not identify a DASH presentation.
+    if !text.starts_with("#EXTM3U") {
+        return Err(NotPlaylistResponse.into());
     }
     match parser::parse(final_url, text)? {
         parser::Parsed::Master(variants) => Ok(Inspection {

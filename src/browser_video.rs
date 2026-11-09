@@ -22,6 +22,9 @@ pub enum Kind {
 #[serde(deny_unknown_fields)]
 pub struct Item {
     pub url: String,
+    /// Alternate entry points for this same video, never additional downloads.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub fallback_urls: Vec<String>,
     pub filename: String,
     pub label: String,
     pub kind: Kind,
@@ -60,6 +63,76 @@ fn clean_text(value: &str) -> String {
         .to_owned()
 }
 
+fn dailymotion_stream_matches(page: &str, value: &str) -> bool {
+    let Ok(page) = model::validate_url(page) else {
+        return false;
+    };
+    let Ok(url) = model::validate_url(value) else {
+        return false;
+    };
+    if page.scheme() != "https"
+        || page.port().is_some()
+        || !matches!(
+            page.host_str(),
+            Some("dailymotion.com" | "www.dailymotion.com")
+        )
+        || url.scheme() != "https"
+        || url.port().is_some()
+        || value.len() > 4096
+    {
+        return false;
+    }
+    let path = page.path().strip_suffix('/').unwrap_or(page.path());
+    let Some(id) = path
+        .strip_prefix("/video/")
+        .or_else(|| path.strip_prefix("/embed/video/"))
+    else {
+        return false;
+    };
+    if id.contains('/') {
+        return false;
+    }
+    let id = id.split('_').next().unwrap_or_default();
+    if !(2..=31).contains(&id.len())
+        || !id.starts_with('x')
+        || !id
+            .bytes()
+            .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit())
+    {
+        return false;
+    }
+    let host = url.host_str().unwrap_or_default();
+    if matches!(
+        host,
+        "dmxleo.dailymotion.com" | "cdndirector.dailymotion.com"
+    ) {
+        return url.path() == format!("/cdn/manifest/video/{id}.m3u8");
+    }
+    if host != "dmcdn.net" && !host.ends_with(".dmcdn.net") {
+        return false;
+    }
+    let Ok(asset) = u64::from_str_radix(&id[1..], 36) else {
+        return false;
+    };
+    if asset == 0 || asset > 9_007_199_254_740_991 {
+        return false;
+    }
+    // Mirror the extension's strict CDN identity check. Unknown layouts and
+    // other videos must never be silently substituted for the selected video.
+    let parts: Vec<_> = url.path().rsplit('/').take(6).collect();
+    parts.len() == 6
+        && parts[0] == "manifest.m3u8"
+        && !parts[1].is_empty()
+        && parts[1].bytes().all(|c| c.is_ascii_digit())
+        && !parts[2].is_empty()
+        && parts[2]
+            .bytes()
+            .all(|c| c.is_ascii_alphanumeric() || c == b'_' || c == b'-')
+        && parts[3] == asset.to_string()
+        && parts[4] == "fmp4"
+        && matches!(parts[5], "video" | "cloud")
+}
+
 impl Review {
     pub(crate) fn normalized(&self) -> Result<Self> {
         ensure!(self.items.len() <= 1000, "Too many videos in this review");
@@ -70,6 +143,23 @@ impl Review {
         let mut seen = HashSet::new();
         for item in &mut review.items {
             item.url = model::validate_url(&item.url)?.to_string();
+            ensure!(item.fallback_urls.len() <= 4, "Too many video alternatives");
+            if !item.fallback_urls.is_empty() {
+                ensure!(
+                    item.kind == Kind::Hls
+                        && dailymotion_stream_matches(&review.page_url, &item.url),
+                    "Invalid video alternatives"
+                );
+                let mut alternatives = HashSet::from([item.url.clone()]);
+                for url in &mut item.fallback_urls {
+                    *url = model::validate_url(url)?.to_string();
+                    ensure!(
+                        dailymotion_stream_matches(&review.page_url, url)
+                            && alternatives.insert(url.clone()),
+                        "Invalid video alternatives"
+                    );
+                }
+            }
             ensure!(
                 seen.insert(item.url.clone()),
                 "Duplicate video in this review"
@@ -189,7 +279,7 @@ impl Store {
         Ok(())
     }
 
-    pub fn take_browser_video_stream(&self, id: &str, index: usize) -> Result<String> {
+    pub fn take_browser_video_stream(&self, id: &str, index: usize) -> Result<Item> {
         token(id)?;
         let mut conn = self.connect()?;
         let tx = conn.transaction_with_behavior(TransactionBehavior::Immediate)?;
@@ -209,13 +299,13 @@ impl Store {
             item.kind != Kind::File,
             "Select a video stream to choose its quality"
         );
-        let url = item.url.clone();
+        let item = item.clone();
         tx.execute(
             "UPDATE browser_video_reviews SET data=NULL WHERE request_id=?1",
             [id],
         )?;
         tx.commit()?;
-        Ok(url)
+        Ok(item)
     }
 
     /// Queue only the explicitly selected direct files and consume their review

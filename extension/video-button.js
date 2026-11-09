@@ -85,10 +85,22 @@
     document.removeEventListener("fullscreenchange",schedule);
   }
   function onEncrypted(event) { encrypted.add(event.target); schedule(); }
+  function embeddedPlayer(frame) {
+    // Dailymotion's player lives in a cross-origin iframe, so the top document
+    // has no <video>. Use only its public embed URL and rectangle as a UI anchor.
+    // Stream URLs still come from permitted, tab-owned response metadata; never
+    // read the frame document, run its code or treat the embed URL as a file.
+    let url;
+    try { url=new URL(frame.getAttribute("src"),document.baseURI); } catch { return false; }
+    if(url.protocol!=="https:" || url.username || url.password || url.port)return false;
+    return url.hostname==="geo.dailymotion.com" && /^\/player\/[a-zA-Z0-9]+\.html$/.test(url.pathname) ||
+      ["www.dailymotion.com","dailymotion.com"].includes(url.hostname) && /^\/embed\/video\/[a-zA-Z0-9]+\/?$/.test(url.pathname);
+  }
   // A click reviews this page's own address. YouTube, Bilibili and Twitch decorate their
   // other pages with muted preview players (carousel banners, hover previews), so there
   // only a video page's main player gets a button.
   function offered(video) {
+    if(video.localName==="iframe")return embeddedPlayer(video);
     if(/(^|\.)youtube(-nocookie)?\.com$/.test(location.hostname))
       return /^\/(watch$|shorts\/|embed\/|live\/)/.test(location.pathname) && !!video.closest("#movie_player, #shorts-player");
     if(/^(www\.)?bilibili\.com$/.test(location.hostname))
@@ -117,7 +129,11 @@
     if(!enabled || !host)return;
     if(!host.isConnected) document.documentElement.append(host);
     const visible=new Set(),players=[],occupied=[];let width=0;
-    for(const video of Array.from(document.querySelectorAll("video")).slice(0,100)) {
+    const candidates=Array.from(document.querySelectorAll("video")).slice(0,100);
+    for(const frame of Array.from(document.querySelectorAll("iframe[src]")).slice(0,100)) {
+      if(embeddedPlayer(frame))candidates.push(frame);
+    }
+    for(const video of candidates) {
       const box=video.getBoundingClientRect(), css=getComputedStyle(video);
       if(box.width<180 || box.height<100 || box.bottom<=0 || box.top>=innerHeight || box.right<=0 || box.left>=innerWidth || css.visibility==="hidden" || css.display==="none")continue;
       players.push({video,box});

@@ -3,6 +3,7 @@ const assert = require('node:assert/strict');
 require('../extension/core.js');
 require('../extension/page-links.js');
 const {collect, normalizeScan, category, visibleLinks, selection, Manager} = globalThis.IDMPageLinks;
+require('../extension/dailymotion.js');
 const options = {queues:[{id:'main',name:'Main queue',running:true}],destinations:[{id:'automatic',name:'Automatic folders',path:null}]};
 const scan = () => ({url:'https://example.test/list',title:'Files',links:[{url:'https://example.test/a.pdf#x',filename:'a.pdf',text:'Report'},{url:'https://example.test/b.zip',filename:'b.zip',text:'Archive'}]});
 function fixture() {
@@ -18,12 +19,132 @@ function fixture() {
     get:async id=>{if(!f.tabs.has(id)) throw Error('Missing tab'); return structuredClone(f.tabs.get(id));},
     update:async(id,args)=>{const tab=f.tabs.get(id); if(!tab) throw Error('Missing tab'); Object.assign(tab,args); await f.onNavigate?.(tab); return structuredClone(tab);}
   },scripting:{executeScript:async spec=>{ f.scans++; assert.deepEqual(spec.target,{tabId:0,frameIds:[0]}); assert.equal(spec.func,collect); return [{frameId:0,result:{...scan(),mode:spec.args[0]}}]; }}};
-  f.native=async req=>{f.requests.push(structuredClone(req)); if(req.action==='batch_options') return {batch_options:options}; if(f.send) return f.send(req); if(req.action==='review_browser_video')return {ok:true,version:1,preview_id:req.request_id,message:'Review in Download Engine'}; return {job_ids:req.links.map((_,i)=>'job-'+i),message:'Saved '+req.links.length+' files'};};
+  f.native=async req=>{f.requests.push(structuredClone(req)); if(req.action==='batch_options') return {batch_options:options}; if(f.send) return f.send(req); if(req.action==='ping')return {ok:true,version:1,capabilities:['browser_video_alternatives_v1']}; if(req.action==='review_browser_video')return {ok:true,version:1,preview_id:req.request_id,message:'Review in Download Engine'}; return {job_ids:req.links.map((_,i)=>'job-'+i),message:'Saved '+req.links.length+' files'};};
   f.manager=new Manager({api:f.api,native:f.native,uuid:f.uuid});
   f.start=async()=>{await f.manager.scan(); return Object.keys(f.values)[0].slice('page-links:'.length);};
   f.input={indices:[0,1],queue_id:'main',destination:'automatic'};
   return f;
 }
+
+function dailymotionFixture() {
+  const f=fixture();f.tabs.get(0).url='https://www.dailymotion.com/video/xbv5ovm';
+  f.api.scripting.executeScript=async()=>[{frameId:0,documentId:'dm-document',result:{url:f.tabs.get(0).url,title:'Test video',mode:'videos',links:[]}}];
+  f.events=[];f.manager.trace=(...event)=>f.events.push(event);
+  f.manager.detected=async()=>[{url:'https://vod.dmcdn.net/browser/manifest.m3u8',hls:true,text:'Browser fallback'}];
+  return f;
+}
+
+test('Dailymotion native handoff keeps alternatives after successful browser metadata validation',async()=>{
+  const f=dailymotionFixture();
+  const primary='https://cdndirector.dailymotion.com/cdn/manifest/video/xbv5ovm.m3u8';
+  const fallback='https://vod.dmcdn.net/cloud/fmp4/717461554/h264_aac_hd/1/manifest.m3u8';
+  f.manager.resolveVideo=async()=>({links:[{url:primary,hls:true}],reason:'success'});
+  f.manager.detected=async()=>[{url:fallback,hls:true},{url:fallback.replace('717461554','717479018'),hls:true}];
+  await f.manager.scan(null,'videos');
+  assert.deepEqual(f.requests.map(r=>r.action),['ping','review_browser_video']);
+  const items=f.requests[1].review.items;
+  assert.equal(items.length,2);assert.equal(items[0].url,primary);assert.deepEqual(items[0].fallback_urls,[fallback]);
+  assert.equal(items[1].url,fallback.replace('717461554','717479018'));
+  assert(!Object.hasOwn(items[1],'fallback_urls'));
+  assert(f.events.some(([event,fields])=>event==='desktop_alternatives'&&fields.count===1));
+  assert.throws(()=>normalizeScan({url:f.tabs.get(0).url,links:[{url:primary,hls:true,fallback_urls:['https://127.0.0.1/private.m3u8']}]}),/Invalid video alternatives/);
+  assert.throws(()=>normalizeScan({url:f.tabs.get(0).url,links:[{url:primary,hls:true,fallback_urls:Array(5).fill(fallback)}]}),/Invalid video alternatives/);
+});
+test('older desktops receive separate streams without the new alternative field',async()=>{
+  const f=dailymotionFixture();
+  const primary='https://cdndirector.dailymotion.com/cdn/manifest/video/xbv5ovm.m3u8';
+  const alternate='https://vod.dmcdn.net/cloud/fmp4/717461554/h264_aac_hd/1/manifest.m3u8';
+  f.send=async request=>{
+    if(request.action==='ping')return {ok:true,version:1,capabilities:['browser_video_review_v1']};
+    for(const item of request.review.items)assert.deepEqual(Object.keys(item).sort(),['filename','kind','label','size','url']);
+    return {ok:true,version:1,preview_id:request.request_id};
+  };
+  await f.manager.openScan({url:f.tabs.get(0).url,mode:'videos',links:[
+    {url:primary,hls:true,fallback_urls:[alternate]}, {url:alternate,hls:true}
+  ]});
+  assert.deepEqual(f.requests.map(r=>r.action),['ping','review_browser_video']);
+  assert.deepEqual(f.requests[1].review.items.map(item=>item.url),[primary,alternate]);
+  assert.equal(f.requests[1].review.items[1].label,'HLS · alternate playlist 1');
+  assert.deepEqual(f.values,{});
+});
+
+test('alternative capability failures leave no pending review and allow a fresh retry',async()=>{
+  const f=dailymotionFixture();
+  const value={url:f.tabs.get(0).url,mode:'videos',links:[{
+    url:'https://cdndirector.dailymotion.com/cdn/manifest/video/xbv5ovm.m3u8',hls:true,
+    fallback_urls:['https://vod.dmcdn.net/cloud/fmp4/717461554/h264_aac_hd/1/manifest.m3u8']
+  }]};
+  f.send=async()=>{throw Error('Desktop unavailable');};
+  await assert.rejects(f.manager.openScan(value),/Desktop unavailable/);
+  assert.deepEqual(f.values,{});assert.deepEqual(f.requests.map(r=>r.action),['ping']);
+  f.send=undefined;await f.manager.openScan(value);
+  assert.deepEqual(f.requests.map(r=>r.action),['ping','ping','review_browser_video']);
+  assert.equal(f.requests[2].review.items.length,1);
+});
+
+test('legacy video recovery reuses the saved request even if desktop capabilities change',async()=>{
+  const f=dailymotionFixture();
+  const value={url:f.tabs.get(0).url,mode:'videos',links:[{
+    url:'https://cdndirector.dailymotion.com/cdn/manifest/video/xbv5ovm.m3u8',hls:true,
+    fallback_urls:['https://vod.dmcdn.net/cloud/fmp4/717461554/h264_aac_hd/1/manifest.m3u8']
+  }]};
+  f.send=async request=>{
+    if(request.action==='ping')return {ok:true,version:1};
+    throw Error('Reply lost');
+  };
+  await assert.rejects(f.manager.openScan(value),/Reply lost/);
+  const pending=structuredClone(f.values['pending-video-review']);
+  assert.equal(pending.review.items.length,2);
+  f.send=undefined;assert.equal(await f.manager.recover(),1);
+  assert.deepEqual(f.requests.map(r=>r.action),['ping','review_browser_video','review_browser_video']);
+  assert.deepEqual(f.requests[2],pending);assert.deepEqual(f.values,{});
+});
+
+test('navigation while checking native alternatives cancels before saving or sending the review',async()=>{
+  const f=dailymotionFixture();
+  const primary='https://cdndirector.dailymotion.com/cdn/manifest/video/xbv5ovm.m3u8';
+  const alternate='https://vod.dmcdn.net/cloud/fmp4/717461554/h264_aac_hd/1/manifest.m3u8';
+  f.manager.resolveVideo=async()=>({links:[{url:primary,hls:true}],reason:'success'});
+  f.manager.detected=async()=>[{url:alternate,hls:true}];
+  f.send=async()=>{f.manager.cancelScan(0);return {capabilities:['browser_video_alternatives_v1']};};
+  await assert.rejects(f.manager.scan(null,'videos'),/page changed/i);
+  assert.deepEqual(f.requests.map(r=>r.action),['ping']);assert.deepEqual(f.values,{});
+});
+
+test('metadata-only discovery opens one native video review even with no top-frame video',async()=>{
+  const f=dailymotionFixture();
+  f.manager.detected=async()=>[];
+  f.manager.resolveVideo=async()=>({links:[{url:'https://vod.dmcdn.net/metadata/master.m3u8',hls:true}],reason:'success'});
+  await f.manager.scan(null,'videos','dm-document');
+  assert.equal(f.requests.length,1);assert.equal(f.requests[0].action,'review_browser_video');
+  assert.equal(f.requests[0].review.items.length,1);assert.match(f.requests[0].review.items[0].url,/metadata/);
+  assert.deepEqual(f.events.map(event=>event[0]),['scan_result','handoff','acknowledged']);
+});
+test('a rejected metadata playlist falls back to the browser and logs the exact reason',async()=>{
+  const f=dailymotionFixture();
+  let calls=0;
+  const resolver=new IDMDailymotion.Resolver({fetch:async()=>++calls===1?new Response(JSON.stringify({qualities:{auto:[{url:'https://cdndirector.dailymotion.com/master.m3u8'}]}}),{headers:{'content-type':'application/json'}}):new Response('',{status:403}),trace:f.manager.trace});
+  f.manager.resolveVideo=(tab,signal)=>resolver.lookup(tab,signal);
+  await f.manager.scan(null,'videos');
+  assert.equal(f.requests.length,1);assert.equal(f.requests[0].review.items.length,1);assert.match(f.requests[0].review.items[0].url,/browser/);
+  assert(f.events.some(([event,data])=>event==='metadata_fallback'&&data.reason==='playlist_http'));
+});
+test('empty Dailymotion results show an actionable extension error instead of an empty desktop review',async()=>{
+  const f=dailymotionFixture();f.manager.detected=async()=>[];f.manager.resolveVideo=async()=>({links:[],reason:'no_formats'});
+  await assert.rejects(f.manager.scan(null,'videos'),/Diagnostic log/);assert.equal(f.requests.length,0);
+});
+test('navigation or closing the tab cancels metadata and prevents stale native handoffs',async()=>{
+  for(const changed of ['cancel','different-url','private']) {
+    const f=dailymotionFixture();let release,started;
+    const pending=new Promise(resolve=>{release=resolve;});const ready=new Promise(resolve=>{started=resolve;});
+    f.manager.resolveVideo=async()=>{started();await pending;return {links:[{url:'https://vod.dmcdn.net/master.m3u8',hls:true}]};};
+    const scan=f.manager.scan(null,'videos');await ready;
+    if(changed==='cancel')f.manager.cancelScan(0);
+    if(changed==='different-url')f.tabs.get(0).url='https://www.dailymotion.com/video/x123';
+    if(changed==='private')f.tabs.get(0).incognito=true;
+    release();await assert.rejects(scan,/page changed/);assert.equal(f.requests.length,0);assert.equal(f.manager.scanning,false);
+  }
+});
 
 test('collector resolves base URLs, skips unsafe links, deduplicates and never traverses frames',()=>{
   const node=(href,filename='',text='')=>({getAttribute:name=>({href,download:filename}[name]||''),textContent:text});

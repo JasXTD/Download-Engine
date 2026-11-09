@@ -1,3 +1,9 @@
+## 3.19.1 — 2026-11-10
+
+- Membaiki pengesanan video Dailymotion dan butang muat turun. Jika pautan pertama tidak boleh digunakan, aplikasi mencuba senarai main alternatif untuk video yang sama. Log diagnostik ditambah baik tanpa merekodkan data sensitif.
+
+[English details](../../../CHANGELOG.md#3191--2026-11-10)
+
 ## 3.19.0 — 2026-11-08
 
 ### Sokongan BitTorrent v2 dan hibrid

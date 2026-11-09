@@ -54,6 +54,7 @@ pub(super) struct State {
     start_on_poll: bool,
     /// The browser page a detected stream came from (sent as Referer).
     page: Option<String>,
+    fallback_urls: Vec<String>,
     public_only: bool,
     /// The browser's own findings for a site page, kept until the site reader
     /// either works or fails; then they are offered instead.
@@ -88,6 +89,7 @@ impl State {
             tiktok_selection: None,
             start_on_poll: false,
             page: None,
+            fallback_urls: Vec::new(),
             public_only: false,
             fallback: None,
             reader_failed: None,
@@ -104,6 +106,7 @@ impl State {
         let url = self.url.clone();
         let page = self.page.clone();
         let public_only = self.public_only;
+        let fallback_urls = self.fallback_urls.clone();
         let store = self.store.clone();
         let inspection = self.inspection.clone();
         let selected = self.selected;
@@ -120,6 +123,19 @@ impl State {
             result,
         });
         std::thread::spawn(move || {
+            use download_engine::diagnostics::{
+                self, Details, Event, Failure, Level, NativeAction,
+            };
+            if !inspect {
+                diagnostics::record(
+                    Level::Info,
+                    Event::VideoLookupStarted,
+                    Details {
+                        action: Some(NativeAction::PreviewVideo),
+                        ..Default::default()
+                    },
+                );
+            }
             let result = tokio::runtime::Builder::new_current_thread()
                 .enable_all()
                 .build()
@@ -128,7 +144,18 @@ impl State {
                     runtime.block_on(async {
                         let route = download_engine::proxy::Route::load(&store)?;
                         if inspect {
-                            if public_only {
+                            if !fallback_urls.is_empty() {
+                                service::inspect_candidates_via(
+                                    &url,
+                                    &fallback_urls,
+                                    page.as_deref(),
+                                    public_only,
+                                    &cancel,
+                                    route,
+                                )
+                                .await
+                                .map(|i| Loaded::Inspection(i, None))
+                            } else if public_only {
                                 service::inspect_reader_via(
                                     &url,
                                     page.as_deref().unwrap_or(&url),
@@ -237,6 +264,25 @@ impl State {
                         }
                     })
                 });
+            if !inspect {
+                diagnostics::record(
+                    if result.is_ok() {
+                        Level::Info
+                    } else {
+                        Level::Warn
+                    },
+                    if result.is_ok() {
+                        Event::VideoLookupSucceeded
+                    } else {
+                        Event::VideoLookupFailed
+                    },
+                    Details {
+                        action: Some(NativeAction::PreviewVideo),
+                        failure: result.as_ref().err().map(Failure::error),
+                        ..Default::default()
+                    },
+                );
+            }
             let _ = sender.send(result);
         });
     }
@@ -638,9 +684,18 @@ impl Desktop {
             draft.start_on_poll = true;
         }
     }
-    pub(super) fn restrict_stream_to_public(&mut self) {
+    pub(super) fn open_review_stream(
+        &mut self,
+        item: download_engine::browser_video::Item,
+        page: &str,
+        queue: &str,
+        folder: Option<&str>,
+        public_only: bool,
+    ) {
+        self.open_page_stream(&item.url, Some(page), queue, folder);
         if let Some(draft) = &mut self.hls {
-            draft.public_only = true;
+            draft.fallback_urls = item.fallback_urls;
+            draft.public_only = public_only;
         }
     }
     /// Read a site page with its built-in reader; if that fails, show what the
@@ -1102,23 +1157,24 @@ impl Desktop {
                 }
             });
         });
-        if load {
-            draft.start(true);
-        }
-        if preview {
-            draft.start(false);
-        }
         // The browser page and its findings belong to the address the dialog
         // opened with; a typed address is a manual entry.
         let stale = (edit || retarget).then(|| draft.fallback.take()).flatten();
         if edit || retarget {
             draft.page = None;
             draft.public_only = false;
+            draft.fallback_urls.clear();
         }
         if edit {
             draft.invalidate_preview();
             draft.inspection = None;
             draft.title = None;
+        }
+        if load {
+            draft.start(true);
+        }
+        if preview {
+            draft.start(false);
         }
         if draft.task.is_some() {
             ctx.request_repaint_after(Duration::from_millis(100));
@@ -1266,6 +1322,44 @@ mod tests {
             "Selecting quality must start its preview"
         );
         assert!(app.store.list().unwrap().is_empty());
+    }
+
+    #[test]
+    fn browser_alternatives_stay_with_the_selected_url_and_are_cleared_by_manual_edit() {
+        let (_temp, mut app, ctx) = fixture();
+        let url = "https://cdndirector.dailymotion.com/cdn/manifest/video/xbv5ovm.m3u8";
+        let alternative = "https://vod.dmcdn.net/cloud/fmp4/717461554/h264_aac_hd/1/manifest.m3u8";
+        app.open_review_stream(
+            download_engine::browser_video::Item {
+                url: url.into(),
+                fallback_urls: vec![alternative.into()],
+                filename: "video.m3u8".into(),
+                label: "Video".into(),
+                kind: download_engine::browser_video::Kind::Hls,
+                size: None,
+            },
+            "https://www.dailymotion.com/video/xbv5ovm",
+            MAIN_QUEUE,
+            None,
+            false,
+        );
+        let draft = app.hls.as_mut().unwrap();
+        assert_eq!(draft.fallback_urls, [alternative]);
+        assert!(draft.start_on_poll);
+        draft.start_on_poll = false; // The UI test must not contact a live site.
+        click(&mut app, &ctx, url);
+        frame(
+            &mut app,
+            &ctx,
+            egui::vec2(1280.0, 860.0),
+            vec![egui::Event::Text("x".into())],
+        );
+        let draft = app.hls.as_ref().unwrap();
+        assert!(draft.fallback_urls.is_empty() && draft.page.is_none());
+        assert!(draft.task.is_none());
+        assert!(app.store.list().unwrap().is_empty());
+        app.close_hls();
+        assert!(app.hls.is_none());
     }
 
     #[test]
@@ -1531,6 +1625,7 @@ mod tests {
                     page_url: page.into(),
                     page_title: "Episode".into(),
                     items: vec![download_engine::browser_video::Item {
+                        fallback_urls: Vec::new(),
                         url: "https://cdn.example.test/episode.mp4".into(),
                         filename: "episode.mp4".into(),
                         label: "Video".into(),

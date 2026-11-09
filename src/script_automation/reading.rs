@@ -101,6 +101,7 @@ impl Reading {
             .items
             .iter()
             .map(|item| Item {
+                fallback_urls: Vec::new(),
                 url: item.url.clone(),
                 filename: item
                     .filename

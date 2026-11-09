@@ -12,6 +12,19 @@ use std::{collections::HashMap, sync::Arc, time::Duration};
 use tokio::sync::Mutex;
 use tokio_util::sync::CancellationToken;
 
+#[derive(Debug)]
+pub(super) struct AccessDenied(pub u16);
+impl std::fmt::Display for AccessDenied {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "The video server rejected the desktop request (HTTP {}). Reload the video page, start playback, and find videos again. A link that plays in the browser may still reject downloads outside it.",
+            self.0
+        )
+    }
+}
+impl std::error::Error for AccessDenied {}
+
 #[derive(Clone)]
 pub(crate) struct Network {
     root: Url,
@@ -170,10 +183,9 @@ impl Network {
                 url = next;
                 continue;
             }
-            ensure!(
-                !matches!(response.status().as_u16(), 401 | 403),
-                "This video stream requires login or its link expired. Use a fresh public manifest URL; browser login for streams is not supported yet."
-            );
+            if matches!(response.status().as_u16(), 401 | 403) {
+                return Err(AccessDenied(response.status().as_u16()).into());
+            }
             crate::auth::check_response(&response)?;
             retry::response(&response)?;
             engine::identity(&response)?;

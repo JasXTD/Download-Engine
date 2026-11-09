@@ -385,13 +385,10 @@ impl Desktop {
                 .store
                 .take_browser_video_stream(&draft.pending.id, index)
             {
-                Ok(url) => {
+                Ok(item) => {
                     self.browser_video = None;
                     self.dialog = None;
-                    self.open_page_stream(&url, Some(&page), &queue, folder.as_deref());
-                    if public_only {
-                        self.restrict_stream_to_public();
-                    }
+                    self.open_review_stream(item, &page, &queue, folder.as_deref(), public_only);
                 }
                 Err(error) => draft.error = Some(error.to_string()),
             }
@@ -423,6 +420,7 @@ impl Desktop {
             } else {
                 vec![
                     Item {
+                        fallback_urls: Vec::new(),
                         url: "https://example.com/nature-1080p.mp4".into(),
                         filename: "Nature-documentary-1080p.mp4".into(),
                         label: "Video file".into(),
@@ -430,6 +428,7 @@ impl Desktop {
                         size: Some(84_600_000),
                     },
                     Item {
+                        fallback_urls: Vec::new(),
                         url: "https://example.com/master.m3u8".into(),
                         filename: "Nature documentary".into(),
                         label: "Quality and audio available in the next step".into(),

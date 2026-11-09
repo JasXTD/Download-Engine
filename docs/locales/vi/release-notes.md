@@ -1,5 +1,7 @@
 ## 3.19.1 — 2026-11-10
 
+### Sửa lỗi phát hiện Dailymotion và xem trước video
+
 - Sửa lỗi phát hiện video Dailymotion và nút tải xuống. Nếu liên kết đầu tiên không dùng được, ứng dụng thử danh sách phát khác của cùng video. Cải thiện nhật ký chẩn đoán mà không ghi lại dữ liệu nhạy cảm.
 
 [English details](../../../CHANGELOG.md#3191--2026-11-10)

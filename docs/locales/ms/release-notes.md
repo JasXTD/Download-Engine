@@ -1,5 +1,7 @@
 ## 3.19.1 — 2026-11-10
 
+### Pembaikan pengesanan Dailymotion dan pratonton video
+
 - Membaiki pengesanan video Dailymotion dan butang muat turun. Jika pautan pertama tidak boleh digunakan, aplikasi mencuba senarai main alternatif untuk video yang sama. Log diagnostik ditambah baik tanpa merekodkan data sensitif.
 
 [English details](../../../CHANGELOG.md#3191--2026-11-10)

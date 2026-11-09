@@ -65,6 +65,7 @@ case "${1:-}" in
     cargo test --locked --offline --test hls --test browser_video -j 2 -- --test-threads=2
     cargo test --locked --offline --bin de desktop::hls::tests -j 2 -- --test-threads=2
     cargo test --locked --offline --bin de desktop::browser_video::tests -j 2 -- --test-threads=2
+    cargo test --locked --offline --bin de desktop::guide::tests -j 2 -- --test-threads=2
     bash scripts/Test-UnixPackaging.sh
     bash scripts/Package-Unix.sh /packages
     version=$(sed -n 's/^version = "\([0-9.]*\)"$/\1/p' Cargo.toml | head -n 1)

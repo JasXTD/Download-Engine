@@ -1,5 +1,7 @@
 ## 3.19.1 — 2026-11-10
 
+### Correcziuns da la detecziun Dailymotion e da la prevista da videos
+
 - Curregì la detecziun da videos Dailymotion ed il buttun per telechargiar. Sche l’emprim link na funcziuna betg, l’app emprova ina glista alternativa dal medem video. Meglierà ils protocols da diagnosa senza memorisar datas sensiblas.
 
 [English details](../../../CHANGELOG.md#3191--2026-11-10)

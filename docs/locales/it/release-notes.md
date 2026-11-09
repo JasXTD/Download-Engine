@@ -1,5 +1,7 @@
 ## 3.19.1 — 2026-11-10
 
+### Rilevamento Dailymotion e anteprima video
+
 - Corretti il rilevamento dei video Dailymotion e il pulsante di download. Se un collegamento non è utilizzabile, l’app prova una playlist alternativa dello stesso video. Migliorati i log diagnostici senza registrare dati sensibili.
 
 [English details](../../../CHANGELOG.md#3191--2026-11-10)

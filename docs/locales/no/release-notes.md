@@ -1,5 +1,7 @@
 ## 3.19.1 — 2026-11-10
 
+### Rettet Dailymotion-gjenkjenning og videoforhåndsvisning
+
 - Rettet Dailymotion-gjenkjenning og nedlastingsknappen. Hvis en lenke ikke kan brukes, prøver appen en alternativ spilleliste for samme video. Diagnoseloggene er forbedret uten å lagre sensitive data.
 
 [English details](../../../CHANGELOG.md#3191--2026-11-10)

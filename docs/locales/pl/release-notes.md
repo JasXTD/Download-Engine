@@ -1,5 +1,7 @@
 ## 3.19.1 — 2026-11-10
 
+### Poprawki wykrywania Dailymotion i podglądu wideo
+
 - Naprawiono wykrywanie filmów Dailymotion i przycisk pobierania. Jeśli pierwszy link nie działa, aplikacja próbuje innej listy odtwarzania tego samego filmu. Ulepszono dzienniki diagnostyczne bez zapisywania poufnych danych.
 
 [English details](../../../CHANGELOG.md#3191--2026-11-10)

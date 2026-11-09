@@ -105,11 +105,22 @@ package and renders the UI. Use artifacts from the exact release commit; verify
 the artifact archive digest and each package's companion SHA-256 record before
 copying the two ZIPs into `dist/releases/<version>`.
 
-Build Linux x64 on Debian 12 with the [native-platform instructions](cross-platform.md#build-and-validate).
-Run `Test-UnixPackaging.sh`, extract the resulting archive and run
-`Test-NativePackage.sh` against that extracted folder. Keep the build isolated
-from personal profiles. Verify its companion SHA-256 record and copy only
-`DownloadEngine-<version>-linux-x64.tar.gz` into the release folder.
+Build Linux x64 with the `Linux build validation` workflow. It uses the reviewed
+Debian 12 Rust image by digest and the exact previously reviewed Debian/Node.js
+archives in `scripts/linux-ci-inputs.lock`. Every archive is checked by size and
+SHA-256 before use. No packages are installed on the runner host. After fetching
+locked Cargo dependencies and building the pinned media helper, the workflow
+disconnects the container's network before the torrent, video-review, HLS/DASH,
+browser-extension and packaging checks. It uses an isolated test keyring, publishes
+no ports and removes its container when the job finishes.
+
+The workflow extracts its Linux archive and runs `Test-NativePackage.sh` against
+that extracted folder. Download its artifact from the exact release commit,
+verify the artifact digest and companion SHA-256 record, and copy only
+`DownloadEngine-<version>-linux-x64.tar.gz` into the release folder. This CI job
+does not exercise interactive Linux desktop dialogs; the separate desktop checks
+and a manual Debian build are described in the
+[native-platform instructions](cross-platform.md#build-and-validate).
 
 Every desktop package must contain its matching native FFmpeg, source and license
 notices. Native binaries are built from source, not renamed Windows binaries.

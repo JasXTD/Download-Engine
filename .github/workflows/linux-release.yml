@@ -1,0 +1,70 @@
+name: Linux build validation
+on:
+  push:
+    branches: [main, 'codex/release-*']
+  workflow_dispatch:
+    inputs:
+      ffmpeg_tests:
+        description: 'Re-run FFmpeg functional tests only when changing the pinned media build'
+        type: boolean
+        default: false
+permissions:
+  contents: read
+concurrency:
+  group: linux-release-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  linux:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    env:
+      RUST_IMAGE: docker.io/library/rust@sha256:b36c246742b4d323472588f789601be34eb4af053255e2af53969078ee8dcec7
+      DOWNLOAD_ENGINE_SKIP_FFMPEG_TESTS: ${{ inputs.ffmpeg_tests && '0' || '1' }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Verify build inputs
+        run: |
+          shellcheck scripts/Prepare-LinuxCi.sh scripts/Run-LinuxCi.sh
+          node scripts/Run-NativeCi.cjs linux-inputs "$RUNNER_TEMP/native-diagnostics" bash scripts/Prepare-LinuxCi.sh "$RUNNER_TEMP/linux-ci-inputs"
+          docker pull "$RUST_IMAGE"
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          git archive --format=tar --output="$RUNNER_TEMP/linux-source.tar" HEAD
+      - name: Isolated Debian build and package checks
+        run: |
+          name="download-engine-ci-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+          cleanup() { docker rm -f "$name" >/dev/null 2>&1 || true; }
+          trap cleanup EXIT
+          mkdir "$RUNNER_TEMP/linux-packages"
+          source_hash=$(sha256sum "$RUNNER_TEMP/linux-source.tar" | cut -d ' ' -f 1)
+          docker run --detach --pull never --name "$name" --cap-drop ALL --security-opt no-new-privileges --pids-limit 512 --cpus 2 --memory 8g \
+            --mount "type=bind,source=$RUNNER_TEMP/linux-source.tar,target=/source.tar,readonly" \
+            --mount "type=bind,source=$RUNNER_TEMP/linux-ci-inputs,target=/ci-inputs,readonly" \
+            --mount "type=bind,source=$GITHUB_WORKSPACE/scripts/Run-LinuxCi.sh,target=/run-linux-ci.sh,readonly" \
+            --env GITHUB_ACTIONS=true --env "DE_SOURCE_COMMIT=$GITHUB_SHA" --env "DE_SOURCE_SHA256=$source_hash" \
+            --env "DOWNLOAD_ENGINE_SKIP_FFMPEG_TESTS=$DOWNLOAD_ENGINE_SKIP_FFMPEG_TESTS" \
+            "$RUST_IMAGE" sleep infinity
+          node scripts/Run-NativeCi.cjs linux-prepare "$RUNNER_TEMP/native-diagnostics" docker exec "$name" bash /run-linux-ci.sh prepare
+          docker network disconnect bridge "$name"
+          test "$(docker inspect --format '{{len .NetworkSettings.Networks}}' "$name")" = 0
+          node scripts/Run-NativeCi.cjs linux-tests-package "$RUNNER_TEMP/native-diagnostics" docker exec "$name" dbus-run-session -- bash /run-linux-ci.sh test-package
+          docker cp "$name:/output/." "$RUNNER_TEMP/linux-packages/"
+      - name: Redacted failure diagnostics
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: linux-diagnostics
+          path: ${{ runner.temp }}/native-diagnostics/*.json
+          if-no-files-found: ignore
+          retention-days: 1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: success()
+        with:
+          name: linux-preview-ubuntu-24.04
+          path: |
+            ${{ runner.temp }}/linux-packages/*.tar.gz
+            ${{ runner.temp }}/linux-packages/*.sha256
+            ${{ runner.temp }}/linux-packages/linux-validation.json
+          if-no-files-found: error
+          retention-days: 7

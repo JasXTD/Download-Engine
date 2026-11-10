@@ -1,5 +1,10 @@
 ## 3.19.1 — 2026-11-10
 
+### Aktualisiertes Linux-Wayland-Paket
+
+- Das Linux-Paket aktiviert die Unterstützung übergeordneter Fenster für native Dialoge. Dateiauswahl, Speichern, Abbrechen und Überschreiben wurden getestet. Die Version bleibt 3.19.1; bitte erneut manuell herunterladen. Windows- und macOS-Pakete bleiben unverändert.
+- Bitte Fehler in [GitHub Issues](https://github.com/JasXTD/Download-Engine/issues) statt auf Reddit melden, damit Meldungen und Korrekturen verfolgt werden können.
+
 ### Dailymotion-Erkennung und Videovorschau
 
 - Die Dailymotion-Erkennung und die Schaltfläche zum Herunterladen wurden korrigiert. Bei einem unbrauchbaren Link versucht die App eine alternative Wiedergabeliste desselben Videos. Verbesserte Diagnoseprotokolle enthalten keine vertraulichen Daten.

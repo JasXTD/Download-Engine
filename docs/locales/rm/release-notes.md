@@ -1,5 +1,10 @@
 ## 3.19.1 — 2026-11-10
 
+### Actualisaziun dal pachet Linux Wayland
+
+- Il pachet Linux activescha il sustegn da la fanestra principala per dialogs nativs. La selecziun da datotecas, memorisar, interrumper e surscriver èn vegnids testads. La versiun resta 3.19.1; telechargiai danovamain a maun. Ils pachets Windows e macOS restan invariads.
+- Annunziai sbagls en [GitHub Issues](https://github.com/JasXTD/Download-Engine/issues) enstagl da Reddit, per pudair suandar las annunzias e las correcturas.
+
 ### Correcziuns da la detecziun Dailymotion e da la prevista da videos
 
 - Curregì la detecziun da videos Dailymotion ed il buttun per telechargiar. Sche l’emprim link na funcziuna betg, l’app emprova ina glista alternativa dal medem video. Meglierà ils protocols da diagnosa senza memorisar datas sensiblas.

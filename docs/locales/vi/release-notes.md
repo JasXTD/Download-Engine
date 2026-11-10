@@ -1,5 +1,10 @@
 ## 3.19.1 — 2026-11-10
 
+### Cập nhật gói Linux Wayland
+
+- Gói Linux bật hỗ trợ cửa sổ cha cho hộp thoại gốc và đã vượt qua kiểm thử chọn tệp, lưu, hủy và ghi đè. Phiên bản vẫn là 3.19.1; hãy tải lại thủ công. Các gói Windows và macOS không thay đổi.
+- Vui lòng báo lỗi tại [GitHub Issues](https://github.com/JasXTD/Download-Engine/issues) thay vì Reddit để theo dõi báo cáo và cách sửa.
+
 ### Sửa lỗi phát hiện Dailymotion và xem trước video
 
 - Sửa lỗi phát hiện video Dailymotion và nút tải xuống. Nếu liên kết đầu tiên không dùng được, ứng dụng thử danh sách phát khác của cùng video. Cải thiện nhật ký chẩn đoán mà không ghi lại dữ liệu nhạy cảm.

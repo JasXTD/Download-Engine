@@ -4,6 +4,13 @@ Release notes are available offline in Help → Changelog. Newest releases appea
 
 ## 3.19.1 — 2026-11-10
 
+### Linux Wayland package refresh — 2026-11-10
+
+- Rebuild the Linux x64 package with native Wayland parent-window support enabled in the file-dialog library. The version remains 3.19.1; Windows, macOS and browser-extension release packages are unchanged.
+- Verified nine native GTK portal scenarios through Linux accessibility: file/folder selection, filtering, Unicode paths, save, cancel, accepting/rejecting overwrite and extension-collision protection. Testing used an isolated WSLg session; dialog placement above its parent still needs a compositor with `xdg-foreign` support.
+- Download the refreshed Linux archive manually: an existing 3.19.1 installation will not offer another update with the same version number. The matching source archive and release checksums are refreshed alongside it.
+- Please report bugs on [GitHub Issues](https://github.com/JasXTD/Download-Engine/issues), rather than Reddit, so reports and fixes can be tracked. Include your operating system, app version, steps to reproduce and any relevant error message.
+
 ### Dailymotion detection and video preview fixes
 
 - Restore the Download video button beside Dailymotion's embedded player in Chrome, Edge and Firefox. Request public video metadata when scanning, with browser-captured streams as a fallback.

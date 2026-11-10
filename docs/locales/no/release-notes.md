@@ -1,5 +1,10 @@
 ## 3.19.1 — 2026-11-10
 
+### Oppdatert Linux-pakke for Wayland
+
+- Linux-pakken aktiverer støtte for overordnede vinduer i systemdialoger. Filvalg, lagring, avbryt og overskriving er testet. Versjonen er fortsatt 3.19.1; last ned pakken på nytt manuelt. Windows- og macOS-pakkene er uendret.
+- Rapporter feil via [GitHub Issues](https://github.com/JasXTD/Download-Engine/issues) i stedet for Reddit, slik at rapporter og rettelser kan følges opp.
+
 ### Rettet Dailymotion-gjenkjenning og videoforhåndsvisning
 
 - Rettet Dailymotion-gjenkjenning og nedlastingsknappen. Hvis en lenke ikke kan brukes, prøver appen en alternativ spilleliste for samme video. Diagnoseloggene er forbedret uten å lagre sensitive data.

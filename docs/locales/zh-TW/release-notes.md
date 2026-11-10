@@ -1,5 +1,10 @@
 ## 3.19.1 — 2026-11-10
 
+### Linux Wayland 套件更新
+
+- Linux 套件已啟用原生對話框父視窗支援，並通過檔案選擇、儲存、取消和覆寫測試。版本仍為 3.19.1；請手動重新下載。Windows 和 macOS 套件不變。
+- 請在 [GitHub Issues](https://github.com/JasXTD/Download-Engine/issues) 回報問題，而不是 Reddit，以便追蹤和修復。
+
 ### Dailymotion 偵測與影片預覽修正
 
 - 修正 Dailymotion 影片偵測與下載按鈕。第一個連結無法使用時，應用程式會嘗試同一影片的備用播放清單。改善診斷記錄，不記錄敏感資料。

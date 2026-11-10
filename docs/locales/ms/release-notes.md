@@ -1,5 +1,10 @@
 ## 3.19.1 — 2026-11-10
 
+### Kemas kini pakej Linux Wayland
+
+- Pakej Linux mengaktifkan sokongan tetingkap induk dialog asli dan lulus ujian pemilihan fail, simpan, batal dan timpa. Versi kekal 3.19.1; muat turun semula secara manual. Pakej Windows dan macOS tidak berubah.
+- Laporkan pepijat di [GitHub Issues](https://github.com/JasXTD/Download-Engine/issues), bukan Reddit, supaya laporan dan pembaikan boleh dijejaki.
+
 ### Pembaikan pengesanan Dailymotion dan pratonton video
 
 - Membaiki pengesanan video Dailymotion dan butang muat turun. Jika pautan pertama tidak boleh digunakan, aplikasi mencuba senarai main alternatif untuk video yang sama. Log diagnostik ditambah baik tanpa merekodkan data sensitif.

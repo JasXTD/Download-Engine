@@ -53,6 +53,12 @@ browser extensions, source code and SHA-256 checksums are included with the rele
 **New in 3.19.1:** fixes Dailymotion video detection and preview in Chrome, Edge and
 Firefox, retains usable playlists through ads, and adds clearer diagnostic logs.
 Update both the desktop app and browser extension for the complete fix.
+
+**Linux Wayland refresh:** the Linux archive now enables native dialog parenting
+and has passed file selection, save, cancel and overwrite checks in WSLg. Download
+it manually if you already use 3.19.1; the version number is unchanged.
+Please report bugs on [GitHub Issues](https://github.com/JasXTD/Download-Engine/issues)
+rather than Reddit so we can track and resolve them.
 <!-- current-release:end -->
 
 ## Features

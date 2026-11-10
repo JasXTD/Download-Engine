@@ -1,5 +1,10 @@
 ## 3.19.1 — 2026-11-10
 
+### Aktualizacja pakietu Linux Wayland
+
+- Pakiet Linux włącza obsługę okna nadrzędnego dla natywnych okien dialogowych. Testy wyboru pliku, zapisu, anulowania i nadpisywania zakończyły się pomyślnie. Wersja pozostaje 3.19.1; pobierz pakiet ponownie ręcznie. Pakiety Windows i macOS nie zmieniły się.
+- Zgłaszaj błędy w [GitHub Issues](https://github.com/JasXTD/Download-Engine/issues), zamiast na Reddicie, aby umożliwić śledzenie zgłoszeń i poprawek.
+
 ### Poprawki wykrywania Dailymotion i podglądu wideo
 
 - Naprawiono wykrywanie filmów Dailymotion i przycisk pobierania. Jeśli pierwszy link nie działa, aplikacja próbuje innej listy odtwarzania tego samego filmu. Ulepszono dzienniki diagnostyczne bez zapisywania poufnych danych.

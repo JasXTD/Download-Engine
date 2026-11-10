@@ -1,5 +1,10 @@
 ## 3.19.1 — 2026-11-10
 
+### Aggiornamento del pacchetto Linux Wayland
+
+- Il pacchetto Linux abilita il supporto della finestra principale per le finestre di dialogo native. Sono stati verificati selezione dei file, salvataggio, annullamento e sovrascrittura. La versione resta 3.19.1: scarica nuovamente il pacchetto manualmente. I pacchetti Windows e macOS sono invariati.
+- Segnala i bug su [GitHub Issues](https://github.com/JasXTD/Download-Engine/issues), anziché su Reddit, per poter seguire le segnalazioni e le correzioni.
+
 ### Rilevamento Dailymotion e anteprima video
 
 - Corretti il rilevamento dei video Dailymotion e il pulsante di download. Se un collegamento non è utilizzabile, l’app prova una playlist alternativa dello stesso video. Migliorati i log diagnostici senza registrare dati sensibili.

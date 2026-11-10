@@ -169,6 +169,29 @@ magnet forwarding using a harmless stub in a temporary directory. It needs the
 existing GCC and `gio-unix-2.0` development files and must run as a non-root user.
 It does not change default file associations.
 
+Wayland chooser validation uses `tests/native/wayland_dialogs.rs`, which imports
+the production Unix dialog adapter, and `scripts/Test-WaylandDialogs.cjs` to
+operate the real GTK portal through its private Linux AT-SPI accessibility bus.
+The probe must run inside a disposable session with `/evidence` and a private
+`/home/test`; it intentionally creates and overwrites harmless fixture files
+there. The driver expects the session's native `/tmp/de-wayland-dialogs.*` path in
+an evidence directory's `runtime-root` file. From Windows, use
+`node scripts/Test-WaylandDialogs.cjs <evidence-directory> all` after preparing and
+starting that isolated Ubuntu/WSLg session. The driver does not install packages,
+prepare the sandbox or operate normal desktop dialogs.
+
+The WSLg/GTK run passed nine scenarios: folder selection and cancellation, filtered
+file selection and cancellation, saving and cancelling a new file, declining and
+confirming overwrite, and rejecting a collision after adding a missing extension.
+It also verified spaces/Unicode paths and unchanged files after cancellation.
+The session used a private home, D-Bus and network namespace, with no Windows
+drives or normal profile mounted. Its patched portal packages were extracted into
+temporary storage; the Ubuntu package database remained unchanged after cleanup.
+This checks the actual chooser adapter and native portal, not every import/export
+consumer or GNOME/KDE desktop. Linux enables rfd's `wayland` parent-window support;
+WSLg did not advertise `xdg-foreign`, so parent-window placement still needs a
+compositor that supports that protocol.
+
 `bash scripts/Test-UnixPackaging.sh` verifies that native packages copy only
 reviewed source files and reject source symlinks or paths outside the checkout.
 It also verifies that environment dumps and unlisted FFmpeg build records are

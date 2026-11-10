@@ -1,5 +1,10 @@
 ## 3.19.1 — 2026-11-10
 
+### Mise à jour du paquet Linux Wayland
+
+- Le paquet Linux active la prise en charge de la fenêtre parente des boîtes de dialogue natives. La sélection de fichiers, l’enregistrement, l’annulation et le remplacement ont été testés. La version reste 3.19.1 : téléchargez-la à nouveau manuellement. Les paquets Windows et macOS restent inchangés.
+- Merci de signaler les bugs sur [GitHub Issues](https://github.com/JasXTD/Download-Engine/issues) plutôt que sur Reddit, afin de suivre les signalements et les corrections.
+
 ### Détection Dailymotion et aperçu vidéo
 
 - Correction de la détection des vidéos Dailymotion et du bouton de téléchargement. Si un lien échoue, l’application essaie une autre liste de lecture de la même vidéo. Les journaux de diagnostic sont améliorés sans enregistrer de données sensibles.

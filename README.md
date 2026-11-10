@@ -282,7 +282,8 @@ code. For Premiumize.me, save your API key in its protected **Settings**. Paste 
 file-host URL, choose **Generate links**, then **Review generated links** to select files.
 Service accounts, subscriptions, host support and traffic limits still apply.
 
-See the [account-plugin guide](docs/debrid-plugins.md) and the [Lua source](assets/plugins).
+See the [account-plugin guide](docs/debrid-plugins.md) and the
+[Lua source on GitHub](https://github.com/JasXTD/Download-Engine/tree/main/assets/plugins).
 Account flows have automated fixture coverage; live paid-account compatibility remains
 unverified. These are app plugins, separate from the browser extensions.
 

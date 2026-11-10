@@ -62,7 +62,10 @@ case "${1:-}" in
       XDOWNLOADER_MEDIA_HELPER="$DOWNLOAD_ENGINE_FFMPEG_PATH" node --test tests/media_security.test.cjs
     fi
     cargo test --locked --offline --manifest-path torrent/Cargo.toml -j 2 -- --test-threads=2
+    cargo test --locked --offline --lib extensions:: -j 2 -- --test-threads=2
+    cargo test --locked --offline --test extension_jobs -j 2 -- --test-threads=2
     cargo test --locked --offline --test hls --test browser_video -j 2 -- --test-threads=2
+    cargo test --locked --offline --bin de desktop::extensions::tests -j 2 -- --test-threads=2
     cargo test --locked --offline --bin de desktop::hls::tests -j 2 -- --test-threads=2
     cargo test --locked --offline --bin de desktop::browser_video::tests -j 2 -- --test-threads=2
     cargo test --locked --offline --bin de desktop::guide::tests -j 2 -- --test-threads=2

@@ -1,6 +1,6 @@
 # Privacy policy
 
-Last updated: 2026-11-09
+Last updated: 2026-11-10
 
 This policy covers the official Download Engine project website, browser extensions
 and their integration with Download Engine for Windows, macOS and Linux. The project
@@ -85,6 +85,23 @@ No automatic copy of your download list, detected media or login cookies is sent
 to a project-operated collection server. The project does not sell this data or
 use it for advertising, credit scoring or unrelated profiling. Maintainers do not
 have remote access to your local profile through the extension.
+
+## Optional account plugins
+
+The bundled All Debrid, Real Debrid and Premiumize.me Lua plugins run only after
+you review and install them. These three plugins are then enabled by default;
+their account and link-generation actions run only when you choose them.
+They send the source link you enter and the account
+credentials required by that service to its HTTPS API. The service also receives
+normal connection information, including your IP address. Its own privacy policy
+and account limits apply.
+
+Account tokens and API keys are stored locally using the operating system's
+protected-data facility. The bundled plugins do not print credentials in their
+logs or attach account authorization headers to generated file downloads.
+Generated URLs may themselves grant access to a file and are saved in the local
+download history when you add them. Keep those URLs private. Disconnect clears
+the local credential; revoke access on the service website to invalidate it there.
 
 ## Torrents
 

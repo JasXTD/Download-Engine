@@ -1,3 +1,13 @@
+## 3.20.0 — 2026-11-10
+
+### Valfria kontoplugin
+
+- Tre separata Lua-plugin: All Debrid, Real Debrid och Premiumize.me. Granska och aktivera pluginet, anslut ditt eget konto och skapa länkar. Välj filer före nedladdning. Inloggningsuppgifter skyddas och åtgärder kan stoppas; tjänsternas abonnemang och gränser gäller fortfarande.
+
+- Dessa tre tillägg aktiveras som standard efter granskning av behörigheter och installation. Du startar åtgärderna själv; tidigare inaktiveringar behålls.
+
+[Setup guide (English)](../../debrid-plugins.md) · [English details](../../../CHANGELOG.md#3200--2026-11-10)
+
 ## 3.19.1 — 2026-11-10
 
 ### Uppdaterat Linux-paket för Wayland

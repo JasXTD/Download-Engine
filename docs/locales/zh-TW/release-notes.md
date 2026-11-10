@@ -1,3 +1,13 @@
+## 3.20.0 — 2026-11-10
+
+### 選用帳戶外掛
+
+- 新增三個獨立 Lua 外掛：All Debrid、Real Debrid 和 Premiumize.me。審核並啟用後，連接自己的帳戶、產生下載連結並選擇檔案。憑證受到保護，支援停止操作；服務訂閱和限額仍然適用。
+
+- 這三個外掛在檢閱安裝後預設啟用，只有您點擊時才執行操作。已關閉的選擇會保留。
+
+[Setup guide (English)](../../debrid-plugins.md) · [English details](../../../CHANGELOG.md#3200--2026-11-10)
+
 ## 3.19.1 — 2026-11-10
 
 ### Linux Wayland 套件更新

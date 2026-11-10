@@ -38,6 +38,8 @@ pub struct Context {
     pub rsa_keys: BTreeMap<String, String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub key_scope: Option<uuid::Uuid>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub secret_writes: Vec<String>,
 }
 
 const LOADING: &str = "__loading";

@@ -133,7 +133,7 @@ impl Desktop {
                 if !available {
                     ui.label(RichText::new(tr("No new packages. Add a .de-extension.json file here, then Refresh.")).small().color(p.muted));
                 } else {
-                    ui.label(RichText::new(tr("Review permissions before installing or updating. New extensions start disabled.")).small().color(p.muted));
+                    ui.label(RichText::new(tr("Review permissions before installing or updating.")).small().color(p.muted));
                 }
             }
         });

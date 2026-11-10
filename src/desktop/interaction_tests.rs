@@ -119,7 +119,7 @@ pub(super) fn fixture() -> (tempfile::TempDir, Desktop, egui::Context) {
     fixture_with_store_setup(|_| {})
 }
 
-fn fixture_with_store_setup(
+pub(super) fn fixture_with_store_setup(
     setup: impl FnOnce(&Store),
 ) -> (tempfile::TempDir, Desktop, egui::Context) {
     let temp = tempfile::tempdir().unwrap();

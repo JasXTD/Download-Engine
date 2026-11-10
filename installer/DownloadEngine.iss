@@ -369,6 +369,7 @@ Source: "{#SourceRoot}\docs\browser-release.md"; DestDir: "{app}\docs"; Flags: i
 Source: "{#SourceRoot}\docs\youtube-port.md"; DestDir: "{app}\docs"; Flags: ignoreversion
 Source: "{#SourceRoot}\docs\automation.md"; DestDir: "{app}\docs"; Flags: ignoreversion
 Source: "{#SourceRoot}\docs\extensions.md"; DestDir: "{app}\docs"; Flags: ignoreversion
+Source: "{#SourceRoot}\docs\debrid-plugins.md"; DestDir: "{app}\docs"; Flags: ignoreversion
 Source: "{#SourceRoot}\docs\first-extension.md"; DestDir: "{app}\docs"; Flags: ignoreversion
 Source: "{#SourceRoot}\examples\core-api-automation.lua"; DestDir: "{app}\examples"; Flags: ignoreversion
 Source: "{#SourceRoot}\examples\custom-site-reader.lua"; DestDir: "{app}\examples"; Flags: ignoreversion

@@ -46,17 +46,15 @@ Get published packages from the [releases page](https://github.com/JasXTD/Downlo
 and read the [changelog](CHANGELOG.md) for release and development notes.
 
 <!-- current-release:start -->
-**[Download 3.19.1](https://github.com/JasXTD/Download-Engine/releases/tag/v3.19.1)** —
+**[Download 3.20.0](https://github.com/JasXTD/Download-Engine/releases/tag/v3.20.0)** —
 Windows, Apple Silicon and Intel Macs, and Linux x64. Native FFmpeg is bundled;
-browser extensions, source code and SHA-256 checksums are included with the release.
+browser extensions, source code and SHA-256 checksums accompany releases.
 
-**New in 3.19.1:** fixes Dailymotion video detection and preview in Chrome, Edge and
-Firefox, retains usable playlists through ads, and adds clearer diagnostic logs.
-Update both the desktop app and browser extension for the complete fix.
+**New in 3.20.0:** optional **All Debrid**, **Real Debrid** and **Premiumize.me**
+Lua plugins. Connect your own account, generate host-file links and review files
+before adding them. Includes protected account storage, cancellation and a
+[setup guide](docs/debrid-plugins.md). Service subscriptions and limits apply.
 
-**Linux Wayland refresh:** the Linux archive now enables native dialog parenting
-and has passed file selection, save, cancel and overwrite checks in WSLg. Download
-it manually if you already use 3.19.1; the version number is unchanged.
 Please report bugs on [GitHub Issues](https://github.com/JasXTD/Download-Engine/issues)
 rather than Reddit so we can track and resolve them.
 <!-- current-release:end -->
@@ -71,6 +69,9 @@ rather than Reddit so we can track and resolve them.
 - **Hosting links:** MEGA public files, public WeTransfer transfers, and exposed file links on
   other download pages. [MEGA](docs/mega.md) · [WeTransfer](docs/wetransfer.md) ·
   [Link discovery](docs/user-guide.md#find-files-on-a-website)
+- **Account plugins:** optional All Debrid, Real Debrid and Premiumize.me plugins generate
+  download links with your own account, then let you review the files before adding them.
+  [Setup](#bundled-account-plugins)
 - **Video:** YouTube, TikTok, Bilibili, Twitch and compatible HLS and DASH streams, with a choice of
   quality and audio. [Supported sites](#supported-video-sites-and-formats)
 - **Torrents:** v1, v2 and hybrid torrents; optional and off by default. [Torrent downloads](#torrent-downloads)
@@ -268,6 +269,22 @@ download by itself. Copying your browser login for a download is a separate, opt
 Rules, scripts and extensions live on the **Extensions** page. The desktop MCP server starts
 turned off, with **View only** access. For a read-only terminal server, use
 `de-cli mcp --read-only`; plain `de-cli mcp` allows changes. Keep its access token private.
+
+### Bundled account plugins
+
+**All Debrid**, **Real Debrid** and **Premiumize.me** are separate Lua plugins included
+in every desktop package. Open **Extensions → Installed → From plugins folder**, review
+and install the plugin you want. These three plugins are enabled by default after
+installation; their actions run only when you start them. Existing disabled choices stay off.
+
+In the plugin's **Overview**, connect All Debrid or Real Debrid with a browser approval
+code. For Premiumize.me, save your API key in its protected **Settings**. Paste a supported
+file-host URL, choose **Generate links**, then **Review generated links** to select files.
+Service accounts, subscriptions, host support and traffic limits still apply.
+
+See the [account-plugin guide](docs/debrid-plugins.md) and the [Lua source](assets/plugins).
+Account flows have automated fixture coverage; live paid-account compatibility remains
+unverified. These are app plugins, separate from the browser extensions.
 
 ### Lua extensions and media providers
 

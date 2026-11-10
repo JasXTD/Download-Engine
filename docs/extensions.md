@@ -1,5 +1,19 @@
 # Extensions
 
+Bundled account plugins: [All Debrid, Real Debrid and Premiumize.me](debrid-plugins.md).
+They are separate, optional Lua packages with account actions and generated-link
+review. Their source is in `assets/plugins`; no paid account is bundled.
+
+From 3.20.0 a site-reader job can set `action` to `"none"` or `"url"` to expose an
+explicit Overview button instead of automatic page matching. It may name protected
+text settings in `secret_writes`; the install/update review discloses these writes.
+The isolated worker then exposes `xd.save_secret(id, value)` (`nil` clears), bounded
+to 4096 bytes and 16 writes. The core checks run state, cancellation, version,
+revision and concurrent setting changes. `xd.setting` remains a launch-time snapshot.
+Return `{title="status", items={}}` for account status, or reader file items to review.
+Use `single_connection=true` when the generated links require one connection.
+See the linked guide for lifecycle details and the protected-setting example.
+
 An extension is one JSON file holding a manifest and Lua files. It adds site support and automation as a single package, and runs on the same Lua workers as your own scripts. Each job keeps its own worker and its own limits: a package groups jobs but never merges their powers.
 
 Extensions are not the Download Engine browser extension. That is the add-on you load into your browser, and the guides call it the *browser extension*.
@@ -51,7 +65,9 @@ On macOS, use **Install from file…** for your own packages: modifying a signed
 before the package is signed.
 
 Choose **Review install** or **Review update** beside a discovered package. The
-normal permission review still applies; new installs start disabled. Discovery
+normal permission review still applies. Custom extensions and starter examples
+start disabled; the bundled account plugins start enabled after installation,
+and their actions run only when you start them. Discovery
 never runs Lua, starts a sample server, grants access or silently updates code.
 It installs the exact bytes reviewed, even if the source file changes afterward.
 
@@ -83,7 +99,7 @@ package, or **Install from file…** to pick a `.de-extension.json` from elsewhe
 
 New to extensions? [Make your first extension](first-extension.md) walks through a bundled example. Choose **Examples…** to review one of five starters: Internet Archive, Wikimedia Commons, GitHub releases, sorting finished files, and queue notifications. Each uses the normal permission review and starts turned off.
 
-- **Install.** The review shows the publisher, what each job does and when it runs, and what the extension can reach: the web, your downloads and your files. Nothing runs yet. It installs turned off, so choose **Turn on** or tick **Enabled** when you are ready. File access is only a request, and stays off unless you tick it. You can allow it later with **Allow…** on the Overview tab, which asks you to confirm, and take it back there with **Take back**. Only a job whose package asks for file access can get it. If the extension changes while the review is open, for example because the CLI installed it, the install is refused: review the file again.
+- **Install.** The review shows the publisher, what each job does and when it runs, and what the extension can reach: the web, your downloads and your files. Nothing runs yet. Custom extensions and starter examples install turned off, so choose **Turn on** or tick **Enabled** when you are ready. The exact bundled All Debrid, Real Debrid and Premiumize.me packages start enabled after installation; their actions still require a click. Updates preserve your enabled choice. File access is only a request, and stays off unless you tick it. You can allow it later with **Allow…** on the Overview tab, which asks you to confirm, and take it back there with **Take back**. Only a job whose package asks for file access can get it. If the extension changes while the review is open, for example because the CLI installed it, the install is refused: review the file again.
 - **Update.** Open a newer file with the same ID. The review shows what changed. You must approve new access, a new publisher, every added job, and any job that now runs at other times, on other pages or from another file. This includes replacing a job's ID, even when its name and kind stay the same. **Not now** leaves the installed version exactly as it was. Settings, keys, stored values and run history are kept, except a saved value the new version can't use, which the review names. Downloads already running keep the code they started with. Going back to an older version means removing the extension first.
 - **Turn off.** Untick **Enabled**. Its running jobs stop and its running downloads pause. Nothing it owns starts until you turn it back on, so a waiting download fails with a message saying so.
 - **Remove.** Its settings, keys and stored values are deleted. Run history stays, and files you downloaded are kept. Removing is refused while unfinished downloads still use it.

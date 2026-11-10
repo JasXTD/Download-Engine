@@ -1,3 +1,13 @@
+## 3.20.0 — 2026-11-10
+
+### Plugin tài khoản tùy chọn
+
+- Thêm ba plugin Lua riêng: All Debrid, Real Debrid và Premiumize.me. Xem quyền, bật plugin, kết nối tài khoản của bạn rồi tạo liên kết và chọn tệp. Thông tin xác thực được bảo vệ, có thể dừng tác vụ; gói dịch vụ và giới hạn vẫn áp dụng.
+
+- Ba plugin này được bật mặc định sau khi xem xét quyền và cài đặt. Thao tác chỉ chạy khi bạn bắt đầu; lựa chọn tắt trước đó được giữ nguyên.
+
+[Setup guide (English)](../../debrid-plugins.md) · [English details](../../../CHANGELOG.md#3200--2026-11-10)
+
 ## 3.19.1 — 2026-11-10
 
 ### Cập nhật gói Linux Wayland

@@ -1,0 +1,97 @@
+{
+  "format": "download-engine-extension",
+  "format_version": 1,
+  "id": "bundled.real-debrid",
+  "name": "Real Debrid",
+  "version": "1.0.0",
+  "publisher": "Download Engine",
+  "description": "Connect your Real Debrid account, check its plan and generate file download links. A separate service account is required; supported hosts and account limits apply.",
+  "homepage": "https://real-debrid.com/device",
+  "license": "MIT",
+  "api_version": 1,
+  "permissions": {
+    "network": [
+      "api.real-debrid.com",
+      "real-debrid.com",
+      "*.real-debrid.com"
+    ],
+    "http_sessions": true
+  },
+  "settings": [
+    {
+      "id": "account",
+      "type": "secret",
+      "label": "Connected account (protected)"
+    }
+  ],
+  "jobs": [
+    {
+      "id": "connect",
+      "name": "Connect account",
+      "entry": "main.lua",
+      "timeout_seconds": 240,
+      "trigger": {
+        "kind": "site_reader",
+        "pages": [
+          "api.real-debrid.com/*"
+        ]
+      },
+      "action": "none",
+      "secret_writes": [
+        "account"
+      ]
+    },
+    {
+      "id": "account",
+      "name": "Check account",
+      "entry": "main.lua",
+      "timeout_seconds": 240,
+      "trigger": {
+        "kind": "site_reader",
+        "pages": [
+          "api.real-debrid.com/*"
+        ]
+      },
+      "action": "none",
+      "secret_writes": [
+        "account"
+      ]
+    },
+    {
+      "id": "generate",
+      "name": "Generate links",
+      "entry": "main.lua",
+      "timeout_seconds": 240,
+      "trigger": {
+        "kind": "site_reader",
+        "pages": [
+          "api.real-debrid.com/*"
+        ]
+      },
+      "action": "url",
+      "secret_writes": [
+        "account"
+      ]
+    },
+    {
+      "id": "disconnect",
+      "name": "Disconnect",
+      "entry": "main.lua",
+      "timeout_seconds": 240,
+      "trigger": {
+        "kind": "site_reader",
+        "pages": [
+          "api.real-debrid.com/*"
+        ]
+      },
+      "action": "none",
+      "secret_writes": [
+        "account"
+      ]
+    }
+  ],
+  "files": {
+    "common.lua": "-- Shared by the three separately packaged plugins. No account information is logged.\nlocal M = {}\nfunction M.text(value, label, limit)\n  assert(type(value) == \"string\" and #value > 0 and #value <= (limit or 2048), \"Invalid \" .. label .. \" in service response\")\n  assert(not value:find(\"[%c]\"), \"Invalid \" .. label .. \" in service response\")\n  return value\nend\nfunction M.session(origin, token)\n  local headers = { Accept = \"application/json\" }\n  if token then headers.Authorization = \"Bearer \" .. M.text(token, \"access token\") end\n  -- Origin-bound sessions refuse cross-origin redirects, including credentials\n  -- embedded in POST bodies or device-code query parameters.\n  return xd.http_session(origin, { headers = headers })\nend\nfunction M.request(session, url, fields)\n  local options = { session = session }\n  if fields then\n    local keys, parts = {}, {}\n    for key in pairs(fields) do keys[#keys + 1] = key end\n    table.sort(keys)\n    for _, key in ipairs(keys) do parts[#parts + 1] = xd.url_encode(key) .. \"=\" .. xd.url_encode(tostring(fields[key])) end\n    options.method = \"POST\"\n    options.body = table.concat(parts, \"&\")\n    options.headers = { [\"Content-Type\"] = \"application/x-www-form-urlencoded\" }\n  end\n  local ok, reply = pcall(xd.fetch, url, options)\n  assert(ok, \"Cannot reach the service. Check your connection or proxy, then try again.\")\n  if reply.status == 429 then error(\"The service is limiting requests. Wait before trying again.\") end\n  if reply.status >= 500 then error(\"The service is temporarily unavailable. Try again later.\") end\n  local parsed, data = pcall(xd.json, reply.body)\n  assert(parsed and type(data) == \"table\", \"The service returned an unreadable response.\")\n  return data, reply.status\nend\nfunction M.account()\n  local saved = xd.setting(\"account\")\n  assert(type(saved) == \"string\" and #saved > 0, \"Connect your account first.\")\n  local ok, data = pcall(xd.json, saved)\n  assert(ok and type(data) == \"table\", \"Saved account is invalid. Connect again.\")\n  return data\nend\nfunction M.save(data)\n  xd.save_secret(\"account\", xd.to_json(data))\nend\nfunction M.status(title)\n  return { title = title, items = {} }\nend\nfunction M.item(link, filename, size, domains)\n  M.text(link, \"download link\", 16384)\n  local host = link:match(\"^https?://([^/?#]+)\")\n  assert(host and not host:find(\"[@:]\"), \"The service returned an unsupported download address.\")\n  host = host:lower()\n  local allowed = false\n  for _, domain in ipairs(domains) do\n    if host == domain or host:sub(-#domain - 1) == \".\" .. domain then allowed = true end\n  end\n  assert(allowed, \"The service returned an unapproved download host. Report this on GitHub without sharing the private link.\")\n  if filename ~= nil then M.text(filename, \"filename\", 1024) end\n  if type(size) ~= \"number\" or size <= 0 or size > 9007199254740991 then size = nil end\n  return { kind = \"file\", url = link, filename = filename, size = size }\nend\nfunction M.disconnect()\n  xd.save_secret(\"account\", nil)\n  return M.status(\"Disconnected. This app's saved account has been removed.\")\nend\nreturn M\n",
+    "main.lua": "local h = require(\"common\")\nlocal origin = \"https://api.real-debrid.com\"\n-- Real-Debrid's documented public client for open-source device authorization.\n-- This identifier is not a credential. User-bound secrets are obtained at login.\nlocal public_client = \"X245A4XAIBGVM\"\nlocal grant = \"http://oauth.net/grant_type/device/1.0\"\nlocal errors = {\n  [8] = \"Account access expired or was revoked. Connect again.\",\n  [9] = \"Account permission was denied. Check the Real-Debrid website.\",\n  [14] = \"Real-Debrid has locked this account. Contact its support.\",\n  [15] = \"Activate your account on Real-Debrid first.\",\n  [16] = \"Real-Debrid does not support this host.\",\n  [17] = \"This host is under maintenance.\", [18] = \"Your host limit has been reached.\",\n  [19] = \"This host is temporarily unavailable.\", [20] = \"This link requires a Real-Debrid premium account.\",\n  [21] = \"Too many active downloads. Wait for one to finish.\",\n  [22] = \"Real-Debrid does not allow this IP address. Check your proxy or VPN with the service.\",\n  [23] = \"Your traffic allowance has been used.\", [24] = \"This file is no longer available.\",\n  [28] = \"The service does not allow this file.\", [34] = \"Too many requests. Try again later.\",\n  [35] = \"This file was blocked by the service.\", [36] = \"The service's fair-use limit has been reached.\",\n}\nlocal function checked(data, status)\n  assert(status < 400 and not data.error,\n    errors[data.error_code] or \"Real-Debrid refused this request. Check your account and host availability on its website.\")\n  return data\nend\nlocal function exchange(account, code)\n  local data, status = h.request(h.session(origin), origin .. \"/oauth/v2/token\", {\n    client_id = account.client_id, client_secret = account.client_secret, code = code, grant_type = grant,\n  })\n  checked(data, status)\n  account.access_token = h.text(data.access_token, \"access token\")\n  account.refresh_token = h.text(data.refresh_token, \"refresh token\")\n  return account\nend\nlocal action = xd.extension.job\nif action == \"disconnect\" then return h.disconnect() end\nif action == \"connect\" then\n  local session = h.session(origin)\n  local device, status = h.request(session, origin .. \"/oauth/v2/device/code?client_id=\" .. public_client .. \"&new_credentials=yes\")\n  checked(device, status)\n  h.text(device.device_code, \"device code\")\n  h.text(device.user_code, \"approval code\", 32)\n  assert(device.user_code:match(\"^[%w%-]+$\"), \"Invalid approval code.\")\n  assert(type(device.interval) == \"number\" and device.interval >= 0 and device.interval <= 60\n    and type(device.expires_in) == \"number\" and device.expires_in > 0, \"Invalid device authorization lifetime.\")\n  local interval = math.max(5, math.ceil(device.interval))\n  xd.log(\"info\", \"Open https://real-debrid.com/device and enter code: \" .. device.user_code)\n  for _ = 1, math.min(36, math.floor(math.min(180, device.expires_in) / interval)) do\n    xd.sleep(interval * 1000)\n    local credentials, code = h.request(session, origin .. \"/oauth/v2/device/credentials?client_id=\" .. public_client .. \"&code=\" .. xd.url_encode(device.device_code))\n    if code == 200 and credentials.client_id and credentials.client_secret then\n      local account = exchange({ client_id = h.text(credentials.client_id, \"client ID\"),\n        client_secret = h.text(credentials.client_secret, \"client secret\") }, device.device_code)\n      h.save(account)\n      return h.status(\"Real Debrid connected. Use Check account to see your plan.\")\n    end\n    -- The public credentials endpoint also returns HTTP 403 with both error\n    -- fields null before approval (checked against the live API). xd.json maps\n    -- those null fields to nil. Only this empty response or explicit pending\n    -- may wait again; refusals and other errors still stop immediately.\n    local pending = credentials.error == \"authorization_pending\"\n      or (code == 403 and next(credentials) == nil)\n    assert(pending, \"Device approval was refused or expired. Connect again.\")\n  end\n  error(\"Approval timed out. Click Connect account to get a new code.\")\nend\nlocal account = h.account()\nh.text(account.access_token, \"saved access token\")\nh.text(account.refresh_token, \"saved refresh token\")\nh.text(account.client_id, \"saved client ID\")\nh.text(account.client_secret, \"saved client secret\")\nlocal function request(path, fields)\n  local data, status = h.request(h.session(origin, account.access_token), origin .. \"/rest/1.0/\" .. path, fields)\n  if status == 401 or data.error_code == 8 then\n    account = exchange(account, account.refresh_token)\n    -- Persist rotated credentials before retrying the request. Never retry\n    -- arbitrary server errors: generating a link may have a remote side effect.\n    h.save(account)\n    data, status = h.request(h.session(origin, account.access_token), origin .. \"/rest/1.0/\" .. path, fields)\n  end\n  return checked(data, status)\nend\nif action == \"account\" then\n  local user = request(\"user\")\n  return h.status(user.type == \"premium\" and \"Real Debrid connected — premium account.\"\n    or \"Real Debrid connected — free account; host restrictions apply.\")\nend\nassert(action == \"generate\", \"Unknown plugin action.\")\nlocal data = request(\"unrestrict/link\", { link = event.url, remote = 0 })\nlocal rows = data.download and { data } or data\nlocal items = {}\nfor _, row in ipairs(rows) do\n  assert(#items < 1000, \"The service returned too many links.\")\n  items[#items + 1] = h.item(row.download, row.filename, row.filesize, { \"real-debrid.com\" })\nend\nassert(#items > 0, \"Real-Debrid did not return a downloadable file.\")\n-- One connection satisfies the service's per-link chunks limit, including 1.\nreturn { title = \"Real Debrid — generated downloads\", single_connection = true, items = items }\n"
+  }
+}

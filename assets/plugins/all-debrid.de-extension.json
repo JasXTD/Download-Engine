@@ -1,0 +1,95 @@
+{
+  "format": "download-engine-extension",
+  "format_version": 1,
+  "id": "bundled.all-debrid",
+  "name": "All Debrid",
+  "version": "1.0.0",
+  "publisher": "Download Engine",
+  "description": "Connect your All Debrid account, check its plan and generate file download links. A separate service account is required; supported hosts and account limits apply.",
+  "homepage": "https://alldebrid.com/pin/",
+  "license": "MIT",
+  "api_version": 1,
+  "permissions": {
+    "network": [
+      "api.alldebrid.com",
+      "alldebrid.com",
+      "*.alldebrid.com",
+      "*.debrid.it",
+      "debrid.it"
+    ],
+    "http_sessions": true
+  },
+  "settings": [
+    {
+      "id": "account",
+      "type": "secret",
+      "label": "Connected account (protected)"
+    }
+  ],
+  "jobs": [
+    {
+      "id": "connect",
+      "name": "Connect account",
+      "entry": "main.lua",
+      "timeout_seconds": 240,
+      "trigger": {
+        "kind": "site_reader",
+        "pages": [
+          "api.alldebrid.com/*"
+        ]
+      },
+      "action": "none",
+      "secret_writes": [
+        "account"
+      ]
+    },
+    {
+      "id": "account",
+      "name": "Check account",
+      "entry": "main.lua",
+      "timeout_seconds": 240,
+      "trigger": {
+        "kind": "site_reader",
+        "pages": [
+          "api.alldebrid.com/*"
+        ]
+      },
+      "action": "none",
+      "secret_writes": []
+    },
+    {
+      "id": "generate",
+      "name": "Generate links",
+      "entry": "main.lua",
+      "timeout_seconds": 240,
+      "trigger": {
+        "kind": "site_reader",
+        "pages": [
+          "api.alldebrid.com/*"
+        ]
+      },
+      "action": "url",
+      "secret_writes": []
+    },
+    {
+      "id": "disconnect",
+      "name": "Disconnect",
+      "entry": "main.lua",
+      "timeout_seconds": 240,
+      "trigger": {
+        "kind": "site_reader",
+        "pages": [
+          "api.alldebrid.com/*"
+        ]
+      },
+      "action": "none",
+      "secret_writes": [
+        "account"
+      ]
+    }
+  ],
+  "files": {
+    "common.lua": "-- Shared by the three separately packaged plugins. No account information is logged.\nlocal M = {}\nfunction M.text(value, label, limit)\n  assert(type(value) == \"string\" and #value > 0 and #value <= (limit or 2048), \"Invalid \" .. label .. \" in service response\")\n  assert(not value:find(\"[%c]\"), \"Invalid \" .. label .. \" in service response\")\n  return value\nend\nfunction M.session(origin, token)\n  local headers = { Accept = \"application/json\" }\n  if token then headers.Authorization = \"Bearer \" .. M.text(token, \"access token\") end\n  -- Origin-bound sessions refuse cross-origin redirects, including credentials\n  -- embedded in POST bodies or device-code query parameters.\n  return xd.http_session(origin, { headers = headers })\nend\nfunction M.request(session, url, fields)\n  local options = { session = session }\n  if fields then\n    local keys, parts = {}, {}\n    for key in pairs(fields) do keys[#keys + 1] = key end\n    table.sort(keys)\n    for _, key in ipairs(keys) do parts[#parts + 1] = xd.url_encode(key) .. \"=\" .. xd.url_encode(tostring(fields[key])) end\n    options.method = \"POST\"\n    options.body = table.concat(parts, \"&\")\n    options.headers = { [\"Content-Type\"] = \"application/x-www-form-urlencoded\" }\n  end\n  local ok, reply = pcall(xd.fetch, url, options)\n  assert(ok, \"Cannot reach the service. Check your connection or proxy, then try again.\")\n  if reply.status == 429 then error(\"The service is limiting requests. Wait before trying again.\") end\n  if reply.status >= 500 then error(\"The service is temporarily unavailable. Try again later.\") end\n  local parsed, data = pcall(xd.json, reply.body)\n  assert(parsed and type(data) == \"table\", \"The service returned an unreadable response.\")\n  return data, reply.status\nend\nfunction M.account()\n  local saved = xd.setting(\"account\")\n  assert(type(saved) == \"string\" and #saved > 0, \"Connect your account first.\")\n  local ok, data = pcall(xd.json, saved)\n  assert(ok and type(data) == \"table\", \"Saved account is invalid. Connect again.\")\n  return data\nend\nfunction M.save(data)\n  xd.save_secret(\"account\", xd.to_json(data))\nend\nfunction M.status(title)\n  return { title = title, items = {} }\nend\nfunction M.item(link, filename, size, domains)\n  M.text(link, \"download link\", 16384)\n  local host = link:match(\"^https?://([^/?#]+)\")\n  assert(host and not host:find(\"[@:]\"), \"The service returned an unsupported download address.\")\n  host = host:lower()\n  local allowed = false\n  for _, domain in ipairs(domains) do\n    if host == domain or host:sub(-#domain - 1) == \".\" .. domain then allowed = true end\n  end\n  assert(allowed, \"The service returned an unapproved download host. Report this on GitHub without sharing the private link.\")\n  if filename ~= nil then M.text(filename, \"filename\", 1024) end\n  if type(size) ~= \"number\" or size <= 0 or size > 9007199254740991 then size = nil end\n  return { kind = \"file\", url = link, filename = filename, size = size }\nend\nfunction M.disconnect()\n  xd.save_secret(\"account\", nil)\n  return M.status(\"Disconnected. This app's saved account has been removed.\")\nend\nreturn M\n",
+    "main.lua": "local h = require(\"common\")\nlocal origin = \"https://api.alldebrid.com\"\nlocal errors = {\n  AUTH_BAD_APIKEY = \"Account access expired or was revoked. Connect again.\",\n  AUTH_MISSING_APIKEY = \"Connect your account first.\",\n  AUTH_BLOCKED = \"Approve this connection on the AllDebrid website, then try again.\",\n  AUTH_USER_BANNED = \"AllDebrid has blocked this account. Contact its support.\",\n  PIN_EXPIRED = \"The approval code expired. Click Connect account again.\",\n  PIN_INVALID = \"The approval code is invalid. Click Connect account again.\",\n  LINK_HOST_NOT_SUPPORTED = \"AllDebrid does not support this host.\",\n  LINK_HOST_UNAVAILABLE = \"This host is temporarily unavailable on AllDebrid.\",\n  LINK_DOWN = \"This file is no longer available.\",\n  LINK_PASS_PROTECTED = \"This link requires a file password. Generate it on the service website.\",\n  LINK_HOST_FULL = \"The host limit has been reached. Try again later.\",\n  LINK_TOO_MANY_DOWNLOADS = \"Too many active downloads. Wait for a download to finish.\",\n  LINK_HOST_LIMIT_REACHED = \"Your account's host allowance has been used.\",\n  LINK_HOST_NOT_SUPPORTED_FOR_FREE = \"This host requires an AllDebrid premium account.\",\n}\nlocal function request(session, path, fields)\n  local data, status = h.request(session, origin .. path, fields)\n  if data.status ~= \"success\" or status >= 400 then\n    local code = type(data.error) == \"table\" and data.error.code or \"\"\n    error(errors[code] or \"AllDebrid refused this request. Check your account and host availability on its website.\")\n  end\n  assert(type(data.data) == \"table\", \"AllDebrid returned an incomplete response.\")\n  return data.data\nend\nlocal function account_status(session)\n  local data = request(session, \"/v4/user\")\n  assert(type(data.user) == \"table\", \"AllDebrid returned incomplete account details.\")\n  return data.user.isPremium == true and \"All Debrid connected — premium account.\" or \"All Debrid connected — free account; host restrictions apply.\"\nend\nlocal action = xd.extension.job\nif action == \"disconnect\" then return h.disconnect() end\nif action == \"connect\" then\n  local session = h.session(origin)\n  local pin = request(session, \"/v4.1/pin/get\")\n  h.text(pin.pin, \"approval code\", 32)\n  assert(pin.pin:match(\"^[%w%-]+$\"), \"Invalid approval code.\")\n  h.text(pin.check, \"approval check\")\n  assert(type(pin.expires_in) == \"number\" and pin.expires_in >= 5, \"Approval code already expired.\")\n  xd.log(\"info\", \"Open https://alldebrid.com/pin/ and enter code: \" .. pin.pin)\n  -- Bounded polling stays below the worker's 50-request budget. Stop kills the\n  -- isolated worker; the core also refuses credential writes after cancellation.\n  for _ = 1, math.min(36, math.floor(pin.expires_in / 5)) do\n    xd.sleep(5000)\n    local answer = request(session, \"/v4/pin/check\", { pin = pin.pin, check = pin.check })\n    if answer.activated == true then\n      local key = h.text(answer.apikey, \"API key\")\n      local title = account_status(h.session(origin, key))\n      h.save({ apikey = key })\n      return h.status(title)\n    end\n  end\n  error(\"Approval timed out. Click Connect account to get a new code.\")\nend\nlocal session = h.session(origin, h.text(h.account().apikey, \"saved API key\"))\nif action == \"account\" then return h.status(account_status(session)) end\nassert(action == \"generate\", \"Unknown plugin action.\")\nlocal data = request(session, \"/v4/link/unlock\", { link = event.url })\nif data.delayed and data.delayed ~= 0 then\n  local ready = false\n  for _ = 1, 36 do\n    xd.log(\"info\", \"AllDebrid is preparing the file…\")\n    xd.sleep(5000)\n    local pending = request(session, \"/v4/link/delayed\", { id = data.delayed })\n    if pending.status == 2 then data.link = pending.link; ready = true; break end\n    assert(pending.status == 1, \"AllDebrid could not prepare this file.\")\n  end\n  assert(ready, \"The host is still preparing the file. Try again later.\")\nend\nassert(type(data.link) == \"string\" and #data.link > 0,\n  \"This link needs a stream-quality choice. Generate a file link on the AllDebrid website.\")\nreturn { title = \"All Debrid — generated download\", single_connection = true,\n  items = { h.item(data.link, data.filename, data.filesize, { \"debrid.it\", \"alldebrid.com\" }) } }\n"
+  }
+}

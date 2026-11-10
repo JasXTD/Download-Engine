@@ -1575,6 +1575,7 @@ mod tests {
                 .request_browser_video_review(
                     &id,
                     &download_engine::browser_video::Review {
+                        single_connection: false,
                         public_only: false,
                         page_url: url.into(),
                         page_title: "Video page".into(),
@@ -1621,6 +1622,7 @@ mod tests {
             .request_browser_video_review(
                 &format!("video:{}", Uuid::new_v4()),
                 &download_engine::browser_video::Review {
+                    single_connection: false,
                     public_only: false,
                     page_url: page.into(),
                     page_title: "Episode".into(),

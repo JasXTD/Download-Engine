@@ -519,6 +519,30 @@ async fn parallel_ranges_reconstruct_exact_bytes_and_preserve_collisions() {
     assert_eq!(fixture.requests.lock().unwrap().len(), 5);
     assert!(!store.paths.parts(&job.id).unwrap().exists());
 }
+
+#[tokio::test]
+async fn generated_link_single_connection_keeps_one_range_and_resumes_exact_bytes() {
+    let fixture = Fixture::pausable_range(9 * 1024 * 1024, 0).await;
+    let (_temp, store) = setup();
+    let mut job = enqueue(&store, &fixture.url);
+    job.single_connection = true;
+    store.save(&job).unwrap();
+    let paused = pause_midway(&store, job, &fixture).await;
+    assert!(paused.single_connection);
+    assert_eq!(paused.plan.as_ref().unwrap().segments.len(), 1);
+    let offset = paused.downloaded;
+    let complete = run(&store, paused).await;
+    assert_eq!(complete.status, Status::Complete, "{:?}", complete.error);
+    assert_eq!(complete.plan.as_ref().unwrap().segments.len(), 1);
+    assert_eq!(
+        std::fs::read(complete.saved_path.unwrap()).unwrap(),
+        *fixture.data
+    );
+    assert!(fixture.requests.lock().unwrap().iter().any(|r| {
+        r.to_lowercase()
+            .contains(&format!("range: bytes={offset}-"))
+    }));
+}
 #[tokio::test]
 async fn ignored_range_falls_back_to_single_download() {
     let fixture = Fixture::new(150000, 1, false).await;

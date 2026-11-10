@@ -40,6 +40,7 @@ fn native_ping_advertises_video_alternative_support_without_queuing() {
 
 fn review() -> Review {
     Review {
+        single_connection: false,
         public_only: false,
         page_url: "https://example.test/watch".into(),
         page_title: "A video".into(),
@@ -63,6 +64,30 @@ fn review() -> Review {
             },
         ],
     }
+}
+
+#[test]
+fn generated_link_connection_limit_survives_selection_receipt_and_reload() {
+    let (_temp, store) = fixture();
+    store.set_queue_running("main", false).unwrap();
+    let mut value = review();
+    value.single_connection = true;
+    value.public_only = true;
+    let request = id();
+    store
+        .request_browser_video_review(&request, &value)
+        .unwrap();
+    let first = store
+        .add_browser_video_selection(&request, &[0], "main", Destination::Automatic)
+        .unwrap();
+    let again = store
+        .add_browser_video_selection(&request, &[0], "main", Destination::Automatic)
+        .unwrap();
+    assert_eq!(first, again);
+    assert_eq!(store.list().unwrap().len(), 1);
+    let saved = store.get(&first[0]).unwrap().unwrap();
+    assert!(saved.single_connection && saved.public_only);
+    assert!(saved.authentication.is_none());
 }
 fn send(store: &Store, id: &str, review: &Review) -> native::Reply {
     native::handle(

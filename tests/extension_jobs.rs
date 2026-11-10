@@ -77,6 +77,101 @@ struct Fixture {
     temp: tempfile::TempDir,
     store: Store,
 }
+
+#[test]
+fn account_action_worker_saves_protected_settings_and_refuses_after_stop() {
+    let f = Fixture::new();
+    let mut value: Value = serde_json::from_slice(&package()).unwrap();
+    value["version"] = json!("1.3.0");
+    value["jobs"][0]["action"] = json!("none");
+    value["jobs"][0]["secret_writes"] = json!(["api_token"]);
+    let bytes = serde_json::to_vec(&value).unwrap();
+    let review = f.store.review_extension(&bytes).unwrap();
+    f.store
+        .install_reviewed(
+            &bytes,
+            &Grants {
+                approved: true,
+                ..Grants::default()
+            },
+            &review,
+        )
+        .unwrap();
+    let script = f.store.extension_job(ID, "reader").unwrap();
+    let mut run = f
+        .store
+        .run_site_reader(
+            &script.id,
+            "https://videohost.example/",
+            &uuid::Uuid::new_v4().to_string(),
+        )
+        .unwrap();
+    // The production scheduler claims the row before launching this same CLI.
+    run.state = "running".into();
+    let db = rusqlite::Connection::open(f.store.paths.data.join("queue.sqlite3")).unwrap();
+    // This test connection acts as the current scheduler, without disabling the
+    // profile's persistent writer guards. Match src/store/migrations.rs.
+    for (name, version) in [("writer", 12_i64), ("data", 12), ("schema", 1)] {
+        db.create_scalar_function(
+            format!("xdownloader_{name}_version").as_str(),
+            0,
+            rusqlite::functions::FunctionFlags::SQLITE_UTF8
+                | rusqlite::functions::FunctionFlags::SQLITE_DETERMINISTIC
+                | rusqlite::functions::FunctionFlags::SQLITE_INNOCUOUS,
+            move |_| Ok(version),
+        )
+        .unwrap();
+    }
+    db.execute(
+        "UPDATE script_runs SET state='running',data=?1 WHERE id=?2",
+        rusqlite::params![serde_json::to_string(&run).unwrap(), run.id],
+    )
+    .unwrap();
+    let output = f.worker(
+        &run,
+        &script,
+        Reach::Web,
+        "xd.save_secret('api_token', 'fixture-worker-secret'); return {title='Connected',items={}}",
+    );
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert!(!String::from_utf8_lossy(&output.stdout).contains("fixture-worker-secret"));
+    let context = f
+        .store
+        .extension_context(&script, Reach::Web)
+        .unwrap()
+        .unwrap();
+    assert_eq!(context.settings["api_token"], "fixture-worker-secret");
+    let ciphertext: Vec<u8> = db
+        .query_row(
+            "SELECT value FROM extension_settings WHERE key='api_token'",
+            [],
+            |r| r.get(0),
+        )
+        .unwrap();
+    assert!(
+        !ciphertext
+            .windows(b"fixture-worker-secret".len())
+            .any(|w| w == b"fixture-worker-secret")
+    );
+    f.store.stop_script(&run.id).unwrap();
+    let output = f.worker(
+        &run,
+        &script,
+        Reach::Web,
+        "xd.save_secret('api_token', 'stopped-replacement'); return {items={}}",
+    );
+    assert!(!output.status.success());
+    let context = f
+        .store
+        .extension_context(&script, Reach::Web)
+        .unwrap()
+        .unwrap();
+    assert_eq!(context.settings["api_token"], "fixture-worker-secret");
+}
 impl Fixture {
     fn new() -> Self {
         let temp = tempfile::tempdir().unwrap();

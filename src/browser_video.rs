@@ -34,6 +34,8 @@ pub struct Item {
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct Review {
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub single_connection: bool,
     /// Set by site readers; preserved in the pending review until selection.
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub public_only: bool,
@@ -368,6 +370,12 @@ impl Store {
             queue,
             destination,
         )?;
+        if review.single_connection {
+            tx.execute("UPDATE profile_format SET data_version=MAX(data_version,12),min_writer_version=MAX(min_writer_version,12) WHERE id=1", [])?;
+            for job in &ids {
+                tx.execute("UPDATE jobs SET data=json_set(data,'$.single_connection',json('true')) WHERE id=?1", [job])?;
+            }
+        }
         tx.execute(
             "UPDATE browser_video_reviews SET data=NULL,job_ids=?2 WHERE request_id=?1",
             params![id, serde_json::to_string(&ids)?],

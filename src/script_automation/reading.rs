@@ -10,6 +10,8 @@ pub const MAX_READING_BYTES: usize = 1024 * 1024;
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Reading {
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub single_connection: bool,
     #[serde(default)]
     pub title: Option<String>,
     pub items: Vec<ReadingItem>,
@@ -114,6 +116,7 @@ impl Reading {
             })
             .collect();
         Review {
+            single_connection: self.single_connection,
             public_only: true,
             page_url: page.to_string(),
             page_title: title,

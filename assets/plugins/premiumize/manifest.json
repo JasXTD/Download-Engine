@@ -1,0 +1,75 @@
+{
+  "format": "download-engine-extension",
+  "format_version": 1,
+  "id": "bundled.premiumize",
+  "name": "Premiumize.me",
+  "version": "1.0.0",
+  "publisher": "Download Engine",
+  "description": "Generate file links using your Premiumize.me account. Open the service website and save its API key in this plugin's Settings first. Service availability and fair-use limits apply.",
+  "homepage": "https://www.premiumize.me/account",
+  "license": "MIT",
+  "api_version": 1,
+  "permissions": {
+    "network": [
+      "www.premiumize.me",
+      "premiumize.me",
+      "*.premiumize.me",
+      "*.energycdn.com",
+      "energycdn.com"
+    ],
+    "http_sessions": true
+  },
+  "settings": [
+    {
+      "id": "account",
+      "type": "secret",
+      "label": "Premiumize API key"
+    }
+  ],
+  "jobs": [
+    {
+      "id": "connect",
+      "name": "Check account",
+      "entry": "main.lua",
+      "timeout_seconds": 120,
+      "trigger": {
+        "kind": "site_reader",
+        "pages": [
+          "www.premiumize.me/*"
+        ]
+      },
+      "action": "none",
+      "secret_writes": []
+    },
+    {
+      "id": "generate",
+      "name": "Generate links",
+      "entry": "main.lua",
+      "timeout_seconds": 120,
+      "trigger": {
+        "kind": "site_reader",
+        "pages": [
+          "www.premiumize.me/*"
+        ]
+      },
+      "action": "url",
+      "secret_writes": []
+    },
+    {
+      "id": "disconnect",
+      "name": "Disconnect",
+      "entry": "main.lua",
+      "timeout_seconds": 120,
+      "trigger": {
+        "kind": "site_reader",
+        "pages": [
+          "www.premiumize.me/*"
+        ]
+      },
+      "action": "none",
+      "secret_writes": [
+        "account"
+      ]
+    }
+  ]
+}

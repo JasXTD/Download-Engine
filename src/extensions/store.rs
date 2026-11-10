@@ -50,7 +50,7 @@ pub struct Installed {
     pub enabled: bool,
     pub installed_at: i64,
     #[serde(skip)]
-    key_scope: uuid::Uuid,
+    pub(super) key_scope: uuid::Uuid,
 }
 
 /// What an install or update would do. Showing it changes nothing.
@@ -184,8 +184,12 @@ fn compare(old: &Package, new: &Package) -> Changes {
             .jobs
             .iter()
             .filter(|job| {
-                old.job(&job.id)
-                    .is_some_and(|o| o.trigger != job.trigger || o.entry != job.entry)
+                old.job(&job.id).is_some_and(|o| {
+                    o.trigger != job.trigger
+                        || o.entry != job.entry
+                        || o.action != job.action
+                        || o.secret_writes != job.secret_writes
+                })
             })
             .map(|job| job.name.clone())
             .collect(),
@@ -235,7 +239,7 @@ pub(super) fn checked(bytes: &[u8]) -> Result<Package> {
     Ok(package)
 }
 
-fn read(conn: &Connection, id: &str) -> Result<Option<Installed>> {
+pub(super) fn read(conn: &Connection, id: &str) -> Result<Option<Installed>> {
     let row: Option<(String, bool, i64)> = conn
         .query_row(
             "SELECT data,enabled,installed_at FROM extensions WHERE id=?1",
@@ -341,7 +345,8 @@ impl Store {
         })
     }
 
-    /// Installs a new extension turned off, or updates an installed one.
+    /// Installs an extension, or updates it while preserving its enabled choice.
+    /// Only the exact bundled account plugins start enabled on first install.
     pub fn install_extension(&self, bytes: &[u8], grants: &Grants) -> Result<Installed> {
         self.install(bytes, grants, None)
     }
@@ -363,6 +368,9 @@ impl Store {
         let mut conn = self.connect()?;
         let tx = conn.transaction_with_behavior(TransactionBehavior::Immediate)?;
         let old = read(&tx, &package.id)?;
+        if package.jobs.iter().any(|j| j.action.is_some()) {
+            tx.execute("UPDATE profile_format SET data_version=MAX(data_version,12),min_writer_version=MAX(min_writer_version,12) WHERE id=1", [])?;
+        }
         if package.settings.iter().any(|s| {
             matches!(
                 s,
@@ -412,7 +420,9 @@ impl Store {
             crate::provider::protect_profile(&tx)?;
         }
         protect_profile(&tx)?;
-        let enabled = old.as_ref().is_some_and(|o| o.enabled);
+        let enabled = old
+            .as_ref()
+            .map_or_else(|| super::examples::enabled_by_default(bytes), |o| o.enabled);
         let scope = old
             .as_ref()
             .map_or_else(uuid::Uuid::new_v4, |o| o.key_scope);
@@ -905,9 +915,21 @@ impl Store {
                 }
             }
         }
-        let key_scope =
-            (reach == Reach::Processor || !binary_secrets.is_empty() || !rsa_keys.is_empty())
-                .then_some(installed.key_scope);
+        let secret_writes = if reach == Reach::Web && link.version == installed.package.version {
+            installed
+                .package
+                .job(&link.job)
+                .filter(|j| j.action.is_some())
+                .map(|j| j.secret_writes.clone())
+                .unwrap_or_default()
+        } else {
+            Vec::new()
+        };
+        let key_scope = (reach == Reach::Processor
+            || !binary_secrets.is_empty()
+            || !rsa_keys.is_empty()
+            || !secret_writes.is_empty())
+        .then_some(installed.key_scope);
         Ok(Some(Context {
             id: link.id.clone(),
             version: link.version.clone(),
@@ -929,6 +951,7 @@ impl Store {
             binary_secrets,
             rsa_keys,
             key_scope,
+            secret_writes,
         }))
     }
 

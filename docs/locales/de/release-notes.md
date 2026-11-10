@@ -1,3 +1,13 @@
+## 3.20.0 — 2026-11-10
+
+### Optionale Konto-Plugins
+
+- Drei getrennte Lua-Plugins: All Debrid, Real Debrid und Premiumize.me. Prüfen und aktivieren Sie das Plugin, verbinden Sie Ihr eigenes Konto und erzeugen Sie Links. Wählen Sie Dateien vor dem Download aus. Zugangsdaten bleiben geschützt und Aktionen lassen sich stoppen; Abonnements und Dienstlimits gelten weiterhin.
+
+- Diese drei Plugins sind nach der Prüfung der Berechtigungen und Installation standardmäßig aktiviert. Aktionen starten Sie selbst; bisherige Deaktivierungen bleiben erhalten.
+
+[Setup guide (English)](../../debrid-plugins.md) · [English details](../../../CHANGELOG.md#3200--2026-11-10)
+
 ## 3.19.1 — 2026-11-10
 
 ### Aktualisiertes Linux-Wayland-Paket

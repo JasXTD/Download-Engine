@@ -365,7 +365,7 @@ Extensions add site support and automation as one package. They run on the same 
 
 4. Tick file access only if you want to allow it, then choose Install.
 
-5. It installs turned off. Select it and tick Enabled when you are ready.
+5. Custom extensions and starter examples install turned off. Select one and tick Enabled when you are ready. The bundled All Debrid, Real Debrid and Premiumize.me plugins are enabled after installation, but their account and download actions run only when you choose them. Existing disabled choices are preserved.
 
 Publishers are not verified, so install extensions only from people you trust.
 
@@ -379,6 +379,16 @@ errors. Keep one package per ID, and increase its version when changing it.
 Deleting the source file leaves the reviewed installed copy intact.
 
 ### Settings, code and updates
+
+All Debrid, Real Debrid and Premiumize.me are optional bundled Lua plugins. Install
+each one you want from **From plugins folder** and review its access. These three
+start enabled after installation, with no automatic account or download action.
+All Debrid and Real Debrid show **Connect account** on Overview: approve the code
+on the service website. For Premiumize.me, save your service API key in the
+plugin's Settings, then choose **Check account**. Paste a host file URL and choose
+**Generate links → Review generated links** to select downloads. **Stop** cancels
+an action; **Disconnect** clears the local account setting. Service subscriptions,
+supported hosts and traffic limits still apply. See [the account-plugin guide](debrid-plugins.md).
 
 Select an extension to see what it can do, what it cannot do and when its jobs last ran. Settings holds its options. Protected values can be replaced or cleared but not shown again. Code shows its files, read-only. Copy to my scripts makes an editable copy as a personal script. If a job asks to change files and you left that box clear, Allow… on the Overview tab grants it later, and Take back removes it.
 

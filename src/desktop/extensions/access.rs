@@ -6,6 +6,7 @@ use download_engine::extensions::Job as PackageJob;
 
 /// One job as the page describes it.
 pub(super) struct JobLine<'a> {
+    pub(super) action: bool,
     pub(super) name: &'a str,
     pub(super) trigger: &'a Trigger,
     /// The last run, on the Overview tab only.
@@ -111,10 +112,15 @@ pub(super) fn what_it_does(
                     ui.label(RichText::new(last).small().color(p.muted));
                 }
             });
-            ui.add(
-                egui::Label::new(RichText::new(runs(job.trigger, queues)).color(p.muted)).wrap(),
-            );
-            if let Trigger::SiteReader { pages } = job.trigger {
+            let explanation = if job.action {
+                tr("Runs only when you start it.").to_owned()
+            } else {
+                runs(job.trigger, queues)
+            };
+            ui.add(egui::Label::new(RichText::new(explanation).color(p.muted)).wrap());
+            if !job.action
+                && let Trigger::SiteReader { pages } = job.trigger
+            {
                 for page in pages {
                     ui.add(
                         egui::Label::new(RichText::new(page).monospace().small().color(p.muted))
@@ -232,6 +238,16 @@ pub(super) fn access(
         ui.add_space(4.0);
         row(ui, "folder", tr("Your files"), width, p, files);
         ui.add_space(6.0);
+        let writes: BTreeSet<_> = package.jobs.iter().flat_map(|j| &j.secret_writes).collect();
+        for key in writes {
+            if let Some(setting) = package.setting(key) {
+                ui.label(format!(
+                    "{}: {}",
+                    tr("May save protected account settings"),
+                    setting.label()
+                ));
+            }
+        }
         if package
             .settings
             .iter()

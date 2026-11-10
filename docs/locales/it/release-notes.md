@@ -1,3 +1,13 @@
+## 3.20.0 — 2026-11-10
+
+### Plugin account facoltativi
+
+- Tre plugin Lua separati: All Debrid, Real Debrid e Premiumize.me. Esamina e attiva il plugin, collega il tuo account e genera i link, poi scegli i file. Le credenziali sono protette e le operazioni possono essere interrotte. Restano validi abbonamenti e limiti dei servizi.
+
+- Questi tre plugin sono attivi per impostazione predefinita dopo la verifica dei permessi e l’installazione. Le azioni partono solo quando le avvii; le disattivazioni esistenti vengono mantenute.
+
+[Setup guide (English)](../../debrid-plugins.md) · [English details](../../../CHANGELOG.md#3200--2026-11-10)
+
 ## 3.19.1 — 2026-11-10
 
 ### Aggiornamento del pacchetto Linux Wayland

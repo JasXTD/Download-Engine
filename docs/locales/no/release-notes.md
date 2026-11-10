@@ -1,3 +1,13 @@
+## 3.20.0 — 2026-11-10
+
+### Valgfrie kontotillegg
+
+- Tre separate Lua-tillegg: All Debrid, Real Debrid og Premiumize.me. Gjennomgå og aktiver tillegget, koble til din egen konto og generer lenker. Velg filer før nedlasting. Påloggingsdata beskyttes og handlinger kan stoppes; tjenestenes abonnementer og grenser gjelder fortsatt.
+
+- Disse tre tilleggene er aktivert som standard etter gjennomgang av tillatelser og installasjon. Du starter handlingene selv; tidligere deaktiveringer beholdes.
+
+[Setup guide (English)](../../debrid-plugins.md) · [English details](../../../CHANGELOG.md#3200--2026-11-10)
+
 ## 3.19.1 — 2026-11-10
 
 ### Oppdatert Linux-pakke for Wayland

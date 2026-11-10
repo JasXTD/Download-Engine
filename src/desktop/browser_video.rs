@@ -288,7 +288,7 @@ impl Desktop {
         let response = form_dialog::modal("browser-video-review", p).show(ctx, |ui| {
                 if saving { ui.disable(); }
                 ui.set_width((ctx.content_rect().width()-100.0).clamp(420.0,760.0));
-                close = form_dialog::title(ui, tr("Video downloads"), form_dialog::Icon::Symbol("\u{e714}"), p, true);
+                close = form_dialog::title(ui, if draft.pending.review.single_connection { tr("Generated downloads") } else { tr("Video downloads") }, form_dialog::Icon::Symbol("\u{e714}"), p, true);
                 egui::ScrollArea::vertical().id_salt("browser-video-body").max_height((ctx.content_rect().height()-190.0).max(260.0)).show(ui, |ui| {
                     let review = &draft.pending.review;
                     ui.add(egui::Label::new(RichText::new(&review.page_title).strong()).truncate()).on_hover_text(&review.page_title);
@@ -401,6 +401,7 @@ impl Desktop {
     pub(super) fn browser_video_sample(&mut self, empty: bool) {
         use download_engine::browser_video::{Item, Review};
         let review = Review {
+            single_connection: false,
             public_only: false,
             page_url: if empty {
                 "https://example.com/watch/no-media"

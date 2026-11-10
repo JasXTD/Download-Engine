@@ -1,0 +1,91 @@
+{
+  "format": "download-engine-extension",
+  "format_version": 1,
+  "id": "bundled.all-debrid",
+  "name": "All Debrid",
+  "version": "1.0.0",
+  "publisher": "Download Engine",
+  "description": "Connect your All Debrid account, check its plan and generate file download links. A separate service account is required; supported hosts and account limits apply.",
+  "homepage": "https://alldebrid.com/pin/",
+  "license": "MIT",
+  "api_version": 1,
+  "permissions": {
+    "network": [
+      "api.alldebrid.com",
+      "alldebrid.com",
+      "*.alldebrid.com",
+      "*.debrid.it",
+      "debrid.it"
+    ],
+    "http_sessions": true
+  },
+  "settings": [
+    {
+      "id": "account",
+      "type": "secret",
+      "label": "Connected account (protected)"
+    }
+  ],
+  "jobs": [
+    {
+      "id": "connect",
+      "name": "Connect account",
+      "entry": "main.lua",
+      "timeout_seconds": 240,
+      "trigger": {
+        "kind": "site_reader",
+        "pages": [
+          "api.alldebrid.com/*"
+        ]
+      },
+      "action": "none",
+      "secret_writes": [
+        "account"
+      ]
+    },
+    {
+      "id": "account",
+      "name": "Check account",
+      "entry": "main.lua",
+      "timeout_seconds": 240,
+      "trigger": {
+        "kind": "site_reader",
+        "pages": [
+          "api.alldebrid.com/*"
+        ]
+      },
+      "action": "none",
+      "secret_writes": []
+    },
+    {
+      "id": "generate",
+      "name": "Generate links",
+      "entry": "main.lua",
+      "timeout_seconds": 240,
+      "trigger": {
+        "kind": "site_reader",
+        "pages": [
+          "api.alldebrid.com/*"
+        ]
+      },
+      "action": "url",
+      "secret_writes": []
+    },
+    {
+      "id": "disconnect",
+      "name": "Disconnect",
+      "entry": "main.lua",
+      "timeout_seconds": 240,
+      "trigger": {
+        "kind": "site_reader",
+        "pages": [
+          "api.alldebrid.com/*"
+        ]
+      },
+      "action": "none",
+      "secret_writes": [
+        "account"
+      ]
+    }
+  ]
+}

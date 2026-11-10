@@ -154,7 +154,11 @@ pub(crate) async fn transfer(
             }
             job.remote = Some(source.remote(&probe));
             let final_url = source.identity(&probe).to_owned();
-            let connection_limit = connections.limit(&job.url, probe.url().as_str())?;
+            let connection_limit = if job.single_connection {
+                1
+            } else {
+                connections.limit(&job.url, probe.url().as_str())?
+            };
             if let Some(plan) = &job.plan {
                 ensure!(
                     plan.size == size && plan.etag == etag && plan.final_url == final_url,

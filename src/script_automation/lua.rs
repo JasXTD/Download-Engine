@@ -277,10 +277,51 @@ pub fn execute_reader_job(
     extension: Option<&crate::extensions::Context>,
     fetch: impl FnMut(FetchRequest) -> Result<FetchReply> + 'static,
 ) -> Result<serde_json::Value> {
+    execute_reader_action(source, event, extension, fetch, |_, _| {
+        anyhow::bail!("Protected settings are read-only in this worker")
+    })
+}
+
+/// Explicit plugin actions may save only their reviewed protected text settings.
+pub fn execute_reader_action(
+    source: &str,
+    event: &serde_json::Value,
+    extension: Option<&crate::extensions::Context>,
+    fetch: impl FnMut(FetchRequest) -> Result<FetchReply> + 'static,
+    mut save: impl FnMut(&str, Option<&str>) -> Result<()> + 'static,
+) -> Result<serde_json::Value> {
     let (lua, xd) = sandbox(source, event)?;
     super::helpers::install(&lua, &xd, true)?;
     if let Some(extension) = extension {
         extension.install(&lua, &xd)?;
+        if !extension.secret_writes.is_empty() {
+            let writable = extension.secret_writes.clone();
+            let mut writes = 0;
+            xd.set(
+                "save_secret",
+                lua.create_function_mut(move |_, (key, value): (String, Option<String>)| {
+                    if writes >= 16
+                        || !writable.contains(&key)
+                        || value
+                            .as_ref()
+                            .is_some_and(|v| v.is_empty() || v.len() > 4096)
+                    {
+                        return Err(mlua::Error::runtime(
+                            "Protected setting write is not allowed",
+                        ));
+                    }
+                    writes += 1;
+                    save(&key, value.as_deref()).map_err(mlua::Error::external)
+                })?,
+            )?;
+            let supports: mlua::Function = xd.get("supports")?;
+            xd.set(
+                "supports",
+                lua.create_function(move |_, name: String| {
+                    Ok(name == "xd.save_secret" || supports.call::<bool>(name)?)
+                })?,
+            )?;
+        }
     }
     let refuse = || {
         lua.create_function(|_, _: Variadic<Value>| -> mlua::Result<()> {

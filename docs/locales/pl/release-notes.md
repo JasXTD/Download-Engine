@@ -1,3 +1,13 @@
+## 3.20.0 — 2026-11-10
+
+### Opcjonalne wtyczki kont
+
+- Dodano osobne wtyczki Lua: All Debrid, Real Debrid i Premiumize.me. Sprawdź uprawnienia, włącz wtyczkę, połącz własne konto i wygeneruj linki, a następnie wybierz pliki. Dane uwierzytelniające są chronione, a operacje można zatrzymać. Nadal obowiązują abonamenty i limity usług.
+
+- Te trzy wtyczki są domyślnie włączane po sprawdzeniu uprawnień i instalacji. Działania uruchamiasz samodzielnie; wcześniejsze wyłączenie zostaje zachowane.
+
+[Setup guide (English)](../../debrid-plugins.md) · [English details](../../../CHANGELOG.md#3200--2026-11-10)
+
 ## 3.19.1 — 2026-11-10
 
 ### Aktualizacja pakietu Linux Wayland

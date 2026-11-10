@@ -1,3 +1,13 @@
+## 3.20.0 — 2026-11-10
+
+### Plugins da conto facultativs
+
+- Trais plugins Lua separads: All Debrid, Real Debrid e Premiumize.me. Controllai ed activai il plugin, collià il voss conto e generai colliaziuns. Tscherna ils datotecas avant il download. Las datas d’access èn protegidas e las acziuns pon vegnir fermadas; ils abunaments e limits dals servetschs restan valaivels.
+
+- Quests trais plugins èn activads sco standard suenter la controlla da las permissiuns e l’installaziun. Vus lantschais las acziuns; las deactivaziuns existentas vegnan mantegnidas.
+
+[Setup guide (English)](../../debrid-plugins.md) · [English details](../../../CHANGELOG.md#3200--2026-11-10)
+
 ## 3.19.1 — 2026-11-10
 
 ### Actualisaziun dal pachet Linux Wayland

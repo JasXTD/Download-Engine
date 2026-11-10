@@ -12,6 +12,7 @@ use std::{
 };
 
 mod access;
+mod actions;
 mod discovery;
 mod examples;
 mod goals;
@@ -78,6 +79,7 @@ struct SettingsDraft {
 
 #[derive(Default)]
 pub(super) struct State {
+    action_reports: BTreeMap<String, actions::Report>,
     discovery: discovery::State,
     loaded: bool,
     entries: Vec<Entry>,
@@ -116,6 +118,9 @@ impl State {
 }
 
 enum Act {
+    RunAction(Script, String),
+    StopAction(String),
+    ReviewAction(String),
     Select(String),
     Enable(String, bool),
     Remove(String),
@@ -245,6 +250,7 @@ fn overview(
     queues: &[DownloadQueue],
     p: Palette,
 ) -> Option<Act> {
+    let mut act = actions::card(ui, state, index, p);
     let entry = &state.entries[index];
     let package = &entry.installed.package;
     let lines: Vec<access::JobLine> = entry
@@ -254,14 +260,24 @@ fn overview(
             name: &job.script.name,
             trigger: &job.script.trigger,
             last: Some(last_run(job)),
+            action: job
+                .script
+                .extension
+                .as_ref()
+                .and_then(|l| package.job(&l.job))
+                .is_some_and(|j| j.action.is_some()),
         })
         .collect();
-    access::what_it_does(ui, &lines, queues, p);
+    if lines.iter().any(|j| !j.action) {
+        access::what_it_does(ui, &lines, queues, p);
+    }
     ui.add_space(8.0);
-    let mut act = None;
     access::access(ui, package, p, |ui| {
-        act = access::overview_files(ui, entry, p)
+        if let Some(next) = access::overview_files(ui, entry, p) {
+            act = Some(next);
+        }
     });
+    let entry = &state.entries[index];
     let provider = entry
         .jobs
         .iter()
@@ -772,7 +788,13 @@ impl Desktop {
         let state = &mut self.extensions;
         state.loaded = true;
         match result {
-            Ok(entries) => state.entries = entries,
+            Ok(entries) => {
+                match actions::reports(&self.store, &entries) {
+                    Ok(reports) => state.action_reports = reports,
+                    Err(error) => state.error = Some(error.to_string()),
+                }
+                state.entries = entries;
+            }
             Err(error) => state.error = Some(error.to_string()),
         }
         state
@@ -989,6 +1011,26 @@ impl Desktop {
     fn extension_action(&mut self, act: Act) {
         let saving = matches!(act, Act::SaveSettings(_));
         let result = match act {
+            Act::RunAction(script, page) => self
+                .store
+                .run_site_reader(&script.id, &page, &Uuid::new_v4().to_string())
+                .map(|_| ()),
+            Act::StopAction(run) => self.store.stop_script(&run),
+            Act::ReviewAction(id) => {
+                let review = self
+                    .extensions
+                    .action_reports
+                    .get(&id)
+                    .and_then(|r| r.reading.as_ref().map(|reading| reading.review(&r.page)))
+                    .unwrap_or_else(|| Err(anyhow::anyhow!("No generated links are available")));
+                match review {
+                    Ok(review) => {
+                        self.open_found_videos(review, &self.queue_id.clone());
+                        Ok(())
+                    }
+                    Err(error) => Err(error),
+                }
+            }
             Act::Select(id) => {
                 select(&mut self.extensions, id);
                 Ok(())
@@ -1168,6 +1210,14 @@ impl Desktop {
                             tr("Your other settings, keys and stored values are kept.")
                         },
                     ],
+                    None if download_engine::extensions::examples::enabled_by_default(
+                        &pending.bytes,
+                    ) =>
+                    {
+                        vec![tr(
+                            "Enabled after install. Actions run only when you start them.",
+                        )]
+                    }
                     None => vec![tr(
                         "It installs turned off. Turn it on after you review it.",
                     )],
@@ -1290,6 +1340,7 @@ fn install_summary(
             name: &job.name,
             trigger: &job.trigger,
             last: None,
+            action: job.action.is_some(),
         })
         .collect();
     access::what_it_does(ui, &lines, queues, p);

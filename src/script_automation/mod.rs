@@ -8,7 +8,9 @@ pub(crate) mod lua;
 pub mod package;
 pub use fetch::{FetchReply, FetchRequest, Fetcher};
 pub use http_session::HttpSession;
-pub use lua::{execute_job, execute_lua, execute_reader, execute_reader_job};
+pub use lua::{
+    execute_job, execute_lua, execute_reader, execute_reader_action, execute_reader_job,
+};
 mod reading;
 pub use reading::{Reading, ReadingItem};
 mod runner;

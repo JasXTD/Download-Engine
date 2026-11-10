@@ -273,20 +273,45 @@ fn lua_worker() -> Result<()> {
 /// A site reader gets xd.fetch (through the profile's proxy settings) instead of
 /// app commands, and leaves what it found where the scheduler collects it.
 fn site_reader(source: &str, event: &Value, extension: Option<&ExtensionContext>) -> Result<()> {
-    use download_engine::script_automation::{Fetcher, Reading, execute_reader_job};
+    use download_engine::script_automation::{Fetcher, Reading, execute_reader_action};
     let paths: AppPaths = serde_json::from_str(&std::env::var("IDM_EX_SCRIPT_PROFILE")?)?;
     ensure!(
         paths.data.is_absolute() && paths.downloads.is_absolute(),
         "Script profile paths must be absolute"
     );
-    let route = download_engine::proxy::Route::load(&Store::open(paths)?)?;
+    let store = Store::open(paths)?;
+    let route = download_engine::proxy::Route::load(&store)?;
     let mut fetcher = Fetcher::new(route)?;
     if let Some(extension) = extension {
         fetcher = fetcher.limit_hosts(extension.hosts.clone());
     }
-    let value = execute_reader_job(source, event, extension, move |request| {
-        fetcher.fetch(request)
-    })?;
+    let context = extension.cloned();
+    let run = std::env::var("IDM_EX_SCRIPT_RUN")?;
+    let mut expected = context
+        .as_ref()
+        .map(|c| c.settings.clone())
+        .unwrap_or_default();
+    let value = execute_reader_action(
+        source,
+        event,
+        extension,
+        move |request| fetcher.fetch(request),
+        move |key, value| {
+            let context = context.as_ref().context("No plugin action context")?;
+            store.save_action_secret(
+                &run,
+                context,
+                key,
+                expected.get(key).and_then(Value::as_str),
+                value,
+            )?;
+            expected.insert(
+                key.to_owned(),
+                value.map_or(Value::Null, |v| Value::String(v.to_owned())),
+            );
+            Ok(())
+        },
+    )?;
     let reading = Reading::from_value(value)?;
     std::fs::write(
         std::env::var("XDOWNLOADER_RESULT_FILE")?,

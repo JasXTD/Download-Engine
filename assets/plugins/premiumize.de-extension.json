@@ -1,0 +1,79 @@
+{
+  "format": "download-engine-extension",
+  "format_version": 1,
+  "id": "bundled.premiumize",
+  "name": "Premiumize.me",
+  "version": "1.0.0",
+  "publisher": "Download Engine",
+  "description": "Generate file links using your Premiumize.me account. Open the service website and save its API key in this plugin's Settings first. Service availability and fair-use limits apply.",
+  "homepage": "https://www.premiumize.me/account",
+  "license": "MIT",
+  "api_version": 1,
+  "permissions": {
+    "network": [
+      "www.premiumize.me",
+      "premiumize.me",
+      "*.premiumize.me",
+      "*.energycdn.com",
+      "energycdn.com"
+    ],
+    "http_sessions": true
+  },
+  "settings": [
+    {
+      "id": "account",
+      "type": "secret",
+      "label": "Premiumize API key"
+    }
+  ],
+  "jobs": [
+    {
+      "id": "connect",
+      "name": "Check account",
+      "entry": "main.lua",
+      "timeout_seconds": 120,
+      "trigger": {
+        "kind": "site_reader",
+        "pages": [
+          "www.premiumize.me/*"
+        ]
+      },
+      "action": "none",
+      "secret_writes": []
+    },
+    {
+      "id": "generate",
+      "name": "Generate links",
+      "entry": "main.lua",
+      "timeout_seconds": 120,
+      "trigger": {
+        "kind": "site_reader",
+        "pages": [
+          "www.premiumize.me/*"
+        ]
+      },
+      "action": "url",
+      "secret_writes": []
+    },
+    {
+      "id": "disconnect",
+      "name": "Disconnect",
+      "entry": "main.lua",
+      "timeout_seconds": 120,
+      "trigger": {
+        "kind": "site_reader",
+        "pages": [
+          "www.premiumize.me/*"
+        ]
+      },
+      "action": "none",
+      "secret_writes": [
+        "account"
+      ]
+    }
+  ],
+  "files": {
+    "common.lua": "-- Shared by the three separately packaged plugins. No account information is logged.\nlocal M = {}\nfunction M.text(value, label, limit)\n  assert(type(value) == \"string\" and #value > 0 and #value <= (limit or 2048), \"Invalid \" .. label .. \" in service response\")\n  assert(not value:find(\"[%c]\"), \"Invalid \" .. label .. \" in service response\")\n  return value\nend\nfunction M.session(origin, token)\n  local headers = { Accept = \"application/json\" }\n  if token then headers.Authorization = \"Bearer \" .. M.text(token, \"access token\") end\n  -- Origin-bound sessions refuse cross-origin redirects, including credentials\n  -- embedded in POST bodies or device-code query parameters.\n  return xd.http_session(origin, { headers = headers })\nend\nfunction M.request(session, url, fields)\n  local options = { session = session }\n  if fields then\n    local keys, parts = {}, {}\n    for key in pairs(fields) do keys[#keys + 1] = key end\n    table.sort(keys)\n    for _, key in ipairs(keys) do parts[#parts + 1] = xd.url_encode(key) .. \"=\" .. xd.url_encode(tostring(fields[key])) end\n    options.method = \"POST\"\n    options.body = table.concat(parts, \"&\")\n    options.headers = { [\"Content-Type\"] = \"application/x-www-form-urlencoded\" }\n  end\n  local ok, reply = pcall(xd.fetch, url, options)\n  assert(ok, \"Cannot reach the service. Check your connection or proxy, then try again.\")\n  if reply.status == 429 then error(\"The service is limiting requests. Wait before trying again.\") end\n  if reply.status >= 500 then error(\"The service is temporarily unavailable. Try again later.\") end\n  local parsed, data = pcall(xd.json, reply.body)\n  assert(parsed and type(data) == \"table\", \"The service returned an unreadable response.\")\n  return data, reply.status\nend\nfunction M.account()\n  local saved = xd.setting(\"account\")\n  assert(type(saved) == \"string\" and #saved > 0, \"Connect your account first.\")\n  local ok, data = pcall(xd.json, saved)\n  assert(ok and type(data) == \"table\", \"Saved account is invalid. Connect again.\")\n  return data\nend\nfunction M.save(data)\n  xd.save_secret(\"account\", xd.to_json(data))\nend\nfunction M.status(title)\n  return { title = title, items = {} }\nend\nfunction M.item(link, filename, size, domains)\n  M.text(link, \"download link\", 16384)\n  local host = link:match(\"^https?://([^/?#]+)\")\n  assert(host and not host:find(\"[@:]\"), \"The service returned an unsupported download address.\")\n  host = host:lower()\n  local allowed = false\n  for _, domain in ipairs(domains) do\n    if host == domain or host:sub(-#domain - 1) == \".\" .. domain then allowed = true end\n  end\n  assert(allowed, \"The service returned an unapproved download host. Report this on GitHub without sharing the private link.\")\n  if filename ~= nil then M.text(filename, \"filename\", 1024) end\n  if type(size) ~= \"number\" or size <= 0 or size > 9007199254740991 then size = nil end\n  return { kind = \"file\", url = link, filename = filename, size = size }\nend\nfunction M.disconnect()\n  xd.save_secret(\"account\", nil)\n  return M.status(\"Disconnected. This app's saved account has been removed.\")\nend\nreturn M\n",
+    "main.lua": "local h = require(\"common\")\nlocal origin = \"https://www.premiumize.me\"\nlocal errors = {\n  authentication_failed = \"The API key is missing, invalid or expired. Save a new key in this plugin's Settings.\",\n  permission_denied = \"Premiumize denied this request. Check your account on its website.\",\n  service_unsupported = \"Premiumize does not support this source.\",\n  not_found = \"This file is no longer available.\",\n  service_down = \"This host is temporarily unavailable.\",\n  service_limit_reached = \"Your account's allowance for this host has been used.\",\n  account_limit_reached = \"Your Premiumize fair-use allowance has been used.\",\n  rate_limit_reached = \"The service is limiting requests. Try again later.\",\n  link_generation_failed = \"Premiumize could not generate this link yet. Try again later.\",\n}\nif xd.extension.job == \"disconnect\" then return h.disconnect() end\nlocal key = xd.setting(\"account\")\nassert(type(key) == \"string\" and #key > 0,\n  \"Open the service website, copy your API key, then save it in this plugin's Settings.\")\nlocal session = h.session(origin, key)\nlocal function request(path, fields)\n  local data, status = h.request(session, origin .. \"/api/\" .. path, fields)\n  assert(status < 400 and data.status == \"success\",\n    errors[data.code] or \"Premiumize refused this request. Check your account and source availability on its website.\")\n  return data\nend\nif xd.extension.job == \"connect\" or xd.extension.job == \"account\" then\n  local account = request(\"account/info\")\n  assert(type(account.customer_id) == \"string\" or type(account.customer_id) == \"number\",\n    \"Premiumize returned incomplete account details.\")\n  -- Do not infer that an account is currently premium from an expiry timestamp\n  -- alone, or persist identifiers and personal account data.\n  local title = \"Premiumize.me connected.\"\n  if type(account.limit_used) == \"number\" and account.limit_used >= 0 and account.limit_used <= 1 then\n    title = title .. \" Fair-use allowance used: \" .. math.floor(account.limit_used * 100) .. \"%.\"\n  end\n  return h.status(title)\nend\nassert(xd.extension.job == \"generate\", \"Unknown plugin action.\")\nlocal response = request(\"transfer/directdl\", { src = event.url })\nassert(type(response.content) == \"table\", \"Premiumize did not return a file list.\")\nlocal items, names = {}, {}\nfor _, file in ipairs(response.content) do\n  assert(#items < 1000, \"The service returned too many links.\")\n  local path = h.text(file.path, \"file path\", 1024)\n  local name = path:match(\"[^/\\\\]+$\")\n  assert(name and name ~= \".\" and name ~= \"..\", \"Invalid generated filename.\")\n  -- All files go through the ordinary destination review, never service paths.\n  local original, number = name, 2\n  while names[name:lower()] do\n    local stem, suffix = original:match(\"^(.*)(%.[^.]*)$\")\n    name = (stem or original) .. \" (\" .. number .. \")\" .. (suffix or \"\")\n    number = number + 1\n  end\n  names[name:lower()] = true\n  items[#items + 1] = h.item(file.link, name, file.size, { \"premiumize.me\", \"energycdn.com\" })\nend\nassert(#items > 0, \"Premiumize did not return a downloadable file. The source may not be ready for direct download.\")\nreturn { title = \"Premiumize.me — generated downloads\", single_connection = true, items = items }\n"
+  }
+}

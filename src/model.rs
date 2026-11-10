@@ -139,6 +139,9 @@ pub struct Job {
     /// Reader-derived files must keep their network boundary across restarts.
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub public_only: bool,
+    /// Some generated links permit only one transfer connection.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub single_connection: bool,
     pub directory: PathBuf,
     pub status: Status,
     /// Queued files continue after reset. Paused, non-resumable files need review.
@@ -309,6 +312,7 @@ impl Job {
             source_page: None,
             link_fallback: None,
             public_only: false,
+            single_connection: false,
             url: url.to_string(),
             directory,
             status: Status::Queued,

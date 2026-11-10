@@ -1,0 +1,93 @@
+{
+  "format": "download-engine-extension",
+  "format_version": 1,
+  "id": "bundled.real-debrid",
+  "name": "Real Debrid",
+  "version": "1.0.0",
+  "publisher": "Download Engine",
+  "description": "Connect your Real Debrid account, check its plan and generate file download links. A separate service account is required; supported hosts and account limits apply.",
+  "homepage": "https://real-debrid.com/device",
+  "license": "MIT",
+  "api_version": 1,
+  "permissions": {
+    "network": [
+      "api.real-debrid.com",
+      "real-debrid.com",
+      "*.real-debrid.com"
+    ],
+    "http_sessions": true
+  },
+  "settings": [
+    {
+      "id": "account",
+      "type": "secret",
+      "label": "Connected account (protected)"
+    }
+  ],
+  "jobs": [
+    {
+      "id": "connect",
+      "name": "Connect account",
+      "entry": "main.lua",
+      "timeout_seconds": 240,
+      "trigger": {
+        "kind": "site_reader",
+        "pages": [
+          "api.real-debrid.com/*"
+        ]
+      },
+      "action": "none",
+      "secret_writes": [
+        "account"
+      ]
+    },
+    {
+      "id": "account",
+      "name": "Check account",
+      "entry": "main.lua",
+      "timeout_seconds": 240,
+      "trigger": {
+        "kind": "site_reader",
+        "pages": [
+          "api.real-debrid.com/*"
+        ]
+      },
+      "action": "none",
+      "secret_writes": [
+        "account"
+      ]
+    },
+    {
+      "id": "generate",
+      "name": "Generate links",
+      "entry": "main.lua",
+      "timeout_seconds": 240,
+      "trigger": {
+        "kind": "site_reader",
+        "pages": [
+          "api.real-debrid.com/*"
+        ]
+      },
+      "action": "url",
+      "secret_writes": [
+        "account"
+      ]
+    },
+    {
+      "id": "disconnect",
+      "name": "Disconnect",
+      "entry": "main.lua",
+      "timeout_seconds": 240,
+      "trigger": {
+        "kind": "site_reader",
+        "pages": [
+          "api.real-debrid.com/*"
+        ]
+      },
+      "action": "none",
+      "secret_writes": [
+        "account"
+      ]
+    }
+  ]
+}

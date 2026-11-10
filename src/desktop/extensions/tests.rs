@@ -4,6 +4,124 @@ use serde_json::{Value, json};
 
 const ID: &str = "example.videohost";
 
+#[test]
+fn plugin_account_actions_render_and_start_only_after_enable_and_stop_without_downloads() {
+    let (_temp, mut app, ctx) = fixture();
+    let mut local: Value =
+        serde_json::from_slice(download_engine::extensions::examples::PLUGINS[0]).unwrap();
+    local["id"] = json!("test.account-actions");
+    local["files"]["main.lua"] = json!("xd.sleep(60000); return {items={}}");
+    let bytes = serde_json::to_vec(&local).unwrap();
+    let downloads_before = app.store.list().unwrap().len();
+    let installed = app
+        .store
+        .install_extension(&bytes, &Grants::default())
+        .unwrap();
+    open(&mut app);
+    frame(&mut app, &ctx, size(), vec![]);
+    let output = frame(&mut app, &ctx, size(), vec![]);
+    text_rect(&output, "Plugin actions");
+    text_rect(&output, "Connect account");
+    text_rect(&output, "Turn on this plugin to use its actions.");
+    click(&mut app, &ctx, "Connect account");
+    assert!(app.store.script_runs(None).unwrap().is_empty());
+    app.store
+        .set_extension_enabled(&installed.package.id, true)
+        .unwrap();
+    app.refresh_extensions();
+    frame(&mut app, &ctx, size(), vec![]);
+    click(&mut app, &ctx, "Connect account");
+    let runs = app.store.script_runs(None).unwrap();
+    assert_eq!(runs.len(), 1);
+    assert!(runs[0].active());
+    frame(&mut app, &ctx, size(), vec![]);
+    app.extension_action(Act::StopAction(runs[0].id.clone()));
+    for _ in 0..40 {
+        if !app.store.script_run(&runs[0].id).unwrap().active() {
+            break;
+        }
+        std::thread::sleep(Duration::from_millis(50));
+    }
+    assert!(!app.store.script_run(&runs[0].id).unwrap().active());
+    assert_eq!(app.store.list().unwrap().len(), downloads_before);
+}
+
+#[test]
+fn plugin_action_buttons_fit_the_shared_panel_at_two_window_sizes() {
+    for dimensions in [egui::vec2(1280.0, 860.0), egui::vec2(1000.0, 760.0)] {
+        let (_temp, mut app, ctx) = fixture();
+        app.store
+            .install_extension(
+                download_engine::extensions::examples::PLUGINS[1],
+                &Grants::default(),
+            )
+            .unwrap();
+        open(&mut app);
+        frame(&mut app, &ctx, dimensions, vec![]);
+        let output = frame(&mut app, &ctx, dimensions, vec![]);
+        let connect = text_rect(&output, "Connect account");
+        let check = text_rect(&output, "Check account");
+        let disconnect = text_rect(&output, "Disconnect");
+        assert!(!connect.intersects(check) && !check.intersects(disconnect));
+        assert!(disconnect.right() <= dimensions.x);
+    }
+}
+
+#[test]
+fn plugin_result_opens_selection_without_starting_a_download() {
+    // The CLI integration suite executes the worker. Seed its completed receipt
+    // before this layout fixture starts its scheduler; test binaries do not have
+    // the installed de-cli sibling that the production scheduler launches.
+    let (_temp, mut app, ctx) = super::super::interaction_tests::fixture_with_store_setup(
+        |store| {
+            let package = store
+                .install_extension(
+                    download_engine::extensions::examples::PLUGINS[1],
+                    &Grants::default(),
+                )
+                .unwrap();
+            store
+                .set_extension_enabled(&package.package.id, true)
+                .unwrap();
+            let job = store
+                .extension_job(&package.package.id, "generate")
+                .unwrap();
+            let mut run = store
+                .run_site_reader(
+                    &job.id,
+                    "https://source.example/file",
+                    &Uuid::new_v4().to_string(),
+                )
+                .unwrap();
+            run.state = "succeeded".into();
+            let db = super::super::fixture_database::open(store.paths.data.join("queue.sqlite3"))
+                .unwrap();
+            db.execute(
+                "UPDATE script_runs SET state='succeeded',data=?2 WHERE id=?1",
+                rusqlite::params![run.id, serde_json::to_string(&run).unwrap()],
+            )
+            .unwrap();
+            let reading = json!({"title":"Generated fixture","single_connection":true,"items":[{"kind":"file","url":"https://cdn.real-debrid.com/fixture.bin","filename":"fixture.bin","size":32}]});
+            db.execute(
+                "INSERT INTO script_results(run_id,data) VALUES(?1,?2)",
+                rusqlite::params![run.id, reading.to_string()],
+            )
+            .unwrap();
+        },
+    );
+    open(&mut app);
+    let before = app.store.list().unwrap().len();
+    frame(&mut app, &ctx, size(), vec![]);
+    let output = frame(&mut app, &ctx, size(), vec![]);
+    text_rect(&output, "Review generated links");
+    click(&mut app, &ctx, "Review generated links");
+    assert_eq!(app.dialog, Some(Dialog::BrowserVideo));
+    let pending = app.store.next_browser_video_review().unwrap().unwrap();
+    assert!(pending.review.single_connection);
+    assert_eq!(pending.review.items.len(), 1);
+    assert_eq!(app.store.list().unwrap().len(), before);
+}
+
 pub(super) fn package(version: &str, hosts: &[&str]) -> Vec<u8> {
     serde_json::to_vec(&json!({
         "format": "download-engine-extension",

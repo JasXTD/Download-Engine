@@ -1,3 +1,13 @@
+## 3.20.0 — 2026-11-10
+
+### 可选账户插件
+
+- 新增三个独立 Lua 插件：All Debrid、Real Debrid 和 Premiumize.me。审核并启用后，连接自己的账户、生成下载链接并选择文件。凭据受保护，支持停止操作；服务订阅和限额仍然适用。
+
+- 这三个插件在审核安装后默认启用，只有您点击时才运行操作。已关闭的选择会保留。
+
+[Setup guide (English)](../../debrid-plugins.md) · [English details](../../../CHANGELOG.md#3200--2026-11-10)
+
 ## 3.19.1 — 2026-11-10
 
 ### Linux Wayland 软件包更新

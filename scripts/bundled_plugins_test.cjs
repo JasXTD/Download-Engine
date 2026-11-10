@@ -12,7 +12,11 @@ const ffmpeg = process.env.MEDIA_TEST_FFMPEG || path.join(root, 'tools/ffmpeg/ff
 const hash = file => createHash('sha256').update(fs.readFileSync(file)).digest('hex');
 try {
   const first = prepare(path.join(scratch, 'first'), cli, ffmpeg);
-  assert.deepEqual(fs.readdirSync(first.directory).sort(), ['README.md', 'offline-episode', 'offline-episode.de-extension.json']);
+  assert.deepEqual(fs.readdirSync(first.directory).sort(), ['README.md', 'all-debrid.de-extension.json', 'offline-episode', 'offline-episode.de-extension.json', 'premiumize.de-extension.json', 'real-debrid.de-extension.json']);
+  for (const slug of ['all-debrid', 'real-debrid', 'premiumize']) {
+    assert.equal(hash(path.join(first.directory, slug + '.de-extension.json')),
+      hash(path.join(root, 'assets/plugins', slug + '.de-extension.json')));
+  }
   assert.equal(JSON.parse(fs.readFileSync(first.package)).id, 'download-engine.offline-episode');
   assert.equal(hash(first.package), hash(path.join(first.directory, 'offline-episode/offline-episode.de-extension.json')));
   const bundle = path.join(first.directory, 'offline-episode');

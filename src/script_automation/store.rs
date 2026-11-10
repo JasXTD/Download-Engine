@@ -830,7 +830,14 @@ impl Store {
                 && matches!(script.trigger, Trigger::SiteReader { .. })
         });
         readers.sort_by_key(|script| script.extension.is_some());
-        Ok(readers)
+        readers
+            .into_iter()
+            .filter_map(|s| match self.is_extension_action(&s) {
+                Ok(true) => None,
+                Ok(false) => Some(Ok(s)),
+                Err(e) => Some(Err(e)),
+            })
+            .collect()
     }
     /// The first enabled site reader whose pages cover `page`. Built-in readers
     /// always take their own sites.
@@ -868,6 +875,15 @@ impl Store {
                 && script.language == Language::Lua,
             "This script is not a site reader"
         );
+        if let Some(link) = &script.extension
+            && self.is_extension_action(&script)?
+        {
+            // Account actions share credentials. Serialize them across the whole
+            // plugin, including requests from the editor/CLI, not just UI clicks.
+            ensure!(!tx.query_row("SELECT EXISTS(SELECT 1 FROM script_runs r JOIN extension_jobs j
+                ON r.script_id=j.script_id WHERE j.extension_id=?1 AND r.state IN ('queued','running'))",
+                [&link.id], |r| r.get::<_,bool>(0))?, "This plugin already has a queued or running action");
+        }
         let run = enqueue(
             &tx,
             &script,

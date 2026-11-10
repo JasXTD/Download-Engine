@@ -61,6 +61,19 @@ pub struct Job {
     /// A request. The person installing the extension decides, as with script imports.
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub change_files: bool,
+    /// An explicit web action, never an automatic page handler.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub action: Option<ActionInput>,
+    /// Protected settings this action may replace after account authorization.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub secret_writes: Vec<String>,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ActionInput {
+    None,
+    Url,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -412,6 +425,22 @@ impl Package {
         let mut ids = BTreeSet::new();
         let mut web = false;
         for job in &self.jobs {
+            ensure!(
+                job.action.is_none() || matches!(job.trigger, Trigger::SiteReader { .. }),
+                "Actions must be site reader jobs"
+            );
+            ensure!(
+                job.secret_writes.is_empty() || job.action.is_some(),
+                "Only explicit actions may save protected settings"
+            );
+            let mut writable = BTreeSet::new();
+            for key in &job.secret_writes {
+                ensure!(
+                    writable.insert(key)
+                        && matches!(self.setting(key), Some(Setting::Secret { .. })),
+                    "Secret writes must name distinct protected text settings"
+                );
+            }
             ensure!(
                 !job.id.is_empty()
                     && job.id.len() <= 32

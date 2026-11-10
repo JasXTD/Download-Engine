@@ -1,3 +1,13 @@
+## 3.20.0 — 2026-11-10
+
+### Pemalam akaun pilihan
+
+- Tiga pemalam Lua berasingan: All Debrid, Real Debrid dan Premiumize.me. Semak dan aktifkan pemalam, sambungkan akaun sendiri, jana pautan dan pilih fail sebelum memuat turun. Bukti kelayakan dilindungi dan tindakan boleh dihentikan; langganan serta had perkhidmatan masih terpakai.
+
+- Ketiga-tiga pemalam diaktifkan secara lalai selepas pemasangan yang disemak. Tindakan hanya berjalan apabila anda memulakannya; pilihan yang dinyahaktifkan dikekalkan.
+
+[Setup guide (English)](../../debrid-plugins.md) · [English details](../../../CHANGELOG.md#3200--2026-11-10)
+
 ## 3.19.1 — 2026-11-10
 
 ### Kemas kini pakej Linux Wayland

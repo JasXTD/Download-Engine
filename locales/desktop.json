@@ -1,4 +1,12 @@
 {
+  "Enabled after install. Actions run only when you start them.": ["安装后默认启用。操作仅在您启动时运行。","安裝後預設啟用。操作僅在您啟動時執行。","Diaktifkan selepas pemasangan. Tindakan hanya berjalan apabila anda memulakannya."],
+  "Review permissions before installing or updating.": ["安装或更新前请审核权限。","安裝或更新前請檢閱權限。","Semak kebenaran sebelum memasang atau mengemas kini."],
+  "Plugin actions": ["插件操作","外掛操作","Tindakan pemalam"],
+  "Turn on this plugin to use its actions.": ["启用此插件以使用其操作。","啟用此外掛以使用其操作。","Aktifkan pemalam ini untuk menggunakan tindakannya."],
+  "Open service website": ["打开服务网站","開啟服務網站","Buka laman perkhidmatan"],
+  "Review generated links": ["查看生成的链接","檢視產生的連結","Semak pautan yang dijana"],
+  "May save protected account settings": ["可保存受保护的账户设置","可儲存受保護的帳戶設定","Boleh menyimpan tetapan akaun terlindung"],
+  "Generated downloads": ["生成的下载","產生的下載","Muat turun yang dijana"],
   "Allow incoming connections?": ["允许传入连接？","允許傳入連線？","Benarkan sambungan masuk?"],
   "Other peers can connect to this app. This increases network exposure. Your firewall and router settings stay unchanged.": ["其他节点可连接到此应用，这会增加网络暴露面。防火墙和路由器设置保持不变。","其他節點可連線至此應用程式，這會增加網路暴露面。防火牆和路由器設定保持不變。","Rakan lain boleh menyambung ke aplikasi ini. Ini meningkatkan pendedahan rangkaian. Tetapan tembok api dan penghala anda kekal sama."],
   "Enable UPnP?": ["启用 UPnP？","啟用 UPnP？","Dayakan UPnP?"],

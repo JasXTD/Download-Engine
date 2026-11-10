@@ -49,6 +49,10 @@ function Get-ReleaseVersion {
     }
     $notes = $release.Groups[2].Value -replace '(?m)^#+[^\r\n]*', ''
     if ([string]::IsNullOrWhiteSpace($notes)) { throw 'The latest changelog release must contain release notes.' }
+    $docsCheck = & node (Join-Path $Root 'scripts/Check-ReleaseDocs.cjs') $Root 2>&1
+    if ($LASTEXITCODE -ne 0) {
+        throw "Release documentation preflight failed: $($docsCheck -join [Environment]::NewLine)"
+    }
     return $version
 }
 

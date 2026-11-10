@@ -92,7 +92,7 @@ GitHub Pages deploys the `/docs` contents automatically. Check the repository's
 Actions page or Settings → Pages for the deployment result, then verify the
 published page and affected assets.
 
-Featured packages are explicitly pinned to **3.10.2**. Publish the GitHub release
+Featured packages are explicitly pinned to the version in **Cargo.toml**. Publish the GitHub release
 with all ten assets before or together with pushing this site, or download buttons
 return 404. Update the current version labels, all nine payload URLs, checksum URL,
 release-notes URL and SoftwareApplication version/download URL together. Keep
@@ -105,11 +105,28 @@ The separate **Latest release** link always opens GitHub's
 current latest release. The website never downloads or runs an installer
 automatically.
 
+Before committing a release update, run:
+
+```sh
+node scripts/Check-ReleaseDocs.cjs
+node --test scripts/Check-ReleaseDocs.test.cjs
+```
+
+This offline check validates the README Download link, website release labels,
+SoftwareApplication metadata, and all ten asset URLs and filenames against
+`Cargo.toml`. Keep the README's current highlights inside its `current-release`
+comments and `data-release-version` on website text describing the current release;
+leave historical feature versions unmarked. Update the release highlights with
+the actual changes instead of relabeling an older feature as new. Both native CI
+workflows and Windows/Unix packaging run the check, so stale download information
+fails before a release is assembled. It does not query GitHub or prove the assets
+are published; verify that separately before deploying the website.
+
 For design changes, check narrow and wide layouts, both grabber-preview modes,
 all theme-preview choices, keyboard navigation, FAQ controls, reduced motion and
 operation without JavaScript. Check slideshow and hero-theme timing, wraparound,
 pause/play, image selection, visibility, loading failure and stable panel height.
-At 375 px the page must not scroll horizontally. Verify all seven release
+At 375 px the page must not scroll horizontally. Verify all ten release
 assets and the documentation anchors.
 
 Review new files explicitly and add their paths to

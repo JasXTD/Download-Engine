@@ -12,7 +12,9 @@ $fixture = & {
 }
 try {
     New-Item -ItemType Directory -Path (Join-Path $fixture 'extension') -Force | Out-Null
-    foreach ($file in @('Cargo.toml','Cargo.lock','CHANGELOG.md','extension/manifest.chromium.json','extension/manifest.firefox.json')) {
+    New-Item -ItemType Directory -Path (Join-Path $fixture 'docs') -Force | Out-Null
+    New-Item -ItemType Directory -Path (Join-Path $fixture 'scripts') -Force | Out-Null
+    foreach ($file in @('Cargo.toml','Cargo.lock','CHANGELOG.md','extension/manifest.chromium.json','extension/manifest.firefox.json','README.md','docs/index.html','scripts/Check-ReleaseDocs.cjs')) {
         Copy-Item -LiteralPath (Join-Path $workspaceRoot $file) -Destination (Join-Path $fixture $file)
     }
     $script:checks = 0
@@ -63,6 +65,10 @@ try {
     With-InvalidFile 'CHANGELOG.md' "# Changelog`n`n## 0.0.0 $([char]0x2014) 2026-10-16`n`nOld notes." 'first CHANGELOG.md release heading'
     With-InvalidFile 'CHANGELOG.md' "# Changelog`n`n## $version $([char]0x2014) 2026-02-30`n`nNotes." 'first CHANGELOG.md release heading'
     With-InvalidFile 'CHANGELOG.md' "# Changelog`n`n## $version $([char]0x2014) 2026-10-16`n`n### Added`n`n" 'must contain release notes'
+    $readme = Get-Content -LiteralPath (Join-Path $fixture 'README.md') -Raw
+    With-InvalidFile 'README.md' ($readme.Replace("[Download $version]", '[Download 0.0.0]')) 'Release documentation preflight failed'
+    $homepage = Get-Content -LiteralPath (Join-Path $fixture 'docs/index.html') -Raw
+    With-InvalidFile 'docs/index.html' ($homepage.Replace("releases/download/v$version/", 'releases/download/v0.0.0/')) 'Release documentation preflight failed'
     New-Item -ItemType Directory -Path (Join-Path $fixture 'target/release') -Force | Out-Null
     [IO.File]::WriteAllText((Join-Path $fixture 'target/release/de.exe'), 'No version resource')
     Expect-Failure { Assert-ReleaseBinaryVersions -Root $fixture -Version $version } 'Rebuild de.exe'

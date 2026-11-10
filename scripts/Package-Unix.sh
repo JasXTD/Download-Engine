@@ -3,6 +3,7 @@
 set -euo pipefail
 root=$(cd "$(dirname "$0")/.." && pwd)
 output=${1:?Usage: bash scripts/Package-Unix.sh OUTPUT_DIRECTORY}
+node "$root/scripts/Check-ReleaseDocs.cjs" "$root"
 mkdir -p "$output"
 output=$(cd "$output" && pwd)
 host=$(rustc -vV | sed -n 's/^host: //p')

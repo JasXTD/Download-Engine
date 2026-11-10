@@ -45,9 +45,15 @@ not affiliated with IDM, and does not claim complete IDM feature parity.
 Get published packages from the [releases page](https://github.com/JasXTD/Download-Engine/releases)
 and read the [changelog](CHANGELOG.md) for release and development notes.
 
-**[Download 3.19.0](https://github.com/JasXTD/Download-Engine/releases/tag/v3.19.0)** —
+<!-- current-release:start -->
+**[Download 3.19.1](https://github.com/JasXTD/Download-Engine/releases/tag/v3.19.1)** —
 Windows, Apple Silicon and Intel Macs, and Linux x64. Native FFmpeg is bundled;
 browser extensions, source code and SHA-256 checksums are included with the release.
+
+**New in 3.19.1:** fixes Dailymotion video detection and preview in Chrome, Edge and
+Firefox, retains usable playlists through ads, and adds clearer diagnostic logs.
+Update both the desktop app and browser extension for the complete fix.
+<!-- current-release:end -->
 
 ## Features
 
@@ -98,6 +104,7 @@ quality and audio choices, then select **Add video to queue**.
 | **[Bilibili](docs/reference.md#bilibili-video-downloads)** | Public `BV`/`av` video pages and a selected part of a multi-part video; DASH video/audio selection and merging. | Anonymous access currently offers up to 480p. Sign-in qualities, paid/region-locked/DRM videos, live pages, and `b23.tv` short links are unsupported. |
 | **[Bilibili Bangumi](docs/reference.md#bilibili-video-downloads)** | Accessible episode links; a season link selects its first main episode. | No built-in support for members-only previews, region-locked episodes or DRM. This does not download an entire season at once. |
 | **[Twitch](docs/reference.md#twitch-video-downloads)** | Public past broadcasts, highlights, and uploads, with available HLS qualities. | No live channels, clips, subscriber-only videos, or sign-in support. |
+| **[Dailymotion](docs/reference.md#video-links-in-the-browser)** | Start playback, then use the browser extension’s **Download video** button. Public metadata lookup falls back to captured playlists, with quality preview before downloading. | Public playable videos only. Ads can delay detection; let the main video start and retry. Update both the extension and desktop app. |
 | **[HLS](docs/reference.md#hls-video-downloads)** | Supported finished, unencrypted `.m3u8` streams, with quality/audio selection and supported track merging. | No live recording, encrypted streams, or DRM. Container and playlist limits apply. |
 | **[DASH](docs/reference.md#dash-video-downloads)** | Static, single-period, unencrypted MP4 video/audio in supported `.mpd` manifests, merged without re-encoding. | No dynamic/live or encrypted streams, multiple periods, WebM representations, or subtitles. |
 | **[Custom sites](docs/automation.md#site-readers)** | Add a Lua site reader that resolves a page into supported direct files or streams. | Public-address fetching with no inherited browser-login cookies. Reader results use the engine's supported formats; custom byte processing uses [Lua providers](docs/lua-providers.md). |

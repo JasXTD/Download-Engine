@@ -842,6 +842,8 @@
     "scripts/Build-LicenseBundle.cjs",
     "scripts/Build-Locales.cjs",
     "scripts/Build-UnixFfmpeg.sh",
+    "scripts/Check-ReleaseDocs.cjs",
+    "scripts/Check-ReleaseDocs.test.cjs",
     "scripts/Create-TestTlsFixtures.sh",
     "scripts/Install-LinuxDesktop.sh",
     "scripts/LicenseNotices.cjs",

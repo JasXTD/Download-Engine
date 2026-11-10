@@ -37,6 +37,10 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      - name: Release documentation
+        run: |
+          node scripts/Check-ReleaseDocs.cjs
+          node --test scripts/Check-ReleaseDocs.test.cjs
       - name: Native toolchain
         run: |
           # Use the runner's installed compiler and SDK; do not install tools.

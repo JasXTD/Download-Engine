@@ -24,6 +24,8 @@ After updating sources and the release notes, run focused tests and visual check
 for the affected behavior. Then run these commands from the project root:
 
 ```powershell
+node scripts/Check-ReleaseDocs.cjs
+node --test scripts/Check-ReleaseDocs.test.cjs
 cargo fmt --all --check
 cargo clippy --offline --locked --all-targets --all-features -- -D warnings
 cargo build --release --offline --locked --bins
@@ -42,6 +44,14 @@ the newest dated changelog entry before building. They also reject binaries whos
 Windows version metadata differs from the release, including with `-SkipBuild`.
 These checks catch inconsistent versions; they do not detect source edits made
 without a version bump. The release author must choose and increment the version.
+
+Windows and Unix packaging also run `Check-ReleaseDocs.cjs`, before assembling
+packages. It compares the README's current Download link, marked website version
+labels, SoftwareApplication metadata, and all ten public asset links with
+`Cargo.toml`. Historical feature dates and versions stay unchanged. The same
+offline check and its regression tests run at the start of macOS and Linux CI,
+before dependency downloads or compilation. Keep `data-release-version` on any
+website text that describes the current release; see `docs/website.md` in the source checkout.
 
 Check Help → Changelog, Help → About, `de-cli.exe --version` and `--help`,
 the packaged manifests, and the packaged `CHANGELOG.md`. Ensure the packaged

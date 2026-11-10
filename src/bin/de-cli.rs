@@ -53,7 +53,7 @@ MCP controls: --no-download-control, --no-queue-control, --allow-lua,
   scripts state SCRIPT_ID [clear]  Show or clear what a script keeps between runs
   extensions list | show ID | review FILE
   extensions install FILE [--queue NAME|ID] [--allow-files] [--approve]
-                               Install turned off, or update an installed extension
+                               Install or update; bundled account plugins start enabled
   extensions enable ID | disable ID | remove ID
   extensions set ID KEY VALUE  Save a setting
   extensions set-secret ID KEY Save a protected setting from redirected stdin

@@ -6,6 +6,8 @@
 
 - Questi tre plugin sono attivi per impostazione predefinita dopo la verifica dei permessi e l’installazione. Le azioni partono solo quando le avvii; le disattivazioni esistenti vengono mantenute.
 
+- I tre plugin per gli account, versione 1.0.1, accettano solo link di download generati con HTTPS. Se è già installata una versione di sviluppo, esamina e installa l’aggiornamento.
+
 [Setup guide (English)](../../debrid-plugins.md) · [English details](../../../CHANGELOG.md#3200--2026-11-10)
 
 ## 3.19.1 — 2026-11-10

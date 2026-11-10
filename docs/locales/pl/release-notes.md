@@ -6,6 +6,8 @@
 
 - Te trzy wtyczki są domyślnie włączane po sprawdzeniu uprawnień i instalacji. Działania uruchamiasz samodzielnie; wcześniejsze wyłączenie zostaje zachowane.
 
+- Trzy wtyczki kont w wersji 1.0.1 akceptują wygenerowane linki do pobierania wyłącznie przez HTTPS. Jeśli masz już wersję rozwojową, przejrzyj i zainstaluj aktualizację.
+
 [Setup guide (English)](../../debrid-plugins.md) · [English details](../../../CHANGELOG.md#3200--2026-11-10)
 
 ## 3.19.1 — 2026-11-10

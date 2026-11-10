@@ -6,6 +6,8 @@
 
 - Quests trais plugins èn activads sco standard suenter la controlla da las permissiuns e l’installaziun. Vus lantschais las acziuns; las deactivaziuns existentas vegnan mantegnidas.
 
+- Ils trais plugins da conto en la versiun 1.0.1 acceptan mo colliaziuns da telechargiar generadas cun HTTPS. Sche ina versiun da svilup è gia installada, controllai ed installai l’actualisaziun.
+
 [Setup guide (English)](../../debrid-plugins.md) · [English details](../../../CHANGELOG.md#3200--2026-11-10)
 
 ## 3.19.1 — 2026-11-10

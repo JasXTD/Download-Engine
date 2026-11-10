@@ -6,6 +6,8 @@
 
 - Disse tre tilleggene er aktivert som standard etter gjennomgang av tillatelser og installasjon. Du starter handlingene selv; tidligere deaktiveringer beholdes.
 
+- De tre kontoprogramtilleggene i versjon 1.0.1 godtar bare genererte nedlastingslenker med HTTPS. Se gjennom og installer oppdateringen hvis en utviklingsversjon allerede er installert.
+
 [Setup guide (English)](../../debrid-plugins.md) · [English details](../../../CHANGELOG.md#3200--2026-11-10)
 
 ## 3.19.1 — 2026-11-10

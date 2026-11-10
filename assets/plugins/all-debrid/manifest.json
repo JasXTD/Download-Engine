@@ -3,7 +3,7 @@
   "format_version": 1,
   "id": "bundled.all-debrid",
   "name": "All Debrid",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "publisher": "Download Engine",
   "description": "Connect your All Debrid account, check its plan and generate file download links. A separate service account is required; supported hosts and account limits apply.",
   "homepage": "https://alldebrid.com/pin/",

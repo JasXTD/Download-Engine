@@ -10,6 +10,7 @@ Release notes are available offline in Help → Changelog. Newest releases appea
 - Connect All Debrid or Real Debrid using a browser approval code. Premiumize.me uses the API key saved in its protected plugin setting. Generate host-file links, review the results and choose which files to add; service accounts, supported hosts and traffic limits still apply.
 - Add explicit plugin action buttons, progress logs, Stop and local Disconnect. Keep account credentials protected, bind API sessions to their origin, and reject token writes from canceled or stale actions. Real Debrid refreshes expired tokens; All Debrid handles delayed files.
 - Preserve a one-connection transfer limit for generated links through queueing and profile reload. Installing an account-action plugin upgrades the profile so older builds cannot discard its new permissions or transfer limits.
+- Require HTTPS for generated links in all three account plugins, preventing private download URLs and file contents from being sent over cleartext HTTP. Bundle plugin version 1.0.1 so development installations can review the security update.
 - Add the account-plugin guide and offline API fixtures, protected-store and worker cancellation checks. Live paid-account host compatibility is not claimed by the offline tests.
 - Report bugs on [GitHub Issues](https://github.com/JasXTD/Download-Engine/issues), rather than Reddit. Never include API keys, tokens or private generated links.
 

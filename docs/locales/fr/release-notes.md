@@ -6,6 +6,8 @@
 
 - Ces trois plugins sont activés par défaut après vérification des autorisations et installation. Vous lancez les actions vous-même ; les choix de désactivation existants sont conservés.
 
+- Les trois plugins de compte en version 1.0.1 acceptent uniquement les liens de téléchargement générés en HTTPS. Si une version de développement est déjà installée, examinez et installez la mise à jour.
+
 [Setup guide (English)](../../debrid-plugins.md) · [English details](../../../CHANGELOG.md#3200--2026-11-10)
 
 ## 3.19.1 — 2026-11-10

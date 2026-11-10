@@ -6,6 +6,8 @@
 
 - Ba plugin này được bật mặc định sau khi xem xét quyền và cài đặt. Thao tác chỉ chạy khi bạn bắt đầu; lựa chọn tắt trước đó được giữ nguyên.
 
+- Ba plugin tài khoản phiên bản 1.0.1 chỉ chấp nhận liên kết tải xuống được tạo dùng HTTPS. Nếu đã cài bản phát triển, hãy xem xét và cài đặt bản cập nhật plugin.
+
 [Setup guide (English)](../../debrid-plugins.md) · [English details](../../../CHANGELOG.md#3200--2026-11-10)
 
 ## 3.19.1 — 2026-11-10

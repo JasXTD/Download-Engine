@@ -482,6 +482,47 @@ fn debrid_delayed_file_waits_then_returns_the_generated_link() {
     assert_eq!(result.unwrap().items.len(), 1);
 }
 #[test]
+fn debrid_generated_links_require_https_for_every_service() {
+    let mut insecure_results = Vec::new();
+    for (index, account, host) in [
+        (0, ad(), "cdn.debrid.it"),
+        (1, rd(), "cdn.real-debrid.com"),
+        (2, json!("fixture-pm-key"), "cdn.energycdn.com"),
+    ] {
+        for scheme in ["https", "http"] {
+            let url = format!("{scheme}://{host}/safe.bin?token=private-fixture-token");
+            let response = match index {
+                0 => step("/v4/link/unlock", success(json!({"link":url}))),
+                1 => step("/rest/1.0/unrestrict/link", json!({"download":url})),
+                _ => step(
+                    "/api/transfer/directdl",
+                    json!({"status":"success","content":[{"path":"safe.bin","link":url}]}),
+                ),
+            };
+            let (result, saved, requests) =
+                run(index, "generate", Some(account.clone()), vec![response]);
+            assert!(saved.is_empty());
+            assert_eq!(requests.len(), 1, "only the service API is contacted");
+            if scheme == "https" {
+                let reading = result.unwrap();
+                assert_eq!(reading.items.len(), 1);
+                assert_eq!(reading.items[0].url, url);
+            } else if let Err(error) = result {
+                let message = error.to_string();
+                assert!(message.contains("HTTPS"), "{message}");
+                assert!(!message.contains(host));
+                assert!(!message.contains("private-fixture-token"));
+            } else {
+                insecure_results.push(index);
+            }
+        }
+    }
+    assert!(
+        insecure_results.is_empty(),
+        "plugins accepted cleartext generated links: {insecure_results:?}"
+    );
+}
+#[test]
 fn debrid_rejects_unsafe_or_unapproved_generated_links() {
     for url in [
         "file:///C:/private",

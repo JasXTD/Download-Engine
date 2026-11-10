@@ -3,7 +3,7 @@
   "format_version": 1,
   "id": "bundled.premiumize",
   "name": "Premiumize.me",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "publisher": "Download Engine",
   "description": "Generate file links using your Premiumize.me account. Open the service website and save its API key in this plugin's Settings first. Service availability and fair-use limits apply.",
   "homepage": "https://www.premiumize.me/account",

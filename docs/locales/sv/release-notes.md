@@ -6,6 +6,8 @@
 
 - Dessa tre tillägg aktiveras som standard efter granskning av behörigheter och installation. Du startar åtgärderna själv; tidigare inaktiveringar behålls.
 
+- De tre kontopluginerna i version 1.0.1 godtar endast genererade nedladdningslänkar via HTTPS. Granska och installera uppdateringen om en utvecklingsversion redan är installerad.
+
 [Setup guide (English)](../../debrid-plugins.md) · [English details](../../../CHANGELOG.md#3200--2026-11-10)
 
 ## 3.19.1 — 2026-11-10

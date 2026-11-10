@@ -6,6 +6,8 @@
 
 - Ketiga-tiga pemalam diaktifkan secara lalai selepas pemasangan yang disemak. Tindakan hanya berjalan apabila anda memulakannya; pilihan yang dinyahaktifkan dikekalkan.
 
+- Ketiga-tiga plugin akaun versi 1.0.1 hanya menerima pautan muat turun yang dijana melalui HTTPS. Jika versi pembangunan sudah dipasang, semak dan pasang kemas kini.
+
 [Setup guide (English)](../../debrid-plugins.md) · [English details](../../../CHANGELOG.md#3200--2026-11-10)
 
 ## 3.19.1 — 2026-11-10

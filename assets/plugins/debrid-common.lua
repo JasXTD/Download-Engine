@@ -46,8 +46,9 @@ function M.status(title)
 end
 function M.item(link, filename, size, domains)
   M.text(link, "download link", 16384)
-  local host = link:match("^https?://([^/?#]+)")
-  assert(host and not host:find("[@:]"), "The service returned an unsupported download address.")
+  -- Generated URLs can grant account-backed access; never send them in cleartext.
+  local host = link:match("^https://([^/?#]+)")
+  assert(host and not host:find("[@:]"), "The service returned an unsupported download address. Only HTTPS links are accepted.")
   host = host:lower()
   local allowed = false
   for _, domain in ipairs(domains) do

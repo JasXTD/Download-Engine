@@ -27,6 +27,10 @@ Premiumize's OAuth requires an application registration. This plugin uses its
 documented API-key authentication and sends the key in an HTTPS Authorization
 header, never in the URL. It does not borrow another application's OAuth identity.
 
+If you installed a development copy of a plugin before this release, refresh the
+plugins folder and review its **1.0.1** update. Updating the application does not
+silently replace installed plugin code or permissions.
+
 ## Generate and download
 
 Paste one supported HTTP(S) file-host link into **Source URL**, then choose
@@ -58,7 +62,9 @@ Credentials are protected by Windows DPAPI or the OS-backed encrypted credential
 store on macOS/Linux. Each plugin has its own setting. API credentials are never
 attached to the generated file downloads. API sessions are bound to one HTTPS
 origin and refuse cross-origin redirects. Results are limited to the declared
-service/CDN domains, and the download engine rejects private network destinations.
+service/CDN domains and must use HTTPS. Cleartext generated links are rejected
+without logging the private URL; the engine also rejects HTTPS-to-HTTP redirects
+and private network destinations.
 Unexpected hosts fail explicitly and require a reviewed plugin update.
 Installing an account-action plugin upgrades that profile's format. Older app
 versions refuse to open it, preventing accidental loss of permissions or transfer

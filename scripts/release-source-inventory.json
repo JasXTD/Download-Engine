@@ -873,6 +873,7 @@
     "scripts/Run-MacTests.test.cjs",
     "scripts/Run-NativeCi.cjs",
     "scripts/Run-NativeCi.test.cjs",
+    "scripts/RustCiCache.test.cjs",
     "scripts/Signing.ps1",
     "scripts/Test-LinuxDesktop.sh",
     "scripts/Test-NativePackage.sh",

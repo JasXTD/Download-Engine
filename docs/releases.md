@@ -108,6 +108,20 @@ Windows package names.
 
 ## Native release packages
 
+The macOS and Linux workflows cache downloaded Rust crates and compiled debug/release
+dependencies with GitHub's commit-pinned `actions/cache` action. Intel Mac, Apple
+Silicon and Linux use separate keys. Compiler/SDK, container, native build inputs
+and build configuration changes start a separate cache. When only manifests or
+lockfiles change, Cargo can reuse compatible dependencies from the previous cache;
+`--locked` fetching and the current build still determine what is used.
+
+Only successful full builds on `main` save caches. App and test binaries are removed
+before saving; credentials, test keychains, app profiles and release packages are
+excluded. Cache hits never skip regression, UI or package checks. An absent or evicted
+cache falls back to a cold build. The first run fills the cache; compare subsequent
+full-run timings before claiming a measured speed improvement. No paid runners or
+additional cache-storage allowance are enabled by these workflows.
+
 Build macOS arm64 and x64 on their respective native runners using the full
 `macOS build validation` workflow. The workflow checks torrent/app regressions,
 builds FFmpeg from the pinned sources, packages the app, checks the extracted

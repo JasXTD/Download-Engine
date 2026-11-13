@@ -28,6 +28,33 @@ jobs:
         run: |
           node scripts/Check-ReleaseDocs.cjs
           node --test scripts/Check-ReleaseDocs.test.cjs
+      - name: Rust cache identity
+        id: rust-cache-identity
+        run: |
+          set -euo pipefail
+          toolchain=$(printf '%s' "$RUST_IMAGE" | sha256sum | cut -d ' ' -f 1)
+          echo "toolchain=$toolchain" >> "$GITHUB_OUTPUT"
+      - name: Restore Rust dependencies
+        id: rust-cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          # These are dedicated container mounts, never the runner's Cargo home.
+          path: |
+            ${{ runner.temp }}/rust-cache/cargo-registry/index
+            ${{ runner.temp }}/rust-cache/cargo-registry/cache
+            ${{ runner.temp }}/rust-cache/cargo-registry/src
+            ${{ runner.temp }}/rust-cache/target/debug/.fingerprint
+            ${{ runner.temp }}/rust-cache/target/debug/build
+            ${{ runner.temp }}/rust-cache/target/debug/deps
+            ${{ runner.temp }}/rust-cache/target/release/.fingerprint
+            ${{ runner.temp }}/rust-cache/target/release/build
+            ${{ runner.temp }}/rust-cache/target/release/deps
+            ${{ runner.temp }}/rust-cache/torrent-target/debug/.fingerprint
+            ${{ runner.temp }}/rust-cache/torrent-target/debug/build
+            ${{ runner.temp }}/rust-cache/torrent-target/debug/deps
+          key: rust-v1-linux-x64-${{ steps.rust-cache-identity.outputs.toolchain }}-${{ hashFiles('.github/workflows/linux-release.yml', 'scripts/Run-LinuxCi.sh', 'scripts/Package-Unix.sh', 'scripts/linux-ci-inputs.lock') }}-${{ hashFiles('Cargo.lock', 'torrent/Cargo.lock', 'Cargo.toml', 'torrent/Cargo.toml') }}
+          restore-keys: |
+            rust-v1-linux-x64-${{ steps.rust-cache-identity.outputs.toolchain }}-${{ hashFiles('.github/workflows/linux-release.yml', 'scripts/Run-LinuxCi.sh', 'scripts/Package-Unix.sh', 'scripts/linux-ci-inputs.lock') }}-
       - name: Verify build inputs
         run: |
           shellcheck scripts/Prepare-LinuxCi.sh scripts/Run-LinuxCi.sh
@@ -36,16 +63,22 @@ jobs:
           test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
           git archive --format=tar --output="$RUNNER_TEMP/linux-source.tar" HEAD
       - name: Isolated Debian build and package checks
+        env:
+          SAVE_RUST_CACHE: ${{ github.ref == 'refs/heads/main' && steps.rust-cache.outputs.cache-hit != 'true' }}
         run: |
           name="download-engine-ci-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
           cleanup() { docker rm -f "$name" >/dev/null 2>&1 || true; }
           trap cleanup EXIT
           mkdir "$RUNNER_TEMP/linux-packages"
+          mkdir -p "$RUNNER_TEMP/rust-cache/cargo-registry" "$RUNNER_TEMP/rust-cache/target" "$RUNNER_TEMP/rust-cache/torrent-target"
           source_hash=$(sha256sum "$RUNNER_TEMP/linux-source.tar" | cut -d ' ' -f 1)
           docker run --detach --pull never --name "$name" --cap-drop ALL --security-opt no-new-privileges --pids-limit 512 --cpus 2 --memory 8g \
             --mount "type=bind,source=$RUNNER_TEMP/linux-source.tar,target=/source.tar,readonly" \
             --mount "type=bind,source=$RUNNER_TEMP/linux-ci-inputs,target=/ci-inputs,readonly" \
             --mount "type=bind,source=$GITHUB_WORKSPACE/scripts/Run-LinuxCi.sh,target=/run-linux-ci.sh,readonly" \
+            --mount "type=bind,source=$RUNNER_TEMP/rust-cache/cargo-registry,target=/usr/local/cargo/registry" \
+            --mount "type=bind,source=$RUNNER_TEMP/rust-cache/target,target=/source/target" \
+            --mount "type=bind,source=$RUNNER_TEMP/rust-cache/torrent-target,target=/source/torrent/target" \
             --env GITHUB_ACTIONS=true --env "DE_SOURCE_COMMIT=$GITHUB_SHA" --env "DE_SOURCE_SHA256=$source_hash" \
             --env "DOWNLOAD_ENGINE_SKIP_FFMPEG_TESTS=$DOWNLOAD_ENGINE_SKIP_FFMPEG_TESTS" \
             "$RUST_IMAGE" sleep infinity
@@ -54,6 +87,9 @@ jobs:
           test "$(docker inspect --format '{{len .NetworkSettings.Networks}}' "$name")" = 0
           node scripts/Run-NativeCi.cjs linux-tests-package "$RUNNER_TEMP/native-diagnostics" docker exec "$name" dbus-run-session -- bash /run-linux-ci.sh test-package
           docker cp "$name:/output/." "$RUNNER_TEMP/linux-packages/"
+          if [[ "$SAVE_RUST_CACHE" == true ]]; then
+            docker exec "$name" bash /run-linux-ci.sh prepare-cache
+          fi
       - name: Redacted failure diagnostics
         if: failure()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -72,3 +108,21 @@ jobs:
             ${{ runner.temp }}/linux-packages/linux-validation.json
           if-no-files-found: error
           retention-days: 7
+      - name: Save Rust dependencies
+        if: success() && github.ref == 'refs/heads/main' && steps.rust-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          key: ${{ steps.rust-cache.outputs.cache-primary-key }}
+          path: |
+            ${{ runner.temp }}/rust-cache/cargo-registry/index
+            ${{ runner.temp }}/rust-cache/cargo-registry/cache
+            ${{ runner.temp }}/rust-cache/cargo-registry/src
+            ${{ runner.temp }}/rust-cache/target/debug/.fingerprint
+            ${{ runner.temp }}/rust-cache/target/debug/build
+            ${{ runner.temp }}/rust-cache/target/debug/deps
+            ${{ runner.temp }}/rust-cache/target/release/.fingerprint
+            ${{ runner.temp }}/rust-cache/target/release/build
+            ${{ runner.temp }}/rust-cache/target/release/deps
+            ${{ runner.temp }}/rust-cache/torrent-target/debug/.fingerprint
+            ${{ runner.temp }}/rust-cache/torrent-target/debug/build
+            ${{ runner.temp }}/rust-cache/torrent-target/debug/deps

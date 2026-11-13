@@ -8,7 +8,8 @@ case "${1:-}" in
   prepare)
     [[ "${DE_SOURCE_SHA256:-}" =~ ^[a-f0-9]{64}$ && "${DE_SOURCE_COMMIT:-}" =~ ^[a-f0-9]{40}$ ]]
     printf '%s  /source.tar\n' "$DE_SOURCE_SHA256" | sha256sum --check --status
-    mkdir /source /output
+    # Cache bind mounts create /source/target before the source is unpacked.
+    mkdir -p /source /output
     tar -xf /source.tar --no-same-owner -C /source
     while read -r expected size url extra; do
       [[ -z "$expected" || "$expected" == \#* ]] && continue
@@ -56,7 +57,7 @@ case "${1:-}" in
       sleep 0.1
     done
     [[ "$ready" == 1 ]] || { echo 'Isolated test keyring did not start' >&2; exit 1; }
-    node --test scripts/Run-NativeCi.test.cjs scripts/LicenseNotices.test.cjs
+    node --test scripts/Run-NativeCi.test.cjs scripts/LicenseNotices.test.cjs scripts/RustCiCache.test.cjs
     node --test tests/dailymotion.test.cjs tests/page_links.test.cjs tests/media.test.cjs tests/video_button.test.cjs tests/background.test.cjs tests/extension.test.cjs tests/capture.test.cjs tests/permission_flow.test.cjs tests/browser_login.test.cjs
     if [[ "${DOWNLOAD_ENGINE_SKIP_FFMPEG_TESTS:-0}" != 1 ]]; then
       XDOWNLOADER_MEDIA_HELPER="$DOWNLOAD_ENGINE_FFMPEG_PATH" node --test tests/media_security.test.cjs
@@ -82,5 +83,12 @@ case "${1:-}" in
     cp "/packages/$name" "/packages/$name.sha256" /output/
     node -e 'require("node:fs").writeFileSync("/output/linux-validation.json",JSON.stringify({commit:process.env.DE_SOURCE_COMMIT,version:process.argv[1],architecture:"x86_64",base:"Debian 12",testsPassed:true,extractedPackageSmokePassed:true,networkDisconnectedForTests:true,ffmpegBundled:true},null,2))' "$version"
     ;;
-  *) echo 'Expected prepare or test-package' >&2; exit 1 ;;
+  prepare-cache)
+    cd /source
+    # Test keyrings and downloaded files stay outside these build directories.
+    cargo clean --locked --offline --package download-engine --package de-torrent
+    cargo clean --locked --offline --release --package download-engine --package de-torrent
+    cargo clean --locked --offline --manifest-path torrent/Cargo.toml --package de-torrent
+    ;;
+  *) echo 'Expected prepare, test-package or prepare-cache' >&2; exit 1 ;;
 esac

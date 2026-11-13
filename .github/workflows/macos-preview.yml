@@ -41,6 +41,43 @@ jobs:
         run: |
           node scripts/Check-ReleaseDocs.cjs
           node --test scripts/Check-ReleaseDocs.test.cjs
+      - name: Rust cache identity
+        id: rust-cache-identity
+        run: |
+          set -euo pipefail
+          identity="$RUNNER_TEMP/rust-toolchain"
+          rustc -vV > "$identity"
+          cargo -V >> "$identity"
+          xcodebuild -version >> "$identity"
+          xcrun --show-sdk-path >> "$identity"
+          xcrun --show-sdk-version >> "$identity"
+          xcrun clang --version >> "$identity"
+          printf '%s\n' "$MACOSX_DEPLOYMENT_TARGET" "$CARGO_PROFILE_DEV_DEBUG" "$CARGO_INCREMENTAL" "${RUSTFLAGS:-}" "${CARGO_ENCODED_RUSTFLAGS:-}" >> "$identity"
+          toolchain=$(shasum -a 256 "$identity" | cut -d ' ' -f 1)
+          echo "toolchain=$toolchain" >> "$GITHUB_OUTPUT"
+      - name: Restore Rust dependencies
+        id: rust-cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          # Never cache Cargo credentials, test profiles, keychains or packages.
+          path: |
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/registry/src
+            target/debug/.fingerprint
+            target/debug/build
+            target/debug/deps
+            target/release/.fingerprint
+            target/release/build
+            target/release/deps
+            torrent/target/debug/.fingerprint
+            torrent/target/debug/build
+            torrent/target/debug/deps
+          key: rust-v1-${{ matrix.runner }}-${{ runner.arch }}-${{ steps.rust-cache-identity.outputs.toolchain }}-${{ hashFiles('.github/workflows/macos-preview.yml', 'scripts/Run-MacTests.cjs', 'scripts/Package-Unix.sh') }}-${{ hashFiles('Cargo.lock', 'torrent/Cargo.lock', 'Cargo.toml', 'torrent/Cargo.toml') }}
+          # Reuse unchanged crates after a lock/version change; Cargo still
+          # resolves the current locks and rebuilds changed dependencies.
+          restore-keys: |
+            rust-v1-${{ matrix.runner }}-${{ runner.arch }}-${{ steps.rust-cache-identity.outputs.toolchain }}-${{ hashFiles('.github/workflows/macos-preview.yml', 'scripts/Run-MacTests.cjs', 'scripts/Package-Unix.sh') }}-
       - name: Native toolchain
         run: |
           # Use the runner's installed compiler and SDK; do not install tools.
@@ -50,6 +87,7 @@ jobs:
           node --test scripts/Run-NativeCi.test.cjs
           node --test scripts/Run-MacTests.test.cjs
           node --test scripts/LicenseNotices.test.cjs
+          node --test scripts/RustCiCache.test.cjs
           cargo fetch --locked --target "$(rustc -vV | sed -n 's/^host: //p')"
           cargo fetch --locked --manifest-path torrent/Cargo.toml --target "$(rustc -vV | sed -n 's/^host: //p')"
       - name: Isolated test keychain
@@ -122,3 +160,28 @@ jobs:
         run: |
           keychain="$RUNNER_TEMP/download-engine-tests.keychain-db"
           if [[ -f "$keychain" ]]; then security delete-keychain "$keychain"; fi
+      - name: Prepare Rust dependency cache
+        if: success() && github.ref == 'refs/heads/main' && (github.event.inputs.validation == '' || github.event.inputs.validation == 'full') && steps.rust-cache.outputs.cache-hit != 'true'
+        run: |
+          # Keep dependency compilation, not this checkout's app/test binaries.
+          cargo clean --locked --offline --package download-engine --package de-torrent
+          cargo clean --locked --offline --release --package download-engine --package de-torrent
+          cargo clean --locked --offline --manifest-path torrent/Cargo.toml --package de-torrent
+      - name: Save Rust dependencies
+        if: success() && github.ref == 'refs/heads/main' && (github.event.inputs.validation == '' || github.event.inputs.validation == 'full') && steps.rust-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          key: ${{ steps.rust-cache.outputs.cache-primary-key }}
+          path: |
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/registry/src
+            target/debug/.fingerprint
+            target/debug/build
+            target/debug/deps
+            target/release/.fingerprint
+            target/release/build
+            target/release/deps
+            torrent/target/debug/.fingerprint
+            torrent/target/debug/build
+            torrent/target/debug/deps

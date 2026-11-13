@@ -348,6 +348,120 @@ mod security_tests {
     use super::*;
 
     #[test]
+    fn linked_sqlite_includes_the_wal_memory_disclosure_fix() {
+        assert!(
+            rusqlite::version_number() >= 3_054_001,
+            "Bundled SQLite must include the WAL page initialization fix and 3.54.1 corrections; linked {}",
+            rusqlite::version()
+        );
+    }
+
+    #[test]
+    fn sqlite_wal_smaller_frames_zero_fill_unread_page_tail() {
+        // RUSTSEC-2026-0459: exercise the real pager with a disposable 4096-byte
+        // database and a valid-checksum WAL containing a 512-byte page frame.
+        // Only synthetic rows are involved, and failure never prints page bytes.
+        let temp = tempfile::tempdir().unwrap();
+        let path = temp.path().join("mismatched.sqlite3");
+        let conn = Connection::open(&path).unwrap();
+        conn.execute_batch(
+            "PRAGMA page_size=4096;
+             PRAGMA journal_mode=WAL;
+             CREATE TABLE target(b BLOB);
+             INSERT INTO target VALUES(zeroblob(3000));
+             CREATE TABLE primer(b BLOB);",
+        )
+        .unwrap();
+        for _ in 0..16 {
+            conn.execute("INSERT INTO primer VALUES(?1)", [vec![0x5au8; 3000]])
+                .unwrap();
+        }
+        let page: u32 = conn
+            .query_row(
+                "SELECT rootpage FROM sqlite_schema WHERE name='target'",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        let pages: u32 = conn
+            .pragma_query_value(None, "page_count", |r| r.get(0))
+            .unwrap();
+        drop(conn); // Checkpoint the legitimate fixture before supplying its WAL.
+
+        fn checksum(bytes: &[u8], state: &mut [u32; 2]) {
+            // WAL magic 0x377f0682 selects little-endian checksum input words;
+            // header fields and the stored checksum remain big-endian.
+            for words in bytes.as_chunks::<8>().0 {
+                state[0] = state[0]
+                    .wrapping_add(u32::from_le_bytes(words[..4].try_into().unwrap()))
+                    .wrapping_add(state[1]);
+                state[1] = state[1]
+                    .wrapping_add(u32::from_le_bytes(words[4..].try_into().unwrap()))
+                    .wrapping_add(state[0]);
+            }
+        }
+        let salts = [0x1234_5678u32, 0x7654_3210];
+        let mut wal = Vec::new();
+        for word in [0x377f_0682, 3_007_000, 512, 0, salts[0], salts[1]] {
+            wal.extend_from_slice(&word.to_be_bytes());
+        }
+        let mut sum = [0u32; 2];
+        checksum(&wal, &mut sum);
+        for word in sum {
+            wal.extend_from_slice(&word.to_be_bytes());
+        }
+
+        let mut frame = Vec::new();
+        frame.extend_from_slice(&page.to_be_bytes());
+        frame.extend_from_slice(&pages.to_be_bytes()); // A committed frame.
+        checksum(&frame, &mut sum);
+        for word in salts {
+            frame.extend_from_slice(&word.to_be_bytes());
+        }
+        let mut payload = [0u8; 512];
+        payload[0] = 0x0d; // Table leaf, one cell at offset 16.
+        payload[3..5].copy_from_slice(&1u16.to_be_bytes());
+        payload[5..7].copy_from_slice(&16u16.to_be_bytes());
+        payload[8..10].copy_from_slice(&16u16.to_be_bytes());
+        // Cell payload 3003, rowid 1; record header size 3, BLOB serial type
+        // 6012 (= 12 + 2*3000). Only 490 of those 3000 bytes fit in this frame.
+        payload[16..22].copy_from_slice(&[0x97, 0x3b, 1, 3, 0xae, 0x7c]);
+        payload[22..].fill(0x7b);
+        checksum(&payload, &mut sum);
+        for word in sum {
+            frame.extend_from_slice(&word.to_be_bytes());
+        }
+        frame.extend_from_slice(&payload);
+        wal.extend_from_slice(&frame);
+        std::fs::write(temp.path().join("mismatched.sqlite3-wal"), wal).unwrap();
+
+        let conn = Connection::open(&path).unwrap();
+        conn.execute_batch("PRAGMA cache_size=2").unwrap();
+        assert_eq!(
+            conn.query_row("SELECT sum(length(b)) FROM primer", [], |r| r
+                .get::<_, i64>(0))
+                .unwrap(),
+            16 * 3000
+        );
+        let (len, prefix, tail): (i64, Vec<u8>, Vec<u8>) = conn
+            .query_row(
+                "SELECT length(b),substr(b,1,100),substr(b,491) FROM target",
+                [],
+                |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
+            )
+            .unwrap();
+        assert_eq!(len, 3000);
+        assert!(
+            prefix.len() == 100 && prefix.iter().all(|&b| b == 0x7b),
+            "Fixture WAL was not read"
+        );
+        assert!(
+            tail.len() == 2510 && tail.iter().all(|&b| b == 0),
+            "WAL read returned nonzero bytes outside the supplied frame"
+        );
+    }
+
+    #[test]
     fn corrupt_job_identifiers_are_rejected_before_path_use() {
         let temp = tempfile::tempdir().unwrap();
         let store = Store::open(AppPaths {

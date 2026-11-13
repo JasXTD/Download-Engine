@@ -1,3 +1,13 @@
+## 3.20.1 — 2026-11-14
+
+### Poprawki pobierania przez przeglądarkę i interfejsu
+
+- Lepsza zgodność z większą liczbą witryn strumieniowych i pobierania. Odrzucone żądania można ponowić przez zatwierdzoną kartę przeglądarki. Pozostaw ją otwartą podczas pobierania i zaktualizuj aplikację oraz rozszerzenie razem.
+
+- Poprawiono odczyt dużych strumieni, wznawianie, zamykanie okna po eksporcie raportu awarii oraz przesuwanie listy przy otwieraniu folderu. Zaktualizowano diagnostykę, zależności bazy danych i przewodnik.
+
+[English details](../../../CHANGELOG.md#3201--2026-11-14)
+
 ## 3.20.0 — 2026-11-10
 
 ### Opcjonalne wtyczki kont

@@ -266,6 +266,8 @@ pub(crate) fn parse(source: &str, url: &str, text: &str) -> Result<Inspection> {
         })
         .collect();
     Ok(Inspection {
+        user_agent: None,
+        browser_relay: None,
         public_only: false,
         source: source.into(),
         variants,

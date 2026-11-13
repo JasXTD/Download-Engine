@@ -1,5 +1,5 @@
 "use strict";
-if (typeof importScripts === "function") importScripts("i18n-catalog.js", "i18n.js", "core.js", "capture.js", "link-recovery.js", "page-links.js", "browser-login.js", "video-button-manager.js", "github-download.js", "media.js", "media-diagnostics.js", "dailymotion.js", "permission-flow.js");
+if (typeof importScripts === "function") importScripts("i18n-catalog.js", "i18n.js", "core.js", "capture.js", "link-recovery.js", "page-links.js", "browser-login.js", "video-button-manager.js", "github-download.js", "media.js", "media-diagnostics.js", "dailymotion.js", "permission-flow.js", "browser-video-relay.js");
   const __xdL = globalThis.IDMI18n || {t: text => text, f: (text, ...values) => text.replace(/\{(\d+)\}/g, (_, n) => String(values[n]))};
 const api = typeof browser !== "undefined" ? browser : chrome;
 const actionApi = api.action || api.browserAction;
@@ -124,12 +124,13 @@ const capture = new IDMCapture.Manager({
 void serializeCaptureSettings(migrateCaptureRules).catch(console.warn);
 const media = new IDMMedia.Manager({ api, trace: traceMedia });
 const dailymotion = new IDMDailymotion.Resolver({ trace: traceMedia });
+const browserRelay = new IDMBrowserRelay.Manager({ api, trace: traceMedia });
 const linkRecovery = new IDMLinkRecovery.Manager({api,native,report:async(ok,message)=>{
   await saveStatus(ok,message);await recordDiagnostic({setting:"recovery",ok,message});
 }});
 void media.start().catch(() => { media.error = __xdL.t("Media detection is unavailable. Reload the extension to retry."); traceMedia("discovery_error"); });
 const pageLinks = new IDMPageLinks.Manager({ api, native, detected: tab => media.list(tab),
-  resolveVideo: (tab, signal) => dailymotion.lookup(tab, signal), trace: traceMedia });
+  resolveVideo: (tab, signal) => dailymotion.lookup(tab, signal), trace: traceMedia, relay: browserRelay });
 const browserLogin = new IDMBrowserLogin.Manager({ api, native });
 const videoButtons = new IDMVideoButtons.Manager({ api, pageLinks });
 const githubDownloads = new IDMGitHubDownload.Manager({ api, enabled });
@@ -156,13 +157,13 @@ function requestPopupPermission(message, requestInPopup) {
   if(message.setting==="recovery")return trackOperation("recovery",()=>permissionFlow.request(message,requestInPopup));
   return trackSetting(message.setting, true, () => permissionFlow.request(message, requestInPopup));
 }
-api.tabs.onRemoved.addListener(tabId => { permissionFlow.tabLeft(tabId); pageLinks.cancelScan(tabId); media.closed(tabId); videoButtons.last.delete(tabId); void pageLinks.closed(tabId).catch(console.warn); });
+api.tabs.onRemoved.addListener(tabId => { browserRelay.closeTab(tabId); permissionFlow.tabLeft(tabId); pageLinks.cancelScan(tabId); media.closed(tabId); videoButtons.last.delete(tabId); void pageLinks.closed(tabId).catch(console.warn); });
 api.tabs.onActivated?.addListener(({ tabId, windowId }) => {
   const target = permissionFlow.pending?.target;
   if (target?.windowId === windowId && target.tabId !== tabId) permissionFlow.tabLeft(target.tabId);
 });
 api.tabs.onUpdated?.addListener((tabId, changes) => {
-  if (changes.url || changes.status === "loading") pageLinks.cancelScan(tabId);
+  if (changes.url || changes.status === "loading") {pageLinks.cancelScan(tabId); browserRelay.closeTab(tabId);}
   media.navigated(tabId, changes);
 });
 if (api.scripting?.getRegisteredContentScripts) {
@@ -224,6 +225,7 @@ installDownloadListeners();
 api.alarms.onAlarm.addListener(alarm => { if (alarm.name === ALARM) void recover().catch(console.warn); });
 api.permissions.onAdded.addListener(() => { void media.start().catch(console.warn); installDownloadListeners(); void recover().catch(console.warn); });
 api.permissions.onRemoved.addListener(removed => {
+  browserRelay.closeAll();
   if (removed.origins?.length) pageLinks.cancelScan(pageLinks.activeScan?.tabId);
   if (removed.permissions?.includes("downloads")) {permissionFlow.cancel("capture");permissionFlow.cancel("recovery");}
   if (removed.permissions?.includes("webRequest") || removed.origins?.length) permissionFlow.cancel("media");

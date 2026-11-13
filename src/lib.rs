@@ -50,6 +50,7 @@ mod file_relocation;
 
 pub mod browser_batch;
 pub mod browser_recovery;
+pub mod browser_relay;
 pub mod browser_setup;
 pub mod browser_video;
 

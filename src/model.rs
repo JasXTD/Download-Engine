@@ -381,6 +381,19 @@ pub(crate) fn page_referer(page: &str, target: &reqwest::Url) -> Option<String> 
     (page.scheme() == "http" || target.scheme() == "https")
         .then(|| format!("{}/", page.origin().ascii_serialization()))
 }
+/// Browser identity only, not an arbitrary header map. Reject controls, hidden
+/// Unicode and oversized values before saving or constructing an HTTP request.
+pub(crate) fn validate_browser_user_agent(value: Option<&str>) -> Result<()> {
+    if let Some(value) = value {
+        ensure!(
+            !value.trim().is_empty()
+                && value.len() <= 512
+                && value.bytes().all(|b| (b' '..=b'~').contains(&b)),
+            "Invalid browser User-Agent"
+        );
+    }
+    Ok(())
+}
 pub fn safe_filename(value: &str) -> String {
     let mut units = 0;
     let result: String = value

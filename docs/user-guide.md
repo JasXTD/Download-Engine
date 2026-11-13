@@ -113,6 +113,8 @@ Single downloads started manually, including browser handoffs and reviewed video
 
 Pause keeps the window open. Resume or Start immediately starts only that file, respecting the app's active-download limit and data quotas. To stop a transfer and close its window, choose Pause, then the close button; saved progress is kept, although servers without resume support may need to start again. Hide, Escape and the close button alone leave downloads running. Completed files offer Open file and Open folder. Open file keeps the existing antivirus checks when enabled.
 
+The status window's **When done → Open file when download finishes** option is off by default and is not saved between sessions. Leave it unchecked to keep downloaded files from opening automatically. The status window itself only displays transfer information.
+
 Unknown file sizes cannot show a percentage or time estimate. Video progress counts completed segments, so its percentage may advance in steps. Receiving every byte is followed by assembly, verification or merging; Completed appears only when the file is ready.
 
 For an ordinary file saved as one complete part on the same drive, finishing verifies and saves that file without writing another full copy. Multi-part files and files saved to another drive still need assembly or copying. SHA-256 verification remains active. Pause during finishing keeps the downloaded parts; resuming verifies or assembles them again. If the app closes after the finished file was saved but before completion was recorded, it recovers that same file without creating a duplicate.
@@ -308,6 +310,49 @@ Use Check connection in the extension. If you replace an unpacked extension buil
 Automatic download capture and Detect media while browsing are on by default after installation. Capture sends supported file downloads you click to Download Engine, following Capture rules. Detection lists media without downloading it; choose which video to send. Saved off choices are preserved. If the desktop app is unavailable, file downloads remain in the browser. Video button on this site controls the button beside supported players; site settings can override its default.
 
 Click Download video beside the player to open the desktop video review. Select quality and audio; the selection is previewed automatically. Then choose Add video to queue.
+
+For browser-detected HLS/DASH streams, updated extensions and desktops preserve
+the browser's User-Agent through quality preview and pause/resume. This can help
+with servers that require the same browser identity. It does not copy your login
+cookies or guarantee that a browser-only stream will work. Reviewed browser
+streams send an origin-only Referer and can retry HTTP 403 once with an Origin
+header, without the page's path or query string. The desktop diagnostic log
+shows this as **Video request retried with adjusted Origin header**. If preview returns
+HTTP 403, refresh the page, start the main video after any ads, and find videos
+again. In the extension's Diagnostic log, `browser_agent=true` confirms that the
+handoff included the browser identity; `false` can indicate an older desktop.
+In Firefox it also requires the optional **Technical and interaction data**
+permission under the extension's **Permissions and Data** settings. It is used
+only for browser identity in video requests, not analytics. Turning it off keeps
+ordinary video discovery available. If you revoke it while a review awaits
+confirmation, check the desktop before reloading the extension, or restore the
+permission to recover that exact pending handoff.
+Share error/status text when reporting a failure, not signed URLs or cookies.
+
+**Preview video** and **Choose quality** inspect playlists, stream metadata and,
+when required, bounded media index data. They do not play the video or launch the
+downloaded file. There is no built-in media player or automatic playback. ZIP
+preview similarly lists archive entries rather than opening their contents.
+These checks still parse untrusted input; a successful preview is not an
+antivirus verdict.
+
+With a compatible local extension, a desktop HTTP 403 can automatically retry
+through the video tab. Keep that tab open on the same page until the download
+finishes. Pause/resume keeps verified segments and restarts unfinished ones;
+closing or refreshing the tab, reloading the extension, or waiting more than
+six hours ends its browser connection. A new video review is then needed.
+The desktop log shows **Video request is using the reviewed browser tab**;
+the extension log shows **Browser video connection ready** or a fetch failure.
+The handoff line includes `browser_relay=true` when the reviewed tab connection
+was attached. If it is unavailable, a separate log entry gives the reason.
+Fetch failures include a fixed reason such as `network`, `timeout`, `http` or
+`too_large`, without recording the media URL or server error body. Failed or
+interrupted segments remain incomplete; Retry preserves verified segments.
+The browser still enforces its certificate and CORS checks, and no login cookies
+are copied or sent by this path. It uses your browser's network route, so it is
+available only with the default **System proxy** setting, not explicit Direct,
+Custom proxy or strict public-only extension jobs. It cannot make every protected
+or browser-only stream downloadable.
 
 Enable media detection before playback if the page has no discovered streams. Public, finished YouTube videos, Bilibili videos and Bangumi episodes (up to 480p without sign-in), public TikTok videos and Twitch videos (past broadcasts, highlights and uploads) use the app's extraction workflow. If the app cannot read such a page, it shows the media the browser found on it instead. Live, encrypted and browser-sign-in-only media are unsupported. A video page URL is not a direct file link for the CLI.
 
@@ -1003,8 +1048,10 @@ For crashes, open **Help → Crash reports** (also available from Logs). The des
 offers unreviewed reports on the next launch. Select a report, expand **Review
 report contents**, then **Copy report** or **Export report** if you want to share
 it. **Report an issue** opens an empty GitHub issue form; attach the exported JSON
-yourself after reviewing it. Closing the dialog acknowledges the reports without
-deleting them. Reports stay local and are never uploaded automatically.
+yourself after reviewing it. A successful export closes the dialog and shows a
+confirmation; cancelling or a failed export leaves it open. Closing the dialog
+acknowledges the reports without deleting them, so they remain available in Help.
+Reports stay local and are never uploaded automatically.
 
 A captured Rust panic includes version, platform, time, component and the code
 location, not the panic message, download URLs, credentials, personal file paths

@@ -123,6 +123,12 @@ test('diagnostics persist across worker restart, stay bounded and never store un
   const restored=new IDMMediaDiagnostics.Log(storage),result=await restored.read();
   assert.equal(result.trace.length,120);assert.equal(result.traceError,false);assert.match(result.trace[0].message,/count=30/);
   assert(!JSON.stringify(values).includes('SECRET'));
+  await log.add('handoff',{count:1,browser_agent:true,browser_relay:true,token:'SECRET relay token',user_agent:'SECRET browser value',headers:{Cookie:'SECRET'}});
+  assert.match((await restored.read()).trace.at(-1).message,/browser_agent=true/);
+  assert.match((await restored.read()).trace.at(-1).message,/browser_relay=true/);
+  await log.add('relay_unavailable',{reason:'legacy_desktop',url:'https://private/SECRET'});
+  assert.match((await restored.read()).trace.at(-1).message,/reason=legacy_desktop/);
+  assert(!JSON.stringify(values).includes('SECRET'));
   values.mediaDiagnostics.push({event:'metadata_failed',fields:null},{event:'SECRET',fields:{}});
   assert(!(await restored.read()).traceError);
   await restored.clear();assert.equal((await restored.read()).trace.length,0);

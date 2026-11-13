@@ -137,14 +137,16 @@ test('Firefox embedded-player HLS metadata reaches desktop review from an empty 
   f.tabs.get(7).url=page;
   // Firefox MV2 exposes browserAction rather than action.
   f.api.browserAction=f.api.action;delete f.api.action;
+  f.api.runtime={getManifest:()=>require('../extension/manifest.firefox.json')};
   f.manager=new IDMMedia.Manager({api:f.api,now:()=>f.time,uuid:()=>String(++f.seq)});
   f.api.scripting={executeScript:async spec=>{
     assert.deepEqual(spec.target,{tabId:7,frameIds:[0]});
     return [{frameId:0,documentId:'top-document',result:{url:page,title:'Embedded player',mode:spec.args[0],links:[]}}];
   }};
-  const links=new IDMPageLinks.Manager({api:f.api,detected:tab=>f.manager.list(tab),
+  const userAgent='Mozilla/5.0 (Offline test browser) Firefox/142.0';
+  const links=new IDMPageLinks.Manager({api:f.api,detected:tab=>f.manager.list(tab),userAgent,
     uuid:()=> '00000000-0000-4000-8000-000000000001',native:async request=>{
-      requests.push(request);return {ok:true,version:1,preview_id:request.request_id};
+      requests.push(request);return {ok:true,version:1,preview_id:request.request_id,capabilities:['browser_video_user_agent_v1']};
     }});
   const buttons=new IDMVideoButtons.Manager({api:f.api,pageLinks:links});
   await f.begin();
@@ -152,9 +154,10 @@ test('Firefox embedded-player HLS metadata reaches desktop review from an empty 
   await f.capture(f.request(stream,{frameId:2,parentFrameId:0,originUrl:'https://geo.dailymotion.com/player/xtv3w.html',
     responseHeaders:[{name:'Content-Type',value:'application/vnd.apple.mpegurl'}]}));
   await buttons.open({frameId:0,url:page,tab:f.tabs.get(7),documentId:'top-document'});
-  assert.equal(requests.length,1);assert.equal(requests[0].action,'review_browser_video');
-  assert.equal(requests[0].review.page_url,page);
-  assert.deepEqual(requests[0].review.items.map(item=>({url:item.url,kind:item.kind})),[{url:stream,kind:'hls'}]);
+  assert.deepEqual(requests.map(r=>r.action),['ping','review_browser_video']);
+  assert.equal(requests[1].review.page_url,page);
+  assert.equal(requests[1].review.user_agent,userAgent);
+  assert.deepEqual(requests[1].review.items.map(item=>({url:item.url,kind:item.kind})),[{url:stream,kind:'hls'}]);
   assert.equal(f.session['pending-video-review'],undefined);
   // No GET permission or stale responses from a previous top document may be reused.
   const stale=f.request('https://cdn.test/stale.m3u8',{frameId:2});await f.before(stale);
@@ -203,6 +206,26 @@ test('media review resolves a stored ID for the active tab and opens only a revi
   const f=fixture();await f.begin();await f.enable();await f.capture(f.request('https://cdn.test/master.m3u8'));const item=(await f.manager.status()).items[0],reviews=[];const picker={openScan:async s=>reviews.push(s)};
   await f.manager.review(7,item.id,picker);assert.equal(reviews[0].links[0].hls,true);assert.equal(reviews[0].mode,'videos');
   await assert.rejects(f.manager.review(8,item.id,picker),/page changed/);await assert.rejects(f.manager.review(7,'arbitrary-url',picker),/expired/);assert.equal(reviews.length,1);
+});
+
+test('reviewing one detected stream negotiates the browser relay for its actual tab',async()=>{
+  require('../extension/page-links.js');
+  const f=fixture();await f.begin();await f.enable();
+  await f.capture(f.request('https://cdn.test/master.m3u8'));
+  f.api.runtime={getManifest:()=>({manifest_version:3})};
+  const session={port:40000,token:'00000000-0000-4000-8000-000000000001',expires:2000000000,page:f.tabs.get(7).url,origins:['https://cdn.test']};
+  const requests=[],openings=[];
+  const picker=new IDMPageLinks.Manager({api:f.api,userAgent:'',
+    uuid:()=> '00000000-0000-4000-8000-000000000002',
+    native:async request=>{requests.push(request);return {ok:true,version:1,preview_id:request.request_id,capabilities:['browser_video_relay_v1']};},
+    relay:{open:async(...args)=>{openings.push(args);return session;}}});
+  const item=(await f.manager.status()).items[0];
+  await f.manager.review(7,item.id,picker);
+  assert.equal(openings.length,1,'The detected-media button must not skip browser transport');
+  assert.equal(openings[0][0],7);
+  assert.equal(openings[0][2],f.tabs.get(7).url);
+  assert.deepEqual(requests.map(r=>r.action),['ping','review_browser_video']);
+  assert.deepEqual(requests[1].review.browser_relay,session);
 });
 test('lists are bounded by entries, tabs and expiry',async()=>{
   const f=fixture();await f.begin();await f.enable();for(let i=0;i<ITEM_LIMIT+5;i++)await f.capture(f.request('https://cdn.test/'+i+'.mp4'));assert.equal((await f.manager.status()).items.length,ITEM_LIMIT);

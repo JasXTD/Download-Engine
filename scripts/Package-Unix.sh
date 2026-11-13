@@ -128,7 +128,7 @@ cp -R "$licenses/docs/licenses/." "$resources/docs/licenses/"
 for browser in chrome edge brave firefox; do
   destination="$resources/extensions/$browser"
   mkdir -p "$destination"
-  for file in i18n-catalog.js i18n.js core.js capture.js torrent-links.js link-recovery.js page-links.js browser-login.js video-button-manager.js video-button.js github-download.js media.js media-diagnostics.js dailymotion.js permission-flow.js login.html login.js background.js popup.html popup.css popup.js links.html links.css links.js; do cp "$root/extension/$file" "$destination/"; done
+  for file in i18n-catalog.js i18n.js core.js capture.js torrent-links.js link-recovery.js page-links.js browser-login.js browser-video-relay.js video-button-manager.js video-button.js github-download.js media.js media-diagnostics.js dailymotion.js permission-flow.js login.html login.js background.js popup.html popup.css popup.js links.html links.css links.js; do cp "$root/extension/$file" "$destination/"; done
   copy_source_tree extension/_locales "$destination/_locales"
   copy_source_tree extension/icons "$destination/icons"
   cp "$root/LICENSE" "$root/PRIVACY.md" "$destination/"

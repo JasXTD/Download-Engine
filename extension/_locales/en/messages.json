@@ -221,6 +221,9 @@
   "m_50746138b9d24c2b": {
     "message": "Could not return to the extension popup:"
   },
+  "m_09423eef52fe86ae": {
+    "message": "Dailymotion did not provide a playable stream. Start playback, then retry. Open Diagnostic log in the extension for details."
+  },
   "m_936628cc4a394ede": {
     "message": "Defaults restored. Select Save rules to keep them."
   },
@@ -241,6 +244,9 @@
   },
   "m_97a6661033069fb1": {
     "message": "Direct files and unencrypted HLS / DASH previews."
+  },
+  "m_bb804321651aec3f": {
+    "message": "Discovery logging is unavailable. Reload the extension to retry."
   },
   "m_d6bd8c0aeee80fed": {
     "message": "Document"
@@ -355,6 +361,9 @@
   },
   "m_cf58b80fa579dabc": {
     "message": "Fresh link found. Review the saved-data check in Download Engine, then confirm resuming."
+  },
+  "m_cb8a06be45767aba": {
+    "message": "HLS · alternate playlist"
   },
   "m_23b41d51987507df": {
     "message": "HLS / DASH opens a desktop preview; live/encrypted streams are unsupported. Enable media detection before playback to find more streams."

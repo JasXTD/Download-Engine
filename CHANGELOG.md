@@ -2,6 +2,18 @@
 
 Release notes are available offline in Help → Changelog. Newest releases appear first.
 
+## 3.20.1 — 2026-11-14
+
+### Browser downloads and desktop fixes
+
+- Improve compatibility with more streaming and download sites. Reviewed HLS/DASH downloads can retry through the actual browser tab when a desktop request receives HTTP 403. Keep the reviewed page open; the fallback uses normal browser certificate/CORS checks, omits credentials, rejects redirects and limits requests to reviewed media origins. Explicit Direct/Custom proxy modes and strict public-only jobs do not use this path.
+- Preserve browser identity through quality selection and download recovery. Firefox requests optional Technical and interaction data consent for this identity; ordinary discovery remains available without it. Fix detected-media popup handoffs so they retain the reviewed tab connection.
+- Split large browser stream reads into bounded native-message chunks instead of failing with an unexpected end-of-file error. Pause/resume reuses verified segments. Show useful connection and fetch-failure diagnostics without recording media URLs, cookies, headers or session tokens.
+- Close the crash-report dialog after a successful export. Cancellation and export errors keep it open, and a late completion cannot close another dialog.
+- Keep the download list in place when opening a folder and preserve earlier messages. Folder-opening errors remain visible.
+- Update the approved SQLite dependency to rusqlite 0.41.1 and libsqlite3-sys 0.39.1, including matching source/license notices. Exclude locally exported crash reports from Git.
+- Update the guide and privacy/security documentation. Quality previews inspect metadata rather than playing or automatically opening downloaded files.
+
 ## 3.20.0 — 2026-11-10
 
 ### Optional account plugins

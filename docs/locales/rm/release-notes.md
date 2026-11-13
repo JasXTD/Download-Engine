@@ -1,3 +1,13 @@
+## 3.20.1 — 2026-11-14
+
+### Correcturas dals downloads e da l’interfatscha
+
+- Megliurada la cumpatibilitad cun ulteriuras paginas da streaming e da download. Dumondas refusadas pon vegnir repetidas sur il tab dal navigatur examinà. Laschai avert il tab durant il download ed actualisai ensemen l’app e l’extensiun.
+
+- Correctas la lectura da gronds streams, la cuntinuaziun dals downloads, la serrada suenter l’export d’in rapport da collaps e la glista che sa sposta cun avrir in ordinatur. Actualisadas la diagnosa, las bibliotecas da la banca da datas e l’instrucziun.
+
+[English details](../../../CHANGELOG.md#3201--2026-11-14)
+
 ## 3.20.0 — 2026-11-10
 
 ### Plugins da conto facultativs

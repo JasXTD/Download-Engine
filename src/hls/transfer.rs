@@ -77,7 +77,9 @@ pub(crate) async fn transfer(
     let mut network = Network::via(&playlist.source, route)
         .await?
         .with_page(page.as_deref())
-        .with_public_only(job.public_only || playlist.public_only)?;
+        .with_user_agent(download.user_agent.as_deref())?
+        .with_public_only(job.public_only || playlist.public_only)?
+        .with_browser_relay(download.browser_relay.as_ref())?;
     if let Some(site) = site {
         network = network.with_site(site);
     }

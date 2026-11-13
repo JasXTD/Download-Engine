@@ -148,7 +148,10 @@ desktop queue before resubmission.
 
 Video actions instead send the page URL/title and up to 1,000 candidate
 URLs, filenames, labels, file/stream kinds and reported sizes to the local desktop
-for review. No cookies, headers or media bodies accompany this transfer. The
+for review. HLS/DASH reviews also carry the extension's browser User-Agent when
+the host advertises `browser_video_user_agent_v1`. Older hosts receive the legacy
+payload; pending retries retain the exact negotiated payload. No cookies,
+intercepted request headers or media bodies accompany this transfer. The
 native host validates and bounds the payload (850 KB), saves at most ten pending
 reviews and does not create jobs or fetch media. The desktop's **Video downloads**
 dialog requires file selection or a stream quality preview before queuing.
@@ -160,6 +163,38 @@ An uncertain browser handoff retains one request in session storage; **Recover
 handoffs** resends the same `video:` ID and requires an exact `preview_id` receipt.
 Native diagnostic logs record the action and outcome without these URLs or titles.
 The `browser_video_review_v1` capability identifies compatible desktop versions.
+
+The desktop validates the optional User-Agent as at most 512 printable ASCII
+bytes and preserves it through quality selection, redirects, segments and saved
+download recovery. The existing origin-only Referer, public-network checks,
+HTTPS downgrade protection and proxy routing still apply. This is anonymous
+request context, not browser-session or challenge-cookie support. An HTTP 403
+can still mean the server rejects desktop access. The extension diagnostic
+handoff entry includes `browser_agent=true/false`, never the header value.
+With browser identity present, HTTP 403 can retry once with CORS Origin derived
+from the same sanitized source-page origin used by Referer. Working requests
+keep their existing headers. A successful Origin choice is remembered in memory
+per media-server origin for subsequent segments; a later 403 can retry without
+it. Explicit site Origin headers and HTTP 401 responses are not retried by this
+fallback. Neither page header includes paths or query strings, and neither is
+sent from an HTTPS page to HTTP. Manual/legacy streams without browser identity
+retain their previous headers. The desktop log records `video_headers_retried`
+without URLs or header values; the final lookup result is logged separately.
+
+`browser_video_relay_v1` enables a persistent, reviewed-tab fallback after desktop
+HTTP 403. The packaged `browser-video-relay.js` injects an isolated content script
+and connects it to the native host. Page-context GETs omit credentials, reject
+redirects, and use normal browser TLS/CORS. Only reviewed media origins are allowed.
+Framed loopback IPC is authenticated with a per-session UUID; it is not a general
+HTTP proxy. Native messaging pulls at most 48 KiB per chunk with eight active
+requests and a 256 MiB body limit. Closing/navigating the tab, losing its permission,
+reloading the extension or reaching six hours closes the connection. Cancellation
+aborts the browser request. Verified completed segments remain reusable on resume.
+This path uses the browser's DNS and route, not desktop connection IP pinning, so
+strict public-only jobs and explicit Direct/Custom proxy modes cannot use it.
+The default System route retains desktop destination preflight and existing
+playlist, range, encryption and saved-part validation. Diagnostics contain event
+names, status and counts, never session capabilities, media URLs or header values.
 
 The desktop contacts requested download servers. There is no analytics,
 telemetry endpoint, advertising or account sync. A privacy statement should
@@ -200,8 +235,17 @@ URLs, page titles, selected links and media metadata are transferred to the loca
 desktop app for downloading or review. Native messaging counts as transmission
 under [Mozilla policy](https://extensionworkshop.com/documentation/publish/add-on-policies/#data-collection-and-transmission-disclosure-and-control), even without a vendor server.
 `authenticationInfo` is optional and requested only when approving browser login.
+`technicalAndInteraction` is optional and controls sending the browser's User-Agent
+with a video review. Without consent, video reviews keep the desktop's default
+identity. A revoked grant also prevents replaying a pending review that already
+contains browser information; check the desktop for the earlier review before
+reloading the extension, or restore consent to recover that same handoff.
+This gate follows the Firefox package's manifest, not the presence of the
+`browser` API namespace: [Chrome 148+ exposes that namespace too](https://developer.chrome.com/docs/extensions/develop/concepts/browser-namespace).
+Regression coverage includes Chromium with both API namespaces and Firefox
+with consent absent, granted and revoked.
 Do not replace these declarations with `none`. No analytics or technical telemetry
-is collected. See [Firefox built-in consent](https://extensionworkshop.com/documentation/develop/firefox-builtin-data-consent/).
+is sent to the developer. See [Firefox built-in consent](https://extensionworkshop.com/documentation/develop/firefox-builtin-data-consent/).
 
 The listing should explain the separate Windows desktop installation and native
 host connection, default capture/detection, manual video selection, and optional

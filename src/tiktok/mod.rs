@@ -235,6 +235,8 @@ fn listing(item: &Value, video_id: &str) -> Result<(String, Listing)> {
 /// The qualities as choices for the shared quality dialog.
 fn inspection(listing: Listing) -> Result<Inspection> {
     Ok(Inspection {
+        user_agent: None,
+        browser_relay: None,
         public_only: false,
         source: source_url(&listing.author, &listing.video_id)?,
         variants: listing

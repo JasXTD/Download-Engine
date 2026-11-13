@@ -29,7 +29,7 @@ for the hosting provider's practices.
 | Feature | Information handled | Purpose |
 | --- | --- | --- |
 | File capture and link recovery | Download and source-page URLs, filenames, browser download identifiers, file types, reported sizes and handoff status | Send eligible downloads to the desktop app, recover interrupted handoffs and avoid duplicate downloads |
-| Page-link and video selection | Page URLs and titles, link text, filenames, image/audio/video resource addresses, media types and reported sizes | Show downloadable items, let you choose files and prepare video reviews |
+| Page-link and video selection | Page URLs and titles, link text, filenames, image/audio/video resource addresses, media types and reported sizes; the browser's User-Agent for HLS/DASH reviews | Show downloadable items, let you choose files and prepare video reviews with the browser identity expected by some servers |
 | Media detection | Media response URLs, content types, reported sizes and the associated tab | List detected media so you can decide what to download |
 | Dailymotion video lookup | The video ID from the page you choose, public metadata and bounded playlist responses | Resolve a video on request, validate its playlist and fall back to browser detection when unavailable |
 | Preferences and diagnostics | Language, capture filters, site choices, feature settings, timestamps, operation outcomes and diagnostic messages | Remember your choices and help diagnose connection or handoff failures |
@@ -68,6 +68,32 @@ requests to the companion application on the same computer. It also reads queue
 names and saved-folder information from that application to display download
 destinations. A video review can include the page title and candidate media links;
 an ordinary file batch sends the links you selected.
+
+For HLS/DASH reviews, a compatible desktop can also receive the browser's
+User-Agent string, which describes its browser and operating-system family.
+The extension reads this value from its own browser environment, not from the
+page or intercepted request headers. The desktop stores it with the selected
+stream and sends it to the requested media servers for previews, downloads and
+resume checks. The page's origin may be sent as Referer and, after an HTTP 403
+with browser identity, as the Origin header used by CORS media requests. An
+accepted Origin choice is reused in memory for that media server; a later 403
+can retry without it. Page paths and query parameters are excluded. This does
+not copy browser cookies or login headers.
+Diagnostic logs record only whether the browser identity was included, not its value.
+In Firefox, this transfer uses the optional Technical and interaction data
+consent. Without that permission the browser identity is omitted. This option
+is used for stream compatibility, not analytics or reporting to the developer.
+
+If a reviewed HLS/DASH stream rejects the desktop with HTTP 403, compatible
+extensions can fetch it through the open video tab. This sends ordinary browser
+connection information to the reviewed media servers, with cookies and login
+headers omitted. The browser enforces TLS and page CORS; redirects are refused.
+Only bounded media bytes and selected response headers return to the desktop.
+A temporary local connection token and reviewed server origins are saved with
+the job for pause/resume; they are not included in diagnostic logs. The connection
+ends when the tab closes or navigates, the extension reloads, or six hours elapse.
+This fallback is unavailable for strict public-only jobs and explicit Direct or
+Custom desktop proxy modes. Browser routing and DNS can differ from the desktop.
 
 The desktop app contacts the source websites, download servers and media services
 needed for the downloads or previews you request. Those services receive the

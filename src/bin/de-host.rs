@@ -54,6 +54,10 @@ fn run() -> Result<()> {
         let started = std::time::Instant::now();
         let request = serde_json::from_slice::<native::Request>(&data);
         drop(data); // Wipe the raw native frame before queue work or desktop startup.
+        if let Ok(native::Request::OpenBrowserVideoRelay { page, origins }) = request {
+            drop(input);
+            return download_engine::browser_relay::host::serve(page, origins, &mut output);
+        }
         let details = Details {
             action: request
                 .as_ref()

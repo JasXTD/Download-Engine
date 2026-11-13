@@ -787,6 +787,7 @@ fn recovery_pauses_active_jobs_and_keeps_queued_jobs() {
 #[test]
 fn native_framing_handles_partial_reads_unicode_and_invalid_lengths() {
     let reply = native::Reply {
+        browser_relay: None,
         capture_state: None,
         capabilities: vec![],
         job_ids: vec![],

@@ -1,3 +1,13 @@
+## 3.20.1 — 2026-11-14
+
+### Browserdownloads und Oberflächenkorrekturen
+
+- Verbesserte Kompatibilität mit weiteren Streaming- und Downloadseiten. Abgelehnte Anfragen können über den geprüften Browser-Tab wiederholt werden. Lassen Sie den Tab beim Herunterladen geöffnet und aktualisieren Sie App und Browser-Erweiterung gemeinsam.
+
+- Korrigiert große Stream-Lesevorgänge, das Fortsetzen, das Schließen des Dialogs nach dem Export eines Absturzberichts und das Springen der Liste beim Öffnen eines Ordners. Diagnose, Datenbankabhängigkeiten und Anleitung wurden aktualisiert.
+
+[English details](../../../CHANGELOG.md#3201--2026-11-14)
+
 ## 3.20.0 — 2026-11-10
 
 ### Optionale Konto-Plugins

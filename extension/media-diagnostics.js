@@ -3,7 +3,11 @@
   "use strict";
   const KEY = "mediaDiagnostics", LIMIT = 120;
   const EVENTS = {
-    ready: "Media discovery ready (Dailymotion lookup v2)",
+    relay_ready: "Browser video connection ready",
+    relay_closed: "Browser video connection closed",
+    relay_failed: "Browser video fetch failed",
+    relay_unavailable: "Browser video connection not available",
+    ready: "Media discovery ready (Dailymotion lookup v2, browser relay v1)",
     discovery_error: "Browser discovery could not update its list",
     network_saved: "Browser stream captured", network_ignored: "Browser candidate ignored",
     metadata_start: "Dailymotion metadata lookup started", metadata_result: "Dailymotion metadata resolved",
@@ -14,13 +18,13 @@
     scan_result: "Video scan completed", scan_cancelled: "Video scan cancelled after navigation",
     handoff: "Video review sent to desktop", acknowledged: "Desktop accepted video review", handoff_failed: "Desktop video review failed"
   };
-  const REASONS = new Set(["success", "invalid_json", "unavailable", "wrong_video", "no_formats", "http", "playlist_http", "playlist_content", "content_type", "too_large", "cancelled", "timeout", "network", "disabled", "no_request", "stale_navigation", "unsupported", "init", "preview"]);
+  const REASONS = new Set(["success", "invalid_json", "unavailable", "wrong_video", "no_formats", "http", "playlist_http", "playlist_content", "content_type", "too_large", "cancelled", "timeout", "network", "disabled", "no_request", "stale_navigation", "unsupported", "init", "preview", "no_context", "legacy_desktop", "protocol"]);
   function record(event, fields = {}, time = Date.now()) {
     if (!Object.hasOwn(EVENTS, event)) return null;
     if (!fields || typeof fields !== "object") fields = {};
     const safe = {};
     for (const key of ["tab", "count", "dom", "observed", "status"]) if (Number.isInteger(fields[key]) && fields[key] >= 0 && fields[key] <= 1000000) safe[key] = fields[key];
-    for (const key of ["enabled", "allowed", "cached", "metadata"]) if (typeof fields[key] === "boolean") safe[key] = fields[key];
+    for (const key of ["enabled", "allowed", "cached", "metadata", "browser_agent", "browser_relay"]) if (typeof fields[key] === "boolean") safe[key] = fields[key];
     if (REASONS.has(fields.reason)) safe.reason = fields.reason;
     if (["hls", "dash", "video", "audio"].includes(fields.format)) safe.format = fields.format;
     return { time: Number.isFinite(time) && time >= 0 && time <= 8640000000000000 ? time : Date.now(), event, fields: safe };

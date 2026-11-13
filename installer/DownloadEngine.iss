@@ -281,6 +281,7 @@ Source: "{#SourceRoot}\extension\media.js"; DestDir: "{app}\extensions\chrome"; 
 Source: "{#SourceRoot}\extension\media-diagnostics.js"; DestDir: "{app}\extensions\chrome"; Flags: ignoreversion
 Source: "{#SourceRoot}\extension\dailymotion.js"; DestDir: "{app}\extensions\chrome"; Flags: ignoreversion
 Source: "{#SourceRoot}\extension\permission-flow.js"; DestDir: "{app}\extensions\chrome"; Flags: ignoreversion
+Source: "{#SourceRoot}\extension\browser-video-relay.js"; DestDir: "{app}\extensions\chrome"; Flags: ignoreversion
 Source: "{#SourceRoot}\extension\background.js"; DestDir: "{app}\extensions\chrome"; Flags: ignoreversion
 Source: "{#SourceRoot}\extension\popup.html"; DestDir: "{app}\extensions\chrome"; Flags: ignoreversion
 Source: "{#SourceRoot}\extension\popup.css"; DestDir: "{app}\extensions\chrome"; Flags: ignoreversion
@@ -304,6 +305,7 @@ Source: "{#SourceRoot}\extension\media.js"; DestDir: "{app}\extensions\edge"; Fl
 Source: "{#SourceRoot}\extension\media-diagnostics.js"; DestDir: "{app}\extensions\edge"; Flags: ignoreversion
 Source: "{#SourceRoot}\extension\dailymotion.js"; DestDir: "{app}\extensions\edge"; Flags: ignoreversion
 Source: "{#SourceRoot}\extension\permission-flow.js"; DestDir: "{app}\extensions\edge"; Flags: ignoreversion
+Source: "{#SourceRoot}\extension\browser-video-relay.js"; DestDir: "{app}\extensions\edge"; Flags: ignoreversion
 Source: "{#SourceRoot}\extension\background.js"; DestDir: "{app}\extensions\edge"; Flags: ignoreversion
 Source: "{#SourceRoot}\extension\popup.html"; DestDir: "{app}\extensions\edge"; Flags: ignoreversion
 Source: "{#SourceRoot}\extension\popup.css"; DestDir: "{app}\extensions\edge"; Flags: ignoreversion
@@ -327,6 +329,7 @@ Source: "{#SourceRoot}\extension\media.js"; DestDir: "{app}\extensions\brave"; F
 Source: "{#SourceRoot}\extension\media-diagnostics.js"; DestDir: "{app}\extensions\brave"; Flags: ignoreversion
 Source: "{#SourceRoot}\extension\dailymotion.js"; DestDir: "{app}\extensions\brave"; Flags: ignoreversion
 Source: "{#SourceRoot}\extension\permission-flow.js"; DestDir: "{app}\extensions\brave"; Flags: ignoreversion
+Source: "{#SourceRoot}\extension\browser-video-relay.js"; DestDir: "{app}\extensions\brave"; Flags: ignoreversion
 Source: "{#SourceRoot}\extension\background.js"; DestDir: "{app}\extensions\brave"; Flags: ignoreversion
 Source: "{#SourceRoot}\extension\popup.html"; DestDir: "{app}\extensions\brave"; Flags: ignoreversion
 Source: "{#SourceRoot}\extension\popup.css"; DestDir: "{app}\extensions\brave"; Flags: ignoreversion
@@ -350,6 +353,7 @@ Source: "{#SourceRoot}\extension\media.js"; DestDir: "{app}\extensions\firefox";
 Source: "{#SourceRoot}\extension\media-diagnostics.js"; DestDir: "{app}\extensions\firefox"; Flags: ignoreversion
 Source: "{#SourceRoot}\extension\dailymotion.js"; DestDir: "{app}\extensions\firefox"; Flags: ignoreversion
 Source: "{#SourceRoot}\extension\permission-flow.js"; DestDir: "{app}\extensions\firefox"; Flags: ignoreversion
+Source: "{#SourceRoot}\extension\browser-video-relay.js"; DestDir: "{app}\extensions\firefox"; Flags: ignoreversion
 Source: "{#SourceRoot}\extension\background.js"; DestDir: "{app}\extensions\firefox"; Flags: ignoreversion
 Source: "{#SourceRoot}\extension\popup.html"; DestDir: "{app}\extensions\firefox"; Flags: ignoreversion
 Source: "{#SourceRoot}\extension\popup.css"; DestDir: "{app}\extensions\firefox"; Flags: ignoreversion

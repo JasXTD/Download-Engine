@@ -148,6 +148,8 @@ fn refresh_matches_quality_and_audio_identity_instead_of_list_position() {
     let mut other = selected.clone();
     other.url = url(93, false);
     let mut inspection = Inspection {
+        user_agent: None,
+        browser_relay: None,
         public_only: false,
         source: preview.playlist.source,
         variants: vec![other, selected.clone()],

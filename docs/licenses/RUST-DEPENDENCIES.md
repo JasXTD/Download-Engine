@@ -162,7 +162,7 @@ Download Engine builds a modified copy of librqbit-utp 0.7.0 (bounded packet que
 - **librqbit-sha1-wrapper 9.1.0** — Apache-2.0, modified copy. [LICENSE-Apache-2.0](rust/librqbit-sha1-wrapper-9.1.0/LICENSE-Apache-2.0).
 - **librqbit-tracker-comms 9.1.0** — Apache-2.0, modified copy. [LICENSE-Apache-2.0](rust/librqbit-tracker-comms-9.1.0/LICENSE-Apache-2.0).
 - **librqbit-utp 0.7.0** — Apache-2.0, modified copy. [LICENSE](rust/librqbit-utp-0.7.0/LICENSE), [LICENSE-APACHE](rust/librqbit-utp-0.7.0/LICENSE-APACHE).
-- **libsqlite3-sys 0.38.2** — MIT. [LICENSE](rust/libsqlite3-sys-0.38.2/LICENSE), [LICENSE](rust/libsqlite3-sys-0.38.2/sqlcipher/LICENSE).
+- **libsqlite3-sys 0.39.1** — MIT. [LICENSE](rust/libsqlite3-sys-0.39.1/LICENSE).
 - **linebender_resource_handle 0.1.1** — Apache-2.0 OR MIT. [AUTHORS](rust/linebender_resource_handle-0.1.1/AUTHORS), [LICENSE-APACHE](rust/linebender_resource_handle-0.1.1/LICENSE-APACHE), [LICENSE-MIT](rust/linebender_resource_handle-0.1.1/LICENSE-MIT).
 - **litemap 0.8.3** — Unicode-3.0. [LICENSE](rust/litemap-0.8.3/LICENSE).
 - **litrs 1.0.0** — MIT OR Apache-2.0. [LICENSE-APACHE](rust/litrs-1.0.0/LICENSE-APACHE), [LICENSE-MIT](rust/litrs-1.0.0/LICENSE-MIT).
@@ -223,7 +223,7 @@ Download Engine builds a modified copy of librqbit-utp 0.7.0 (bounded packet que
 - **renderdoc-sys 1.1.0** — MIT OR Apache-2.0. [LICENSE-APACHE](rust/renderdoc-sys-1.1.0/LICENSE-APACHE), [LICENSE-MIT](rust/renderdoc-sys-1.1.0/LICENSE-MIT).
 - **reqwest 0.13.5** — MIT OR Apache-2.0. [LICENSE-APACHE](rust/reqwest-0.13.5/LICENSE-APACHE), [LICENSE-MIT](rust/reqwest-0.13.5/LICENSE-MIT).
 - **ringbuf 0.5.2** — MIT OR Apache-2.0. [LICENSE-APACHE](rust/ringbuf-0.5.2/LICENSE-APACHE), [LICENSE-MIT](rust/ringbuf-0.5.2/LICENSE-MIT).
-- **rusqlite 0.40.2** — MIT. [LICENSE](rust/rusqlite-0.40.2/LICENSE).
+- **rusqlite 0.41.1** — MIT. [LICENSE](rust/rusqlite-0.41.1/LICENSE).
 - **rustc_version 0.4.1** — MIT OR Apache-2.0. [LICENSE-APACHE](rust/rustc_version-0.4.1/LICENSE-APACHE), [LICENSE-MIT](rust/rustc_version-0.4.1/LICENSE-MIT).
 - **rustc-hash 1.1.0** — Apache-2.0/MIT. [LICENSE-APACHE](rust/rustc-hash-1.1.0/LICENSE-APACHE), [LICENSE-MIT](rust/rustc-hash-1.1.0/LICENSE-MIT).
 - **rustc-hash 2.1.3** — Apache-2.0 OR MIT. [LICENSE-APACHE](rust/rustc-hash-2.1.3/LICENSE-APACHE), [LICENSE-MIT](rust/rustc-hash-2.1.3/LICENSE-MIT).

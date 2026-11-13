@@ -8,7 +8,11 @@ use crate::{
 };
 use anyhow::{Context, Result, ensure};
 use reqwest::{Client, Response, Url, header};
-use std::{collections::HashMap, sync::Arc, time::Duration};
+use std::{
+    collections::{HashMap, HashSet},
+    sync::Arc,
+    time::Duration,
+};
 use tokio::sync::Mutex;
 use tokio_util::sync::CancellationToken;
 
@@ -29,11 +33,15 @@ impl std::error::Error for AccessDenied {}
 pub(crate) struct Network {
     root: Url,
     clients: Arc<Mutex<HashMap<String, Client>>>,
+    browser_origins: Arc<Mutex<HashSet<String>>>,
     route: crate::proxy::Route,
     site: Option<SiteHeaders>,
     /// The browser page the stream was found on, sent as an origin-only Referer.
     page: Option<String>,
+    user_agent: Option<header::HeaderValue>,
     public_only: bool,
+    browser_relay: Option<crate::browser_relay::Session>,
+    browser_active: Arc<std::sync::atomic::AtomicBool>,
 }
 
 /// Headers a site's own video servers require (for example a Referer and the
@@ -64,30 +72,74 @@ impl Network {
         Ok(Self {
             root: validate_url(source)?,
             clients: Arc::new(Mutex::new(HashMap::new())),
+            browser_origins: Arc::new(Mutex::new(HashSet::new())),
             route,
             site: None,
             page: None,
+            user_agent: None,
             public_only: false,
+            browser_relay: None,
+            browser_active: Arc::default(),
         })
     }
     pub(crate) fn with_site(mut self, site: SiteHeaders) -> Self {
         self.site = Some(site);
+        self.browser_relay = None;
+        self.browser_active = Arc::default();
         self
     }
     pub(crate) fn with_page(mut self, page: Option<&str>) -> Self {
         self.page = page.map(str::to_owned);
+        self.browser_relay = None;
+        self.browser_active = Arc::default();
+        self.browser_origins = Arc::new(Mutex::new(HashSet::new()));
         self
+    }
+    pub(crate) fn with_user_agent(mut self, value: Option<&str>) -> Result<Self> {
+        crate::model::validate_browser_user_agent(value)?;
+        self.user_agent = value.map(header::HeaderValue::from_str).transpose()?;
+        self.browser_origins = Arc::new(Mutex::new(HashSet::new()));
+        Ok(self)
     }
     pub(crate) fn with_public_only(mut self, public_only: bool) -> Result<Self> {
         if public_only {
             self.route.require_public_pinning()?;
         }
         self.public_only = public_only;
+        if public_only {
+            self.browser_relay = None;
+            self.browser_active = Arc::default();
+        }
         self.clients = Arc::new(Mutex::new(HashMap::new()));
+        self.browser_origins = Arc::new(Mutex::new(HashSet::new()));
         Ok(self)
     }
     pub(crate) fn public_only(&self) -> bool {
         self.public_only
+    }
+    pub(crate) fn browser_relay(&self) -> Option<&crate::browser_relay::Session> {
+        self.browser_relay.as_ref()
+    }
+    pub(crate) fn with_browser_relay(
+        mut self,
+        session: Option<&crate::browser_relay::Session>,
+    ) -> Result<Self> {
+        if let Some(session) = session {
+            session.validate()?;
+            ensure!(
+                self.page.as_deref() == Some(session.page.as_str()),
+                "Browser video page changed"
+            );
+            // Explicit Direct and Custom routes retain their exact routing
+            // policy. Only the default System route may use the user's browser.
+            if !self.public_only
+                && self.route.settings.mode == crate::proxy::Mode::System
+                && self.site.is_none()
+            {
+                self.browser_relay = Some(session.clone());
+            }
+        }
+        Ok(self)
     }
     async fn client(&self, url: &Url) -> Result<Client> {
         let origin = url.origin().ascii_serialization();
@@ -151,11 +203,20 @@ impl Network {
             let mut request = client
                 .get(url.clone())
                 .header(header::ACCEPT_ENCODING, "identity");
+            if let Some(user_agent) = &self.user_agent {
+                request = request.header(header::USER_AGENT, user_agent.clone());
+            }
+            let mut browser_origin = None;
             if let Some(referer) = self
                 .page
                 .as_deref()
                 .and_then(|page| crate::model::page_referer(page, &url))
             {
+                if self.user_agent.is_some() {
+                    browser_origin = Some(header::HeaderValue::from_str(
+                        referer.trim_end_matches('/'),
+                    )?);
+                }
                 request = request.header(header::REFERER, referer);
             }
             if let Some(site) = self.site.as_ref().filter(|site| site.applies(&url)) {
@@ -167,7 +228,32 @@ impl Network {
                     format!("bytes={}-{}", range.start, range.start + range.length - 1),
                 );
             }
-            let response = tokio::select! { _=cancel.cancelled()=>anyhow::bail!("Video stream preview or download cancelled"), result=self.route.execute(&client, request.build()?, None)=>result? };
+            let response = if self
+                .browser_active
+                .load(std::sync::atomic::Ordering::Relaxed)
+                && let Some(session) = &self.browser_relay
+            {
+                crate::browser_relay::get(session, &url, range, cancel).await?
+            } else {
+                let response = self
+                    .send_browser_request(&client, request.build()?, browser_origin, cancel)
+                    .await?;
+                if response.status() == reqwest::StatusCode::FORBIDDEN
+                    && let Some(session) = &self.browser_relay
+                {
+                    crate::diagnostics::record(
+                        crate::diagnostics::Level::Info,
+                        crate::diagnostics::Event::VideoBrowserFallback,
+                        Default::default(),
+                    );
+                    let response = crate::browser_relay::get(session, &url, range, cancel).await?;
+                    self.browser_active
+                        .store(true, std::sync::atomic::Ordering::Relaxed);
+                    response
+                } else {
+                    response
+                }
+            };
             if matches!(response.status().as_u16(), 301 | 302 | 303 | 307 | 308) {
                 ensure!(redirects < 5, "Too many video stream redirects");
                 let location = response
@@ -210,6 +296,67 @@ impl Network {
             return Ok(response);
         }
         unreachable!("redirect limit checked before following")
+    }
+    async fn send_browser_request(
+        &self,
+        client: &Client,
+        request: reqwest::Request,
+        browser_origin: Option<header::HeaderValue>,
+        cancel: &CancellationToken,
+    ) -> Result<Response> {
+        // Keep successful requests unchanged. Some media servers require Origin,
+        // while an iframe player's origin can differ from the reviewed page.
+        // Try the other header choice once on 403, never on 401 or other errors.
+        // A site's explicit header contract takes precedence over this fallback.
+        let browser_origin =
+            browser_origin.filter(|_| !request.headers().contains_key(header::ORIGIN));
+        let destination = request.url().origin().ascii_serialization();
+        let mut use_origin =
+            browser_origin.is_some() && self.browser_origins.lock().await.contains(&destination);
+        for attempt in 0..=1 {
+            ensure!(
+                !cancel.is_cancelled(),
+                "Video stream preview or download cancelled"
+            );
+            let mut next = request
+                .try_clone()
+                .context("Cannot retry video GET request")?;
+            if use_origin && let Some(origin) = &browser_origin {
+                next.headers_mut().insert(header::ORIGIN, origin.clone());
+            }
+            let response = tokio::select! {
+                biased;
+                _=cancel.cancelled()=>anyhow::bail!("Video stream preview or download cancelled"),
+                result=self.route.execute(client, next, None)=>result?
+            };
+            if response.status() == reqwest::StatusCode::FORBIDDEN
+                && attempt == 0
+                && browser_origin.is_some()
+            {
+                use_origin = !use_origin;
+                crate::diagnostics::record(
+                    crate::diagnostics::Level::Info,
+                    crate::diagnostics::Event::VideoHeadersRetried,
+                    crate::diagnostics::Details {
+                        attempt: Some(2),
+                        ..Default::default()
+                    },
+                );
+                continue;
+            }
+            if response.status().is_success() && browser_origin.is_some() {
+                // Only remember successes, in memory, for the same destination
+                // origin. The checked client cache bounds this set to 64 entries.
+                let mut origins = self.browser_origins.lock().await;
+                if use_origin {
+                    origins.insert(destination);
+                } else {
+                    origins.remove(&destination);
+                }
+            }
+            return Ok(response);
+        }
+        unreachable!("only the first forbidden response can retry")
     }
     pub async fn playlist(
         &mut self,
@@ -289,6 +436,162 @@ impl Network {
 mod tests {
     use super::*;
     use tokio::io::{AsyncReadExt, AsyncWriteExt};
+
+    #[tokio::test]
+    async fn browser_relay_never_overrides_explicit_routes_or_site_credentials() {
+        let session = crate::browser_relay::Session {
+            port: 1,
+            token: uuid::Uuid::new_v4(),
+            expires: chrono::Utc::now().timestamp() + 60,
+            page: "https://example.com/watch".into(),
+            origins: vec!["https://cdn.example.com".into()],
+        };
+        for mode in [
+            crate::proxy::Mode::Direct,
+            crate::proxy::Mode::Custom,
+            crate::proxy::Mode::System,
+        ] {
+            let route = crate::proxy::Route {
+                settings: crate::proxy::Settings {
+                    mode,
+                    ..Default::default()
+                },
+                login: None,
+            };
+            let network = Network::via("https://cdn.example.com/index.m3u8", route)
+                .await
+                .unwrap()
+                .with_page(Some(&session.page))
+                .with_browser_relay(Some(&session))
+                .unwrap();
+            assert_eq!(
+                network.browser_relay().is_some(),
+                mode == crate::proxy::Mode::System
+            );
+            assert!(
+                network
+                    .clone()
+                    .with_page(Some("https://example.com/other"))
+                    .browser_relay()
+                    .is_none()
+            );
+            assert!(
+                network
+                    .with_site(SiteHeaders {
+                        domain: "cdn.example.com",
+                        headers: header::HeaderMap::new()
+                    })
+                    .browser_relay()
+                    .is_none()
+            );
+        }
+        let strict = Network::new("https://cdn.example.com/index.m3u8")
+            .await
+            .unwrap()
+            .with_page(Some(&session.page))
+            .with_public_only(true)
+            .unwrap()
+            .with_browser_relay(Some(&session))
+            .unwrap();
+        assert!(strict.browser_relay().is_none());
+        let debug = format!("{session:?}");
+        assert!(!debug.contains(&session.token.to_string()) && !debug.contains(&session.page));
+    }
+
+    #[tokio::test]
+    async fn origin_fallback_reuses_success_recovers_without_origin_and_cancels() {
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let base = format!("http://{}", listener.local_addr().unwrap());
+        let requests = Arc::new(std::sync::Mutex::new(Vec::new()));
+        let captured = requests.clone();
+        let cancel = CancellationToken::new();
+        let server_cancel = cancel.clone();
+        let server = tokio::spawn(async move {
+            loop {
+                let (mut socket, _) = listener.accept().await.unwrap();
+                let mut bytes = Vec::new();
+                while !bytes.ends_with(b"\r\n\r\n") {
+                    bytes.push(socket.read_u8().await.unwrap());
+                    assert!(bytes.len() < 8192);
+                }
+                let request = String::from_utf8(bytes).unwrap().to_ascii_lowercase();
+                let origin = request.contains("\r\norigin: http://browser.example.test\r\n");
+                let path = request.split_whitespace().nth(1).unwrap();
+                captured.lock().unwrap().push((path.to_owned(), origin));
+                if path == "/cancel" && origin {
+                    server_cancel.cancel();
+                    std::future::pending::<()>().await;
+                }
+                let status = match path {
+                    "/required" | "/cancel" if origin => 200,
+                    "/plain" if !origin => 200,
+                    _ => 403,
+                };
+                socket.write_all(format!("HTTP/1.1 {status} fixture\r\nContent-Length: 0\r\nConnection: close\r\n\r\n").as_bytes()).await.unwrap();
+            }
+        });
+        let network = Network::new(&base)
+            .await
+            .unwrap()
+            .with_page(Some("http://browser.example.test/private?secret=value"))
+            .with_user_agent(Some("Offline test browser"))
+            .unwrap();
+        for path in ["/required", "/required", "/plain", "/plain"] {
+            assert_eq!(
+                network
+                    .get(&format!("{base}{path}"), None, &cancel)
+                    .await
+                    .unwrap()
+                    .status(),
+                200
+            );
+        }
+        assert_eq!(
+            *requests.lock().unwrap(),
+            [
+                ("/required".into(), false),
+                ("/required".into(), true),
+                ("/required".into(), true),
+                ("/plain".into(), true),
+                ("/plain".into(), false),
+                ("/plain".into(), false),
+            ]
+        );
+        // Explicit site headers are never replaced or negotiated.
+        let client = network.client(&Url::parse(&base).unwrap()).await.unwrap();
+        let request = client
+            .get(format!("{base}/explicit"))
+            .header(header::ORIGIN, "http://site.example.test")
+            .build()
+            .unwrap();
+        let response = network
+            .send_browser_request(
+                &client,
+                request,
+                Some(header::HeaderValue::from_static(
+                    "http://browser.example.test",
+                )),
+                &cancel,
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), 403);
+        assert_eq!(requests.lock().unwrap().len(), 7);
+        let error = tokio::time::timeout(
+            Duration::from_secs(3),
+            network.get(&format!("{base}/cancel"), None, &cancel),
+        )
+        .await
+        .unwrap()
+        .unwrap_err();
+        assert!(error.to_string().contains("cancelled"));
+        assert_eq!(
+            &requests.lock().unwrap()[7..],
+            [("/cancel".into(), false), ("/cancel".into(), true)]
+        );
+        server.abort();
+        let _ = server.await;
+    }
 
     #[tokio::test]
     async fn reader_security_redirects_and_parts_reject_local_destinations() {

@@ -1,3 +1,13 @@
+## 3.20.1 — 2026-11-14
+
+### Korrigeringar för webbläsarhämtningar och gränssnitt
+
+- Förbättrad kompatibilitet med fler webbplatser för strömning och hämtning. Avvisade begäranden kan försökas igen via den granskade webbläsarfliken. Låt fliken vara öppen under hämtningen och uppdatera appen och tillägget tillsammans.
+
+- Korrigerar läsning av stora strömmar, återupptagning, stängning efter export av en kraschrapport och att listan hoppar när en mapp öppnas. Diagnostik, databasberoenden och guiden har uppdaterats.
+
+[English details](../../../CHANGELOG.md#3201--2026-11-14)
+
 ## 3.20.0 — 2026-11-10
 
 ### Valfria kontoplugin

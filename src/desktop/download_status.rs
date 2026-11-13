@@ -956,6 +956,7 @@ impl Desktop {
                 None
             }
             Some(Action::OpenFolder) => {
+                window.notice = Some(tr("Opening folder…").into());
                 self.show_folder(&job);
                 None
             }

@@ -2,10 +2,10 @@ const { test } = require("node:test");
 const assert = require("node:assert/strict");
 require("../extension/core.js");
 const { normalizeUrl, makeRequest, handoff } = globalThis.IDMCore;
-test('Windows and Unix packaging include both discovery modules and Firefox loads them before background',()=>{
+test('Windows and Unix packaging include discovery and relay modules before the Firefox background',()=>{
   const fs=require('node:fs'),path=require('node:path');
   const manifest=require('../extension/manifest.firefox.json');
-  for(const module of ['dailymotion.js','media-diagnostics.js']){
+  for(const module of ['dailymotion.js','media-diagnostics.js','browser-video-relay.js']){
     assert(manifest.background.scripts.indexOf(module)>=0);
     assert(manifest.background.scripts.indexOf(module)<manifest.background.scripts.indexOf('background.js'));
     for(const script of ['Package.ps1','Package-Unix.sh'])assert(fs.readFileSync(path.join(__dirname,'../scripts',script),'utf8').includes(module));
@@ -101,7 +101,7 @@ test("Firefox declares local data transfers and optional login consent for AMO",
   assert.equal(settings.gecko_android, undefined,
     "The native Windows companion does not support Firefox for Android");
   assert.deepEqual(gecko.data_collection_permissions, {
-    required: ["browsingActivity", "websiteContent"], optional: ["authenticationInfo"]
+    required: ["browsingActivity", "websiteContent"], optional: ["authenticationInfo", "technicalAndInteraction"]
   });
 });
 

@@ -126,6 +126,74 @@ async fn selected(f: &Fixture) -> hls::Playlist {
         .await
         .unwrap()
 }
+
+#[tokio::test]
+async fn browser_identity_reaches_dash_indexes_tracks_and_download_recheck() {
+    let f = source().await;
+    let agent = "Mozilla/5.0 (Offline DASH test browser)";
+    for reply in f.server.routes.lock().unwrap().values_mut() {
+        reply.required_user_agent = Some(agent.into());
+        reply.required_origin = Some("http://browser.example.test".into());
+    }
+    f.server.requests.lock().unwrap().clear();
+    let cancel = CancellationToken::new();
+    let inspection = hls::inspect_browser_via(
+        &f.inspection.source,
+        &[],
+        Some("http://browser.example.test/private?secret=value"),
+        Some(agent),
+        false,
+        &cancel,
+        download_engine::proxy::Route::direct(),
+    )
+    .await
+    .unwrap();
+    let preview = hls::preview_with_audio(&inspection, 1, 1, &cancel)
+        .await
+        .unwrap();
+    assert!(preview.dash.as_ref().unwrap().video_index.is_some());
+    assert!(preview.dash.as_ref().unwrap().audio_index.is_some());
+    assert_eq!(
+        preview.audio.as_ref().unwrap().language.as_deref(),
+        Some("fr")
+    );
+    let (_home, store) = fixture();
+    let job = store
+        .enqueue_inspected_hls(
+            &inspection,
+            &preview,
+            "video.mp4",
+            None,
+            MAIN_QUEUE,
+            "dash-browser-identity",
+        )
+        .unwrap();
+    let saved = run(&store, job).await;
+    assert_eq!(saved.status, Status::Complete, "{:?}", saved.error);
+    assert_tracks_decode(&saved.saved_path.unwrap());
+    let requests = f.server.requests.lock().unwrap();
+    assert!(
+        requests
+            .iter()
+            .any(|r| r.to_ascii_lowercase().contains("range: bytes="))
+    );
+    for request in requests.iter() {
+        if !request
+            .to_ascii_lowercase()
+            .contains("\r\norigin: http://browser.example.test\r\n")
+        {
+            // Each new inspection/preview/transfer negotiates once, then shares
+            // the accepted header with subsequent indexes and media ranges.
+            assert!(request.starts_with("GET /base.mpd ") || request.starts_with("GET /low.mp4 "));
+        }
+        assert!(!request.contains("private") && !request.contains("secret=value"));
+        assert!(
+            request
+                .to_ascii_lowercase()
+                .contains(&format!("user-agent: {}\r\n", agent.to_ascii_lowercase()))
+        );
+    }
+}
 fn range_count(server: &Server, part: &hls::Part) -> usize {
     let range = part.range.as_ref().unwrap();
     let target = format!(

@@ -116,6 +116,8 @@ impl Reading {
             })
             .collect();
         Review {
+            user_agent: None,
+            browser_relay: None,
             single_connection: self.single_connection,
             public_only: true,
             page_url: page.to_string(),

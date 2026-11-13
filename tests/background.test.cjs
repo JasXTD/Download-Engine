@@ -10,7 +10,46 @@ function event() {
   return { addListener: fn => listeners.push(fn), emit: (...args) => listeners.map(fn => fn(...args)) };
 }
 async function flush() { for (let i = 0; i < 12; i++) await new Promise(setImmediate); }
+test('Chrome with both API namespaces keeps browser identity without Firefox data consent',async()=>{
+  const userAgent='Mozilla/5.0 (Offline browser) Chrome/157.0.0.0';
+  const {state,api}=background('chromium',{},true,userAgent,true);await flush();
+  let technicalChecks=0,loseReply=true;
+  api.permissions.contains=async grant=>{
+    if(grant.data_collection){technicalChecks++;throw Error('Unexpected property: data_collection');}
+    return state.granted;
+  };
+  api.scripting={executeScript:async()=>[{frameId:0,result:{url:'https://example.test/page',title:'Video',mode:'videos',links:[{url:'https://cdn.example.test/master.m3u8',hls:true}]}}]};
+  api.runtime.sendNativeMessage=async(_host,request)=>{
+    state.native.push(structuredClone(request));
+    if(request.action==='ping')return {ok:true,version:1,capabilities:['browser_video_user_agent_v1']};
+    if(loseReply)throw Error('Native reply lost');
+    return {ok:true,version:1,preview_id:request.request_id};
+  };
+  assert.equal((await state.request({action:'scan_videos'})).ok,false);
+  const pending=structuredClone(state.session['pending-video-review']);
+  assert.equal(pending.review.user_agent,userAgent);
+  loseReply=false;
+  assert((await state.request({action:'recover_capture'})).ok);
+  assert.deepEqual(state.native.at(-1),pending);
+  assert.equal(technicalChecks,0,'Chrome must never receive Firefox-only consent arguments');
+  const log=await state.request({action:'diagnostics_get'});
+  assert(log.trace.some(row=>row.message.includes('browser_agent=true')));
+  assert(!JSON.stringify(log).includes(userAgent));
+});
 for(const variant of ['chromium','firefox']) {
+  test(variant+': stream handoff reads the extension navigator identity and logs only its presence',async()=>{
+    const userAgent='Mozilla/5.0 (Offline browser) '+variant;
+    const {state,api}=background(variant,{},true,userAgent);await flush();
+    state.browserIdentityConsent=true;
+    api.scripting={executeScript:async()=>[{frameId:0,result:{url:'https://example.test/page',title:'Video',mode:'videos',user_agent:'Page controlled',links:[{url:'https://cdn.example.test/master.m3u8',hls:true}]}}]};
+    api.runtime.sendNativeMessage=async(_host,request)=>{state.native.push(request);return {ok:true,version:1,preview_id:request.request_id,capabilities:['browser_video_user_agent_v1']};};
+    const result=await state.request({action:'scan_videos'});assert(result.ok,result.message);
+    assert.deepEqual(state.native.map(r=>r.action),['ping','review_browser_video']);
+    assert.equal(state.native[1].review.user_agent,userAgent);
+    const log=await state.request({action:'diagnostics_get'});
+    assert(log.trace.some(row=>row.message.includes('browser_agent=true')));
+    assert(!JSON.stringify(log).includes(userAgent));
+  });
   test(variant+': magnet offers require the trusted extension frame, capture enabled and a validated magnet',async()=>{
     const {state,api}=background(variant); await flush(); state.values.autoCapture=true;
     const calls=[]; api.runtime.sendNativeMessage=async(_host,request)=>{calls.push(request);return {version:1,ok:true,preview_id:request.request_id,message:'Ready for review'};};
@@ -73,6 +112,41 @@ function holdNativePing(api) {
   };
   return { started, release };
 }
+test('Firefox browser identity requires optional consent and a revoked pending review cannot be resent',async()=>{
+  const userAgent='Mozilla/5.0 (Offline Firefox)';
+  const {state,api}=background('firefox',{},true,userAgent);await flush();
+  api.scripting={executeScript:async()=>[{frameId:0,result:{url:'https://example.test/page',title:'Video',mode:'videos',links:[{url:'https://cdn.example.test/master.m3u8',hls:true}]}}]};
+  let loseReply=false,revokeOnPing=false;
+  api.runtime.sendNativeMessage=async(_host,request)=>{
+    state.native.push(structuredClone(request));
+    if(request.action==='ping'){
+      if(revokeOnPing)state.browserIdentityConsent=false;
+      return {ok:true,version:1,capabilities:['browser_video_user_agent_v1']};
+    }
+    if(loseReply)throw Error('Native reply lost');
+    return {ok:true,version:1,preview_id:request.request_id};
+  };
+  // Website access alone does not authorize sending the browser's identity.
+  assert((await state.request({action:'scan_videos'})).ok);
+  assert(!Object.hasOwn(state.native.at(-1).review,'user_agent'));
+  state.browserIdentityConsent=true;revokeOnPing=true;
+  assert((await state.request({action:'scan_videos'})).ok);
+  assert(!Object.hasOwn(state.native.at(-1).review,'user_agent'));
+  state.browserIdentityConsent=true;revokeOnPing=false;loseReply=true;
+  assert.equal((await state.request({action:'scan_videos'})).ok,false);
+  const pending=structuredClone(state.session['pending-video-review']);
+  assert.equal(pending.review.user_agent,userAgent);
+  state.browserIdentityConsent=false;loseReply=false;
+  const count=state.native.length;
+  const denied=await state.request({action:'recover_capture'});
+  assert.equal(denied.ok,false);assert.match(denied.message,/Permission revoked/);
+  assert.equal(state.native.length,count);
+  assert.deepEqual(state.session['pending-video-review'],pending);
+  state.browserIdentityConsent=true;
+  assert((await state.request({action:'recover_capture'})).ok);
+  assert.deepEqual(state.native.at(-1),pending);
+  assert.equal(state.session['pending-video-review'],undefined);
+});
 for(const variant of ['firefox','chromium']) {
   for(const compatible of [true,false]) test(variant+': browser-readable metadata sends '+(compatible?'grouped alternatives':'separate streams for an older desktop')+' in the actual native message',async()=>{
     const {state,api}=background(variant,{},true);await flush();
@@ -107,9 +181,10 @@ for(const variant of ['firefox','chromium']) {
     if(fallback){const d={requestId:'dm',tabId:7,method:'GET',type:'xmlhttprequest',statusCode:200,url:'https://vod.dmcdn.net/browser/manifest.m3u8?token=SECRET',responseHeaders:[{name:'content-type',value:'video/mp4'}]};api.webRequest.onBeforeRequest.emit(d);api.webRequest.onHeadersReceived.emit(d);await flush();}
     api.runtime.sendNativeMessage=async(host,request)=>{state.native.push(request);return {ok:true,version:1,preview_id:request.request_id,message:'Review opened'};};
     const reply=await state.request({action:'scan_videos'});assert(reply.ok,reply.message);
-    assert.equal(state.native.length,1);assert.equal(state.native[0].review.items.length,1);
-    assert.equal(state.native[0].review.items[0].kind,'hls');
-    assert.match(state.native[0].review.items[0].url,fallback?/browser/:/master/);
+    assert.deepEqual(state.native.map(row=>row.action),['ping','review_browser_video']);
+    assert.equal(state.native[1].review.items.length,1);
+    assert.equal(state.native[1].review.items[0].kind,'hls');
+    assert.match(state.native[1].review.items[0].url,fallback?/browser/:/master/);
     const log=await state.request({action:'diagnostics_get'});
     assert(!JSON.stringify(log).includes('SECRET'));assert(!JSON.stringify(log).includes(tab.url));
     assert(log.trace.some(row=>row.message.includes(fallback?'Using browser detection fallback':'Dailymotion metadata resolved')));
@@ -227,7 +302,7 @@ test("chromium: setup failure releases the filename decision exactly once",async
   await flush();assert.equal(suggestions,1);assert.equal(item.paused,false);
 });
 
-function background(variant, values = {}, granted = false) {
+function background(variant, values = {}, granted = false, userAgent = '', browserNamespace = false) {
   const state = { granted, compatible: true, values: structuredClone(values), session: {}, native: [], receipt: "missing", cancel: 0, alarms: [] };
   const item = { id: 42, url: "https://example.test/file.zip", startTime: "today", filename: "file.zip",
     mime: "application/zip", totalBytes: 100000, state: "in_progress", paused: false, danger: "safe" };
@@ -242,6 +317,7 @@ function background(variant, values = {}, granted = false) {
   const api = {
     runtime: {
       id: "extension-id", getURL: part => "extension://extension-id/" + part,
+      getManifest: () => JSON.parse(fs.readFileSync(path.join(__dirname, '../extension/manifest.' + variant + '.json'), 'utf8')),
       onInstalled: event(), onStartup: event(), onMessage: event(),
       sendNativeMessage: async (host, req) => {
         assert.equal(host, "com.xetro.downloadengine"); state.native.push(req);
@@ -265,7 +341,7 @@ function background(variant, values = {}, granted = false) {
     } },
     tabs: { onRemoved: event(), onUpdated: event(), query: async () => [{id:7,url:'https://example.test/page'}], get: async id => ({id,url:'https://example.test/page'}) },
     webRequest: {onBeforeRequest:event(),onHeadersReceived:event(),onCompleted:event(),onErrorOccurred:event()},
-    permissions: { contains: async () => state.granted, onAdded: event(), onRemoved: event() },
+    permissions: { contains: async grant => grant.data_collection?.includes('technicalAndInteraction') ? state.browserIdentityConsent === true : state.granted, onAdded: event(), onRemoved: event() },
     alarms: {
       get: async () => state.alarms.length ? { name: "idm-ex-capture-recovery" } : undefined,
       create: async (...args) => { state.alarms.push(args); }, onAlarm: event()
@@ -277,10 +353,13 @@ function background(variant, values = {}, granted = false) {
   };
   Object.defineProperty(api, "downloads", { get: () => state.granted ? downloads : undefined });
   const context = vm.createContext({ [variant === "firefox" ? "browser" : "chrome"]: api,
+    navigator: {userAgent},
     URL, performance, structuredClone, TextEncoder, TextDecoder, AbortController, fetch: (...args) => state.fetch(...args), crypto: { randomUUID: () => "random" }, setTimeout, clearTimeout, console });
+  // Chrome 148+ exposes browser alongside chrome, including in service workers.
+  if (variant === 'chromium' && browserNamespace) context.browser=api;
   const load = name => vm.runInContext(fs.readFileSync(path.join(__dirname, "../extension", name), "utf8"), context, { filename: name });
   if (variant === "chromium") context.importScripts = (...files) => files.forEach(load);
-  else { load("core.js"); load("capture.js"); load("link-recovery.js"); load("page-links.js"); load("browser-login.js"); load("video-button-manager.js"); load("github-download.js"); load("media.js"); load("media-diagnostics.js"); load("dailymotion.js"); load("permission-flow.js"); }
+  else { load("core.js"); load("capture.js"); load("link-recovery.js"); load("page-links.js"); load("browser-login.js"); load("video-button-manager.js"); load("github-download.js"); load("media.js"); load("media-diagnostics.js"); load("dailymotion.js"); load("permission-flow.js"); load("browser-video-relay.js"); }
   load("background.js");
   state.request = message => new Promise(resolve => {
     const handled = api.runtime.onMessage.emit(message, {

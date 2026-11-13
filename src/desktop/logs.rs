@@ -789,6 +789,8 @@ fn event_label(event: Event) -> &'static str {
         Event::VideoLookupStarted => tr("Video lookup started"),
         Event::VideoLookupSucceeded => tr("Video lookup completed"),
         Event::VideoLookupFailed => tr("Video lookup failed"),
+        Event::VideoHeadersRetried => tr("Video request retried with adjusted Origin header"),
+        Event::VideoBrowserFallback => tr("Video request is using the reviewed browser tab"),
         Event::BrowserRegistered => tr("Browser connected"),
         Event::BrowserUnregistered => tr("Browser disconnected"),
         Event::BrowserSetupFailed => tr("Browser setup failed"),

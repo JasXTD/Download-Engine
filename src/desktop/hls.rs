@@ -1,4 +1,5 @@
 use super::*;
+use anyhow::Context;
 use download_engine::hls::{self as service, Inspection, Playlist};
 use std::sync::mpsc;
 use tokio_util::sync::CancellationToken;
@@ -54,6 +55,8 @@ pub(super) struct State {
     start_on_poll: bool,
     /// The browser page a detected stream came from (sent as Referer).
     page: Option<String>,
+    user_agent: Option<String>,
+    browser_relay: Option<download_engine::browser_relay::Session>,
     fallback_urls: Vec<String>,
     public_only: bool,
     /// The browser's own findings for a site page, kept until the site reader
@@ -89,6 +92,8 @@ impl State {
             tiktok_selection: None,
             start_on_poll: false,
             page: None,
+            user_agent: None,
+            browser_relay: None,
             fallback_urls: Vec::new(),
             public_only: false,
             fallback: None,
@@ -105,6 +110,8 @@ impl State {
         let (sender, result) = mpsc::channel();
         let url = self.url.clone();
         let page = self.page.clone();
+        let user_agent = self.user_agent.clone();
+        let browser_relay = self.browser_relay.clone();
         let public_only = self.public_only;
         let fallback_urls = self.fallback_urls.clone();
         let store = self.store.clone();
@@ -144,11 +151,18 @@ impl State {
                     runtime.block_on(async {
                         let route = download_engine::proxy::Route::load(&store)?;
                         if inspect {
-                            if !fallback_urls.is_empty() {
-                                service::inspect_candidates_via(
+                            if !fallback_urls.is_empty()
+                                || user_agent.is_some()
+                                || browser_relay.is_some()
+                            {
+                                service::inspect_browser_relay_via(
                                     &url,
                                     &fallback_urls,
-                                    page.as_deref(),
+                                    service::BrowserContext {
+                                        page: page.as_deref(),
+                                        user_agent: user_agent.as_deref(),
+                                        relay: browser_relay.as_ref(),
+                                    },
                                     public_only,
                                     &cancel,
                                     route,
@@ -494,6 +508,8 @@ impl Desktop {
             dash: None,
         };
         draft.inspection = Some(Inspection {
+            user_agent: None,
+            browser_relay: None,
             public_only: false,
             source: draft.url.clone(),
             variants,
@@ -687,15 +703,17 @@ impl Desktop {
     pub(super) fn open_review_stream(
         &mut self,
         item: download_engine::browser_video::Item,
-        page: &str,
+        context: service::BrowserContext<'_>,
         queue: &str,
         folder: Option<&str>,
         public_only: bool,
     ) {
-        self.open_page_stream(&item.url, Some(page), queue, folder);
+        self.open_page_stream(&item.url, context.page, queue, folder);
         if let Some(draft) = &mut self.hls {
             draft.fallback_urls = item.fallback_urls;
             draft.public_only = public_only;
+            draft.user_agent = context.user_agent.map(str::to_owned);
+            draft.browser_relay = context.relay.cloned();
         }
     }
     /// Read a site page with its built-in reader; if that fails, show what the
@@ -739,7 +757,7 @@ impl Desktop {
         let youtube = draft.youtube_selection.clone();
         let bilibili = draft.bilibili_selection.clone();
         let tiktok = draft.tiktok_selection.clone();
-        let page = draft.inspection.as_ref().and_then(|i| i.page.clone());
+        let inspection = draft.inspection.clone();
         let name = draft.name.clone();
         let queue = draft.queue.clone();
         // The same receipt survives a failed attempt, including a lost reply.
@@ -780,9 +798,9 @@ impl Desktop {
                     &receipt,
                 )
             } else {
-                store.enqueue_found_hls(
+                store.enqueue_inspected_hls(
+                    inspection.as_ref().context("Missing video inspection")?,
                     &preview,
-                    page.as_deref(),
                     &name,
                     folder.as_deref(),
                     &queue,
@@ -916,6 +934,9 @@ impl Desktop {
                             }
                             if let Some(title) = &draft.title {
                                 ui.add(egui::Label::new(RichText::new(title).strong()).wrap());
+                            }
+                            if draft.browser_relay.is_some() {
+                                ui.label(RichText::new(tr("Keep the video tab open until the download finishes.")).small().color(p.muted));
                             }
                             if let Some(inspection) = &draft.inspection
                                 && !inspection.variants.is_empty()
@@ -1162,6 +1183,8 @@ impl Desktop {
         let stale = (edit || retarget).then(|| draft.fallback.take()).flatten();
         if edit || retarget {
             draft.page = None;
+            draft.user_agent = None;
+            draft.browser_relay = None;
             draft.public_only = false;
             draft.fallback_urls.clear();
         }
@@ -1338,13 +1361,21 @@ mod tests {
                 kind: download_engine::browser_video::Kind::Hls,
                 size: None,
             },
-            "https://www.dailymotion.com/video/xbv5ovm",
+            service::BrowserContext {
+                page: Some("https://www.dailymotion.com/video/xbv5ovm"),
+                user_agent: Some("Mozilla/5.0 (Test browser)"),
+                relay: None,
+            },
             MAIN_QUEUE,
             None,
             false,
         );
         let draft = app.hls.as_mut().unwrap();
         assert_eq!(draft.fallback_urls, [alternative]);
+        assert_eq!(
+            draft.user_agent.as_deref(),
+            Some("Mozilla/5.0 (Test browser)")
+        );
         assert!(draft.start_on_poll);
         draft.start_on_poll = false; // The UI test must not contact a live site.
         click(&mut app, &ctx, url);
@@ -1356,6 +1387,7 @@ mod tests {
         );
         let draft = app.hls.as_ref().unwrap();
         assert!(draft.fallback_urls.is_empty() && draft.page.is_none());
+        assert!(draft.user_agent.is_none());
         assert!(draft.task.is_none());
         assert!(app.store.list().unwrap().is_empty());
         app.close_hls();
@@ -1378,6 +1410,60 @@ mod tests {
         assert!(paths.iter().any(|p| p == "/high.m3u8"));
         assert!(paths.iter().any(|p| p == "/en.m3u8"));
         assert!(paths.iter().all(|p| p.ends_with(".m3u8")));
+    }
+
+    #[test]
+    fn browser_identity_survives_native_review_quality_selection_and_queue_save() {
+        let server = PreviewServer::new();
+        let (_temp, mut app, ctx) = fixture();
+        app.store.set_queue_running(MAIN_QUEUE, false).unwrap();
+        let agent = "Mozilla/5.0 (Offline desktop test browser)";
+        app.store
+            .request_browser_video_review(
+                &format!("video:{}", Uuid::new_v4()),
+                &download_engine::browser_video::Review {
+                    user_agent: Some(agent.into()),
+                    browser_relay: None,
+                    single_connection: false,
+                    public_only: false,
+                    page_url: "http://browser.example.test/watch".into(),
+                    page_title: "Offline fixture".into(),
+                    truncated: false,
+                    items: vec![download_engine::browser_video::Item {
+                        url: server.url("/direct.m3u8"),
+                        fallback_urls: Vec::new(),
+                        filename: "video.ts".into(),
+                        label: "Fixture stream".into(),
+                        kind: download_engine::browser_video::Kind::Hls,
+                        size: None,
+                    }],
+                },
+            )
+            .unwrap();
+        app.poll_browser_video_requests(&ctx);
+        app.wait_for_io();
+        assert_eq!(app.dialog, Some(Dialog::BrowserVideo));
+        click(&mut app, &ctx, "Choose quality");
+        finish_preview(&mut app);
+        assert_eq!(
+            app.hls
+                .as_ref()
+                .unwrap()
+                .inspection
+                .as_ref()
+                .unwrap()
+                .user_agent
+                .as_deref(),
+            Some(agent)
+        );
+        app.add_hls();
+        app.wait_for_io();
+        let jobs = app.store.list().unwrap();
+        assert_eq!(jobs.len(), 1);
+        assert_eq!(
+            jobs[0].hls.as_ref().unwrap().user_agent.as_deref(),
+            Some(agent)
+        );
     }
 
     #[test]
@@ -1575,6 +1661,8 @@ mod tests {
                 .request_browser_video_review(
                     &id,
                     &download_engine::browser_video::Review {
+                        user_agent: None,
+                        browser_relay: None,
                         single_connection: false,
                         public_only: false,
                         page_url: url.into(),
@@ -1622,6 +1710,8 @@ mod tests {
             .request_browser_video_review(
                 &format!("video:{}", Uuid::new_v4()),
                 &download_engine::browser_video::Review {
+                    user_agent: None,
+                    browser_relay: None,
                     single_connection: false,
                     public_only: false,
                     page_url: page.into(),

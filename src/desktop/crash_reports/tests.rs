@@ -76,10 +76,12 @@ fn help_export_cancel_error_retry_and_review_preserve_downloads() {
     app.export_crash_report(&ctx);
     assert!(app.crash_reports.task.is_none());
     assert!(app.crash_reports.saved.is_none());
+    assert_eq!(app.dialog, Some(Dialog::CrashReports));
     app.folder_picker.response = Some(Ok(Some(temp.path().join("missing").display().to_string())));
     app.export_crash_report(&ctx);
     settle(&mut app, &ctx);
     assert!(app.crash_reports.error.is_some());
+    assert_eq!(app.dialog, Some(Dialog::CrashReports));
     app.folder_picker.response = Some(Ok(Some(temp.path().display().to_string())));
     click(&mut app, &ctx, "Export report");
     app.export_crash_report(&ctx); // duplicate input cannot start another writer
@@ -91,6 +93,13 @@ fn help_export_cancel_error_retry_and_review_preserve_downloads() {
     );
     assert_eq!(app.jobs.len(), jobs);
     assert_eq!(app.selected, selected);
+    assert_eq!(app.dialog, None);
+    assert!(!service::load(&app.store.paths).unwrap().reports[0].unreviewed);
+    app.check_crash_reports_on_launch(&ctx);
+    settle(&mut app, &ctx);
+    assert_eq!(app.dialog, None);
+    app.open_crash_reports(&ctx);
+    settle(&mut app, &ctx);
     assert_eq!(app.dialog, Some(Dialog::CrashReports));
     // Exercise the real egui commands without opening a browser or touching
     // the system clipboard. The issue URL must contain no report data.
@@ -128,6 +137,22 @@ fn help_export_cancel_error_retry_and_review_preserve_downloads() {
             assert!(commands.iter().any(|c| matches!(c, egui::OutputCommand::OpenUrl(url) if url.url == "https://github.com/JasXTD/Download-Engine/issues/new")));
         }
     }
+}
+
+#[test]
+fn export_completion_does_not_dismiss_another_dialog() {
+    let (temp, mut app, ctx) = fixture();
+    saved(&app);
+    app.open_crash_reports(&ctx);
+    settle(&mut app, &ctx);
+    app.folder_picker.response = Some(Ok(Some(temp.path().display().to_string())));
+    app.export_crash_report(&ctx);
+    app.dialog = Some(Dialog::About);
+    settle(&mut app, &ctx);
+    assert_eq!(app.dialog, Some(Dialog::About));
+    assert!(app.crash_reports.saved.is_some());
+    assert!(app.crash_reports.error.is_none());
+    assert!(service::load(&app.store.paths).unwrap().reports[0].unreviewed);
 }
 
 #[test]

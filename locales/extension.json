@@ -1,4 +1,7 @@
 {
+  "Dailymotion did not provide a playable stream. Start playback, then retry. Open Diagnostic log in the extension for details.": ["Dailymotion 未提供可播放的视频流。请开始播放后重试。详细信息请查看扩展中的诊断日志。","Dailymotion 未提供可播放的串流。請開始播放後重試。詳細資訊請查看擴充功能中的診斷記錄。","Dailymotion tidak menyediakan strim yang boleh dimainkan. Mulakan main balik, kemudian cuba lagi. Buka log diagnostik sambungan untuk butiran."],
+  "HLS · alternate playlist": ["HLS · 备用播放列表","HLS · 備用播放清單","HLS · senarai main alternatif"],
+  "Discovery logging is unavailable. Reload the extension to retry.": ["发现日志不可用。请重新加载扩展后重试。","探索記錄無法使用。請重新載入擴充功能後重試。","Log penemuan tidak tersedia. Muat semula sambungan untuk mencuba lagi."],
   "Audio": [
     "音频",
     "音訊",

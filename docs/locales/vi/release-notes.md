@@ -1,3 +1,13 @@
+## 3.20.1 — 2026-11-14
+
+### Sửa lỗi tải qua trình duyệt và giao diện
+
+- Cải thiện khả năng tương thích với nhiều trang phát trực tuyến và tải xuống hơn. Yêu cầu bị từ chối có thể thử lại qua thẻ trình duyệt đã được xem xét. Giữ thẻ mở khi tải và cập nhật cả ứng dụng lẫn tiện ích trình duyệt.
+
+- Sửa lỗi đọc luồng lớn, tiếp tục sau khi tạm dừng, hộp thoại không đóng sau khi xuất báo cáo sự cố và danh sách bị dịch chuyển khi mở thư mục. Cập nhật chẩn đoán, thư viện cơ sở dữ liệu và hướng dẫn.
+
+[English details](../../../CHANGELOG.md#3201--2026-11-14)
+
 ## 3.20.0 — 2026-11-10
 
 ### Plugin tài khoản tùy chọn

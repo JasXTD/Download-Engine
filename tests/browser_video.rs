@@ -32,14 +32,55 @@ fn native_ping_advertises_video_alternative_support_without_queuing() {
         reply
             .capabilities
             .iter()
+            .any(|value| value == "browser_video_user_agent_v1")
+    );
+    assert!(
+        reply
+            .capabilities
+            .iter()
             .any(|value| value == "browser_video_alternatives_v1")
     );
     assert!(store.list().unwrap().is_empty());
     assert!(store.next_browser_video_review().unwrap().is_none());
 }
 
+#[test]
+fn native_browser_identity_is_optional_bounded_and_survives_review_reload() {
+    let (_temp, store) = fixture();
+    let mut value = review();
+    let legacy = serde_json::to_value(&value).unwrap();
+    assert!(legacy.get("user_agent").is_none());
+    let legacy: Review = serde_json::from_value(legacy).unwrap();
+    assert!(send(&store, &id(), &legacy).ok);
+    store
+        .dismiss_browser_video_review(&store.next_browser_video_review().unwrap().unwrap().id)
+        .unwrap();
+    value.user_agent = Some("Mozilla/5.0 (Test browser)".into());
+    let request = id();
+    let reply = send(&store, &request, &value);
+    assert!(reply.ok, "{}", reply.message);
+    let reopened = Store::open(store.paths.clone()).unwrap();
+    let pending = reopened.next_browser_video_review().unwrap().unwrap();
+    assert_eq!(pending.review.user_agent, value.user_agent);
+    for invalid in [
+        "".to_owned(),
+        " ".into(),
+        "bad\r\nCookie: secret".into(),
+        "hidden\u{200b}value".into(),
+        "x".repeat(513),
+    ] {
+        value.user_agent = Some(invalid);
+        assert!(!send(&store, &id(), &value).ok);
+    }
+    let mut raw = serde_json::to_value(&legacy).unwrap();
+    raw["headers"] = json!({"Cookie":"secret"});
+    assert!(serde_json::from_value::<Review>(raw).is_err());
+}
+
 fn review() -> Review {
     Review {
+        user_agent: None,
+        browser_relay: None,
         single_connection: false,
         public_only: false,
         page_url: "https://example.test/watch".into(),

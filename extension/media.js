@@ -256,7 +256,7 @@
       if (tab.id !== tabId) throw Error(__xdL.t("The page changed. Reopen the extension."));
       const item = (await this.list(tab)).find(entry => entry.id === id);
       if (!item) throw Error(__xdL.t("This media item expired. Play it again to detect it."));
-      return pageLinks.openScan({ url: tab.url, title: tab.title, mode: "videos", links: [item] });
+      return pageLinks.openScan({ url: tab.url, title: tab.title, mode: "videos", links: [item] }, { tabId: tab.id, documentId: null });
     }
   }
   root.IDMMedia = { Manager, describe, GRANT, TTL, TAB_LIMIT, ITEM_LIMIT };

@@ -184,13 +184,24 @@
     return { indices: [...indices].sort((a, b) => a - b), queue_id: queue, destination };
   }
   class Manager {
-    constructor({ api, native, uuid = () => crypto.randomUUID(), detected = async () => [], resolveVideo = null, trace = () => {} }) {
+    constructor({ api, native, uuid = () => crypto.randomUUID(), detected = async () => [], resolveVideo = null, trace = () => {}, userAgent = root.navigator?.userAgent || "", relay = null }) {
       this.api = api; this.native = native; this.uuid = uuid; this.detected = detected;
       this.resolveVideo = resolveVideo; this.trace = trace; this.activeScan = null;
+      this.userAgent = userAgent;
+      this.relay = relay;
       this.inflight = new Set(); this.scanning = false;
     }
     cancelScan(tabId) {
       if (this.activeScan?.tabId === tabId) this.activeScan.controller.abort();
+    }
+    async browserIdentityAllowed() {
+      // Use the packaged consent contract: Chrome 148+ also exposes `browser`.
+      // Firefox's native-host transfer still needs optional technical consent.
+      try {
+        if (!this.api.runtime.getManifest().browser_specific_settings?.gecko) return true;
+        return await this.api.permissions.contains({data_collection:["technicalAndInteraction"]});
+      }
+      catch { return false; }
     }
     key(id) {
       if (typeof id !== "string" || !UUID.test(id)) throw Error(__xdL.t("Invalid link picker identifier."));
@@ -253,15 +264,15 @@
         }
         // If a navigation raced the scan, show what was actually scanned rather
         // than silently attributing another document's links to the first page.
-        return await this.openScan(scan);
+        return await this.openScan(scan, { tabId: tab.id, documentId: result.documentId || null });
       } finally { this.activeScan = null; this.scanning = false; }
     }
-    async openScan(value) {
+    async openScan(value, browserContext = null) {
       if (this.opening) throw Error(__xdL.t("A review is already opening."));
       this.opening = true;
       try {
         const scan = normalizeScan(value);
-        if (scan.mode === "videos") return await this.openVideoReview(scan);
+        if (scan.mode === "videos") return await this.openVideoReview(scan, browserContext);
         const records = await this.api.storage.session.get(null);
         if (Object.keys(records).filter(key => key.startsWith(PREFIX)).length >= 5) throw Error(__xdL.t("Close another link picker first. Use Recover handoffs for any pending batch."));
         const id = this.uuid(), record = { scan, pending: null, receipt: null };
@@ -271,15 +282,24 @@
         return { ok: true, message: __xdL.f("Found {0} {1}. Review them in the new tab.", scan.links.length, scan.mode === "videos" ? __xdL.t("media items") : __xdL.t("files and links")) };
       } finally { this.opening = false; }
     }
-    async openVideoReview(scan) {
+    async openVideoReview(scan, browserContext = null) {
       if ((await this.api.storage.session.get(VIDEO_PENDING))[VIDEO_PENDING]) throw Error(__xdL.t("A video review is awaiting confirmation. Use Browser options → Recover handoffs first."));
       let items = scan.links.map(link => ({ url: link.url, filename: link.filename, label: link.text,
         kind: link.dash ? "dash" : link.hls ? "hls" : "file", size: link.size ?? null,
         ...(link.fallback_urls?.length ? { fallback_urls: link.fallback_urls } : {}) }));
-      if (items.some(item => item.fallback_urls?.length)) {
+      const streams = items.some(item => item.kind !== "file");
+      // Read the extension's browser identity, never a page-supplied header.
+      // No cookies, authorization headers, or arbitrary request headers are collected.
+      let userAgent = streams && typeof this.userAgent === "string" &&
+        this.userAgent.length <= 512 && !/[^\x20-\x7e]/.test(this.userAgent) && this.userAgent.trim()
+        ? this.userAgent : null;
+      let capabilities = [];
+      if (userAgent || items.some(item => item.fallback_urls?.length) || (this.relay && browserContext && streams)) {
         const host = await this.native({ action: "ping" });
         if (this.activeScan?.controller.signal.aborted) throw Error(__xdL.t("The page changed. Click its video button again."));
-        if (!Array.isArray(host.capabilities) || !host.capabilities.includes("browser_video_alternatives_v1")) {
+        capabilities = Array.isArray(host.capabilities) ? host.capabilities : [];
+        if (!capabilities.includes("browser_video_user_agent_v1")) userAgent = null;
+        if (items.some(item => item.fallback_urls?.length) && !capabilities.includes("browser_video_alternatives_v1")) {
           // Store extensions can update before the desktop. Older native hosts
           // reject unknown fields, so retain these streams as explicit choices.
           // Negotiate before saving the request: retries must keep its exact body.
@@ -296,10 +316,18 @@
           this.trace("desktop_legacy", { count: items.length });
         }
       }
+      if (userAgent && !await this.browserIdentityAllowed()) userAgent = null;
+      let browserRelay = null;
+      if (this.relay && streams) {
+        const reason = !browserContext ? "no_context" : !capabilities.includes("browser_video_relay_v1") ? "legacy_desktop" : null;
+        if (reason) this.trace("relay_unavailable", { reason });
+        else browserRelay = await this.relay.open(browserContext.tabId, browserContext.documentId, scan.url, items);
+      }
+      if (this.activeScan?.controller.signal.aborted) throw Error(__xdL.t("The page changed. Click its video button again."));
       const request = {
         action: "review_browser_video", request_id: "video:" + this.uuid(),
         review: { page_url: scan.url, page_title: scan.title, truncated: scan.truncated,
-          items }
+          items, ...(userAgent ? { user_agent: userAgent } : {}), ...(browserRelay ? { browser_relay: browserRelay } : {}) }
       };
       if (new TextEncoder().encode(JSON.stringify(request)).length > 900000) throw Error(__xdL.t("This page contains too much video data. Try a smaller page."));
       // Save before sending: a lost reply must reuse the same desktop receipt.
@@ -310,7 +338,10 @@
       if (this.inflight.has(VIDEO_PENDING)) throw Error(__xdL.t("A video review is already opening in Download Engine."));
       this.inflight.add(VIDEO_PENDING);
       try {
-        this.trace("handoff", { count: request.review.items.length });
+        // Recovery must keep its exact idempotent payload, but cannot resend
+        // browser information after consent was revoked. Leave it pending.
+        if (request.review.user_agent && !await this.browserIdentityAllowed()) throw Error(__xdL.t("Permission revoked"));
+        this.trace("handoff", { count: request.review.items.length, browser_agent: !!request.review.user_agent, browser_relay: !!request.review.browser_relay });
         const reply = await this.native(request);
         if (reply.preview_id !== request.request_id) throw Error(__xdL.t("The desktop app did not confirm the video review. Update Download Engine, then use Recover handoffs."));
         await this.api.storage.session.remove(VIDEO_PENDING);

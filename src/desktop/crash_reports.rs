@@ -80,7 +80,13 @@ impl Desktop {
                     self.crash_reports.reports = snapshot.reports;
                     self.crash_reports.skipped = snapshot.skipped;
                 }
-                Ok(Completed::Exported(path)) => self.crash_reports.saved = Some(path),
+                Ok(Completed::Exported(path)) => {
+                    self.crash_reports.saved = Some(path);
+                    self.notice = Some(Notice::success(tr("Crash report exported").into()));
+                    if self.dialog == Some(Dialog::CrashReports) {
+                        self.close_crash_reports(ctx);
+                    }
+                }
                 Ok(Completed::Acknowledged) => {}
                 Err(error) => {
                     self.crash_reports.error = Some(error.to_string());

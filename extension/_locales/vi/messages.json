@@ -221,6 +221,9 @@
   "m_50746138b9d24c2b": {
     "message": "Không quay lại được cửa sổ tiện ích:"
   },
+  "m_09423eef52fe86ae": {
+    "message": "Dailymotion không cung cấp luồng có thể phát. Hãy bắt đầu phát rồi thử lại. Mở nhật ký chẩn đoán trong tiện ích để xem chi tiết."
+  },
   "m_936628cc4a394ede": {
     "message": "Đã khôi phục mặc định. Chọn Lưu quy tắc để giữ lại."
   },
@@ -241,6 +244,9 @@
   },
   "m_97a6661033069fb1": {
     "message": "Tệp trực tiếp và xem trước HLS / DASH không mã hóa."
+  },
+  "m_bb804321651aec3f": {
+    "message": "Không có nhật ký phát hiện. Tải lại tiện ích rồi thử lại."
   },
   "m_d6bd8c0aeee80fed": {
     "message": "Tài liệu"
@@ -355,6 +361,9 @@
   },
   "m_cf58b80fa579dabc": {
     "message": "Đã tìm thấy liên kết mới. Xem kiểm tra dữ liệu đã lưu trong Download Engine rồi xác nhận tiếp tục."
+  },
+  "m_cb8a06be45767aba": {
+    "message": "HLS · danh sách phát thay thế"
   },
   "m_23b41d51987507df": {
     "message": "HLS/DASH mở xem trước trên máy tính; không hỗ trợ trực tiếp/mã hóa. Bật phát hiện trước khi phát để tìm thêm luồng."

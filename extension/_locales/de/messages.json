@@ -221,6 +221,9 @@
   "m_50746138b9d24c2b": {
     "message": "Rückkehr zum Erweiterungsfenster nicht möglich:"
   },
+  "m_09423eef52fe86ae": {
+    "message": "Dailymotion hat keinen abspielbaren Stream bereitgestellt. Starten Sie die Wiedergabe und versuchen Sie es erneut. Details stehen im Diagnoseprotokoll der Erweiterung."
+  },
   "m_936628cc4a394ede": {
     "message": "Standardwerte wiederhergestellt. Zum Übernehmen „Regeln speichern“ wählen."
   },
@@ -241,6 +244,9 @@
   },
   "m_97a6661033069fb1": {
     "message": "Direkte Dateien und unverschlüsselte HLS-/DASH-Vorschauen."
+  },
+  "m_bb804321651aec3f": {
+    "message": "Das Erkennungsprotokoll ist nicht verfügbar. Laden Sie die Erweiterung neu und versuchen Sie es erneut."
   },
   "m_d6bd8c0aeee80fed": {
     "message": "Dokument"
@@ -355,6 +361,9 @@
   },
   "m_cf58b80fa579dabc": {
     "message": "Neuer Link gefunden. Datenprüfung in Download Engine prüfen, dann Fortsetzen bestätigen."
+  },
+  "m_cb8a06be45767aba": {
+    "message": "HLS · alternative Wiedergabeliste"
   },
   "m_23b41d51987507df": {
     "message": "HLS / DASH öffnet eine Desktopvorschau; Live- und verschlüsselte Streams werden nicht unterstützt. Medienerkennung vor Wiedergabe aktivieren, um mehr Streams zu finden."

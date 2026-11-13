@@ -1,3 +1,13 @@
+## 3.20.1 — 2026-11-14
+
+### Pembetulan muat turun pelayar dan antara muka
+
+- Keserasian dipertingkat untuk lebih banyak laman penstriman dan muat turun. Permintaan yang ditolak boleh dicuba semula melalui tab pelayar yang disemak. Biarkan tab terbuka semasa memuat turun dan kemas kini aplikasi serta sambungan pelayar bersama-sama.
+
+- Membaiki bacaan aliran besar, sambungan semula selepas jeda, dialog yang kekal terbuka selepas eksport laporan ranap dan senarai yang melompat apabila folder dibuka. Diagnostik, kebergantungan pangkalan data dan panduan turut dikemas kini.
+
+[English details](../../../CHANGELOG.md#3201--2026-11-14)
+
 ## 3.20.0 — 2026-11-10
 
 ### Pemalam akaun pilihan

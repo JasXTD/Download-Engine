@@ -1,3 +1,13 @@
+## 3.20.1 — 2026-11-14
+
+### Corrections des téléchargements et de l’interface
+
+- Compatibilité améliorée avec davantage de sites de streaming et de téléchargement. Les requêtes refusées peuvent être réessayées via l’onglet du navigateur validé. Gardez cet onglet ouvert et mettez à jour l’application et l’extension ensemble.
+
+- Correction de la lecture de grands flux, de la reprise, de la fermeture après export d’un rapport de plantage et du déplacement de la liste à l’ouverture d’un dossier. Diagnostics, dépendances de base de données et guide mis à jour.
+
+[English details](../../../CHANGELOG.md#3201--2026-11-14)
+
 ## 3.20.0 — 2026-11-10
 
 ### Plugins de compte facultatifs

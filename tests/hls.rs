@@ -20,6 +20,8 @@ use tokio_util::sync::CancellationToken;
 
 #[path = "hls/activity.rs"]
 mod activity;
+#[path = "hls/browser_identity.rs"]
+mod browser_identity;
 #[path = "hls/dash.rs"]
 mod dash;
 #[path = "hls/merge.rs"]
@@ -31,6 +33,8 @@ mod sidx;
 
 #[derive(Clone)]
 struct Reply {
+    required_user_agent: Option<String>,
+    required_origin: Option<String>,
     body: Vec<u8>,
     headers: String,
     status: u16,
@@ -42,6 +46,8 @@ struct Reply {
 impl Reply {
     fn bytes(body: impl AsRef<[u8]>) -> Self {
         Self {
+            required_user_agent: None,
+            required_origin: None,
             body: body.as_ref().into(),
             headers: String::new(),
             status: 200,
@@ -113,6 +119,22 @@ impl Server {
                                 return;
                             }
                             let mut reply = routes.lock().unwrap().get(path).cloned().unwrap_or(Reply {status:404,..Reply::bytes("missing")});
+                            if let Some(expected) = &reply.required_user_agent {
+                                let actual = request.lines().find_map(|line| line.split_once(':')
+                                    .filter(|(name, _)| name.eq_ignore_ascii_case("user-agent"))
+                                    .map(|(_, value)| value.trim()));
+                                if actual != Some(expected.as_str()) {
+                                    reply = Reply { status: 403, ..Reply::bytes("Browser identity required") };
+                                }
+                            }
+                            if let Some(expected) = &reply.required_origin {
+                                let actual = request.lines().find_map(|line| line.split_once(':')
+                                    .filter(|(name, _)| name.eq_ignore_ascii_case("origin"))
+                                    .map(|(_, value)| value.trim()));
+                                if actual != Some(expected.as_str()) {
+                                    reply = Reply { status: 403, ..Reply::bytes("Page origin required") };
+                                }
+                            }
                             let total = reply.body.len();
                             if !reply.ignore_range && reply.status == 200 && let Some(range) = range {
                                 let (start,end) = range.split_once('-').unwrap(); let (start,end): (usize,usize) = (start.parse().unwrap(),end.parse().unwrap());

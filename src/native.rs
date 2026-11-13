@@ -94,6 +94,10 @@ mod torrent_review_tests {
 #[serde(tag = "action", rename_all = "snake_case", deny_unknown_fields)]
 pub enum Request {
     Ping,
+    OpenBrowserVideoRelay {
+        page: String,
+        origins: Vec<String>,
+    },
     ReviewTorrent {
         request_id: String,
         url: String,
@@ -171,7 +175,9 @@ impl Request {
             | Self::RecoveryStatus { .. }
             | Self::RecoveryOffer { .. }
             | Self::RecoveryCancel { .. } => Action::BrowserRecovery,
-            Self::ReviewBrowserVideo { .. } => Action::ReviewVideo,
+            Self::ReviewBrowserVideo { .. } | Self::OpenBrowserVideoRelay { .. } => {
+                Action::ReviewVideo
+            }
             Self::PreviewHls { .. } | Self::PreviewVideo { .. } => Action::PreviewVideo,
             Self::AddBatch { .. } => Action::AddBatch,
             Self::Add { .. } => Action::Add,
@@ -185,6 +191,8 @@ impl Request {
 }
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Reply {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub browser_relay: Option<crate::browser_relay::Session>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub recovery: Option<crate::browser_recovery::Session>,
     pub ok: bool,
@@ -219,7 +227,7 @@ pub fn read_frame(reader: &mut impl Read) -> Result<Option<zeroize::Zeroizing<Ve
     reader.read_exact(&mut data)?;
     Ok(Some(data))
 }
-pub fn write_frame(writer: &mut impl Write, value: &Reply) -> Result<()> {
+pub fn write_frame(writer: &mut impl Write, value: &impl Serialize) -> Result<()> {
     let bytes = serde_json::to_vec(value)?;
     ensure!(bytes.len() <= MAX_FRAME, "Reply is too large");
     writer.write_all(&(bytes.len() as u32).to_le_bytes())?;
@@ -255,6 +263,9 @@ fn process(store: &Store, request: Request) -> Result<Reply> {
         store::CaptureState,
     };
     match request {
+        Request::OpenBrowserVideoRelay { .. } => {
+            anyhow::bail!("Browser video transfers require a persistent native connection")
+        }
         Request::Ping => {
             let mut reply = Reply::success("Download Engine is connected");
             reply.capabilities.extend([
@@ -265,6 +276,8 @@ fn process(store: &Store, request: Request) -> Result<Reply> {
                 "video_preview_v1".into(),
                 "browser_video_review_v1".into(),
                 "browser_video_alternatives_v1".into(),
+                "browser_video_user_agent_v1".into(),
+                "browser_video_relay_v1".into(),
                 "browser_link_recovery_v1".into(),
                 "torrent_review_v1".into(),
             ]);
@@ -446,6 +459,7 @@ impl Reply {
             batch_options: None,
             preview_id: None,
             recovery: None,
+            browser_relay: None,
         }
     }
     pub fn failure(error: impl std::fmt::Display) -> Self {

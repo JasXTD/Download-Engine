@@ -1,3 +1,13 @@
+## 3.20.1 — 2026-11-14
+
+### Rettelser for nettlesernedlastinger og grensesnitt
+
+- Bedre kompatibilitet med flere strømme- og nedlastingsnettsteder. Avviste forespørsler kan prøves på nytt gjennom den gjennomgåtte nettleserfanen. Hold fanen åpen under nedlastingen, og oppdater appen og utvidelsen sammen.
+
+- Retter lesing av store strømmer, gjenopptakelse, lukking etter eksport av en krasjrapport og at listen hopper når en mappe åpnes. Diagnostikk, databaseavhengigheter og veiledningen er oppdatert.
+
+[English details](../../../CHANGELOG.md#3201--2026-11-14)
+
 ## 3.20.0 — 2026-11-10
 
 ### Valgfrie kontotillegg

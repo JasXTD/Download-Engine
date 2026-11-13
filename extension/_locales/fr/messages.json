@@ -221,6 +221,9 @@
   "m_50746138b9d24c2b": {
     "message": "Impossible de revenir à la fenêtre de l’extension :"
   },
+  "m_09423eef52fe86ae": {
+    "message": "Dailymotion n’a fourni aucun flux lisible. Lancez la lecture, puis réessayez. Consultez le journal de diagnostic de l’extension pour plus de détails."
+  },
   "m_936628cc4a394ede": {
     "message": "Valeurs par défaut rétablies. Sélectionnez « Enregistrer les règles » pour les conserver."
   },
@@ -241,6 +244,9 @@
   },
   "m_97a6661033069fb1": {
     "message": "Fichiers directs et aperçus HLS / DASH non chiffrés."
+  },
+  "m_bb804321651aec3f": {
+    "message": "Le journal de détection est indisponible. Rechargez l’extension pour réessayer."
   },
   "m_d6bd8c0aeee80fed": {
     "message": "Document"
@@ -355,6 +361,9 @@
   },
   "m_cf58b80fa579dabc": {
     "message": "Nouveau lien trouvé. Vérifiez les données dans Download Engine, puis confirmez la reprise."
+  },
+  "m_cb8a06be45767aba": {
+    "message": "HLS · liste de lecture alternative"
   },
   "m_23b41d51987507df": {
     "message": "HLS / DASH ouvre un aperçu dans l’application ; flux en direct ou chiffrés non pris en charge. Activez la détection avant la lecture pour trouver plus de flux."

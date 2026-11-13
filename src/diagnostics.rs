@@ -77,6 +77,8 @@ pub enum Event {
     VideoLookupStarted,
     VideoLookupSucceeded,
     VideoLookupFailed,
+    VideoHeadersRetried,
+    VideoBrowserFallback,
     BrowserRegistered,
     BrowserUnregistered,
     BrowserSetupFailed,

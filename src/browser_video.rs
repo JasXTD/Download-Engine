@@ -34,6 +34,11 @@ pub struct Item {
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct Review {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub browser_relay: Option<crate::browser_relay::Session>,
+    /// Browser identity for anonymous HLS/DASH requests; never login headers.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub user_agent: Option<String>,
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub single_connection: bool,
     /// Set by site readers; preserved in the pending review until selection.
@@ -137,6 +142,14 @@ fn dailymotion_stream_matches(page: &str, value: &str) -> bool {
 
 impl Review {
     pub(crate) fn normalized(&self) -> Result<Self> {
+        model::validate_browser_user_agent(self.user_agent.as_deref())?;
+        if let Some(session) = &self.browser_relay {
+            session.validate()?;
+            ensure!(
+                !self.public_only && session.page == self.page_url,
+                "Invalid browser video transport context"
+            );
+        }
         ensure!(self.items.len() <= 1000, "Too many videos in this review");
         ensure!(self.page_title.len() <= 2048, "The page title is too long");
         let mut review = self.clone();

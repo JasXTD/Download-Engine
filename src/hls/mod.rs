@@ -29,6 +29,11 @@ pub struct CompletedPart {
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Download {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub browser_relay: Option<crate::browser_relay::Session>,
+    /// Keep the reviewed browser identity for playlist checks and resumed parts.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub user_agent: Option<String>,
     pub version: u8,
     pub playlist: Playlist,
     #[serde(default)]
@@ -46,6 +51,8 @@ pub struct Download {
 impl Download {
     pub fn new(playlist: Playlist) -> Self {
         Self {
+            user_agent: None,
+            browser_relay: None,
             version: if playlist.dash.as_ref().is_some_and(|d| d.has_index()) {
                 4
             } else if playlist.dash.is_some() {
@@ -94,6 +101,17 @@ impl Download {
         Ok(())
     }
     pub fn validate(&self) -> Result<()> {
+        crate::model::validate_browser_user_agent(self.user_agent.as_deref())?;
+        if let Some(session) = &self.browser_relay {
+            session.validate()?;
+            ensure!(
+                !self.playlist.public_only
+                    && self.youtube.is_none()
+                    && self.bilibili.is_none()
+                    && self.tiktok.is_none(),
+                "Invalid browser video transport context"
+            );
+        }
         // Version 6 is an indexed DASH download re-resolved from a Bilibili page;
         // version 7 is a single MP4 file re-resolved from a TikTok page.
         ensure!(
@@ -152,6 +170,8 @@ impl Download {
 
 #[derive(Clone, Debug)]
 pub struct Inspection {
+    pub browser_relay: Option<crate::browser_relay::Session>,
+    pub user_agent: Option<String>,
     /// Retained through quality selection and saved downloads for site readers.
     pub public_only: bool,
     pub source: String,
@@ -233,7 +253,57 @@ pub async fn inspect_candidates_via(
     cancel: &CancellationToken,
     route: crate::proxy::Route,
 ) -> Result<Inspection> {
+    inspect_browser_via(url, fallbacks, page, None, public_only, cancel, route).await
+}
+
+/// Preserve the browser's non-secret identity without importing login cookies
+/// or changing the existing network, redirect, proxy or public-only policy.
+pub async fn inspect_browser_via(
+    url: &str,
+    fallbacks: &[String],
+    page: Option<&str>,
+    user_agent: Option<&str>,
+    public_only: bool,
+    cancel: &CancellationToken,
+    route: crate::proxy::Route,
+) -> Result<Inspection> {
+    inspect_browser_relay_via(
+        url,
+        fallbacks,
+        BrowserContext {
+            page,
+            user_agent,
+            relay: None,
+        },
+        public_only,
+        cancel,
+        route,
+    )
+    .await
+}
+
+/// Context captured by the extension for one explicit video review.
+pub struct BrowserContext<'a> {
+    pub page: Option<&'a str>,
+    pub user_agent: Option<&'a str>,
+    pub relay: Option<&'a crate::browser_relay::Session>,
+}
+
+pub async fn inspect_browser_relay_via(
+    url: &str,
+    fallbacks: &[String],
+    context: BrowserContext<'_>,
+    public_only: bool,
+    cancel: &CancellationToken,
+    route: crate::proxy::Route,
+) -> Result<Inspection> {
     use crate::diagnostics::{self, Details, Event, Failure, Level};
+    let BrowserContext {
+        page,
+        user_agent,
+        relay: browser_relay,
+    } = context;
+    crate::model::validate_browser_user_agent(user_agent)?;
     ensure!(fallbacks.len() <= 4, "Too many video alternatives");
     let source = crate::model::validate_url(url)?.to_string();
     let mut candidates = vec![source.clone()];
@@ -252,7 +322,9 @@ pub async fn inspect_candidates_via(
     let mut network = network::Network::via(&source, route)
         .await?
         .with_page(page.as_deref())
-        .with_public_only(public_only)?;
+        .with_user_agent(user_agent)?
+        .with_public_only(public_only)?
+        .with_browser_relay(browser_relay)?;
     for (index, candidate) in candidates.iter().enumerate() {
         ensure!(!cancel.is_cancelled(), "Video stream preview cancelled");
         let attempt = Some((index + 1) as u8);
@@ -272,6 +344,8 @@ pub async fn inspect_candidates_via(
         match result {
             Ok(mut inspection) => {
                 inspection.page = page;
+                inspection.user_agent = user_agent.map(str::to_owned);
+                inspection.browser_relay = network.browser_relay().cloned();
                 inspection.public_only = public_only;
                 if let Some(playlist) = &mut inspection.playlist {
                     playlist.public_only = public_only;
@@ -341,6 +415,8 @@ pub(crate) fn inspection_from(source: String, final_url: &str, text: &str) -> Re
     }
     match parser::parse(final_url, text)? {
         parser::Parsed::Master(variants) => Ok(Inspection {
+            user_agent: None,
+            browser_relay: None,
             public_only: false,
             source,
             variants,
@@ -352,6 +428,8 @@ pub(crate) fn inspection_from(source: String, final_url: &str, text: &str) -> Re
         parser::Parsed::Media(mut playlist) => {
             playlist.source = source.clone();
             Ok(Inspection {
+                user_agent: None,
+                browser_relay: None,
                 public_only: false,
                 source,
                 variants: Vec::new(),
@@ -401,7 +479,9 @@ pub async fn preview_with_audio_via(
     let mut network = network::Network::via(&inspection.source, route)
         .await?
         .with_page(inspection.page.as_deref())
-        .with_public_only(inspection.public_only)?;
+        .with_user_agent(inspection.user_agent.as_deref())?
+        .with_public_only(inspection.public_only)?
+        .with_browser_relay(inspection.browser_relay.as_ref())?;
     if let Some(dash) = &inspection.dash {
         ensure!(!cancel.is_cancelled(), "Video preview cancelled");
         return dash

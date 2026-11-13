@@ -41,6 +41,33 @@ impl Store {
             request_id,
         )
     }
+    /// Save the identity used by the quality preview along with its playlist.
+    pub fn enqueue_inspected_hls(
+        &self,
+        inspection: &super::Inspection,
+        playlist: &Playlist,
+        name: &str,
+        folder: Option<&Path>,
+        queue: &str,
+        request_id: &str,
+    ) -> Result<Job> {
+        ensure!(
+            inspection.source == playlist.source,
+            "The video preview changed"
+        );
+        let mut download = Download::new(playlist.clone());
+        download.user_agent.clone_from(&inspection.user_agent);
+        download.browser_relay.clone_from(&inspection.browser_relay);
+        download.playlist.public_only |= inspection.public_only;
+        self.enqueue_video(
+            &download,
+            inspection.page.as_deref(),
+            name,
+            folder,
+            queue,
+            request_id,
+        )
+    }
     pub fn enqueue_youtube(
         &self,
         preview: &crate::youtube::Preview,

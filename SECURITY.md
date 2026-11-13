@@ -194,6 +194,34 @@ Its bounded discovery list is held in browser session storage and can include
 signed URLs. Turning a feature off does not necessarily revoke permissions shared
 with another feature; review permissions in the browser's extension settings.
 
+An explicitly requested HLS/DASH review may include the browser's own User-Agent.
+It is bounded to 512 printable ASCII bytes and kept with the selected stream for
+preview and resume. No arbitrary header map is accepted. The desktop retains its
+origin-only Referer and existing DNS, redirect, HTTPS and proxy restrictions;
+reviewed browser streams can retry HTTP 403 once with Origin derived from that
+same sanitized page origin. Successful choices are reused per media-server
+origin in memory; a later 403 can retry without Origin. HTTP 401 is not retried,
+and explicit site headers are not replaced by this fallback.
+Neither page header is sent on an HTTPS-page-to-HTTP-request downgrade, and
+this does not grant browser-session access. Diagnostics report only whether the
+browser identity was included and whether an Origin retry occurred, never the
+header values.
+
+After desktop HTTP 403, a reviewed stream may use `browser_video_relay_v1`.
+The extension binds its connection to the reviewed top-level tab/document,
+page and at most 16 media origins. An ephemeral UUID capability authenticates
+framed IPC on literal 127.0.0.1; it is not an HTTP proxy endpoint. GETs omit
+credentials, refuse redirects, and retain normal browser TLS/CORS enforcement.
+Native frames stay below 1 MiB, chunks at most 48 KiB, and responses at most
+256 MiB (or the requested byte-range length). Pull-based delivery, eight active
+requests per connection, cancellation and six-hour expiry bound resource use.
+Desktop validation still checks destination addresses, playlist format, encryption,
+range responses and saved-part hashes. However, the browser owns its DNS and
+connection: desktop DNS preflight is **not** connection IP pinning. Consequently
+strict public-only jobs and explicit Direct/Custom proxy routes never use this
+fallback. Remote media requires HTTPS; an explicitly reviewed loopback HTTP page
+can fetch only its own origin. No arbitrary script HTTP API can use this transport.
+
 Browser-login handoffs are separate. For supported direct downloads, they copy
 matching cookies from the reviewed site into an encrypted per-download snapshot.
 They do not read browser passwords or profile databases. Ordinary capture, page

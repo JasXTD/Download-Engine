@@ -9,8 +9,9 @@ pub(super) struct Task<T> {
 
 #[cfg(test)]
 mod tests {
-    use super::super::interaction_tests::fixture;
+    use super::super::interaction_tests::{fixture, frame, text_rect};
     use super::*;
+    use egui::vec2;
     use std::sync::{
         Arc,
         atomic::{AtomicUsize, Ordering},
@@ -110,6 +111,47 @@ mod tests {
         assert_eq!(app.queue_id, queue.id);
         assert_eq!(app.jobs.len(), 1);
         assert_eq!(app.jobs[0].id, other.id);
+    }
+
+    #[test]
+    fn opening_folder_preserves_download_layout_and_existing_notice() {
+        for previous in [None, Some("An earlier message that should remain visible")] {
+            for size in [vec2(860.0, 600.0), vec2(1280.0, 860.0)] {
+                let (_temp, mut app, ctx) = fixture();
+                for job in &app.jobs {
+                    app.store.enqueue(job).unwrap();
+                }
+                app.refresh_and_wait();
+                app.interface.show_details = false;
+                app.notice = previous.map(|message| Notice::info(message.into()));
+                frame(&mut app, &ctx, size, vec![]);
+                let before = frame(&mut app, &ctx, size, vec![]);
+                let row = text_rect(&before, "first.zip");
+                let (release, gate) = mpsc::channel();
+                app.launch_folder_async(app.store.paths.downloads.clone(), move |_| {
+                    gate.recv_timeout(Duration::from_secs(5))?;
+                    Ok(())
+                });
+                let pending = frame(&mut app, &ctx, size, vec![]);
+                assert_eq!(
+                    text_rect(&pending, "first.zip"),
+                    row,
+                    "Starting Explorer moved the download row"
+                );
+                release.send(()).unwrap();
+                app.wait_for_io();
+                let finished = frame(&mut app, &ctx, size, vec![]);
+                assert_eq!(
+                    text_rect(&finished, "first.zip"),
+                    row,
+                    "Finishing the folder launch moved the download row"
+                );
+                assert_eq!(
+                    app.notice.as_ref().map(|notice| notice.message.as_str()),
+                    previous
+                );
+            }
+        }
     }
 
     #[test]
@@ -477,7 +519,7 @@ impl Desktop {
         match Task::spawn(self.background_io.context.clone(), move || launch(path)) {
             Ok(task) => {
                 self.background_io.folders.insert(directory, task);
-                self.notice = Some(Notice::info(tr("Opening folder…").into()));
+                // A successful shell action must not move the list or replace an earlier notice.
             }
             Err(error) => self.notice = Some(Notice::error(error.to_string())),
         }
@@ -503,13 +545,6 @@ impl Desktop {
             self.status_folder_result(&path, result.as_ref().err().map(String::as_str));
             if let Err(error) = result {
                 self.notice = Some(Notice::error(error));
-            } else if self.background_io.folders.is_empty()
-                && self
-                    .notice
-                    .as_ref()
-                    .is_some_and(|notice| notice.message == tr("Opening folder…"))
-            {
-                self.notice = None;
             }
         }
         self.poll_download_status();

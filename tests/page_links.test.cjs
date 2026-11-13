@@ -6,10 +6,10 @@ const {collect, normalizeScan, category, visibleLinks, selection, Manager} = glo
 require('../extension/dailymotion.js');
 const options = {queues:[{id:'main',name:'Main queue',running:true}],destinations:[{id:'automatic',name:'Automatic folders',path:null}]};
 const scan = () => ({url:'https://example.test/list',title:'Files',links:[{url:'https://example.test/a.pdf#x',filename:'a.pdf',text:'Report'},{url:'https://example.test/b.zip',filename:'b.zip',text:'Archive'}]});
-function fixture() {
+function fixture(userAgent = '') {
   const f={values:{},tabs:new Map([[0,{id:0,url:'https://example.test/list'}]]),requests:[],scans:0,sequence:0};
   f.uuid=()=>`00000000-0000-4000-8000-${String(++f.sequence).padStart(12,'0')}`;
-  f.api={runtime:{getURL:file=>'extension://id/'+file},storage:{session:{
+  f.api={runtime:{getURL:file=>'extension://id/'+file,getManifest:()=>({manifest_version:3})},storage:{session:{
     get:async key=>structuredClone(key===null?f.values:{[key]:f.values[key]}),
     set:async value=>{ if(f.failSave?.(value)) throw Error('Storage unavailable'); Object.assign(f.values,structuredClone(value)); },
     remove:async key=>{delete f.values[key];}
@@ -20,11 +20,43 @@ function fixture() {
     update:async(id,args)=>{const tab=f.tabs.get(id); if(!tab) throw Error('Missing tab'); Object.assign(tab,args); await f.onNavigate?.(tab); return structuredClone(tab);}
   },scripting:{executeScript:async spec=>{ f.scans++; assert.deepEqual(spec.target,{tabId:0,frameIds:[0]}); assert.equal(spec.func,collect); return [{frameId:0,result:{...scan(),mode:spec.args[0]}}]; }}};
   f.native=async req=>{f.requests.push(structuredClone(req)); if(req.action==='batch_options') return {batch_options:options}; if(f.send) return f.send(req); if(req.action==='ping')return {ok:true,version:1,capabilities:['browser_video_alternatives_v1']}; if(req.action==='review_browser_video')return {ok:true,version:1,preview_id:req.request_id,message:'Review in Download Engine'}; return {job_ids:req.links.map((_,i)=>'job-'+i),message:'Saved '+req.links.length+' files'};};
-  f.manager=new Manager({api:f.api,native:f.native,uuid:f.uuid});
+  f.manager=new Manager({api:f.api,native:f.native,uuid:f.uuid,userAgent});
   f.start=async()=>{await f.manager.scan(); return Object.keys(f.values)[0].slice('page-links:'.length);};
   f.input={indices:[0,1],queue_id:'main',destination:'automatic'};
   return f;
 }
+
+test('browser stream user agent is negotiated, bounded and retained across a lost native reply',async()=>{
+  const ua='Mozilla/5.0 (Test browser) Chrome/130.0.0.0';
+  const f=fixture(ua);
+  const value={url:'https://example.test/watch',mode:'videos',user_agent:'Page-controlled value',links:[{url:'https://cdn.example.test/master.m3u8',hls:true}]};
+  f.send=async request=>{
+    if(request.action==='ping')return {capabilities:['browser_video_user_agent_v1']};
+    throw Error('Reply lost');
+  };
+  await assert.rejects(f.manager.openScan(value),/Reply lost/);
+  const pending=structuredClone(f.values['pending-video-review']);
+  assert.equal(pending.review.user_agent,ua);
+  assert.deepEqual(f.requests.map(r=>r.action),['ping','review_browser_video']);
+  f.manager.userAgent='Different browser after restart';
+  f.send=undefined;
+  await f.manager.recover();
+  assert.deepEqual(f.requests[2],pending);
+  assert.deepEqual(f.values,{});
+});
+
+test('older desktops and invalid browser user agents keep the legacy video request',async()=>{
+  const value={url:'https://example.test/watch',mode:'videos',links:[{url:'https://cdn.example.test/master.m3u8',hls:true}]};
+  for(const [index,ua] of ['Mozilla/5.0 (Test browser)','','bad\r\nCookie: secret','Mozilla/5.0\n','Mozilla/5.0\r','x'.repeat(513),'hidden\u200bvalue'].entries()){
+    const f=fixture(ua);
+    f.send=async request=>request.action==='ping'
+      ? {capabilities:index===0?[]:['browser_video_user_agent_v1']} : {ok:true,version:1,preview_id:request.request_id};
+    await f.manager.openScan(value);
+    const request=f.requests.find(r=>r.action==='review_browser_video');
+    assert(!Object.hasOwn(request.review,'user_agent'));
+    assert.deepEqual(f.values,{});
+  }
+});
 
 function dailymotionFixture() {
   const f=fixture();f.tabs.get(0).url='https://www.dailymotion.com/video/xbv5ovm';
@@ -33,6 +65,26 @@ function dailymotionFixture() {
   f.manager.detected=async()=>[{url:'https://vod.dmcdn.net/browser/manifest.m3u8',hls:true,text:'Browser fallback'}];
   return f;
 }
+
+test('full video scans bind the relay to the scanned document and explain legacy hosts',async()=>{
+  for(const supported of [true,false]){
+    const f=fixture(),events=[],opened=[];
+    const session={port:40000,token:'00000000-0000-4000-8000-000000000099',page:f.tabs.get(0).url};
+    f.api.scripting.executeScript=async()=>[{frameId:0,documentId:'scanned-document',result:{...scan(),mode:'videos',links:[{url:'https://cdn.test/main.m3u8',hls:true}]}}];
+    f.manager.relay={open:async(...args)=>{opened.push(args);return session;}};
+    f.manager.trace=(...args)=>events.push(args);
+    f.send=async request=>request.action==='ping'
+      ? {capabilities:supported?['browser_video_relay_v1']:[]}
+      : {ok:true,version:1,preview_id:request.request_id};
+    await f.manager.scan(f.tabs.get(0),'videos','scanned-document');
+    assert.equal(opened.length,supported?1:0);
+    if(supported)assert.deepEqual(opened[0].slice(0,3),[0,'scanned-document',f.tabs.get(0).url]);
+    assert.deepEqual(f.requests.map(r=>r.action),['ping','review_browser_video']);
+    assert.deepEqual(f.requests[1].review.browser_relay,supported?session:undefined);
+    assert(events.some(([event,fields])=>event==='handoff'&&fields.browser_relay===supported));
+    if(!supported)assert(events.some(([event,fields])=>event==='relay_unavailable'&&fields.reason==='legacy_desktop'));
+  }
+});
 
 test('Dailymotion native handoff keeps alternatives after successful browser metadata validation',async()=>{
   const f=dailymotionFixture();

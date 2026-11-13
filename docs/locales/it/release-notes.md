@@ -1,3 +1,13 @@
+## 3.20.1 — 2026-11-14
+
+### Correzioni dei download dal browser e dell’interfaccia
+
+- Compatibilità migliorata con altri siti di streaming e download. Le richieste rifiutate possono essere riprovate tramite la scheda del browser esaminata. Tieni aperta la scheda durante il download e aggiorna insieme app ed estensione.
+
+- Corretti la lettura di flussi grandi, la ripresa, la chiusura dopo l’esportazione di un rapporto di arresto anomalo e lo spostamento dell’elenco quando si apre una cartella. Aggiornati diagnostica, dipendenze del database e guida.
+
+[English details](../../../CHANGELOG.md#3201--2026-11-14)
+
 ## 3.20.0 — 2026-11-10
 
 ### Plugin account facoltativi

@@ -381,6 +381,8 @@ impl Desktop {
                 .and_then(|d| d.path.clone());
             let page = draft.pending.review.page_url.clone();
             let public_only = draft.pending.review.public_only;
+            let user_agent = draft.pending.review.user_agent.clone();
+            let browser_relay = draft.pending.review.browser_relay.clone();
             match self
                 .store
                 .take_browser_video_stream(&draft.pending.id, index)
@@ -388,7 +390,17 @@ impl Desktop {
                 Ok(item) => {
                     self.browser_video = None;
                     self.dialog = None;
-                    self.open_review_stream(item, &page, &queue, folder.as_deref(), public_only);
+                    self.open_review_stream(
+                        item,
+                        download_engine::hls::BrowserContext {
+                            page: Some(&page),
+                            user_agent: user_agent.as_deref(),
+                            relay: browser_relay.as_ref(),
+                        },
+                        &queue,
+                        folder.as_deref(),
+                        public_only,
+                    );
                 }
                 Err(error) => draft.error = Some(error.to_string()),
             }
@@ -401,6 +413,8 @@ impl Desktop {
     pub(super) fn browser_video_sample(&mut self, empty: bool) {
         use download_engine::browser_video::{Item, Review};
         let review = Review {
+            user_agent: None,
+            browser_relay: None,
             single_connection: false,
             public_only: false,
             page_url: if empty {

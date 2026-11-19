@@ -123,6 +123,7 @@ Each line on stdin is a JSON object with a `cmd`, and gets one reply line: `{"ok
 | --- | --- | --- |
 | `files` | `torrent` (path) or `name` | The file list and info hash. |
 | `add` | `name`, `output`, then `torrent` (path) or `magnet`, and optional `only`, `peers`, `choose_later`, `seed_only`, `file_name`, `trackers`, `dht_search` | The info hash. |
+| `add_staged` | The fields for `add`, plus the required `output_identity` from the desktop's open staging directory | The info hash after the helper opens and verifies the same directory. |
 | `select` | `name`, `only` | Changes the chosen files at any time. |
 | `details` | `name` | `private`, `pieces` (counts and a `map` of up to 1,024 cells), `peers`, `trackers`, and `dht` and `pex` with the peers each found. |
 | `recheck` | `name` | Stops the swarm, forgets saved progress, and reads every chosen piece again. A running torrent starts again by itself. |
@@ -230,10 +231,12 @@ silently leaking direct traffic. The tests use harmless fixtures in a network-no
 - Router setup speaks UPnP IGD only (no
   NAT-PMP, PCP or IPv6 openings), and reads the routing table on Windows and Linux only.
 - Peer exchange is only read. The engine doesn't send peer lists of its own.
-- `add` reuses files already in `output`, so the app must choose a fresh folder for a new
-  download.
-- A skipped file can appear on disk at full size, as a sparse file holding only the
-  bytes of pieces shared with a chosen file.
+- Standalone `add` can reuse files in its selected output. The desktop uses `add_staged`
+  with an exclusively created directory and records its identity for later sessions. Once a
+  profile records a staging directory it requires a build supporting profile format 13.
+- If a piece spans a chosen file and a skipped file, the helper needs bytes from both
+  to verify the piece. The skipped file can appear at its full logical size as a sparse
+  file. The desktop removes skipped files from staging before publishing the download.
 
 ## Interface binding and peer indicators (3.18.0)
 

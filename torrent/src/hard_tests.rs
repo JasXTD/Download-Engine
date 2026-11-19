@@ -663,15 +663,12 @@ async fn test_a_bad_file_number_is_refused() {
 async fn test_a_torrent_that_cannot_write_reports_an_error() {
     let data = sample_bytes(100_000, 28);
     let meta = meta_of(&single_file_torrent("a.bin", &data, PIECE));
-    let (one, two) = (TempFolder::new(), TempFolder::new());
-    let seed = seed_of(&meta, &one, &[("a.bin", &data)]).await;
+    let two = TempFolder::new();
     // A file where the download folder should be can't be written into.
     let blocked = two.path().join("not-a-folder");
     std::fs::write(&blocked, b"x").unwrap();
-    let leech = start_torrent(&meta, blocked, 2);
+    let leech = start_torrent(&meta, blocked.clone(), 2);
     leech.start().await;
-    wait_until(&leech, "the torrent to go live", is_live).await;
-    join(&seed, &leech);
     let reported = tokio::time::timeout(PATIENCE, async {
         loop {
             if leech.stats().error.is_some() {
@@ -683,6 +680,7 @@ async fn test_a_torrent_that_cannot_write_reports_an_error() {
     .await;
     assert!(reported.is_ok());
     assert_eq!(leech.stats().state, "error");
+    assert_eq!(std::fs::read(&blocked).unwrap(), b"x");
 }
 
 #[tokio::test(flavor = "multi_thread")]

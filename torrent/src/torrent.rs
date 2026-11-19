@@ -117,6 +117,7 @@ pub struct Context {
 pub struct TorrentOptions {
     pub web_seeds: bool,
     pub output: PathBuf,
+    pub directory: Option<Arc<crate::storage::Directory>>,
     /// The files to download, or None for all of them.
     pub only: Option<Vec<usize>>,
     pub peers: Vec<SocketAddr>,
@@ -274,7 +275,7 @@ impl TorrentCore {
             options.seed_only || options.file_name.is_none(),
             "Renamed paths are only supported for read-only seeding"
         );
-        let storage = Arc::new(if options.seed_only {
+        let mut storage = if options.seed_only {
             Storage::for_seeding(
                 meta.clone(),
                 options.output.clone(),
@@ -283,7 +284,11 @@ impl TorrentCore {
             )?
         } else {
             Storage::new(meta.clone(), options.output.clone())
-        });
+        };
+        if let Some(directory) = &options.directory {
+            storage.bind_directory(directory.clone());
+        }
+        let storage = Arc::new(storage);
         Ok(Arc::new(Self {
             meta,
             storage,
@@ -1478,7 +1483,7 @@ async fn check_existing(core: &Arc<TorrentCore>, cancel: &CancellationToken) -> 
         for piece in have.iter_set() {
             picker.piece_passed(piece);
         }
-    } else if core.storage.any_file_exists() && !hash_files(core, cancel).await? {
+    } else if core.storage.any_file_exists()? && !hash_files(core, cancel).await? {
         return Ok(false);
     }
     // A check that ran to the end makes saved progress trustworthy again.

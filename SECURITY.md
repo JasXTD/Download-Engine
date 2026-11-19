@@ -142,8 +142,13 @@ addresses and peers' messages. That's why this code runs in a separate program:
   dropped and banned.
 - File names can't leave the torrent's folder, and the app checks the helper's paths again
   before using them.
-- Files are written to a temporary folder, marked as coming from the internet, and reach
-  the download folder only when complete. They never replace an existing file.
+- Each new torrent gets a newly created staging directory. The desktop records its filesystem
+  identity in the profile. The helper verifies that identity and opens each path component
+  relative to an open directory, refusing linked directories and hard-linked payload files.
+  On Windows the helper also rejects reparse points and marks payload files as Internet downloads.
+- Completed torrents move into place without replacing existing entries. Resume, cleanup and
+  recovery check the recorded identity. When upgrading an older partial download, the app can
+  copy hash-verified pieces into fresh staging and leaves the original folder intact.
 - Tracker addresses can't lead to this computer or its local network, and trackers can't
   redirect the helper anywhere else. Stranger-supplied peer addresses and DHT nodes use
   the same public-address policy, including mapped IPv6, link-local and CGNAT addresses.

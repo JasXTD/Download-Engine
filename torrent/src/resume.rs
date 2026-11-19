@@ -24,6 +24,8 @@ struct Saved {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     v2_hash: Option<String>,
     info_hash: String,
+    #[serde(default)]
+    directory_id: Option<String>,
     have: String,
     files: Vec<Option<FileStamp>>,
 }
@@ -90,8 +92,9 @@ pub fn save(
         version: if meta.hashes.v2.is_some() { 2 } else { VERSION },
         v2_hash: meta.hashes.v2.map(|h| h.as_string()),
         info_hash: meta.hashes.key(),
+        directory_id: Some(storage.directory_id()?),
         have: to_hex(have.as_bytes()),
-        files: storage.stamps(),
+        files: storage.stamps()?,
     };
     let path = path_for(state_dir, meta.hashes);
     let temporary = path.with_extension("tmp");
@@ -114,7 +117,8 @@ pub fn load(state_dir: &Path, meta: &TorrentMeta, storage: &Storage) -> Option<B
     if saved.version != if meta.hashes.v2.is_some() { 2 } else { VERSION }
         || saved.v2_hash != meta.hashes.v2.map(|h| h.as_string())
         || saved.info_hash != meta.hashes.key()
-        || saved.files != storage.stamps()
+        || saved.directory_id.as_deref()? != storage.directory_id().ok()?
+        || saved.files != storage.stamps().ok()?
     {
         return None;
     }
@@ -273,6 +277,22 @@ mod tests {
     fn test_no_record_means_nothing_is_trusted() {
         let folder = TempFolder::new();
         let (meta, storage, state) = setup(&folder);
+        assert_eq!(load(&state, &meta, &storage), None);
+    }
+
+    #[test]
+    fn old_or_mismatched_directory_receipts_require_piece_checks() {
+        let folder = TempFolder::new();
+        let (meta, storage, state) = setup(&folder);
+        save(&state, &meta, &storage, &two_pieces(&meta)).unwrap();
+        let path = path_for(&state, meta.hashes);
+        let mut receipt: serde_json::Value =
+            serde_json::from_slice(&fs::read(&path).unwrap()).unwrap();
+        receipt.as_object_mut().unwrap().remove("directory_id");
+        fs::write(&path, serde_json::to_vec(&receipt).unwrap()).unwrap();
+        assert_eq!(load(&state, &meta, &storage), None);
+        receipt["directory_id"] = "another directory".into();
+        fs::write(path, serde_json::to_vec(&receipt).unwrap()).unwrap();
         assert_eq!(load(&state, &meta, &storage), None);
     }
 

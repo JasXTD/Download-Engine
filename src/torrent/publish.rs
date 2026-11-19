@@ -1,12 +1,14 @@
 //! A torrent downloads into a temporary folder beside its destination. Its files appear in
 //! the download folder only when every piece has passed its hash check, and they never
 //! replace anything already there.
-use super::{File, Files};
+use super::{File, Files, staging::Stage};
 use crate::{
     download_file, model::Job, store::Store, synchronization::FinishedFile,
     transfer_activity::Phase,
 };
 use anyhow::{Context, Result, ensure};
+use de_torrent::storage::{Directory, file_identity};
+use rusqlite::params;
 use std::{
     io::ErrorKind,
     path::{Path, PathBuf},
@@ -17,21 +19,8 @@ use std::{
 const MOVE_TRIES: u32 = 6;
 const MOVE_RETRY: Duration = Duration::from_secs(1);
 
-pub(super) fn staging(job: &Job) -> PathBuf {
-    job.directory.join(format!(".idm-ex-{}.torrent", job.id))
-}
-
 fn is_missing(error: &std::io::Error) -> bool {
     matches!(error.kind(), ErrorKind::NotFound)
-}
-
-fn delete_file(path: &Path) -> Result<()> {
-    match std::fs::remove_file(path) {
-        Err(error) if !is_missing(&error) => {
-            Err(error).with_context(|| format!("Cannot remove {}", path.display()))
-        }
-        _ => Ok(()),
-    }
 }
 
 /// Removes the empty folders left above a deleted file, up to and not including `root`.
@@ -45,27 +34,47 @@ fn remove_empty_folders(root: &Path, file: &Path) {
     }
 }
 
-/// A file that was not chosen can still exist, holding the pieces it shares with one that was.
-fn remove_skipped(root: &Path, files: &Files) -> Result<()> {
-    for file in files
-        .list
-        .iter()
-        .filter(|file| !files.chosen.contains(&file.index))
+fn remove_staged_file(root: &Directory, relative: &Path) -> Result<()> {
+    if let Err(e) = root.remove(relative, false)
+        && !is_missing(&e)
     {
-        let path = root.join(&file.saved_as);
-        delete_file(&path)?;
-        remove_empty_folders(root, &path);
+        return Err(e.into());
+    }
+    for dir in relative
+        .ancestors()
+        .skip(1)
+        .take_while(|p| !p.as_os_str().is_empty())
+    {
+        match root.remove(dir, true) {
+            Ok(()) => {}
+            Err(e) if is_missing(&e) => {}
+            Err(e) if e.kind() == ErrorKind::DirectoryNotEmpty => break,
+            Err(e) => return Err(e.into()),
+        }
     }
     Ok(())
 }
 
-fn check_complete(root: &Path, files: &Files) -> Result<()> {
+/// Skipped files can still hold boundary pieces shared with a chosen file.
+fn remove_skipped(root: &Directory, files: &Files) -> Result<()> {
+    let chosen: std::collections::HashSet<_> = files.chosen.iter().collect();
+    for file in files
+        .list
+        .iter()
+        .filter(|file| !chosen.contains(&file.index))
+    {
+        remove_staged_file(root, &file.saved_as)?;
+    }
+    Ok(())
+}
+
+fn check_complete(root: &Directory, files: &Files) -> Result<()> {
     for file in files.chosen_files() {
-        let path = root.join(&file.saved_as);
-        let info = std::fs::symlink_metadata(&path)
-            .with_context(|| format!("{} is missing. Resume to download it.", file.path))?;
+        let actual = root
+            .read_file(&file.saved_as)
+            .with_context(|| format!("Cannot verify {} before saving", file.path))?;
         ensure!(
-            info.is_file() && info.len() == file.len,
+            actual.metadata()?.len() == file.len,
             "{} changed before saving. Resume to check it again.",
             file.path
         );
@@ -82,135 +91,186 @@ fn lone_file(files: &Files) -> Option<&File> {
     }
 }
 
-#[cfg(windows)]
-fn move_folder(from: &Path, to: &Path) -> std::io::Result<()> {
-    use std::os::windows::ffi::OsStrExt;
-    use windows_sys::Win32::Storage::FileSystem::{MOVEFILE_WRITE_THROUGH, MoveFileExW};
-    let wide =
-        |path: &Path| -> Vec<u16> { path.as_os_str().encode_wide().chain(Some(0)).collect() };
-    let (from, to) = (wide(from), wide(to));
-    // Both strings end in a zero. Without MOVEFILE_REPLACE_EXISTING, nothing is replaced.
-    if unsafe { MoveFileExW(from.as_ptr(), to.as_ptr(), MOVEFILE_WRITE_THROUGH) } == 0 {
-        return Err(std::io::Error::last_os_error());
+fn candidate(job: &Job, index: u32, single: bool) -> PathBuf {
+    if index == 0 {
+        return job.directory.join(&job.name);
     }
-    Ok(())
+    let name = Path::new(&job.name);
+    let stem = if single {
+        name.file_stem()
+            .and_then(|s| s.to_str())
+            .unwrap_or(&job.name)
+    } else {
+        &job.name
+    };
+    let ext = single
+        .then(|| name.extension().and_then(|s| s.to_str()))
+        .flatten();
+    let name = match ext {
+        Some(ext) => format!("{stem} ({index}).{ext}"),
+        None => format!("{stem} ({index})"),
+    };
+    job.directory.join(name)
 }
 
-#[cfg(not(windows))]
-fn move_folder(from: &Path, to: &Path) -> std::io::Result<()> {
-    use std::os::unix::fs::OpenOptionsExt;
-    let original = std::fs::OpenOptions::new()
-        .read(true)
-        .custom_flags(libc::O_DIRECTORY | libc::O_NOFOLLOW | libc::O_CLOEXEC)
-        .open(from)?;
-    #[cfg(test)]
-    tests::before_folder_rename(to)?;
-    // The destination can appear after the caller's check. Refuse replacement atomically.
-    crate::unix_files::rename_owned(&original, from, to).map_err(|error| {
-        // Keep AlreadyExists so publication can try the next numbered name.
-        let kind = error
-            .downcast_ref::<std::io::Error>()
-            .map_or(ErrorKind::Other, std::io::Error::kind);
-        std::io::Error::new(kind, error)
-    })
+fn rename_entry(file: &std::fs::File, source: &Path, target: &Path) -> Result<()> {
+    #[cfg(windows)]
+    {
+        let _ = source;
+        let parents = download_file::guard_parents(target)?;
+        let parent = parents
+            .last()
+            .context("Missing torrent destination folder")?;
+        de_torrent::storage::rename_into(
+            parent,
+            file,
+            target
+                .file_name()
+                .context("Missing torrent destination name")?,
+        )?;
+        Ok(())
+    }
+    #[cfg(unix)]
+    {
+        #[cfg(test)]
+        tests::before_folder_rename(target)?;
+        crate::unix_files::rename_owned(file, source, target)
+    }
 }
 
-fn folder_candidate(directory: &Path, name: &str, index: u32) -> PathBuf {
-    directory.join(match index {
-        0 => name.to_owned(),
-        index => format!("{name} ({index})"),
-    })
-}
-
-async fn publish_folder(store: &Store, job: &mut Job, source: &Path) -> Result<PathBuf> {
+async fn publish_entry(
+    store: &Store,
+    job: &mut Job,
+    handle: &std::fs::File,
+    source: &Path,
+    single: bool,
+) -> Result<PathBuf> {
     for index in 0..10000 {
-        let path = folder_candidate(&job.directory, &job.name, index);
+        let path = candidate(job, index, single);
         if path.try_exists()? {
             continue;
         }
-        // Write the intent first, so that a crash after the move still finds the folder.
+        // Recovery checks the published handle's identity as well as this intent.
         job.saved_path = Some(path.clone());
         store.save(job)?;
-        let mut tries = 0;
-        loop {
-            match move_folder(source, &path) {
+        for attempt in 1..=MOVE_TRIES {
+            match rename_entry(handle, source, &path) {
                 Ok(()) => return Ok(path),
-                Err(error) if error.kind() == ErrorKind::AlreadyExists => break,
-                Err(_) if tries + 1 < MOVE_TRIES => {
-                    tries += 1;
-                    tokio::time::sleep(MOVE_RETRY).await;
+                Err(e)
+                    if e.downcast_ref::<std::io::Error>()
+                        .is_some_and(|e| e.kind() == ErrorKind::AlreadyExists) =>
+                {
+                    break;
                 }
-                Err(error) => {
-                    job.saved_path = None;
-                    return Err(error)
+                Err(e) if attempt == MOVE_TRIES => {
+                    return Err(e)
                         .context("Cannot move the finished torrent to the download folder");
                 }
+                Err(_) => tokio::time::sleep(MOVE_RETRY).await,
             }
         }
     }
-    anyhow::bail!("Too many folders have this name")
+    anyhow::bail!("Too many downloads have this name")
 }
 
-pub(super) async fn finish(store: &Store, job: &mut Job) -> Result<FinishedFile> {
+pub(super) async fn finish(store: &Store, job: &mut Job, stage: &Stage) -> Result<FinishedFile> {
     store.activity.set(&job.id, Phase::Saving);
     let files = store.torrent_files(&job.id)?;
-    let root = staging(job);
-    let check = (root.clone(), files.clone());
-    tokio::task::spawn_blocking(move || {
-        remove_skipped(&check.0, &check.1)?;
-        check_complete(&check.0, &check.1)
+    let root = stage.open_for_move()?;
+    let (root, files) = tokio::task::spawn_blocking(move || -> Result<_> {
+        remove_skipped(&root, &files)?;
+        check_complete(&root, &files)?;
+        Ok((root, files))
     })
     .await??;
-    let path = match lone_file(&files) {
-        Some(file) => {
-            let source = root.join(&file.saved_as);
-            // A torrent's own name can differ from its file's, and lacks the extension.
-            job.name = file.saved_as.to_string_lossy().into_owned();
-            let path = crate::engine::publish_without_overwrite(store, job, &source).await?;
-            delete_file(&source)?;
-            std::fs::remove_dir(&root).context("Cannot remove the temporary torrent folder")?;
-            path
-        }
-        None => publish_folder(store, job, &root).await?,
+    let single = lone_file(&files);
+    let leaf;
+    let (source, handle) = if let Some(file) = single {
+        job.name = file.saved_as.to_string_lossy().into_owned();
+        leaf = root.file_for_move(&file.saved_as)?;
+        (stage.path.join(&file.saved_as), &leaf)
+    } else {
+        (stage.path.clone(), root.handle())
     };
+    let count = store.connect()?.execute(
+        "UPDATE torrent_staging SET published_id=?1 WHERE job_id=?2 AND directory_id=?3",
+        params![file_identity(handle)?, job.id, stage.identity],
+    )?;
+    ensure!(count == 1, "The torrent staging record changed");
+    let path = publish_entry(store, job, handle, &source, single.is_some()).await?;
+    if single.is_some() {
+        crate::file_relocation::delete_owned(root.handle(), &stage.path)?;
+    }
     Ok(FinishedFile { path, guard: None })
 }
 
-/// Finishes the work of a run that stopped between publishing and saving the result.
+/// A name that appeared while the app was stopped is never proof of publication.
 pub(super) async fn recover(store: &Store, job: &mut Job) -> Result<Option<FinishedFile>> {
-    let Some(path) = job.saved_path.clone() else {
+    let Some(path) = job.saved_path.take() else {
         return Ok(None);
     };
-    let root = staging(job);
-    let files = store.torrent_files(&job.id)?;
-    if path.try_exists()? {
-        if !root.try_exists()? {
-            return Ok(Some(FinishedFile { path, guard: None }));
-        }
-        if let Some(file) = lone_file(&files) {
-            let source = root.join(&file.saved_as);
-            if source.try_exists()? && same_file::is_same_file(&source, &path)? {
-                delete_file(&source)?;
-                std::fs::remove_dir(&root).context("Cannot remove the temporary torrent folder")?;
-                return Ok(Some(FinishedFile { path, guard: None }));
-            }
+    let Some(stage) = Stage::load(&store.connect()?, job)? else {
+        return Ok(None);
+    };
+    let Some(expected) = &stage.published else {
+        return Ok(None);
+    };
+    #[cfg(windows)]
+    let _parents = download_file::guard_parents(&path)?;
+    let single = lone_file(&store.torrent_files(&job.id)?).is_some();
+    let actual = if single {
+        let name = path.file_name().context("Missing published filename")?;
+        Directory::open(path.parent().context("Missing published folder")?)
+            .and_then(|parent| parent.read_file(Path::new(name)))
+            .and_then(|file| file_identity(&file))
+    } else {
+        Directory::open(&path).and_then(|dir| dir.identity())
+    };
+    let actual = match actual {
+        Ok(identity) => identity,
+        Err(e) if is_missing(&e) => return Ok(None),
+        Err(e) => return Err(e).context("Cannot verify the published torrent"),
+    };
+    if &actual != expected {
+        return Ok(None);
+    }
+    if single {
+        match stage.open_for_move() {
+            Ok(root) => crate::file_relocation::delete_owned(root.handle(), &stage.path)?,
+            Err(e) if is_missing(&e) => {}
+            Err(e) => return Err(e.into()),
         }
     }
-    job.saved_path = None;
-    Ok(None)
+    job.saved_path = Some(path.clone());
+    Ok(Some(FinishedFile { path, guard: None }))
 }
 
-/// Removes what an unfinished torrent left behind. The temporary folder is ours, and the
-/// download folder's other contents are never touched.
+/// Delete only recorded torrent entries in the registered staging directory. Unexpected
+/// files keep the folder nonempty, and an unregistered or replaced tree is never swept.
 pub(crate) fn discard(store: &Store, job: &Job) -> Result<()> {
-    if job.torrent.is_none() {
+    let Some(torrent) = &job.torrent else {
         return Ok(());
-    }
-    match std::fs::remove_dir_all(staging(job)) {
-        Err(error) if !is_missing(&error) => {
-            return Err(error).context("Cannot remove the temporary torrent folder");
+    };
+    let conn = store.connect()?;
+    if let Some(stage) = Stage::load(&conn, job)? {
+        match stage.open_for_move() {
+            Ok(root) => {
+                if torrent.stage == super::Stage::Chosen {
+                    for file in store.torrent_files(&job.id)?.list {
+                        remove_staged_file(&root, &file.saved_as)?;
+                    }
+                }
+                crate::file_relocation::delete_owned(root.handle(), &stage.path)?;
+            }
+            Err(e) if is_missing(&e) => {}
+            Err(e) => {
+                return Err(e).context("Cannot verify the temporary torrent folder for removal");
+            }
         }
-        _ => {}
+        conn.execute(
+            "DELETE FROM torrent_staging WHERE job_id=?1 AND directory_id=?2",
+            params![job.id, stage.identity],
+        )?;
     }
     super::forget(store, job)
 }
@@ -247,6 +307,16 @@ pub(crate) fn delete_saved(store: &Store, job: &Job, path: &Path) -> Result<()> 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn move_folder(from: &Path, to: &Path) -> std::io::Result<()> {
+        let root = Directory::open_for_move(from)?;
+        rename_entry(root.handle(), from, to).map_err(|e| {
+            let kind = e
+                .downcast_ref::<std::io::Error>()
+                .map_or(ErrorKind::Other, |e| e.kind());
+            std::io::Error::new(kind, e)
+        })
+    }
 
     #[cfg(unix)]
     std::thread_local! {
@@ -353,7 +423,7 @@ mod tests {
             ],
             chosen: vec![0],
         };
-        remove_skipped(&root, &files).unwrap();
+        remove_skipped(&Directory::open(&root).unwrap(), &files).unwrap();
         assert!(root.join("keep/a.bin").exists());
         assert!(!root.join("keep/c.bin").exists());
         assert!(!root.join("skip").exists());
@@ -369,11 +439,12 @@ mod tests {
             list: vec![file(0, "a.bin"), file(1, "b.bin")],
             chosen: vec![0, 1],
         };
-        assert!(check_complete(root, &files).is_err());
+        let directory = Directory::open(root).unwrap();
+        assert!(check_complete(&directory, &files).is_err());
         write(root, "b.bin");
-        assert!(check_complete(root, &files).is_ok());
+        assert!(check_complete(&directory, &files).is_ok());
         std::fs::write(root.join("b.bin"), b"longer").unwrap();
-        assert!(check_complete(root, &files).is_err());
+        assert!(check_complete(&directory, &files).is_err());
     }
 
     #[test]

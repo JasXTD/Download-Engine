@@ -2,8 +2,6 @@
 //! disk. Everything here blocks, so callers run it on blocking threads.
 
 use std::collections::HashMap;
-#[cfg(not(unix))]
-use std::fs::OpenOptions;
 use std::fs::{self, File};
 use std::io;
 use std::path::{Path, PathBuf};
@@ -15,8 +13,21 @@ use sha1w::{ISha1, Sha1};
 
 use crate::meta::TorrentMeta;
 
+mod directory;
+mod legacy;
+pub use directory::Directory;
+pub use legacy::import_verified_pieces;
+#[cfg(windows)]
+pub use native::rename_into;
+pub fn file_identity(file: &File) -> io::Result<String> {
+    native::identity(file)
+}
 #[cfg(unix)]
-mod unix;
+#[path = "storage/unix.rs"]
+mod native;
+#[cfg(windows)]
+#[path = "storage/windows.rs"]
+mod native;
 
 /// A torrent can have many thousands of files, and the system allows only so many open.
 const MAX_OPEN_FILES: usize = 128;
@@ -53,8 +64,7 @@ pub struct FileStamp {
 pub struct Storage {
     meta: Arc<TorrentMeta>,
     root: PathBuf,
-    #[cfg(unix)]
-    native_root: unix::Root,
+    directory: Mutex<Option<Arc<Directory>>>,
     open: Mutex<OpenFiles>,
     // Leaf proofs are derived from verified data. Bound the cache independently of
     // torrent size, so repeated requests cannot repeatedly hash a whole large piece.
@@ -68,8 +78,7 @@ impl Storage {
     pub fn new(meta: Arc<TorrentMeta>, root: PathBuf) -> Self {
         Self {
             meta,
-            #[cfg(unix)]
-            native_root: unix::Root::new(root.clone()),
+            directory: Mutex::default(),
             root,
             open: Mutex::default(),
             hash_nodes: Mutex::default(),
@@ -79,24 +88,44 @@ impl Storage {
         }
     }
 
-    fn path_of(&self, file: usize) -> PathBuf {
-        self.root.join(
-            self.file_name
-                .as_deref()
-                .map(Path::new)
-                .unwrap_or(&self.meta.files[file].path),
-        )
+    pub(crate) fn bind_directory(&mut self, directory: Arc<Directory>) {
+        *self.directory.get_mut() = Some(directory);
     }
 
-    #[cfg(unix)]
+    pub(crate) fn directory_id(&self) -> io::Result<String> {
+        self.directory(false)?.identity()
+    }
+
+    fn directory(&self, write: bool) -> io::Result<Arc<Directory>> {
+        let mut saved = self.directory.lock();
+        Ok(match saved.as_ref() {
+            Some(directory) => directory.clone(),
+            None => {
+                // Standalone helpers and metadata previews can start without an output
+                // folder. A read never creates it. Managed downloads bind it at add.
+                let directory = Arc::new(if write {
+                    Directory::open_or_create(&self.root)?
+                } else {
+                    Directory::open(&self.root)?
+                });
+                *saved = Some(directory.clone());
+                directory
+            }
+        })
+    }
+
     fn native_file(&self, index: usize, write: bool) -> io::Result<File> {
+        let directory = self.directory(write)?;
         let relative = self
             .file_name
             .as_deref()
             .map(Path::new)
             .unwrap_or(&self.meta.files[index].path);
-        self.native_root
-            .open(relative, write, self.meta.files[index].len)
+        directory.file(
+            relative,
+            write.then_some(self.meta.files[index].len),
+            self.read_only,
+        )
     }
 
     pub fn for_seeding(
@@ -210,37 +239,7 @@ impl Storage {
         if let Some(file) = self.cached(index, false) {
             return Ok(file);
         }
-        #[cfg(not(unix))]
-        let mut options = OpenOptions::new();
-        #[cfg(not(unix))]
-        options.read(true);
-        #[cfg(windows)]
-        if self.read_only {
-            use std::os::windows::fs::OpenOptionsExt;
-            use windows_sys::Win32::Storage::FileSystem::{
-                FILE_FLAG_OPEN_REPARSE_POINT, FILE_SHARE_READ,
-            };
-            options
-                .share_mode(FILE_SHARE_READ)
-                .custom_flags(FILE_FLAG_OPEN_REPARSE_POINT);
-        }
-        #[cfg(not(unix))]
-        let file = Arc::new(options.open(self.path_of(index))?);
-        #[cfg(unix)]
         let file = Arc::new(self.native_file(index, false)?);
-        if self.read_only && !file.metadata()?.is_file() {
-            return Err(io::ErrorKind::InvalidData.into());
-        }
-        #[cfg(windows)]
-        if self.read_only {
-            use std::os::windows::fs::MetadataExt;
-            if file.metadata()?.file_attributes()
-                & windows_sys::Win32::Storage::FileSystem::FILE_ATTRIBUTE_REPARSE_POINT
-                != 0
-            {
-                return Err(io::ErrorKind::PermissionDenied.into());
-            }
-        }
         self.remember(index, file.clone(), false);
         Ok(file)
     }
@@ -249,12 +248,6 @@ impl Storage {
         if let Some(file) = self.cached(index, true) {
             return Ok(file);
         }
-        #[cfg(not(unix))]
-        let file = Arc::new(open_for_writing(
-            &self.path_of(index),
-            self.meta.files[index].len,
-        )?);
-        #[cfg(unix)]
         let file = Arc::new(self.native_file(index, true)?);
         self.remember(index, file.clone(), true);
         Ok(file)
@@ -312,6 +305,14 @@ impl Storage {
     /// Whether a piece on disk matches its hash. A missing or short file just means the
     /// piece isn't there yet. Any other failure is a real problem and is returned.
     pub fn piece_matches(&self, piece: u32) -> io::Result<bool> {
+        self.check_piece(piece, || Ok(()))
+    }
+
+    fn check_piece(
+        &self,
+        piece: u32,
+        check_cancel: impl Fn() -> io::Result<()>,
+    ) -> io::Result<bool> {
         let lengths = &self.meta.lengths;
         let Some(valid) = lengths.validate_piece_index(piece) else {
             return Ok(false);
@@ -320,7 +321,7 @@ impl Storage {
         if expected.is_none() && self.meta.hashes.v2.is_none() {
             return Ok(false);
         }
-        if self.meta.hashes.v2.is_some() && !self.v2_piece_matches(piece)? {
+        if self.meta.hashes.v2.is_some() && !self.v2_piece_matches(piece, &check_cancel)? {
             return Ok(false);
         }
         let Some(expected) = expected else {
@@ -331,6 +332,7 @@ impl Storage {
         let mut hash = Sha1::new();
         let mut buffer = vec![0u8; HASH_BUFFER.min(left)];
         while left > 0 {
+            check_cancel()?;
             let take = left.min(buffer.len());
             match self.read(offset, &mut buffer[..take]) {
                 Ok(()) => {}
@@ -344,7 +346,11 @@ impl Storage {
         Ok(hash.finish() == expected)
     }
 
-    fn v2_piece_matches(&self, piece: u32) -> io::Result<bool> {
+    fn v2_piece_matches(
+        &self,
+        piece: u32,
+        check_cancel: impl Fn() -> io::Result<()>,
+    ) -> io::Result<bool> {
         let Some(file) = self
             .meta
             .v2
@@ -363,6 +369,7 @@ impl Storage {
         let mut hashes = Vec::new();
         let mut buffer = vec![0; crate::v2::BLOCK as usize];
         while left > 0 {
+            check_cancel()?;
             let take = left.min(buffer.len());
             match self.read(offset, &mut buffer[..take]) {
                 Ok(()) => {}
@@ -380,10 +387,21 @@ impl Storage {
     }
 
     /// Whether any real file of this torrent exists yet, so a new download can skip checking.
-    pub fn any_file_exists(&self) -> bool {
-        (0..self.meta.files.len())
-            .filter(|index| !self.meta.files[*index].virtual_file)
-            .any(|index| self.path_of(index).exists())
+    pub fn any_file_exists(&self) -> io::Result<bool> {
+        for (index, _) in self
+            .meta
+            .files
+            .iter()
+            .enumerate()
+            .filter(|(_, f)| !f.virtual_file)
+        {
+            match self.native_file(index, false) {
+                Ok(_) => return Ok(true),
+                Err(e) if e.kind() == io::ErrorKind::NotFound => continue,
+                Err(e) => return Err(e),
+            }
+        }
+        Ok(false)
     }
 
     /// Creates the empty files among those chosen. No piece covers them, so nothing else
@@ -395,9 +413,6 @@ impl Storage {
         for (index, file) in self.meta.files.iter().enumerate() {
             let chosen = only.is_none_or(|only| only.contains(&index));
             if chosen && file.len == 0 && !file.virtual_file {
-                #[cfg(not(unix))]
-                open_for_writing(&self.path_of(index), 0)?;
-                #[cfg(unix)]
                 self.native_file(index, true)?;
             }
         }
@@ -405,16 +420,19 @@ impl Storage {
     }
 
     /// One stamp for each file, or None for a file that isn't there.
-    pub fn stamps(&self) -> Vec<Option<FileStamp>> {
-        (0..self.meta.files.len())
-            .map(|index| {
-                #[cfg(not(unix))]
-                {
-                    stamp(&self.path_of(index))
+    pub fn stamps(&self) -> io::Result<Vec<Option<FileStamp>>> {
+        self.meta
+            .files
+            .iter()
+            .enumerate()
+            .map(|(index, entry)| {
+                if entry.virtual_file {
+                    return Ok(None);
                 }
-                #[cfg(unix)]
-                {
-                    file_stamp(&self.native_file(index, false).ok()?.metadata().ok()?)
+                match self.native_file(index, false) {
+                    Ok(file) => Ok(file_stamp(&file.metadata()?)),
+                    Err(e) if e.kind() == io::ErrorKind::NotFound => Ok(None),
+                    Err(e) => Err(e),
                 }
             })
             .collect()
@@ -443,12 +461,6 @@ impl Storage {
     }
 }
 
-#[cfg(not(unix))]
-fn stamp(path: &Path) -> Option<FileStamp> {
-    let info = fs::metadata(path).ok()?;
-    file_stamp(&info)
-}
-
 fn file_stamp(info: &fs::Metadata) -> Option<FileStamp> {
     let modified = info.modified().ok()?.duration_since(UNIX_EPOCH).ok()?;
     Some(FileStamp {
@@ -463,86 +475,6 @@ fn is_absent(error: &io::Error) -> bool {
         io::ErrorKind::NotFound | io::ErrorKind::UnexpectedEof
     )
 }
-
-#[cfg(not(unix))]
-fn open_for_writing(path: &Path, len: u64) -> io::Result<File> {
-    if let Some(parent) = path.parent() {
-        fs::create_dir_all(parent)?;
-    }
-    let mut options = OpenOptions::new();
-    options.read(true).write(true);
-    match options.clone().create_new(true).open(path) {
-        Ok(file) => {
-            // Pieces arrive in any order, and without this Windows would fill the gap
-            // before a far-away write with zeros while the download waits.
-            mark_sparse(&file);
-            mark_internet(path)?;
-            file.set_len(len)?;
-            Ok(file)
-        }
-        Err(error) if error.kind() == io::ErrorKind::AlreadyExists => {
-            let file = options.open(path)?;
-            if file.metadata()?.len() != len {
-                file.set_len(len)?;
-            }
-            Ok(file)
-        }
-        Err(error) => Err(error),
-    }
-}
-
-/// Files from a torrent came from the internet, and Windows should treat them that way.
-/// This matches what the app does for its other downloads.
-fn mark_internet(path: &Path) -> io::Result<()> {
-    #[cfg(windows)]
-    {
-        use io::Write;
-        let mut name = path.as_os_str().to_os_string();
-        name.push(":Zone.Identifier");
-        let mut marker = OpenOptions::new()
-            .create(true)
-            .truncate(true)
-            .write(true)
-            .open(PathBuf::from(name))
-            .map_err(|error| {
-                io::Error::new(
-                    error.kind(),
-                    "Cannot mark this file as an Internet download. Choose a local NTFS folder.",
-                )
-            })?;
-        marker.write_all(b"[ZoneTransfer]\r\nZoneId=3\r\n")?;
-    }
-    #[cfg(not(windows))]
-    let _ = path;
-    Ok(())
-}
-
-#[cfg(windows)]
-fn mark_sparse(file: &File) {
-    use std::os::windows::io::AsRawHandle;
-    use windows_sys::Win32::System::IO::DeviceIoControl;
-    use windows_sys::Win32::System::Ioctl::FSCTL_SET_SPARSE;
-
-    let mut returned = 0u32;
-    // Not every file system supports this. The download still works, just more slowly.
-    // SAFETY: the handle is open for as long as `file` lives, and this control code
-    // takes no buffers.
-    let _ = unsafe {
-        DeviceIoControl(
-            file.as_raw_handle() as _,
-            FSCTL_SET_SPARSE,
-            std::ptr::null(),
-            0,
-            std::ptr::null_mut(),
-            0,
-            &mut returned,
-            std::ptr::null_mut(),
-        )
-    };
-}
-
-#[cfg(not(windows))]
-fn mark_sparse(_file: &File) {}
 
 #[cfg(windows)]
 fn write_all_at(file: &File, mut data: &[u8], mut offset: u64) -> io::Result<()> {
@@ -799,13 +731,13 @@ mod tests {
         let data = pattern(100, 1);
         let torrent = single_file_torrent("a.bin", &data, 16384);
         let storage = Storage::new(meta_of(&torrent), folder.path());
-        assert_eq!(storage.stamps(), [None]);
+        assert_eq!(storage.stamps().unwrap(), [None]);
         storage.write(0, &data).unwrap();
         storage.close();
-        let before = storage.stamps();
+        let before = storage.stamps().unwrap();
         assert_eq!(before[0].as_ref().unwrap().len, 100);
         fs::write(folder.path().join("a.bin"), [0u8; 101]).unwrap();
-        assert_ne!(storage.stamps(), before);
+        assert_ne!(storage.stamps().unwrap(), before);
     }
 
     #[test]

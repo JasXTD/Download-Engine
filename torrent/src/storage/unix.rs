@@ -1,8 +1,7 @@
-//! Keep torrent file operations beneath an opened destination directory.
-use parking_lot::Mutex;
+use super::directory::Creation;
 use std::{
-    ffi::CString,
-    fs::{self, File, OpenOptions},
+    ffi::{CString, OsStr},
+    fs::{File, OpenOptions},
     io,
     os::{
         fd::{AsRawFd, FromRawFd},
@@ -11,16 +10,10 @@ use std::{
             fs::{MetadataExt, OpenOptionsExt},
         },
     },
-    path::{Component, Path, PathBuf},
-    sync::Arc,
+    path::Path,
 };
 
-pub(super) struct Root {
-    path: PathBuf,
-    directory: Mutex<Option<Arc<File>>>,
-}
-
-fn name(value: &std::ffi::OsStr) -> io::Result<CString> {
+fn name(value: &OsStr) -> io::Result<CString> {
     CString::new(value.as_bytes()).map_err(|_| io::ErrorKind::InvalidInput.into())
 }
 
@@ -28,101 +21,121 @@ fn opened(fd: libc::c_int) -> io::Result<File> {
     if fd < 0 {
         Err(io::Error::last_os_error())
     } else {
+        // A successful openat returned a new owned descriptor.
         Ok(unsafe { File::from_raw_fd(fd) })
     }
 }
 
-impl Root {
-    pub(super) fn new(path: PathBuf) -> Self {
-        Self {
-            path,
-            directory: Mutex::new(None),
+const DIRECTORY_FLAGS: libc::c_int =
+    libc::O_RDONLY | libc::O_DIRECTORY | libc::O_NOFOLLOW | libc::O_CLOEXEC;
+
+pub(super) fn open_directory(path: &Path, _for_move: bool) -> io::Result<File> {
+    // The user's selected path can have symlinked ancestors (e.g. /var on macOS).
+    // Strip trailing slashes and "." so O_NOFOLLOW applies to the named directory.
+    // Normalizing components does not resolve symlinks.
+    let path: std::path::PathBuf = path.components().collect();
+    OpenOptions::new()
+        .read(true)
+        .custom_flags(DIRECTORY_FLAGS)
+        .open(path)
+}
+
+pub(super) fn directory_at(parent: &File, part: &OsStr, creation: Creation) -> io::Result<File> {
+    let part = name(part)?;
+    if creation != Creation::Open
+        && unsafe { libc::mkdirat(parent.as_raw_fd(), part.as_ptr(), 0o700) } < 0
+    {
+        let error = io::Error::last_os_error();
+        if creation == Creation::New || error.kind() != io::ErrorKind::AlreadyExists {
+            return Err(error);
         }
     }
-    fn directory(&self, create: bool) -> io::Result<Arc<File>> {
-        let mut saved = self.directory.lock();
-        if let Some(directory) = &*saved {
-            return Ok(directory.clone());
-        }
-        if create {
-            fs::create_dir_all(&self.path)?;
-        }
-        // A user-chosen destination may have symlinked ancestors. Resolve that
-        // explicit root once; never resolve torrent-supplied descendants.
-        let path = fs::canonicalize(&self.path)?;
-        let directory = Arc::new(
-            OpenOptions::new()
-                .read(true)
-                .custom_flags(libc::O_DIRECTORY | libc::O_NOFOLLOW | libc::O_CLOEXEC)
-                .open(path)?,
-        );
-        *saved = Some(directory.clone());
-        Ok(directory)
-    }
-    pub(super) fn open(&self, relative: &Path, write: bool, len: u64) -> io::Result<File> {
-        let mut components = Vec::new();
-        for part in relative.components() {
-            let Component::Normal(part) = part else {
-                return Err(io::ErrorKind::InvalidInput.into());
-            };
-            components.push(name(part)?);
-        }
-        let leaf = components.pop().ok_or(io::ErrorKind::InvalidInput)?;
-        let root = self.directory(write)?;
-        let mut directory = root.try_clone()?;
-        for part in components {
-            if write && unsafe { libc::mkdirat(directory.as_raw_fd(), part.as_ptr(), 0o700) } < 0 {
-                let error = io::Error::last_os_error();
-                if error.kind() != io::ErrorKind::AlreadyExists {
-                    return Err(error);
-                }
-            }
-            directory = opened(unsafe {
-                libc::openat(
-                    directory.as_raw_fd(),
-                    part.as_ptr(),
-                    libc::O_RDONLY | libc::O_DIRECTORY | libc::O_NOFOLLOW | libc::O_CLOEXEC,
-                )
-            })?;
-        }
-        let open = |access| {
-            opened(unsafe {
-                libc::openat(
-                    directory.as_raw_fd(),
-                    leaf.as_ptr(),
-                    access | libc::O_NOFOLLOW | libc::O_CLOEXEC | libc::O_NONBLOCK,
-                    0o600,
-                )
-            })
-        };
-        let file = if write {
-            // Concurrent openat(O_CREAT) calls can return ENOENT on macOS when
-            // another peer creates the file first. Use exclusive creation and
-            // a plain open for the existing-file case, keeping O_NOFOLLOW on both.
-            match open(libc::O_RDWR | libc::O_CREAT | libc::O_EXCL) {
-                Err(error) if error.kind() == io::ErrorKind::AlreadyExists => open(libc::O_RDWR)?,
-                result => result?,
-            }
-        } else {
-            open(libc::O_RDONLY)?
-        };
-        let metadata = file.metadata()?;
-        if !metadata.is_file() || metadata.nlink() != 1 {
+    let directory =
+        opened(unsafe { libc::openat(parent.as_raw_fd(), part.as_ptr(), DIRECTORY_FLAGS) })?;
+    if creation == Creation::New {
+        let metadata = directory.metadata()?;
+        if metadata.uid() != unsafe { libc::geteuid() } || metadata.mode() & 0o077 != 0 {
             return Err(io::ErrorKind::PermissionDenied.into());
         }
-        if write && metadata.len() != len {
-            file.set_len(len)?;
-        }
-        Ok(file)
     }
+    Ok(directory)
+}
+
+pub(super) fn identity(file: &File) -> io::Result<String> {
+    let info = file.metadata()?;
+    let birth = info
+        .created()
+        .ok()
+        .and_then(|time| time.duration_since(std::time::UNIX_EPOCH).ok());
+    Ok(format!(
+        "{:x}:{:x}:{:x}",
+        info.dev(),
+        info.ino(),
+        birth.map_or(0, |duration| duration.as_nanos())
+    ))
+}
+
+pub(super) fn file_at(
+    parent: &File,
+    leaf: &OsStr,
+    size: Option<u64>,
+    _seeding: bool,
+) -> io::Result<File> {
+    let leaf = name(leaf)?;
+    let open = |access| {
+        opened(unsafe {
+            libc::openat(
+                parent.as_raw_fd(),
+                leaf.as_ptr(),
+                access | libc::O_NOFOLLOW | libc::O_CLOEXEC | libc::O_NONBLOCK,
+                0o600,
+            )
+        })
+    };
+    let file = if size.is_some() {
+        // Concurrent openat(O_CREAT) can return ENOENT on macOS. Use exclusive
+        // creation or an ordinary open of the winner, both with O_NOFOLLOW.
+        match open(libc::O_RDWR | libc::O_CREAT | libc::O_EXCL) {
+            Err(error) if error.kind() == io::ErrorKind::AlreadyExists => open(libc::O_RDWR)?,
+            result => result?,
+        }
+    } else {
+        open(libc::O_RDONLY)?
+    };
+    let metadata = file.metadata()?;
+    if !metadata.is_file() || metadata.nlink() != 1 {
+        return Err(io::ErrorKind::PermissionDenied.into());
+    }
+    if let Some(len) = size
+        && metadata.len() != len
+    {
+        file.set_len(len)?;
+    }
+    Ok(file)
+}
+
+pub(super) fn file_for_move(parent: &File, leaf: &OsStr) -> io::Result<File> {
+    file_at(parent, leaf, None, false)
+}
+
+pub(super) fn remove_at(parent: &File, leaf: &OsStr, directory: bool) -> io::Result<()> {
+    let name = name(leaf)?;
+    let flags = if directory { libc::AT_REMOVEDIR } else { 0 };
+    // unlinkat never follows the terminal name; all parents were opened with O_NOFOLLOW.
+    if unsafe { libc::unlinkat(parent.as_raw_fd(), name.as_ptr(), flags) } < 0 {
+        return Err(io::Error::last_os_error());
+    }
+    Ok(())
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::storage::Directory;
     use crate::testkit::TempFolder;
     use std::io::{Read, Write};
     use std::os::unix::fs::symlink;
+    use std::{fs, path::PathBuf};
 
     #[test]
     fn concurrent_first_writes_keep_every_block() {
@@ -131,7 +144,7 @@ mod tests {
         const WRITERS: usize = 8;
         const BLOCK: usize = 64;
         let base = TempFolder::new();
-        let root = Root::new(base.path());
+        let root = Directory::open(&base.path()).unwrap();
         // Each fresh name exercises the first-create race between peer writers.
         for round in 0..32 {
             let relative = PathBuf::from(format!("piece-{round}.bin"));
@@ -142,7 +155,7 @@ mod tests {
                         let (root, relative, ready) = (&root, &relative, &ready);
                         scope.spawn(move || {
                             ready.wait();
-                            root.open(relative, true, (WRITERS * BLOCK) as u64)?
+                            root.file(relative, Some((WRITERS * BLOCK) as u64), false)?
                                 .write_all_at(&[index as u8 + 1; BLOCK], (index * BLOCK) as u64)
                         })
                     })
@@ -163,8 +176,8 @@ mod tests {
     #[test]
     fn reading_a_missing_file_does_not_create_it() {
         let base = TempFolder::new();
-        let root = Root::new(base.path());
-        let error = root.open(Path::new("missing.bin"), false, 10).unwrap_err();
+        let root = Directory::open(&base.path()).unwrap();
+        let error = root.read_file(Path::new("missing.bin")).unwrap_err();
         assert_eq!(error.kind(), io::ErrorKind::NotFound);
         assert_eq!(fs::read_dir(base.path()).unwrap().count(), 0);
     }
@@ -178,13 +191,13 @@ mod tests {
         fs::write(&sentinel, b"keep this file").unwrap();
         let destination = base.path().join("destination");
         fs::create_dir(&destination).unwrap();
-        let root = Root::new(destination.clone());
+        let root = Directory::open_or_create(&destination).unwrap();
         symlink(&outside, destination.join("linked-directory")).unwrap();
         symlink(&sentinel, destination.join("linked-file")).unwrap();
         fs::hard_link(&sentinel, destination.join("hard-file")).unwrap();
         for path in ["linked-directory/sentinel.bin", "linked-file", "hard-file"] {
-            assert!(root.open(Path::new(path), false, 0).is_err());
-            assert!(root.open(Path::new(path), true, 1).is_err());
+            assert!(root.read_file(Path::new(path)).is_err());
+            assert!(root.file(Path::new(path), Some(1), false).is_err());
         }
         assert_eq!(fs::read(sentinel).unwrap(), b"keep this file");
     }
@@ -195,20 +208,22 @@ mod tests {
         let destination = base.path().join("destination");
         let outside = base.path().join("outside");
         fs::create_dir(&outside).unwrap();
-        let root = Root::new(destination.clone());
-        root.open(Path::new("sub/a.bin"), true, 4)
+        let root = Directory::open_or_create(&destination).unwrap();
+        root.file(Path::new("sub/a.bin"), Some(4), false)
             .unwrap()
             .write_all(b"test")
             .unwrap();
         let original = base.path().join("original");
         fs::rename(&destination, &original).unwrap();
         symlink(&outside, &destination).unwrap();
-        root.open(Path::new("sub/b.bin"), true, 3)
+        assert!(Directory::open(&destination).is_err());
+        assert!(Directory::open(&destination.join(".")).is_err());
+        root.file(Path::new("sub/b.bin"), Some(3), false)
             .unwrap()
             .write_all(b"new")
             .unwrap();
         let mut bytes = Vec::new();
-        root.open(Path::new("sub/a.bin"), false, 0)
+        root.read_file(Path::new("sub/a.bin"))
             .unwrap()
             .read_to_end(&mut bytes)
             .unwrap();

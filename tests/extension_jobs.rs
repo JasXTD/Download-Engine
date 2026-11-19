@@ -111,7 +111,7 @@ fn account_action_worker_saves_protected_settings_and_refuses_after_stop() {
     let db = rusqlite::Connection::open(f.store.paths.data.join("queue.sqlite3")).unwrap();
     // This test connection acts as the current scheduler, without disabling the
     // profile's persistent writer guards. Match src/store/migrations.rs.
-    for (name, version) in [("writer", 12_i64), ("data", 12), ("schema", 1)] {
+    for (name, version) in [("writer", 13_i64), ("data", 13), ("schema", 1)] {
         db.create_scalar_function(
             format!("xdownloader_{name}_version").as_str(),
             0,

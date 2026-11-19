@@ -15,30 +15,39 @@ use crate::meta::TorrentMeta;
 use crate::session::{AddOptions, Session, SessionOptions};
 
 #[derive(Deserialize)]
+struct Add {
+    name: String,
+    torrent: Option<String>,
+    magnet: Option<String>,
+    output: PathBuf,
+    only: Option<Vec<usize>>,
+    #[serde(default)]
+    peers: Vec<SocketAddr>,
+    #[serde(default)]
+    choose_later: bool,
+    #[serde(default)]
+    seed_only: bool,
+    file_name: Option<String>,
+    #[serde(default)]
+    trackers: Vec<String>,
+    /// The person's yes to looking up this magnet on the DHT. See `session::magnet_discovery`.
+    #[serde(default)]
+    dht_search: bool,
+}
+
+#[derive(Deserialize)]
 #[serde(tag = "cmd", rename_all = "snake_case")]
 enum Command {
     Files {
         torrent: Option<String>,
         name: Option<String>,
     },
-    Add {
-        name: String,
-        torrent: Option<String>,
-        magnet: Option<String>,
-        output: PathBuf,
-        only: Option<Vec<usize>>,
-        #[serde(default)]
-        peers: Vec<SocketAddr>,
-        #[serde(default)]
-        choose_later: bool,
-        #[serde(default)]
-        seed_only: bool,
-        file_name: Option<String>,
-        #[serde(default)]
-        trackers: Vec<String>,
-        /// The person's yes to looking up this magnet on the DHT. See `session::magnet_discovery`.
-        #[serde(default)]
-        dht_search: bool,
+    Add(Add),
+    // Older helpers must reject this command instead of ignoring the ownership check.
+    AddStaged {
+        output_identity: String,
+        #[serde(flatten)]
+        request: Add,
     },
     Select {
         name: String,
@@ -142,6 +151,38 @@ fn file_list(meta: &TorrentMeta) -> Value {
     })
 }
 
+impl Add {
+    async fn run(self, session: &Arc<Session>, expected: Option<&str>) -> Result<Value> {
+        let directory = expected
+            .map(|identity| -> Result<_> {
+                let directory = crate::storage::Directory::open(&self.output)?;
+                directory.verify(identity)?;
+                Ok(Arc::new(directory))
+            })
+            .transpose()?;
+        let options = AddOptions {
+            output: self.output,
+            directory,
+            only: self.only,
+            peers: self.peers,
+            choose_later: self.choose_later,
+            seed_only: self.seed_only,
+            file_name: self.file_name,
+            trackers: self.trackers,
+            dht_search: self.dht_search,
+        };
+        let info_hash = match (self.torrent, self.magnet) {
+            (Some(path), None) => {
+                let bytes = read_torrent_file(&path).await?;
+                session.add_torrent_file(self.name, &bytes, options).await?
+            }
+            (None, Some(link)) => session.add_magnet(self.name, &link, options).await?,
+            _ => bail!("give either a torrent file or a magnet link"),
+        };
+        Ok(json!({ "info_hash": info_hash }))
+    }
+}
+
 async fn handle(session: &Arc<Session>, command: Command) -> Result<Value> {
     match command {
         Command::Files { torrent, name } => match (torrent, name) {
@@ -158,39 +199,11 @@ async fn handle(session: &Arc<Session>, command: Command) -> Result<Value> {
             }
             (None, None) => bail!("say which torrent"),
         },
-        Command::Add {
-            name,
-            torrent,
-            magnet,
-            output,
-            only,
-            peers,
-            choose_later,
-            seed_only,
-            file_name,
-            trackers,
-            dht_search,
-        } => {
-            let add = AddOptions {
-                output,
-                only,
-                peers,
-                choose_later,
-                seed_only,
-                file_name,
-                trackers,
-                dht_search,
-            };
-            let info_hash = match (torrent, magnet) {
-                (Some(path), None) => {
-                    let bytes = read_torrent_file(&path).await?;
-                    session.add_torrent_file(name, &bytes, add).await?
-                }
-                (None, Some(link)) => session.add_magnet(name, &link, add).await?,
-                _ => bail!("give either a torrent file or a magnet link"),
-            };
-            Ok(json!({ "info_hash": info_hash }))
-        }
+        Command::Add(request) => request.run(session, None).await,
+        Command::AddStaged {
+            output_identity,
+            request,
+        } => request.run(session, Some(&output_identity)).await,
         Command::Select { name, only } => {
             session.torrent(&name)?.select(only)?;
             Ok(json!({}))
@@ -381,21 +394,6 @@ fn options_from(arguments: &[String]) -> Result<SessionOptions> {
     Ok(options)
 }
 
-#[cfg(test)]
-mod option_tests {
-    use super::options_from;
-
-    #[test]
-    fn local_peer_override_is_restricted_to_lab_builds() {
-        assert!(!options_from(&[]).unwrap().allow_loopback_peers);
-        let result = options_from(&["--lab-allow-loopback-peers".into()]);
-        #[cfg(feature = "lab")]
-        assert!(result.unwrap().allow_loopback_peers);
-        #[cfg(not(feature = "lab"))]
-        assert!(result.is_err());
-    }
-}
-
 #[tokio::main]
 pub async fn run() -> Result<()> {
     let arguments: Vec<String> = std::env::args().skip(1).collect();
@@ -492,5 +490,37 @@ mod lab {
             );
         }
         Ok(Value::Object(out))
+    }
+}
+
+#[cfg(test)]
+mod option_tests {
+    use super::*;
+
+    #[test]
+    fn local_peer_override_is_restricted_to_lab_builds() {
+        assert!(!options_from(&[]).unwrap().allow_loopback_peers);
+        let result = options_from(&["--lab-allow-loopback-peers".into()]);
+        #[cfg(feature = "lab")]
+        assert!(result.unwrap().allow_loopback_peers);
+        #[cfg(not(feature = "lab"))]
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn staged_add_requires_a_matching_directory_before_adding_a_torrent() {
+        let temp = crate::testkit::TempFolder::new();
+        let mut command = json!({"cmd":"add_staged", "name":"fixture", "output":temp.path()});
+        assert!(serde_json::from_value::<Command>(command.clone()).is_err());
+        command["output_identity"] = json!("wrong directory");
+        let session = Session::new(SessionOptions::default()).await.unwrap();
+        let result = handle(&session, serde_json::from_value(command).unwrap())
+            .await
+            .unwrap_err();
+        assert_eq!(
+            result.downcast_ref::<std::io::Error>().unwrap().kind(),
+            std::io::ErrorKind::PermissionDenied
+        );
+        assert!(session.torrent("fixture").is_err());
     }
 }

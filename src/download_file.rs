@@ -41,7 +41,7 @@ fn options() -> OpenOptions {
         use std::os::unix::fs::OpenOptionsExt;
         options
             .mode(0o600)
-            .custom_flags(libc::O_NOFOLLOW | libc::O_CLOEXEC);
+            .custom_flags(libc::O_NOFOLLOW | libc::O_CLOEXEC | libc::O_NONBLOCK);
     }
     options
 }

@@ -106,6 +106,7 @@ async fn stop_router(router: RouterTask) {
 #[derive(Clone, Default)]
 pub struct AddOptions {
     pub output: PathBuf,
+    pub directory: Option<Arc<crate::storage::Directory>>,
     pub only: Option<Vec<usize>>,
     pub peers: Vec<SocketAddr>,
     pub choose_later: bool,
@@ -318,6 +319,7 @@ impl Session {
         TorrentOptions {
             web_seeds: self.options.web_seeds,
             output: add.output,
+            directory: add.directory,
             only: add.only,
             peers: add.peers,
             seed: self.options.seed || add.seed_only,

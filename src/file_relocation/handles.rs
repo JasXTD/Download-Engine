@@ -218,7 +218,7 @@ pub(super) fn rename_owned(file: &File, from: &Path, target: &Path) -> Result<()
     }
 }
 
-pub(super) fn delete_owned(file: &File, path: &Path) -> Result<()> {
+pub(crate) fn delete_owned(file: &File, path: &Path) -> Result<()> {
     #[cfg(windows)]
     {
         let _ = path;

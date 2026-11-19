@@ -7,6 +7,7 @@ pub mod limits;
 mod publish;
 pub(crate) mod seeding;
 mod settings;
+mod staging;
 
 pub use details::{
     ADD_WHILE_RUNNING, PRIVATE_TRACKERS_TEXT, Peer, Pieces, RECHECK_LATER, Request, Source,
@@ -663,23 +664,30 @@ pub(crate) async fn transfer(
         forget_progress(store, job)?;
         return Ok(Some(file));
     }
-    let staging = publish::staging(job);
-    tokio::fs::create_dir_all(&staging)
-        .await
-        .context("Cannot create the download folder")?;
-    let files = store.torrent_files(&job.id)?;
+    let (stage_store, stage_job, stage_cancel) = (store.clone(), job.clone(), cancel.clone());
+    let prepared = tokio::task::spawn_blocking(move || -> Result<_> {
+        let files = stage_store.torrent_files(&stage_job.id)?;
+        let chosen = files.chosen;
+        let stage = staging::Stage::prepare(&stage_store, &stage_job, &chosen, &stage_cancel)?;
+        Ok(stage.map(|(stage, guard)| (stage, guard, chosen)))
+    })
+    .await??;
+    let Some((staging, guard, chosen)) = prepared else {
+        return Ok(None);
+    };
     let trackers = store.torrent_added_trackers(&job.id)?;
     let lease = store.torrents.lease(store)?;
     let mut add = json!({
-        "cmd": "add",
+        "cmd": "add_staged",
         "name": job.id,
         "magnet": job.url,
-        "output": staging,
+        "output": staging.path,
+        "output_identity": staging.identity,
         "peers": store.torrents.test_peers(),
         "trackers": trackers,
     });
     match stage {
-        Stage::Chosen => add["only"] = json!(files.chosen),
+        Stage::Chosen => add["only"] = json!(chosen),
         _ => add["choose_later"] = json!(true),
     }
     if store.torrent_dht_consent(job)? {
@@ -701,13 +709,14 @@ pub(crate) async fn transfer(
         .await
         .map(|_| ());
     drop(lease);
+    drop(guard);
     let outcome = outcome.map_err(explained)?;
     counted?;
     match outcome {
         Outcome::Stopped | Outcome::NeedsChoice => Ok(None),
         Outcome::Finished => {
             removed?;
-            let finished = publish::finish(store, job).await?;
+            let finished = publish::finish(store, job, &staging).await?;
             forget_progress(store, job)?;
             Ok(Some(finished))
         }
@@ -1142,6 +1151,106 @@ mod tests {
             })
             .unwrap();
         (temp, store)
+    }
+
+    #[test]
+    fn restart_and_cleanup_require_the_registered_staging_directory() {
+        let (temp, store) = profile();
+        let job = store
+            .add_magnet_for_later(
+                &format!("magnet:?xt=urn:btih:{HEX}"),
+                Some(temp.path()),
+                "main",
+                "staging-test".into(),
+                false,
+            )
+            .unwrap();
+        let cancel = CancellationToken::new();
+        let legacy = temp.path().join(format!(".idm-ex-{}.torrent", job.id));
+        std::fs::create_dir(&legacy).unwrap();
+        std::fs::write(legacy.join("keep"), b"unclaimed").unwrap();
+        let prepare = |store: &Store| staging::Stage::prepare(store, &job, &[], &cancel);
+        let (stage, guard) = prepare(&store).unwrap().unwrap();
+        assert_ne!(stage.path, legacy);
+        let version: i64 = store
+            .connect()
+            .unwrap()
+            .query_row(
+                "SELECT min_writer_version FROM profile_format WHERE id=1",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(version, 13);
+        drop(guard);
+        let reopened = Store::open(store.paths.clone()).unwrap();
+        let (resumed, guard) = prepare(&reopened).unwrap().unwrap();
+        assert_eq!(resumed.identity, stage.identity);
+        drop(guard);
+        std::fs::rename(&stage.path, temp.path().join("original")).unwrap();
+        std::fs::create_dir(&stage.path).unwrap();
+        assert!(prepare(&reopened).is_err());
+        assert!(publish::discard(&reopened, &job).is_err());
+        assert!(
+            stage.path.is_dir(),
+            "even an empty replacement must survive"
+        );
+        assert_eq!(std::fs::read(legacy.join("keep")).unwrap(), b"unclaimed");
+    }
+
+    #[tokio::test]
+    async fn recovery_accepts_only_the_download_that_was_published() {
+        let (temp, store) = profile();
+        let details = Details {
+            info_hash: HEX.into(),
+            magnet: format!("magnet:?xt=urn:btih:{HEX}"),
+            name: "one.bin".into(),
+            files: vec![File {
+                index: 0,
+                path: "one.bin".into(),
+                saved_as: "one.bin".into(),
+                len: 3,
+            }],
+        };
+        let mut job = store
+            .add_torrent(
+                &details,
+                vec![0],
+                Some(temp.path()),
+                "main",
+                "publication-test".into(),
+            )
+            .unwrap();
+        let legacy = temp.path().join(format!(".idm-ex-{}.torrent", job.id));
+        std::fs::write(&legacy, b"unrelated").unwrap();
+        let (stage, guard) = staging::Stage::prepare(&store, &job, &[0], &CancellationToken::new())
+            .unwrap()
+            .unwrap();
+        std::fs::write(stage.path.join("one.bin"), b"abc").unwrap();
+        drop(guard);
+        let published = publish::finish(&store, &mut job, &stage).await.unwrap();
+        let path = published.path;
+        assert_eq!(std::fs::read(&path).unwrap(), b"abc");
+        assert_eq!(std::fs::read(legacy).unwrap(), b"unrelated");
+        assert!(!stage.path.exists());
+        let mut recovered = store.get(&job.id).unwrap().unwrap();
+        assert_eq!(
+            publish::recover(&store, &mut recovered)
+                .await
+                .unwrap()
+                .unwrap()
+                .path,
+            path
+        );
+        std::fs::rename(&path, temp.path().join("original.bin")).unwrap();
+        std::fs::write(&path, b"xyz").unwrap();
+        assert!(
+            publish::recover(&store, &mut recovered)
+                .await
+                .unwrap()
+                .is_none()
+        );
+        assert_eq!(std::fs::read(&path).unwrap(), b"xyz");
     }
 
     #[test]

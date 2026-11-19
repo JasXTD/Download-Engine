@@ -16,7 +16,8 @@ use tokio_util::sync::CancellationToken;
 
 mod folder;
 mod handles;
-use handles::{FileKey, Snapshot, delete_owned, open_owned, rename_owned};
+pub(crate) use handles::delete_owned;
+use handles::{FileKey, Snapshot, open_owned, rename_owned};
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 struct Intent {

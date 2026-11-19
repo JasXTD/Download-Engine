@@ -228,6 +228,8 @@ fn binary_http_and_key_handoff_work_together_against_an_offline_server() {
                 Err(e) => panic!("Fixture server did not receive a request: {e}"),
             }
         };
+        // Accepted sockets can inherit the listener's nonblocking mode.
+        stream.set_nonblocking(false).unwrap();
         stream
             .set_read_timeout(Some(Duration::from_secs(5)))
             .unwrap();

@@ -119,6 +119,9 @@ impl Storage {
     }
 
     fn native_file(&self, index: usize, write: bool) -> io::Result<File> {
+        if self.allowed.as_ref().is_some_and(|allowed| !allowed[index]) {
+            return Err(io::ErrorKind::NotFound.into());
+        }
         let directory = self.directory(write)?;
         let relative = self
             .file_name
@@ -237,9 +240,6 @@ impl Storage {
     }
 
     fn for_reading(&self, index: usize) -> io::Result<Arc<File>> {
-        if self.allowed.as_ref().is_some_and(|allowed| !allowed[index]) {
-            return Err(io::ErrorKind::NotFound.into());
-        }
         if let Some(file) = self.cached(index, false) {
             return Ok(file);
         }
@@ -727,6 +727,30 @@ mod tests {
         storage.write(0, &[9, 9]).unwrap();
         storage.read(0, &mut back).unwrap();
         assert_eq!(back[..2], [9, 9]);
+    }
+
+    #[test]
+    fn partial_seed_probes_only_selected_paths() {
+        let folder = TempFolder::new();
+        let data = pattern(16384, 2);
+        let meta = meta_of(&multi_file_torrent(
+            "pack",
+            &[(&["skipped"], &data, false), (&["chosen"], &data, false)],
+            16384,
+        ));
+        let storage = Storage::for_seeding(meta, folder.path(), None, Some(&[1])).unwrap();
+        fs::create_dir(folder.path().join("skipped")).unwrap();
+        assert!(!storage.any_file_exists().unwrap());
+        let chosen = folder.path().join("chosen");
+        fs::write(&chosen, &data).unwrap();
+        assert!(storage.any_file_exists().unwrap());
+        assert!(storage.check_piece(1, || Ok(())).unwrap());
+        let stamps = storage.stamps().unwrap();
+        assert!(stamps[0].is_none() && stamps[1].is_some());
+        storage.close();
+        fs::remove_file(&chosen).unwrap();
+        fs::create_dir(chosen).unwrap();
+        assert!(storage.any_file_exists().is_err());
     }
 
     #[test]

@@ -1362,7 +1362,7 @@ async fn named_queues_pause_independently_and_resume_exact_bytes_in_order() {
     // scheduler command can wait longer than any paced transfer takes.
     let fixture = Fixture::pausable_range(4 * 1024 * 1024, 0).await;
     let (_temp, store) = setup();
-    let now = chrono::Utc::now().timestamp();
+    let now = jiff::Timestamp::now().as_second();
     store.schedule_queue(MAIN_QUEUE, now + 3600, now).unwrap();
     let q = store.create_queue("Files").unwrap();
     store.set_queue_limit(&q.id, 1).unwrap();
@@ -1446,13 +1446,12 @@ async fn named_queues_pause_independently_and_resume_exact_bytes_in_order() {
 
 #[tokio::test]
 async fn recurring_windows_resume_exact_bytes_after_app_restart_and_automatic_pause() {
-    use chrono::Timelike;
     use download_engine::{
         queue::MAIN_QUEUE,
         queue_schedule::{EVERY_DAY, RecurringSchedule, clock_label},
     };
-    let now = chrono::Local::now();
-    let minute = (now.hour() * 60 + now.minute()) as u16;
+    let now = jiff::ZonedDateTime::now();
+    let minute = now.hour() as u16 * 60 + now.minute() as u16;
     let inside = RecurringSchedule::new(
         EVERY_DAY,
         &clock_label((minute + 1380) % 1440),
@@ -1468,7 +1467,7 @@ async fn recurring_windows_resume_exact_bytes_after_app_restart_and_automatic_pa
     let fixture = Fixture::pausable_range(4 * 1024 * 1024, 0).await;
     let (_temp, store) = setup();
     store
-        .schedule_recurring_queue(MAIN_QUEUE, &outside, now.timestamp())
+        .schedule_recurring_queue(MAIN_QUEUE, &outside, now.timestamp().as_second())
         .unwrap();
     let job = Job::new(
         &fixture.url,
@@ -1601,15 +1600,15 @@ async fn scheduled_queue_starts_once_without_starting_early() {
     store
         .enqueue_batch(std::slice::from_ref(&job), &q.id)
         .unwrap();
-    let at = chrono::Utc::now().timestamp() + 3;
+    let at = jiff::Timestamp::now().as_second() + 3;
     store
-        .schedule_queue(&q.id, at, chrono::Utc::now().timestamp())
+        .schedule_queue(&q.id, at, jiff::Timestamp::now().as_second())
         .unwrap();
     let scheduler = Scheduler::start(store.clone()).unwrap();
-    while chrono::Utc::now().timestamp() < at {
+    while jiff::Timestamp::now().as_second() < at {
         let current = store.get(&job.id).unwrap().unwrap();
         // Read the clock again so crossing the second boundary cannot make this assertion flaky.
-        if chrono::Utc::now().timestamp() < at {
+        if jiff::Timestamp::now().as_second() < at {
             assert_eq!(current.status, Status::Queued);
         }
         tokio::time::sleep(Duration::from_millis(30)).await;

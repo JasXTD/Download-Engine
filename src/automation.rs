@@ -97,7 +97,12 @@ fn read_rules(conn: &Connection) -> Result<Vec<Rule>> {
 fn record(conn: &Connection, rule: &Rule, success: bool, message: &str) -> Result<()> {
     conn.execute(
         "INSERT INTO automation_runs(at,rule_name,success,message) VALUES(?1,?2,?3,?4)",
-        params![chrono::Utc::now().timestamp(), rule.name, success, message],
+        params![
+            jiff::Timestamp::now().as_second(),
+            rule.name,
+            success,
+            message
+        ],
     )?;
     conn.execute("DELETE FROM automation_runs WHERE id NOT IN (SELECT id FROM automation_runs ORDER BY id DESC LIMIT 500)", [])?;
     Ok(())

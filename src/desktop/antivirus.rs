@@ -502,7 +502,7 @@ impl Desktop {
                         ui.label(tr("The file will stay closed."));
                     } else if let Some(report) = &review.report {
                         ui.label(RichText::new(tr(report.verdict.label())).strong().color(if report.verdict == Verdict::NoThreatsFound { p.text } else { p.warning }));
-                        let at = chrono::DateTime::from_timestamp(report.finished_at, 0).map(|v| v.with_timezone(&chrono::Local).format("%d %b %Y, %H:%M:%S").to_string()).unwrap_or_else(|| tr("Unknown time").into());
+                        let at = jiff::Timestamp::from_second(report.finished_at).ok().map(|v| v.to_zoned_datetime(jiff::tz::TimeZone::system()).strftime("%d %b %Y, %H:%M:%S").to_string()).unwrap_or_else(|| tr("Unknown time").into());
                         ui.label(format!("{} · {at}", report.scanner));
                         ui.label(&report.message);
                         if !report.files.is_empty() {

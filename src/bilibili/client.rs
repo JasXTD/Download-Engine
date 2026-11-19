@@ -274,7 +274,7 @@ impl Api {
     }
 
     fn sign(&self, params: &[(&str, String)]) -> Vec<(String, String)> {
-        sign(params, &self.key, chrono::Utc::now().timestamp())
+        sign(params, &self.key, jiff::Timestamp::now().as_second())
     }
 
     async fn get<T: DeserializeOwned>(

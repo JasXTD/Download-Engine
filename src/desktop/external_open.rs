@@ -115,7 +115,7 @@ impl Desktop {
                         if current && ui.button(tr("Choose defaults in Windows")).clicked() {
                             action = Some(Action::Defaults);
                         }
-                        if current && ui.button(tr("Remove registration")).clicked() {
+                        if current && !download_engine::windows_package::is_packaged() && ui.button(tr("Remove registration")).clicked() {
                             action = Some(Action::Remove);
                         }
                         if ui.button(tr("Refresh")).clicked() {

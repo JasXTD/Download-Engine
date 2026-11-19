@@ -159,7 +159,7 @@ fn enqueue(
 
 /// Saves a checked definition. Older events and timers do not fire for it.
 pub(crate) fn put_script(conn: &Connection, script: &Script) -> Result<()> {
-    let now = chrono::Utc::now().timestamp();
+    let now = jiff::Timestamp::now().as_second();
     let next_at = match &script.trigger {
         Trigger::Interval { minutes } => Some(now + i64::from(*minutes) * 60),
         _ => None,
@@ -298,7 +298,7 @@ impl Store {
             &script,
             request,
             json!({"trigger":"manual","downloads":[]}),
-            chrono::Utc::now().timestamp(),
+            jiff::Timestamp::now().as_second(),
         )?;
         tx.commit()?;
         Ok(run)
@@ -383,7 +383,7 @@ impl Store {
             &script,
             request,
             json!({"trigger":name,"queue":queue,"downloads":entries,"events_expired":false,"sample":true}),
-            chrono::Utc::now().timestamp(),
+            jiff::Timestamp::now().as_second(),
         )?;
         tx.commit()?;
         Ok(run)
@@ -504,7 +504,7 @@ impl Store {
             tx.execute(
                 "INSERT INTO script_state(script_id,key,value,updated) VALUES(?1,?2,?3,?4)
                  ON CONFLICT(script_id,key) DO UPDATE SET value=excluded.value,updated=excluded.updated",
-                params![script, key, text, chrono::Utc::now().timestamp()],
+                params![script, key, text, jiff::Timestamp::now().as_second()],
             )?;
         }
         tx.commit()?;
@@ -611,7 +611,7 @@ impl Store {
         let mut run = read_run(&tx, id)?;
         if run.state == "queued" {
             run.state = "stopped".into();
-            run.finished_at = Some(chrono::Utc::now().timestamp());
+            run.finished_at = Some(jiff::Timestamp::now().as_second());
             update_run(&tx, &run)?;
         } else if run.state == "running" {
             tx.execute("UPDATE script_runs SET stop_requested=1 WHERE id=?1", [id])?;
@@ -642,10 +642,10 @@ impl Store {
             run.error = Some(
                 "App stopped before this run finished. It will not replay automatically.".into(),
             );
-            run.finished_at = Some(chrono::Utc::now().timestamp());
+            run.finished_at = Some(jiff::Timestamp::now().as_second());
             update_run(&tx, &run)?;
         }
-        let now = chrono::Utc::now().timestamp();
+        let now = jiff::Timestamp::now().as_second();
         for script in definitions(&tx)? {
             tx.execute(
                 "UPDATE automation_scripts SET cursor=?1 WHERE id=?2",
@@ -794,7 +794,7 @@ impl Store {
         };
         let mut run = read_run(&tx, &id)?;
         run.state = "running".into();
-        run.started_at = Some(chrono::Utc::now().timestamp());
+        run.started_at = Some(jiff::Timestamp::now().as_second());
         update_run(&tx, &run)?;
         tx.commit()?;
         Ok(Some(Claim { run, body, timeout }))
@@ -813,7 +813,7 @@ impl Store {
             run.state = state.into();
             run.error = error;
             run.exit_code = exit_code;
-            run.finished_at = Some(chrono::Utc::now().timestamp());
+            run.finished_at = Some(jiff::Timestamp::now().as_second());
             update_run(&tx, &run)?;
         }
         prune_runs(&tx)?;
@@ -889,7 +889,7 @@ impl Store {
             &script,
             request,
             json!({"trigger":"site_reader","url":page,"downloads":[]}),
-            chrono::Utc::now().timestamp(),
+            jiff::Timestamp::now().as_second(),
         )?;
         tx.commit()?;
         Ok(run)
@@ -944,7 +944,7 @@ impl Store {
         while !text.is_char_boundary(end) {
             end -= 1;
         }
-        let now = chrono::Utc::now().timestamp();
+        let now = jiff::Timestamp::now().as_second();
         if end > 0 {
             tx.execute(
                 "INSERT INTO script_logs(run_id,at,level,text) VALUES(?1,?2,?3,?4)",

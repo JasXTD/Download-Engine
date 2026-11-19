@@ -221,7 +221,7 @@ pub(crate) fn initialize(conn: &Connection) -> Result<()> {
 }
 
 fn prune(conn: &Connection) -> Result<()> {
-    let now = chrono::Utc::now().timestamp();
+    let now = jiff::Timestamp::now().as_second();
     // Keep only a digest after review/expiry, so receipt retries need no URLs.
     conn.execute(
         "DELETE FROM browser_video_reviews WHERE created < ?1",
@@ -263,7 +263,7 @@ impl Store {
             "Review pending videos in Download Engine first"
         );
         tx.execute("INSERT INTO browser_video_reviews(request_id,fingerprint,data,created) VALUES(?1,?2,?3,?4)",
-            params![id,&fingerprint[..],data,chrono::Utc::now().timestamp()])?;
+            params![id,&fingerprint[..],data,jiff::Timestamp::now().as_second()])?;
         tx.commit()?;
         Ok(true)
     }

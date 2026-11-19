@@ -126,7 +126,7 @@ impl Session {
         Ok(())
     }
     fn check_time(&self) -> Result<()> {
-        let now = chrono::Utc::now().timestamp();
+        let now = jiff::Timestamp::now().as_second();
         ensure!(
             self.expires > now && self.expires <= now + LIFETIME,
             EXPIRED
@@ -139,7 +139,7 @@ impl Session {
             auth::secure_origin(url.as_str())? == self.binding.origin,
             "Browser login cannot redirect to another server. Download this file in the browser."
         );
-        let now = chrono::Utc::now().timestamp();
+        let now = jiff::Timestamp::now().as_second();
         ensure!(
             self.cookies
                 .iter()
@@ -246,7 +246,7 @@ pub(crate) fn enqueue(
         );
         return Ok(id);
     }
-    let now = chrono::Utc::now().timestamp();
+    let now = jiff::Timestamp::now().as_second();
     ensure!(
         !cookies.is_empty() && cookies.len() <= 128,
         "No usable browser login cookies were supplied"
@@ -326,7 +326,7 @@ mod tests {
                 origin: "https://site.test".into(),
                 kind: Kind::Browser,
             },
-            expires: chrono::Utc::now().timestamp() + 3600,
+            expires: jiff::Timestamp::now().as_second() + 3600,
             cookies: vec![Cookie {
                 name: "session".into(),
                 value: "synthetic-secret".into(),

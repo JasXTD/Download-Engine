@@ -144,7 +144,7 @@ fn idle_main_offers_start_download_but_a_schedule_keeps_add_to_queue() {
     app.refresh_and_wait();
     app.open_add();
     text_rect(&settled(&mut app, &ctx, SMALL), "Start download");
-    let now = chrono::Utc::now().timestamp();
+    let now = jiff::Timestamp::now().as_second();
     app.store
         .schedule_queue(MAIN_QUEUE, now + 3600, now)
         .unwrap();
@@ -261,7 +261,7 @@ fn inline_login_saves_through_scheduler_and_windows_vault_before_queueing() {
         let (_temp, mut app, ctx) = fixture();
         // Explicit scheduling holds the authenticated job without a network
         // request; an idle, unscheduled Main queue now starts new files.
-        let now = chrono::Utc::now().timestamp();
+        let now = jiff::Timestamp::now().as_second();
         app.store
             .schedule_queue(MAIN_QUEUE, now + 3600, now)
             .unwrap();

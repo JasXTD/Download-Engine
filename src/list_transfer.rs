@@ -140,7 +140,7 @@ pub fn render(entries: &[Entry], format: Format) -> Result<Vec<u8>> {
                 format: FORMAT,
                 version: VERSION,
                 application: format!("Download Engine {}", env!("CARGO_PKG_VERSION")),
-                exported_utc: chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
+                exported_utc: format!("{:.0}", jiff::Timestamp::now()),
                 downloads: entries,
             })?;
             bytes.push(b'\n');

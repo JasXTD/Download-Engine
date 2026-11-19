@@ -261,7 +261,7 @@ fn key(app: &mut Desktop, ctx: &egui::Context, key: egui::Key, modifiers: egui::
 #[test]
 fn ux_review_enter_in_url_adds_exactly_one_download() {
     let (_temp, mut app, ctx) = fixture();
-    let now = chrono::Utc::now().timestamp();
+    let now = jiff::Timestamp::now().as_second();
     app.store
         .schedule_queue(MAIN_QUEUE, now + 3600, now)
         .unwrap();

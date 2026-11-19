@@ -236,7 +236,7 @@ pub async fn run(
                     job.error = Some("Data quota reached. This server cannot safely resume the file. Raise or disable the quota, then resume to restart this download.".into());
                 }
             } else {
-                retry::failed(&mut job, &error, chrono::Utc::now().timestamp_millis());
+                retry::failed(&mut job, &error, jiff::Timestamp::now().as_millisecond());
             }
         }
     }

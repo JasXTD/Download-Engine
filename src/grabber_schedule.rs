@@ -110,7 +110,7 @@ impl Store {
         now: i64,
     ) -> Result<()> {
         ensure!(
-            first_at > now && chrono::DateTime::from_timestamp(first_at, 0).is_some(),
+            first_at > now && jiff::Timestamp::from_second(first_at).is_ok(),
             "Choose a scan time in the future"
         );
         ensure!(
@@ -413,7 +413,7 @@ fn next_occurrence(due: i64, hours: Option<u16>, now: i64) -> Result<Option<i64>
         .and_then(|n| due.checked_add(n))
         .context("Scan schedule overflow")?;
     ensure!(
-        chrono::DateTime::from_timestamp(next, 0).is_some(),
+        jiff::Timestamp::from_second(next).is_ok(),
         "Scan schedule out of range"
     );
     Ok(Some(next))
@@ -490,7 +490,7 @@ impl Controller {
                 .await
                 .context("Scheduled scan worker stopped unexpectedly")
                 .and_then(|r| r);
-            store.finish_grabber(&active.claim, outcome, chrono::Utc::now().timestamp())?;
+            store.finish_grabber(&active.claim, outcome, jiff::Timestamp::now().as_second())?;
             store.release_grabber(&active.claim)?;
         }
         Ok(())

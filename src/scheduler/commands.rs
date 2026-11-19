@@ -65,15 +65,15 @@ pub(super) fn apply(
             return reconcile_workers(store, active);
         }
         Command::ScheduleQueue(id, at) => {
-            store.schedule_queue(id, *at, chrono::Utc::now().timestamp())?;
+            store.schedule_queue(id, *at, jiff::Timestamp::now().as_second())?;
             return reconcile_workers(store, active);
         }
         Command::ScheduleRecurringQueue(id, schedule) => {
-            store.schedule_recurring_queue(id, schedule, chrono::Utc::now().timestamp())?;
+            store.schedule_recurring_queue(id, schedule, jiff::Timestamp::now().as_second())?;
             return reconcile_workers(store, active);
         }
         Command::EnableSchedule(id) => {
-            store.enable_recurring_schedule(id, chrono::Utc::now().timestamp())?;
+            store.enable_recurring_schedule(id, jiff::Timestamp::now().as_second())?;
             return reconcile_workers(store, active);
         }
         Command::ClearSchedule(id) => {
@@ -373,7 +373,7 @@ pub(super) fn ready_jobs(
     active: &HashMap<String, Active>,
     turn: &mut usize,
 ) -> Result<Vec<(String, Job)>> {
-    ready_jobs_at(store, active, turn, chrono::Utc::now().timestamp_millis())
+    ready_jobs_at(store, active, turn, jiff::Timestamp::now().as_millisecond())
 }
 
 #[cfg(test)]

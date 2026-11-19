@@ -293,7 +293,7 @@ impl Logger {
     }
     fn entry(&self, level: Level, event: Event, details: Details) -> Record {
         Record {
-            time: chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Millis, true),
+            time: format!("{:.3}", jiff::Timestamp::now()),
             version: env!("CARGO_PKG_VERSION").into(),
             component: self.component,
             pid: std::process::id(),
@@ -581,8 +581,12 @@ pub struct Snapshot {
 pub fn read_recent(paths: &AppPaths) -> anyhow::Result<Snapshot> {
     let (mut records, skipped) = read_records(paths)?;
     // Parse offsets as well as UTC. Reverse stable chronological order so events
-    // within the same millisecond retain their append order (newest first).
-    records.sort_by_cached_key(|record| chrono::DateTime::parse_from_rfc3339(&record.time).ok());
+    // with identical timestamps retain their append order (newest first).
+    records.sort_by_cached_key(|record| {
+        crate::time_format::parse_rfc3339(&record.time)
+            .ok()
+            .map(|time| time.sort_key())
+    });
     records.reverse();
     let older = records.len().saturating_sub(RECENT_LIMIT);
     records.truncate(RECENT_LIMIT);
@@ -671,14 +675,14 @@ pub fn export(paths: &AppPaths, destination: &Path) -> anyhow::Result<PathBuf> {
     records.sort_by(|a, b| a.time.cmp(&b.time));
     let report = serde_json::json!({
         "application": "Download Engine", "version": env!("CARGO_PKG_VERSION"),
-        "created_utc": chrono::Utc::now().to_rfc3339(), "os": std::env::consts::OS,
+        "created_utc": jiff::Timestamp::now().to_string(), "os": std::env::consts::OS,
         "architecture": std::env::consts::ARCH, "skipped_entries": skipped,
         "privacy": "Typed event metadata only. No URLs, filenames, paths, cookies, credentials, request bodies or raw exception text. Browser extension logs are separate.",
         "records": records,
     });
     let name = format!(
         "DownloadEngine-diagnostics-{}-{}.json",
-        chrono::Utc::now().format("%Y%m%d-%H%M%S"),
+        jiff::Timestamp::now().strftime("%Y%m%d-%H%M%S"),
         Uuid::new_v4()
     );
     let path = destination.join(name);
@@ -705,7 +709,7 @@ fn valid_record(record: &Record) -> bool {
     // Strings loaded from disk are untrusted too; never export extra fields or
     // secrets injected into nominal timestamp/version fields.
     record.time.len() <= 30
-        && chrono::DateTime::parse_from_rfc3339(&record.time).is_ok()
+        && crate::time_format::parse_rfc3339(&record.time).is_ok()
         && record.version.len() <= 32
         && !record.version.is_empty()
         && record

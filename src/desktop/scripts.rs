@@ -248,10 +248,11 @@ pub(super) fn trigger_name(trigger: &Trigger) -> &'static str {
     }
 }
 pub(super) fn time(at: i64) -> String {
-    chrono::DateTime::from_timestamp(at, 0)
+    jiff::Timestamp::from_second(at)
+        .ok()
         .map(|d| {
-            d.with_timezone(&chrono::Local)
-                .format("%d %b %H:%M:%S")
+            d.to_zoned_datetime(jiff::tz::TimeZone::system())
+                .strftime("%d %b %H:%M:%S")
                 .to_string()
         })
         .unwrap_or_else(|| at.to_string())

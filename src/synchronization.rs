@@ -334,7 +334,7 @@ pub(crate) fn finished(job: &mut Job) {
             state.phase = Phase::Updated;
         }
         if matches!(job.status, Status::Complete | Status::Failed) {
-            state.checked_at = Some(chrono::Utc::now().timestamp());
+            state.checked_at = Some(jiff::Timestamp::now().as_second());
         }
     }
 }

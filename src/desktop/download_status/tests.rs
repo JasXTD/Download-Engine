@@ -664,7 +664,7 @@ fn stop_selected_controls_keep_other_files_and_close_only_selected_status_window
     for entry in ["toolbar", "tasks", "actions", "context", "multiple"] {
         let (_temp, mut app, ctx) = fixture();
         separate_status_input(&ctx);
-        let now = chrono::Utc::now().timestamp();
+        let now = jiff::Timestamp::now().as_second();
         let mut jobs = app.jobs.clone();
         // Serialize setup with dispatch before inserting queued fixtures. Writing
         // the store directly can race a tick which already read a running queue.

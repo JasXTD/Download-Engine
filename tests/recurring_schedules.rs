@@ -1,25 +1,32 @@
 #[path = "../src/desktop/fixture_database.rs"]
 mod fixture_database;
-use chrono::{FixedOffset, Local, LocalResult, NaiveDate, NaiveDateTime, TimeZone, Utc};
 use download_engine::{
     paths::AppPaths,
     queue::MAIN_QUEUE,
     queue_schedule::{EVERY_DAY, RecurringSchedule},
     store::Store,
 };
+use jiff::{
+    civil::DateTime,
+    tz::{TimeZone, offset},
+};
 
 fn utc(value: &str) -> i64 {
-    parse(value).and_utc().timestamp()
+    TimeZone::UTC
+        .to_timestamp(parse(value))
+        .unwrap()
+        .as_second()
 }
-fn parse(value: &str) -> NaiveDateTime {
-    NaiveDateTime::parse_from_str(value, "%Y-%m-%d %H:%M").unwrap()
+fn parse(value: &str) -> DateTime {
+    DateTime::strptime("%Y-%m-%d %H:%M", value).unwrap()
 }
 fn local(value: &str) -> i64 {
-    Local
-        .from_local_datetime(&parse(value))
-        .single()
+    TimeZone::try_system()
         .unwrap()
-        .timestamp()
+        .to_ambiguous_timestamp(parse(value))
+        .unambiguous()
+        .unwrap()
+        .as_second()
 }
 fn setup() -> (tempfile::TempDir, Store) {
     let temp = tempfile::tempdir().unwrap();
@@ -52,7 +59,11 @@ fn recurring_input_rejects_invalid_days_times_and_zero_length_windows() {
         stop_minute: 100,
         enabled: true,
     };
-    assert!(invalid.window_at(&Utc, utc("2026-10-12 00:00")).is_err());
+    assert!(
+        invalid
+            .window_at(&TimeZone::UTC, utc("2026-10-12 00:00"))
+            .is_err()
+    );
 }
 
 #[test]
@@ -66,14 +77,17 @@ fn daily_windows_include_start_exclude_stop_and_resume_on_the_next_day() {
         ("2026-10-13 00:00", true),
     ] {
         assert_eq!(
-            schedule.window_at(&Utc, utc(date)).unwrap().is_some(),
+            schedule
+                .window_at(&TimeZone::UTC, utc(date))
+                .unwrap()
+                .is_some(),
             active,
             "{date}"
         );
     }
     assert_eq!(
         schedule
-            .next_window(&Utc, utc("2026-10-12 07:00"))
+            .next_window(&TimeZone::UTC, utc("2026-10-12 07:00"))
             .unwrap()
             .unwrap()
             .start,
@@ -92,14 +106,17 @@ fn overnight_windows_follow_start_weekdays_across_week_and_year_boundaries() {
         ("2026-10-12 23:00", false),
     ] {
         assert_eq!(
-            sunday.window_at(&Utc, utc(date)).unwrap().is_some(),
+            sunday
+                .window_at(&TimeZone::UTC, utc(date))
+                .unwrap()
+                .is_some(),
             active,
             "{date}"
         );
     }
     assert_eq!(
         sunday
-            .next_window(&Utc, utc("2026-10-12 06:00"))
+            .next_window(&TimeZone::UTC, utc("2026-10-12 06:00"))
             .unwrap()
             .unwrap()
             .start,
@@ -108,7 +125,7 @@ fn overnight_windows_follow_start_weekdays_across_week_and_year_boundaries() {
     let daily = RecurringSchedule::new(EVERY_DAY, "23:00", "07:00").unwrap();
     assert_eq!(
         daily
-            .window_at(&Utc, utc("2027-01-01 01:00"))
+            .window_at(&TimeZone::UTC, utc("2027-01-01 01:00"))
             .unwrap()
             .unwrap()
             .start,
@@ -117,13 +134,13 @@ fn overnight_windows_follow_start_weekdays_across_week_and_year_boundaries() {
     let weekdays = RecurringSchedule::new(0b001_1111, "09:00", "17:00").unwrap();
     assert!(
         weekdays
-            .window_at(&Utc, utc("2026-10-17 10:00"))
+            .window_at(&TimeZone::UTC, utc("2026-10-17 10:00"))
             .unwrap()
             .is_none()
     );
     assert!(
         weekdays
-            .window_at(&Utc, utc("2026-10-19 10:00"))
+            .window_at(&TimeZone::UTC, utc("2026-10-19 10:00"))
             .unwrap()
             .is_some()
     );
@@ -133,60 +150,32 @@ fn overnight_windows_follow_start_weekdays_across_week_and_year_boundaries() {
 fn schedule_follows_the_current_zone_and_clock_instead_of_replaying_missed_windows() {
     let schedule = RecurringSchedule::new(EVERY_DAY, "00:00", "07:00").unwrap();
     let at = utc("2026-10-12 01:00");
-    assert!(schedule.window_at(&Utc, at).unwrap().is_some());
+    assert!(schedule.window_at(&TimeZone::UTC, at).unwrap().is_some());
     assert!(
         schedule
-            .window_at(&FixedOffset::east_opt(8 * 3600).unwrap(), at)
+            .window_at(&TimeZone::fixed(offset(8)), at)
             .unwrap()
             .is_none()
     );
     assert!(
         schedule
-            .window_at(&Utc, utc("2026-11-16 12:00"))
+            .window_at(&TimeZone::UTC, utc("2026-11-16 12:00"))
             .unwrap()
             .is_none()
     );
     // Moving the clock back into a window follows its current eligibility.
-    assert!(schedule.window_at(&Utc, at - 60).unwrap().is_some());
-}
-
-// A deterministic zone fixture with the actual 2026 US Eastern DST transitions.
-// Resolve local time by round-tripping both offsets through the UTC rule.
-#[derive(Clone)]
-struct Eastern2026;
-impl TimeZone for Eastern2026 {
-    type Offset = FixedOffset;
-    fn from_offset(_: &FixedOffset) -> Self {
-        Self
-    }
-    fn offset_from_local_date(&self, date: &NaiveDate) -> LocalResult<FixedOffset> {
-        self.offset_from_local_datetime(&date.and_hms_opt(0, 0, 0).unwrap())
-    }
-    fn offset_from_local_datetime(&self, value: &NaiveDateTime) -> LocalResult<FixedOffset> {
-        let offsets: Vec<_> = [4, 5]
-            .into_iter()
-            .map(|hours| FixedOffset::west_opt(hours * 3600).unwrap())
-            .filter(|offset| self.offset_from_utc_datetime(&(*value - *offset)) == *offset)
-            .collect();
-        match offsets.as_slice() {
-            [] => LocalResult::None,
-            [only] => LocalResult::Single(*only),
-            [first, second] => LocalResult::Ambiguous(*first, *second),
-            _ => unreachable!(),
-        }
-    }
-    fn offset_from_utc_date(&self, date: &NaiveDate) -> FixedOffset {
-        self.offset_from_utc_datetime(&date.and_hms_opt(0, 0, 0).unwrap())
-    }
-    fn offset_from_utc_datetime(&self, value: &NaiveDateTime) -> FixedOffset {
-        let daylight = *value >= parse("2026-03-08 07:00") && *value < parse("2026-11-01 06:00");
-        FixedOffset::west_opt(if daylight { 4 * 3600 } else { 5 * 3600 }).unwrap()
-    }
+    assert!(
+        schedule
+            .window_at(&TimeZone::UTC, at - 60)
+            .unwrap()
+            .is_some()
+    );
 }
 
 #[test]
 fn daylight_saving_gaps_skip_the_whole_window_and_repeats_do_not_restart_it() {
-    let zone = Eastern2026;
+    // Deterministic US Eastern rules, independent of the host and its tz database.
+    let zone = TimeZone::posix("EST5EDT,M3.2.0,M11.1.0").unwrap();
     let missing_start = RecurringSchedule::new(1 << 6, "02:30", "04:00").unwrap();
     assert!(
         missing_start

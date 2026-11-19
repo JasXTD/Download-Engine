@@ -89,7 +89,7 @@ pub(crate) fn network(error: reqwest::Error) -> anyhow::Error {
 pub(crate) fn response(response: &Response) -> Result<()> {
     let status = response.status().as_u16();
     if matches!(status, 408 | 429 | 500 | 502 | 503 | 504) {
-        let now = chrono::Utc::now().timestamp_millis();
+        let now = jiff::Timestamp::now().as_millisecond();
         let not_before = retry_after(response.headers(), now).map_err(|()| anyhow::anyhow!(
             "Server returned HTTP {status} and requested a retry delay longer than 24 hours. Resume later when ready."
         ))?;

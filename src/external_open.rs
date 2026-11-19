@@ -150,7 +150,7 @@ pub(crate) fn initialize(conn: &Connection) -> Result<()> {
 fn prune(conn: &Connection) -> Result<()> {
     conn.execute(
         "DELETE FROM external_open_requests WHERE created < ?1",
-        [chrono::Utc::now().timestamp() - 86400],
+        [jiff::Timestamp::now().as_second() - 86400],
     )?;
     conn.execute("DELETE FROM external_open_requests WHERE data IS NULL AND rowid NOT IN (SELECT rowid FROM external_open_requests ORDER BY rowid DESC LIMIT 64)", [])?;
     Ok(())
@@ -186,7 +186,7 @@ impl Store {
                 "Review the pending torrents in Download Engine first"
             );
             let id = uuid::Uuid::new_v4().to_string();
-            tx.execute("INSERT INTO external_open_requests(id,target_key,data,created) VALUES(?1,?2,?3,?4)", params![id,key,serde_json::to_string(target)?,chrono::Utc::now().timestamp()])?;
+            tx.execute("INSERT INTO external_open_requests(id,target_key,data,created) VALUES(?1,?2,?3,?4)", params![id,key,serde_json::to_string(target)?,jiff::Timestamp::now().as_second()])?;
             result.push(Submission { id, owned: true });
         }
         tx.commit()?;

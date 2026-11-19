@@ -1087,7 +1087,7 @@ impl Desktop {
                     let mut label = torrents::list_status(
                         job,
                         queue_running,
-                        chrono::Utc::now().timestamp_millis(),
+                        jiff::Timestamp::now().as_millisecond(),
                         torrents_on,
                     );
                     if job.status == Status::Complete
@@ -1202,13 +1202,13 @@ impl Desktop {
                 Column::Added => {
                     let date = i64::try_from(job.created)
                         .ok()
-                        .and_then(|t| chrono::DateTime::from_timestamp(t, 0))
-                        .map(|t| t.with_timezone(&chrono::Local));
+                        .and_then(|t| jiff::Timestamp::from_second(t).ok())
+                        .map(|t| t.to_zoned_datetime(jiff::tz::TimeZone::system()));
                     if let Some(date) = date {
-                        cell.label(RichText::new(date.format("%d %b %Y").to_string()).small());
+                        cell.label(RichText::new(date.strftime("%d %b %Y").to_string()).small());
                         if !compact {
                             cell.label(
-                                RichText::new(date.format("%H:%M").to_string())
+                                RichText::new(date.strftime("%H:%M").to_string())
                                     .small()
                                     .color(p.muted),
                             );
@@ -1880,7 +1880,7 @@ impl Desktop {
                                     .iter()
                                     .any(|q| q.id == self.queue_id && q.running)
                                     || self.immediate_downloads.contains(&job.id),
-                                chrono::Utc::now().timestamp_millis(),
+                                jiff::Timestamp::now().as_millisecond(),
                             ))
                             .color(p.status(job.status)),
                         );
@@ -1956,7 +1956,7 @@ impl Desktop {
                                                 .iter()
                                                 .any(|q| q.id == self.queue_id && q.running)
                                                 || self.immediate_downloads.contains(&job.id),
-                                            chrono::Utc::now().timestamp_millis(),
+                                            jiff::Timestamp::now().as_millisecond(),
                                         ),
                                     ),
                                 ],

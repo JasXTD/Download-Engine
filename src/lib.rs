@@ -71,6 +71,7 @@ pub mod connections;
 mod server_filename;
 mod status_requests;
 pub mod table_layout;
+pub mod time_format;
 pub mod transfer_activity;
 
 pub mod browser_login;

@@ -442,7 +442,7 @@ mod tests {
         let session = crate::browser_relay::Session {
             port: 1,
             token: uuid::Uuid::new_v4(),
-            expires: chrono::Utc::now().timestamp() + 60,
+            expires: jiff::Timestamp::now().as_second() + 60,
             page: "https://example.com/watch".into(),
             origins: vec!["https://cdn.example.com".into()],
         };

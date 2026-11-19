@@ -37,7 +37,7 @@ pub(crate) fn initialize(conn: &Connection) -> Result<()> {
     Ok(())
 }
 fn now() -> i64 {
-    chrono::Utc::now().timestamp()
+    jiff::Timestamp::now().as_second()
 }
 fn cleanup(conn: &Connection) -> Result<()> {
     conn.execute("UPDATE browser_recovery SET state='cancelled',candidate=NULL WHERE state IN ('waiting','offered') AND (expires<=?1 OR lease<=?1 OR NOT EXISTS(SELECT 1 FROM jobs WHERE jobs.id=browser_recovery.job))",[now()])?;

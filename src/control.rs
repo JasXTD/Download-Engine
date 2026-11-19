@@ -290,7 +290,7 @@ impl Store {
             )?;
             tx.execute(
                 "INSERT INTO control_requests(id,action,expires,state) VALUES(?1,?2,?3,'pending')",
-                params![id, data, chrono::Utc::now().timestamp() + 30],
+                params![id, data, jiff::Timestamp::now().as_second() + 30],
             )?;
             tx.execute("DELETE FROM control_requests WHERE state NOT IN ('pending','running') AND rowid NOT IN (SELECT rowid FROM control_requests ORDER BY rowid DESC LIMIT 1000)", [])?;
         }
@@ -332,7 +332,7 @@ impl Store {
     pub(crate) fn claim_control(&self) -> Result<Option<(String, Action)>> {
         let mut conn = self.connect()?;
         let tx = conn.transaction_with_behavior(TransactionBehavior::Immediate)?;
-        tx.execute("UPDATE control_requests SET state='expired',error='Command expired before execution' WHERE state='pending' AND expires<=?1", [chrono::Utc::now().timestamp()])?;
+        tx.execute("UPDATE control_requests SET state='expired',error='Command expired before execution' WHERE state='pending' AND expires<=?1", [jiff::Timestamp::now().as_second()])?;
         let row: Option<(String,String)> = tx.query_row("SELECT id,action FROM control_requests WHERE state='pending' ORDER BY rowid LIMIT 1", [], |r| Ok((r.get(0)?,r.get(1)?))).optional()?;
         let Some((id, data)) = row else {
             tx.commit()?;

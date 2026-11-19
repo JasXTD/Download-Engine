@@ -558,10 +558,10 @@ impl Desktop {
                             });
                     }
                     for run in &self.automation.runs {
-                        let date = chrono::DateTime::from_timestamp(run.at, 0)
+                        let date = jiff::Timestamp::from_second(run.at).ok()
                             .map(|d| {
-                                d.with_timezone(&chrono::Local)
-                                    .format("%Y-%m-%d %H:%M:%S")
+                                d.to_zoned_datetime(jiff::tz::TimeZone::system())
+                                    .strftime("%Y-%m-%d %H:%M:%S")
                                     .to_string()
                             })
                             .unwrap_or_else(|| run.at.to_string());
@@ -938,10 +938,10 @@ mod tests {
             success: false,
             message: "The destination queue was removed. Edit this rule.".into(),
         }];
-        let date = chrono::DateTime::from_timestamp(app.automation.runs[0].at, 0)
+        let date = jiff::Timestamp::from_second(app.automation.runs[0].at)
             .unwrap()
-            .with_timezone(&chrono::Local)
-            .format("%Y-%m-%d %H:%M:%S")
+            .to_zoned_datetime(jiff::tz::TimeZone::system())
+            .strftime("%Y-%m-%d %H:%M:%S")
             .to_string();
         for size in [egui::vec2(860.0, 600.0), egui::vec2(1280.0, 860.0)] {
             frame(&mut app, &ctx, size, vec![]);

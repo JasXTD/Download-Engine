@@ -1,5 +1,5 @@
 use anyhow::{Context, Result};
-use chrono::{Local, NaiveDateTime, TimeZone};
+use jiff::{Timestamp, civil::DateTime, tz::TimeZone};
 use std::{collections::HashSet, path::Path};
 
 use crate::{i18n::tr, model::Job, queue_schedule::RecurringSchedule};
@@ -49,7 +49,10 @@ impl DownloadQueue {
         }
         match schedule.active_window(now) {
             Ok(Some(window)) => format!("Running · pauses {}", schedule_label(window.stop)),
-            Ok(None) => match schedule.next_window(&Local, now) {
+            Ok(None) => match TimeZone::try_system()
+                .map_err(anyhow::Error::from)
+                .and_then(|zone| schedule.next_window(&zone, now))
+            {
                 Ok(Some(window)) => format!("Waiting · starts {}", schedule_label(window.start)),
                 Ok(None) => "Waiting for a valid local time".into(),
                 Err(error) => format!("Schedule error: {error}"),
@@ -230,28 +233,52 @@ fn letter(value: &str) -> Option<u8> {
 }
 
 pub fn local_schedule(date: &str, time: &str, now: i64) -> Result<i64> {
-    let value = NaiveDateTime::parse_from_str(
-        &format!("{} {}", date.trim(), time.trim()),
-        "%Y-%m-%d %H:%M",
+    schedule_in_zone(
+        date,
+        time,
+        now,
+        &TimeZone::try_system().context("Cannot determine the local time zone")?,
     )
-    .context("Use date YYYY-MM-DD and time HH:MM (24-hour clock)")?;
-    let instant = Local.from_local_datetime(&value).single()
+}
+
+fn schedule_in_zone(date: &str, time: &str, now: i64, zone: &TimeZone) -> Result<i64> {
+    let value = DateTime::strptime("%Y-%m-%d %H:%M", format!("{} {}", date.trim(), time.trim()))
+        .context("Use date YYYY-MM-DD and time HH:MM (24-hour clock)")?;
+    let instant = zone.to_ambiguous_timestamp(value).unambiguous()
         .context("That local time is ambiguous or unavailable because of a clock change; choose another time")?;
-    anyhow::ensure!(instant.timestamp() > now, "Choose a time in the future");
-    Ok(instant.timestamp())
+    anyhow::ensure!(instant.as_second() > now, "Choose a time in the future");
+    Ok(instant.as_second())
 }
 
 pub fn schedule_label(at: i64) -> String {
-    Local
-        .timestamp_opt(at, 0)
-        .single()
-        .map(|value| value.format("%b %d, %H:%M").to_string())
+    Timestamp::from_second(at)
+        .ok()
+        .map(|value| {
+            value
+                .to_zoned_datetime(TimeZone::system())
+                .strftime("%b %d, %H:%M")
+                .to_string()
+        })
         .unwrap_or_else(|| "Invalid scheduled time".into())
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn one_time_schedules_reject_dst_gaps_and_both_repeated_instants() {
+        let zone = TimeZone::posix("EST5EDT,M3.2.0,M11.1.0").unwrap();
+        for (date, time) in [("2026-03-08", "02:30"), ("2026-11-01", "01:30")] {
+            assert!(schedule_in_zone(date, time, 0, &zone).is_err());
+        }
+        let at = schedule_in_zone("2026-03-08", "03:30", 0, &zone).unwrap();
+        assert_eq!(
+            Timestamp::from_second(at).unwrap().to_string(),
+            "2026-03-08T07:30:00Z"
+        );
+        assert!(schedule_in_zone("2026-03-08", "03:30", at, &zone).is_err());
+    }
 
     const PHOTOS: &str = "https://example.com/photos/img*.jpg";
 

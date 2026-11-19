@@ -195,7 +195,7 @@ fn timed_triggers_coalesce_and_never_overlap() {
     definition.enabled = true;
     definition.trigger = Trigger::Interval { minutes: 1 };
     let definition = s.save_script(&definition).unwrap();
-    let now = chrono::Utc::now().timestamp();
+    let now = jiff::Timestamp::now().as_second();
     s.schedule_scripts(now, false).unwrap();
     assert!(s.script_runs(None).unwrap().is_empty());
     s.schedule_scripts(now + 600, false).unwrap();
@@ -239,7 +239,7 @@ fn completion_trigger_filters_queue_carries_context_and_advances_once() {
         queue: Some("main".into()),
     };
     s.save_script(&definition).unwrap();
-    let now = chrono::Utc::now().timestamp();
+    let now = jiff::Timestamp::now().as_second();
     completed_job(&s, &other.id);
     s.schedule_scripts(now, false).unwrap();
     assert!(s.script_runs(None).unwrap().is_empty());
@@ -416,7 +416,7 @@ fn logs_bound_utf8_and_retention_cascades_without_removing_active_runs() {
 fn wait_run(c: &mut Controller, s: &Store, id: &str, until: impl Fn(&Run, &[Log]) -> bool) -> Run {
     let deadline = std::time::Instant::now() + std::time::Duration::from_secs(25);
     loop {
-        c.tick(s, chrono::Utc::now().timestamp()).unwrap();
+        c.tick(s, jiff::Timestamp::now().as_second()).unwrap();
         let run = s.script_run(id).unwrap();
         let logs = s.script_logs(id).unwrap();
         if until(&run, &logs) {
@@ -569,7 +569,7 @@ fn site_readers_are_lua_only_with_valid_pages_and_never_scheduled() {
     }
     let saved = s.save_script(&reader(&["example.com/watch/*"])).unwrap();
     // Readers run only when a page is opened or tested, never on a schedule.
-    s.schedule_scripts(chrono::Utc::now().timestamp(), true)
+    s.schedule_scripts(jiff::Timestamp::now().as_second(), true)
         .unwrap();
     assert!(s.script_runs(Some(&saved.id)).unwrap().is_empty());
     let automation = s.save_script(&script()).unwrap();

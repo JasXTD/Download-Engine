@@ -426,7 +426,7 @@ impl Store {
         let scope = old
             .as_ref()
             .map_or_else(uuid::Uuid::new_v4, |o| o.key_scope);
-        let now = chrono::Utc::now().timestamp();
+        let now = jiff::Timestamp::now().as_second();
         tx.execute(
             "INSERT INTO extensions(id,data,enabled,installed_at) VALUES(?1,?2,?3,?4)
              ON CONFLICT(id) DO UPDATE SET data=excluded.data",

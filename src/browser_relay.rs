@@ -108,7 +108,7 @@ impl Session {
             "Invalid browser video session"
         );
         validate_scope(&self.page, &self.origins)?;
-        let now = chrono::Utc::now().timestamp();
+        let now = jiff::Timestamp::now().as_second();
         ensure!(
             self.expires > 0 && self.expires <= now + LIFETIME_SECONDS + 60,
             "Invalid browser video session lifetime"
@@ -118,7 +118,7 @@ impl Session {
     pub(crate) fn allows(&self, url: &Url) -> Result<()> {
         self.validate()?;
         ensure!(
-            self.expires > chrono::Utc::now().timestamp(),
+            self.expires > jiff::Timestamp::now().as_second(),
             "Browser video session expired. Open the video page and find videos again."
         );
         ensure!(

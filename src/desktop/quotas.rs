@@ -78,11 +78,11 @@ pub(super) struct Form {
     request: Option<Uuid>,
 }
 pub(super) fn reset_label(at: i64) -> String {
-    chrono::DateTime::from_timestamp(at, 0).map_or_else(
+    jiff::Timestamp::from_second(at).ok().map_or_else(
         || tr("at the next window").into(),
         |date| {
-            date.with_timezone(&chrono::Local)
-                .format("%d %b, %H:%M:%S")
+            date.to_zoned_datetime(jiff::tz::TimeZone::system())
+                .strftime("%d %b, %H:%M:%S")
                 .to_string()
         },
     )
@@ -325,7 +325,7 @@ mod tests {
             }
         );
         app.store
-            .record_quota_bytes_at(1234567, chrono::Utc::now().timestamp())
+            .record_quota_bytes_at(1234567, jiff::Timestamp::now().as_second())
             .unwrap();
         app.open_data_quotas();
         app.data_quotas.as_mut().unwrap().hourly.mib = "2048".into();
@@ -352,11 +352,11 @@ mod tests {
                     hourly: Some(quota::MIN_LIMIT),
                     daily: Some(2 * quota::MIN_LIMIT),
                 },
-                chrono::Utc::now().timestamp(),
+                jiff::Timestamp::now().as_second(),
             )
             .unwrap();
         app.store
-            .record_quota_bytes_at(2 * quota::MIN_LIMIT, chrono::Utc::now().timestamp())
+            .record_quota_bytes_at(2 * quota::MIN_LIMIT, jiff::Timestamp::now().as_second())
             .unwrap();
         for theme in [egui::Theme::Light, egui::Theme::Dark] {
             ctx.set_theme(theme);
@@ -402,12 +402,12 @@ mod tests {
                     hourly: Some(quota::MIN_LIMIT),
                     daily: None,
                 },
-                chrono::Utc::now().timestamp(),
+                jiff::Timestamp::now().as_second(),
             )
             .unwrap();
         app.quota_status = app
             .store
-            .record_quota_bytes_at(quota::MIN_LIMIT, chrono::Utc::now().timestamp())
+            .record_quota_bytes_at(quota::MIN_LIMIT, jiff::Timestamp::now().as_second())
             .unwrap();
         app.limits.global = Some(download_engine::bandwidth::MAX_RATE);
         let label = format!(

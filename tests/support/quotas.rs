@@ -12,7 +12,7 @@ async fn quota_is_shared_by_simultaneous_files_in_different_queues() {
                 hourly: Some(MIN_LIMIT),
                 daily: None,
             },
-            chrono::Utc::now().timestamp(),
+            jiff::Timestamp::now().as_second(),
         )
         .unwrap();
     let queue = store.create_queue("Another queue").unwrap();
@@ -73,7 +73,7 @@ async fn quota_database_write_failure_stops_transfer_without_retrying_or_publish
                 hourly: Some(MIN_LIMIT),
                 daily: None,
             },
-            chrono::Utc::now().timestamp(),
+            jiff::Timestamp::now().as_second(),
         )
         .unwrap();
     let conn = crate::fixture_database::open(store.paths.data.join("queue.sqlite3")).unwrap();
@@ -96,7 +96,7 @@ async fn quota_preserves_range_bytes_across_restart_and_resumes_exactly_after_re
     use download_engine::quota::{HOUR, Limits, MIN_LIMIT};
     let fixture = Fixture::new(4 * MIN_LIMIT as usize, 0, true).await;
     let (_temp, store) = setup();
-    let now = chrono::Utc::now().timestamp();
+    let now = jiff::Timestamp::now().as_second();
     store
         .set_quota_limits_at(
             Limits {
@@ -162,7 +162,7 @@ async fn quota_nonresumable_file_requires_manual_action_and_exact_boundary_can_f
                 hourly: Some(MIN_LIMIT),
                 daily: None,
             },
-            chrono::Utc::now().timestamp(),
+            jiff::Timestamp::now().as_second(),
         )
         .unwrap();
     let held = run(&store, enqueue(&store, &fixture.url)).await;
@@ -178,7 +178,7 @@ async fn quota_nonresumable_file_requires_manual_action_and_exact_boundary_can_f
                 hourly: Some(MIN_LIMIT),
                 daily: None,
             },
-            chrono::Utc::now().timestamp(),
+            jiff::Timestamp::now().as_second(),
         )
         .unwrap();
     let complete = run(&fresh, enqueue(&fresh, &small.url)).await;
@@ -197,7 +197,7 @@ async fn quota_failed_attempt_payload_is_counted_again_on_retry() {
                 hourly: Some(8 * MIN_LIMIT),
                 daily: None,
             },
-            chrono::Utc::now().timestamp(),
+            jiff::Timestamp::now().as_second(),
         )
         .unwrap();
     let first = run(&store, enqueue(&store, &fixture.url)).await;
@@ -241,7 +241,7 @@ async fn quota_scheduler_restart_and_reset_respect_manual_pauses_and_stopped_que
     use download_engine::quota::{HOUR, Limits, MIN_LIMIT};
     let fixture = Fixture::new(256 * 1024, 0, true).await;
     let (_temp, store) = setup();
-    let now = chrono::Utc::now().timestamp();
+    let now = jiff::Timestamp::now().as_second();
     let limits = Limits {
         hourly: Some(MIN_LIMIT),
         daily: None,
@@ -317,7 +317,7 @@ async fn quota_link_check_counts_payload_and_does_not_change_saved_parts_when_bl
     };
     let fixture = Fixture::new(4 * MIN_LIMIT as usize, 0, true).await;
     let (_temp, store) = setup();
-    let now = chrono::Utc::now().timestamp();
+    let now = jiff::Timestamp::now().as_second();
     let limits = Limits {
         hourly: Some(MIN_LIMIT),
         daily: None,

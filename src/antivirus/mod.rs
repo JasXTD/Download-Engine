@@ -654,7 +654,7 @@ fn scan_using(
         report.message = "Scanning was cancelled. Scan again before opening.".into();
         permit = None;
     }
-    report.finished_at = chrono::Utc::now().timestamp();
+    report.finished_at = jiff::Timestamp::now().as_second();
     store.save_antivirus_report(job, settings, &report)?;
     Ok(Outcome { report, permit })
 }

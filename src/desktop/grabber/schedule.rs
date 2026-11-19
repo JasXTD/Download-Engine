@@ -11,10 +11,10 @@ pub(super) struct Form {
 }
 impl Default for Form {
     fn default() -> Self {
-        let next = chrono::Local::now() + chrono::Duration::minutes(5);
+        let next = jiff::ZonedDateTime::now() + jiff::SignedDuration::from_secs(5 * 60);
         Self {
-            date: next.format("%Y-%m-%d").to_string(),
-            time: next.format("%H:%M").to_string(),
+            date: next.strftime("%Y-%m-%d").to_string(),
+            time: next.strftime("%H:%M").to_string(),
             repeat: true,
             hours: 24,
             visible: false,
@@ -56,11 +56,11 @@ impl State {
         {
             if let Some(at) = summary
                 .next_at
-                .and_then(|at| chrono::DateTime::from_timestamp(at, 0))
+                .and_then(|at| jiff::Timestamp::from_second(at).ok())
             {
-                let at = at.with_timezone(&chrono::Local);
-                self.schedule.date = at.format("%Y-%m-%d").to_string();
-                self.schedule.time = at.format("%H:%M").to_string();
+                let at = at.to_zoned_datetime(jiff::tz::TimeZone::system());
+                self.schedule.date = at.strftime("%Y-%m-%d").to_string();
+                self.schedule.time = at.strftime("%H:%M").to_string();
             }
             self.schedule.repeat = summary.every_hours.is_some();
             self.schedule.hours = summary.every_hours.unwrap_or(24);
@@ -313,7 +313,7 @@ mod tests {
     use sha2::{Digest, Sha256};
 
     fn project(app: &mut Desktop) -> Project {
-        let now = chrono::Utc::now().timestamp();
+        let now = jiff::Timestamp::now().as_second();
         app.store
             .schedule_queue(MAIN_QUEUE, now + 3600, now)
             .unwrap();
@@ -378,9 +378,9 @@ mod tests {
         draft.schedule.date = "invalid".into();
         click(&mut app, &ctx, "Save scan schedule");
         assert!(app.grabber.as_ref().unwrap().error.is_some());
-        let next = chrono::Local::now() + chrono::Duration::days(1);
+        let next = jiff::ZonedDateTime::now() + jiff::SignedDuration::from_secs(86400);
         let draft = app.grabber.as_mut().unwrap();
-        draft.schedule.date = next.format("%Y-%m-%d").to_string();
+        draft.schedule.date = next.strftime("%Y-%m-%d").to_string();
         draft.schedule.time = "14:30".into();
         draft.schedule.hours = 12;
         draft.schedule.repeat = true;

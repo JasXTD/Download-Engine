@@ -45,9 +45,9 @@ impl Desktop {
             self.queue_synchronize = false;
         }
         if dialog == Dialog::Schedule {
-            let next = chrono::Local::now() + chrono::Duration::hours(1);
-            self.schedule_date = next.format("%Y-%m-%d").to_string();
-            self.schedule_time = next.format("%H:%M").to_string();
+            let next = jiff::ZonedDateTime::now() + jiff::SignedDuration::from_secs(3600);
+            self.schedule_date = next.strftime("%Y-%m-%d").to_string();
+            self.schedule_time = next.strftime("%H:%M").to_string();
             self.schedule_stop = "07:00".into();
             self.schedule_mode = ScheduleMode::Once;
             self.schedule_days = [true, true, true, true, true, false, false];
@@ -63,11 +63,11 @@ impl Desktop {
                     self.schedule_days = std::array::from_fn(|i| schedule.days & (1 << i) != 0);
                 } else if let Some(at) = queue
                     .scheduled_at
-                    .and_then(|at| chrono::DateTime::from_timestamp(at, 0))
+                    .and_then(|at| jiff::Timestamp::from_second(at).ok())
                 {
-                    let at = at.with_timezone(&chrono::Local);
-                    self.schedule_date = at.format("%Y-%m-%d").to_string();
-                    self.schedule_time = at.format("%H:%M").to_string();
+                    let at = at.to_zoned_datetime(jiff::tz::TimeZone::system());
+                    self.schedule_date = at.strftime("%Y-%m-%d").to_string();
+                    self.schedule_time = at.strftime("%H:%M").to_string();
                 }
             }
         }
@@ -141,7 +141,7 @@ impl Desktop {
                         let at = local_schedule(
                             &self.schedule_date,
                             &self.schedule_time,
-                            chrono::Utc::now().timestamp(),
+                            jiff::Timestamp::now().as_second(),
                         )?;
                         Command::ScheduleQueue(self.queue_id.clone(), at)
                     } else {

@@ -160,7 +160,7 @@ impl Store {
         );
         let mut conn = self.connect()?;
         let tx = conn.transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)?;
-        let now = chrono::Utc::now().timestamp();
+        let now = jiff::Timestamp::now().as_second();
         tx.execute("DELETE FROM hls_previews WHERE created < ?1", [now - 86400])?;
         let existing: Option<Option<String>> = tx
             .query_row(
@@ -193,7 +193,7 @@ impl Store {
         Ok(())
     }
     pub fn next_hls_preview(&self) -> Result<Option<(String, String)>> {
-        Ok(self.connect()?.query_row("SELECT request_id,url FROM hls_previews WHERE url IS NOT NULL AND created >= ?1 ORDER BY created,rowid LIMIT 1",[chrono::Utc::now().timestamp()-86400],|row| Ok((row.get(0)?,row.get(1)?))).optional()?)
+        Ok(self.connect()?.query_row("SELECT request_id,url FROM hls_previews WHERE url IS NOT NULL AND created >= ?1 ORDER BY created,rowid LIMIT 1",[jiff::Timestamp::now().as_second()-86400],|row| Ok((row.get(0)?,row.get(1)?))).optional()?)
     }
     pub fn acknowledge_hls_preview(&self, request_id: &str) -> Result<()> {
         self.connect()?.execute(

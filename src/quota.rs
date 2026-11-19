@@ -156,7 +156,7 @@ fn write(conn: &Connection, status: &Status) -> Result<()> {
 }
 impl Store {
     pub fn quota_status(&self) -> Result<Status> {
-        self.quota_status_at(chrono::Utc::now().timestamp())
+        self.quota_status_at(jiff::Timestamp::now().as_second())
     }
     pub fn quota_status_at(&self, now: i64) -> Result<Status> {
         self.with_connection(|conn| {
@@ -256,8 +256,10 @@ impl Meter {
         self.update(Store::quota_status).await
     }
     pub(crate) async fn set_limits(&self, limits: Limits) -> Result<Status> {
-        self.update(move |store| store.set_quota_limits_at(limits, chrono::Utc::now().timestamp()))
-            .await
+        self.update(move |store| {
+            store.set_quota_limits_at(limits, jiff::Timestamp::now().as_second())
+        })
+        .await
     }
     pub(crate) async fn check(&self) -> Result<()> {
         if self.0.blocked.load(Ordering::Acquire) && self.status().await?.blocked() {
@@ -270,7 +272,7 @@ impl Meter {
             // Window selection follows the serialized accounting order, including
             // a chunk received just before a reset whose commit happens after it.
             self.update(move |store| {
-                store.record_quota_bytes_at(bytes as u64, chrono::Utc::now().timestamp())
+                store.record_quota_bytes_at(bytes as u64, jiff::Timestamp::now().as_second())
             })
             .await?;
         }
@@ -335,7 +337,7 @@ mod tests {
         assert!(reached(&meter.check().await.unwrap_err()));
         // Move to the next accounting window without waiting an hour.
         store
-            .quota_status_at(chrono::Utc::now().timestamp() + HOUR)
+            .quota_status_at(jiff::Timestamp::now().as_second() + HOUR)
             .unwrap();
         meter.check().await.unwrap();
         assert_eq!(meter.status().await.unwrap().hourly_used, 0);

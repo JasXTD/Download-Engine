@@ -71,7 +71,7 @@ struct Recorder {
 }
 
 fn now() -> String {
-    chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Millis, true)
+    format!("{:.3}", jiff::Timestamp::now())
 }
 
 impl Report {
@@ -92,7 +92,7 @@ impl Report {
     }
 
     fn valid(&self) -> bool {
-        let time = |s: &str| s.len() <= 30 && chrono::DateTime::parse_from_rfc3339(s).is_ok();
+        let time = |s: &str| s.len() <= 30 && crate::time_format::parse_rfc3339(s).is_ok();
         self.schema == 1
             && !self.id.is_nil()
             && time(&self.session_started_utc)

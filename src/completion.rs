@@ -297,7 +297,7 @@ mod tests {
             assert_eq!(downloads_pending(&store).unwrap(), pending, "{status:?}");
         }
         j.status = Status::Queued;
-        j.retry.next_at = Some(chrono::Utc::now().timestamp_millis() + 3_600_000);
+        j.retry.next_at = Some(jiff::Timestamp::now().as_millisecond() + 3_600_000);
         store.save(&j).unwrap();
         assert!(downloads_pending(&store).unwrap(), "Waiting for a retry");
         store

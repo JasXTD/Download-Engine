@@ -494,7 +494,7 @@ async fn failures_never_publish_pages_or_follow_untrusted_redirects() {
                 .any(|r| r.contains("/private"))
         );
         if matches!(mode, 3 | 13 | 17) {
-            crate::retry::failed(&mut job, &error, chrono::Utc::now().timestamp_millis());
+            crate::retry::failed(&mut job, &error, jiff::Timestamp::now().as_millisecond());
             assert!(job.retry.next_at.is_some(), "mode {mode}: {error:#}");
         }
     }
@@ -595,7 +595,7 @@ async fn live_public_transfer() {
                 hourly: Some(LIMIT),
                 daily: Some(LIMIT),
             },
-            chrono::Utc::now().timestamp(),
+            jiff::Timestamp::now().as_second(),
         )
         .unwrap();
     let source = tokio::time::timeout(

@@ -359,7 +359,7 @@ async fn data_quota_preserves_ftp_partial_and_counts_prefix_verification_after_r
                 hourly: Some(download_engine::quota::MIN_LIMIT),
                 daily: None,
             },
-            chrono::Utc::now().timestamp(),
+            jiff::Timestamp::now().as_second(),
         )
         .unwrap();
     let partial = run(&store, enqueue(&store, &server)).await;
@@ -373,7 +373,7 @@ async fn data_quota_preserves_ftp_partial_and_counts_prefix_verification_after_r
                 hourly: Some(8 * download_engine::quota::MIN_LIMIT),
                 daily: None,
             },
-            chrono::Utc::now().timestamp(),
+            jiff::Timestamp::now().as_second(),
         )
         .unwrap();
     let complete = run(&store, partial).await;
@@ -386,7 +386,7 @@ async fn queue_start_pause_restart_and_parallel_limit_preserve_ftp_progress() {
     let server = Server::new(Mode::Plain).await;
     server.update(|c| c.delay = Duration::from_millis(20));
     let (_home, store) = setup();
-    let now = chrono::Utc::now().timestamp();
+    let now = jiff::Timestamp::now().as_second();
     store.schedule_queue("main", now + 3600, now).unwrap();
     store.set_queue_limit("main", 1).unwrap();
     let first = enqueue(&store, &server);

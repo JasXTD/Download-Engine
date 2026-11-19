@@ -114,7 +114,7 @@ fn raw_click(app: &mut Desktop, ctx: &egui::Context, position: egui::Pos2) -> Du
 #[test]
 fn video_click_is_acknowledged_once_while_a_two_second_write_is_pending() {
     let (_temp, mut app, ctx) = fixture();
-    let now = chrono::Utc::now().timestamp();
+    let now = jiff::Timestamp::now().as_second();
     app.store
         .schedule_queue(MAIN_QUEUE, now + 3600, now)
         .unwrap();
@@ -176,7 +176,7 @@ fn video_click_is_acknowledged_once_while_a_two_second_write_is_pending() {
 #[test]
 fn failed_async_add_keeps_the_form_and_retry_saves_exactly_once() {
     let (_temp, mut app, _ctx) = fixture();
-    let now = chrono::Utc::now().timestamp();
+    let now = jiff::Timestamp::now().as_second();
     app.store
         .schedule_queue(MAIN_QUEUE, now + 3600, now)
         .unwrap();

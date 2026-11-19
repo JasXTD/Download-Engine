@@ -656,14 +656,12 @@ fn add(store: &Store, queue: &str, count: usize) -> Vec<Job> {
 }
 
 fn schedule_time(value: &str) -> i64 {
-    use chrono::TimeZone;
-    chrono::Local
-        .from_local_datetime(
-            &chrono::NaiveDateTime::parse_from_str(value, "%Y-%m-%d %H:%M").unwrap(),
-        )
-        .single()
+    jiff::tz::TimeZone::try_system()
         .unwrap()
-        .timestamp_millis()
+        .to_ambiguous_timestamp(jiff::civil::DateTime::strptime("%Y-%m-%d %H:%M", value).unwrap())
+        .unambiguous()
+        .unwrap()
+        .as_millisecond()
 }
 
 #[test]
@@ -912,7 +910,7 @@ fn dispatch_respects_order_queue_limits_and_global_cap() {
 fn immediate_start_bypasses_only_the_selected_files_queue_and_preserves_progress() {
     let (_root, store) = setup();
     let queue = store.create_queue("Later").unwrap();
-    let now = chrono::Utc::now().timestamp();
+    let now = jiff::Timestamp::now().as_second();
     store.schedule_queue(&queue.id, now + 3600, now).unwrap();
     let jobs = add(&store, &queue.id, 3);
     let mut target = jobs[1].clone();
@@ -1055,7 +1053,7 @@ fn immediate_start_respects_global_slots_quotas_and_manual_pause() {
     }
     assert!(ready_jobs(&store, &active, &mut 0).unwrap().is_empty());
     active.retain(|id, _| id == &jobs[0].id);
-    store.connect().unwrap().execute("UPDATE data_quotas SET hourly_limit=1048576,hourly_used=1048576,hour_start=?1 WHERE id=1",[chrono::Utc::now().timestamp()]).unwrap();
+    store.connect().unwrap().execute("UPDATE data_quotas SET hourly_limit=1048576,hourly_used=1048576,hour_start=?1 WHERE id=1",[jiff::Timestamp::now().as_second()]).unwrap();
     assert!(ready_jobs(&store, &active, &mut 0).unwrap().is_empty());
     store
         .connect()
@@ -1361,7 +1359,7 @@ fn retry_move_remove_restart_and_schedule_do_not_leave_delayed_work() {
     )
     .unwrap();
     assert_eq!(store.get(&job.id).unwrap().unwrap().retry, job.retry);
-    let due = chrono::Utc::now().timestamp() + 30;
+    let due = jiff::Timestamp::now().as_second() + 30;
     apply(
         &store,
         &mut active,

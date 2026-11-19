@@ -181,7 +181,7 @@ impl Output {
         let path = parent.join(format!(
             "{}-{}-{}",
             host.chars().take(60).collect::<String>(),
-            chrono::Local::now().format("%Y%m%d-%H%M%S"),
+            jiff::ZonedDateTime::now().strftime("%Y%m%d-%H%M%S"),
             uuid::Uuid::new_v4().simple()
         ));
         std::fs::create_dir(&path).context("Cannot create the offline copy folder")?;

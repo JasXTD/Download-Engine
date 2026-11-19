@@ -27,7 +27,7 @@ fn legacy_queue_limit_migration_preserves_jobs_schedules_and_references() {
     let queue = store.create_sync_queue("Scheduled sync").unwrap();
     let recurring = RecurringSchedule::new(127, "23:00", "07:00").unwrap();
     store
-        .schedule_recurring_queue(&queue.id, &recurring, chrono::Utc::now().timestamp())
+        .schedule_recurring_queue(&queue.id, &recurring, jiff::Timestamp::now().as_second())
         .unwrap();
     let mut job = Job::new(
         "https://example.invalid/keep.bin",

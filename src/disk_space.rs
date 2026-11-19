@@ -57,7 +57,9 @@ impl Wait {
     fn new(requirements: Vec<Requirement>) -> Self {
         Self {
             requirements,
-            check_after: chrono::Utc::now().timestamp_millis().saturating_add(30_000),
+            check_after: jiff::Timestamp::now()
+                .as_millisecond()
+                .saturating_add(30_000),
         }
     }
 

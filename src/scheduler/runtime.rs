@@ -530,7 +530,7 @@ impl Runtime {
         }
         if let Err(error) = self
             .scripts
-            .tick(&self.store, chrono::Utc::now().timestamp())
+            .tick(&self.store, jiff::Timestamp::now().as_second())
         {
             self.report(format!("Script automation: {error:#}"));
         }
@@ -560,7 +560,7 @@ impl Runtime {
         }
         if let Err(error) = self
             .grabber
-            .tick(&self.store, chrono::Utc::now().timestamp())
+            .tick(&self.store, jiff::Timestamp::now().as_second())
             .await
         {
             self.report(format!("Scheduled website scan: {error:#}"));
@@ -587,7 +587,7 @@ impl Runtime {
             &self.store,
             &self.active,
             &mut self.queue_turn,
-            chrono::Utc::now().timestamp_millis(),
+            jiff::Timestamp::now().as_millisecond(),
             check_disk,
         ) {
             Ok(jobs) => jobs,

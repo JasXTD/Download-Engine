@@ -217,26 +217,24 @@ fn schedules_are_persistent_one_shot_and_manual_controls_clear_them() {
 
 #[test]
 fn schedule_input_uses_local_time_and_rejects_invalid_dates() {
-    use chrono::{Local, TimeZone, Timelike};
-    let next = (Local::now() + chrono::Duration::days(2))
-        .with_second(0)
+    use jiff::{Timestamp, tz::TimeZone};
+    let next = Timestamp::from_second((Timestamp::now().as_second() / 60 + 2 * 24 * 60) * 60)
         .unwrap()
-        .with_nanosecond(0)
-        .unwrap();
+        .to_zoned_datetime(TimeZone::system());
     let at = local_schedule(
-        &next.format("%Y-%m-%d").to_string(),
-        &next.format("%H:%M").to_string(),
-        Local::now().timestamp(),
+        &next.strftime("%Y-%m-%d").to_string(),
+        &next.strftime("%H:%M").to_string(),
+        Timestamp::now().as_second(),
     )
     .unwrap();
-    assert_eq!(Local.timestamp_opt(at, 0).single().unwrap(), next);
+    assert_eq!(Timestamp::from_second(at).unwrap(), next.timestamp());
     for (date, time) in [
         ("2027-02-30", "10:00"),
         ("tomorrow", "10:00"),
         ("2027-10-20", "25:10"),
         ("2000-01-01", "00:00"),
     ] {
-        assert!(local_schedule(date, time, Local::now().timestamp()).is_err());
+        assert!(local_schedule(date, time, Timestamp::now().as_second()).is_err());
     }
 }
 

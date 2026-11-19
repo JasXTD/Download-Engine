@@ -34,7 +34,7 @@ tempfile = "=3.27.0"
 tokio = { version = "1.53.3", features = ["rt-multi-thread", "macros", "fs", "io-util", "sync", "time", "net"] }
 tokio-util = "0.7"
 uuid = { version = "1", features = ["v4", "serde"] }
-chrono = "0.4"
+jiff = "=1.0.1"
 hyper = { version = "1", features = ["server", "http1"] }
 hyper-util = { version = "0.1", features = ["tokio"] }
 http-body-util = "0.1"

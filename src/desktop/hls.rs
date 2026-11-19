@@ -1557,7 +1557,7 @@ mod tests {
     #[test]
     fn youtube_review_uses_the_title_and_saves_only_the_explicitly_reviewed_choice() {
         let (_temp, mut app, ctx) = fixture();
-        let now = chrono::Utc::now().timestamp();
+        let now = jiff::Timestamp::now().as_second();
         app.store
             .schedule_queue(MAIN_QUEUE, now + 3600, now)
             .unwrap();
@@ -1942,7 +1942,7 @@ mod tests {
     fn choosing_another_quality_invalidates_preview_and_queueing_requires_review() {
         let server = PreviewServer::new();
         let (_temp, mut app, ctx) = fixture();
-        let now = chrono::Utc::now().timestamp();
+        let now = jiff::Timestamp::now().as_second();
         app.store
             .schedule_queue(MAIN_QUEUE, now + 3600, now)
             .unwrap();
@@ -2018,7 +2018,7 @@ mod tests {
     fn audio_selection_clears_review_and_new_quality_restores_its_default() {
         let server = PreviewServer::new();
         let (temp, mut app, ctx) = fixture();
-        let now = chrono::Utc::now().timestamp();
+        let now = jiff::Timestamp::now().as_second();
         app.store
             .schedule_queue(MAIN_QUEUE, now + 3600, now)
             .unwrap();
@@ -2123,7 +2123,7 @@ mod tests {
     #[test]
     fn dash_review_retains_selected_audio_and_requires_explicit_queue_add() {
         let (_temp, mut app, ctx) = fixture();
-        let now = chrono::Utc::now().timestamp();
+        let now = jiff::Timestamp::now().as_second();
         app.store
             .schedule_queue(MAIN_QUEUE, now + 3600, now)
             .unwrap();

@@ -518,7 +518,7 @@ mod tests {
     #[test]
     fn browser_video_review_requires_selection_and_keeps_errors_for_retry() {
         let (_temp, mut app, ctx) = fixture();
-        let now = chrono::Utc::now().timestamp();
+        let now = jiff::Timestamp::now().as_second();
         app.store
             .schedule_queue(MAIN_QUEUE, now + 3600, now)
             .unwrap();

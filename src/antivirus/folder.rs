@@ -204,7 +204,7 @@ pub(super) fn scan_progress(
         report.message = "Torrent scan cancelled. Remaining files were not scanned.".into();
         open = None;
     }
-    report.finished_at = chrono::Utc::now().timestamp();
+    report.finished_at = jiff::Timestamp::now().as_second();
     store.save_antivirus_report(job, settings, &report)?;
     Ok(Outcome {
         report,

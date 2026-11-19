@@ -346,7 +346,7 @@ fn stream_choice_only_opens_quality_preview_and_expired_reviews_cannot_be_used()
     let conn = crate::fixture_database::open(store.paths.data.join("queue.sqlite3")).unwrap();
     conn.execute(
         "UPDATE browser_video_reviews SET created=?1 WHERE request_id=?2",
-        rusqlite::params![chrono::Utc::now().timestamp() - 1801, second],
+        rusqlite::params![jiff::Timestamp::now().as_second() - 1801, second],
     )
     .unwrap();
     assert!(store.take_browser_video_stream(&second, 1).is_err());

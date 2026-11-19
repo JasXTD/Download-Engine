@@ -254,7 +254,7 @@ impl Desktop {
         let (scope, skip_complete) = (draft.scope(), draft.skip_complete);
         let name = format!(
             "DownloadEngine-list-{}.{}",
-            chrono::Local::now().format("%Y-%m-%d"),
+            jiff::ZonedDateTime::now().strftime("%Y-%m-%d"),
             format.extension()
         );
         let filter = match format {

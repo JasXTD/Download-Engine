@@ -390,20 +390,6 @@
       "upstreamSource": "https://crates.io/crates/chardetng/1.0.0"
     },
     {
-      "name": "chrono",
-      "version": "0.4.45",
-      "license": "MIT OR Apache-2.0",
-      "selectedLicense": "MIT OR Apache-2.0",
-      "authors": [],
-      "repository": "https://github.com/chronotope/chrono",
-      "checksum": "1aa79e62e7697b8e29b513a68abacf485adcd1fe8284a4316c5ae868e6633327",
-      "notices": [
-        "rust/chrono-0.4.45/LICENSE.txt"
-      ],
-      "source": null,
-      "upstreamSource": "https://crates.io/crates/chrono/0.4.45"
-    },
-    {
       "name": "clipboard-win",
       "version": "5.4.3",
       "license": "BSL-1.0",
@@ -1966,6 +1952,91 @@
       ],
       "source": null,
       "upstreamSource": "https://crates.io/crates/itoa/1.0.18"
+    },
+    {
+      "name": "jiff",
+      "version": "1.0.1",
+      "license": "Unlicense OR MIT",
+      "selectedLicense": "Unlicense OR MIT",
+      "authors": [
+        "Andrew Gallant <jamslam@gmail.com>"
+      ],
+      "repository": "https://github.com/BurntSushi/jiff",
+      "checksum": "ed5d126d72eb017f10b302e73bdeca446bea405ee449af4d9e7866d6b082d83e",
+      "notices": [
+        "rust/jiff-1.0.1/COPYING",
+        "rust/jiff-1.0.1/LICENSE-MIT"
+      ],
+      "source": null,
+      "upstreamSource": "https://crates.io/crates/jiff/1.0.1"
+    },
+    {
+      "name": "jiff-core",
+      "version": "1.0.1",
+      "license": "Unlicense OR MIT",
+      "selectedLicense": "Unlicense OR MIT",
+      "authors": [
+        "Andrew Gallant <jamslam@gmail.com>"
+      ],
+      "repository": "https://github.com/BurntSushi/jiff",
+      "checksum": "b6b46a105a9874634dd96231021526bf24ca04955a5998c59a9c7666e634b7b8",
+      "notices": [
+        "rust/jiff-core-1.0.1/COPYING",
+        "rust/jiff-core-1.0.1/LICENSE-MIT"
+      ],
+      "source": null,
+      "upstreamSource": "https://crates.io/crates/jiff-core/1.0.1"
+    },
+    {
+      "name": "jiff-static",
+      "version": "1.0.1",
+      "license": "Unlicense OR MIT",
+      "selectedLicense": "Unlicense OR MIT",
+      "authors": [
+        "Andrew Gallant <jamslam@gmail.com>"
+      ],
+      "repository": "https://github.com/BurntSushi/jiff",
+      "checksum": "c0127e9bde3c6130d6169e7d8d68676e4be69c4bf7573c308b6f960a5089c428",
+      "notices": [
+        "rust/jiff-static-1.0.1/COPYING",
+        "rust/jiff-static-1.0.1/LICENSE-MIT"
+      ],
+      "source": null,
+      "upstreamSource": "https://crates.io/crates/jiff-static/1.0.1"
+    },
+    {
+      "name": "jiff-tzdb",
+      "version": "1.0.0",
+      "license": "Unlicense OR MIT",
+      "selectedLicense": "Unlicense OR MIT",
+      "authors": [
+        "Andrew Gallant <jamslam@gmail.com>"
+      ],
+      "repository": "https://github.com/BurntSushi/jiff",
+      "checksum": "12e71a1b68a875a44a33bb7a1dd84392cb77145a3367a552a3cfe6a4f5cf3afc",
+      "notices": [
+        "rust/jiff-tzdb-1.0.0/COPYING",
+        "rust/jiff-tzdb-1.0.0/LICENSE-MIT"
+      ],
+      "source": null,
+      "upstreamSource": "https://crates.io/crates/jiff-tzdb/1.0.0"
+    },
+    {
+      "name": "jiff-tzdb-platform",
+      "version": "1.0.0",
+      "license": "Unlicense OR MIT",
+      "selectedLicense": "Unlicense OR MIT",
+      "authors": [
+        "Andrew Gallant <jamslam@gmail.com>"
+      ],
+      "repository": "https://github.com/BurntSushi/jiff",
+      "checksum": "dc65b284afcfa8f6cf189c7274c805505314a7ab975c60e1f548bff56525420e",
+      "notices": [
+        "rust/jiff-tzdb-platform-1.0.0/COPYING",
+        "rust/jiff-tzdb-platform-1.0.0/LICENSE-MIT"
+      ],
+      "source": null,
+      "upstreamSource": "https://crates.io/crates/jiff-tzdb-platform/1.0.0"
     },
     {
       "name": "jobserver",

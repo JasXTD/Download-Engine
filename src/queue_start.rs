@@ -176,7 +176,7 @@ mod tests {
             } else {
                 MAIN_QUEUE.into()
             };
-            let now = chrono::Utc::now().timestamp();
+            let now = jiff::Timestamp::now().as_second();
             match mode {
                 "scheduled" => store.schedule_queue(&queue, now + 3600, now).unwrap(),
                 "recurring" => store

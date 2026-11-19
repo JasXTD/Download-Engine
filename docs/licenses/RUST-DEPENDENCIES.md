@@ -49,7 +49,6 @@ Download Engine builds a modified copy of librqbit-utp 0.7.0 (bounded packet que
 - **cfg_aliases 0.2.2** — MIT. [LICENSE](rust/cfg_aliases-0.2.2/LICENSE).
 - **cfg-if 1.0.5** — MIT OR Apache-2.0. [LICENSE-APACHE](rust/cfg-if-1.0.5/LICENSE-APACHE), [LICENSE-MIT](rust/cfg-if-1.0.5/LICENSE-MIT).
 - **chardetng 1.0.0** — Apache-2.0 OR MIT. [COPYRIGHT](rust/chardetng-1.0.0/COPYRIGHT), [LICENSE-APACHE](rust/chardetng-1.0.0/LICENSE-APACHE), [LICENSE-MIT](rust/chardetng-1.0.0/LICENSE-MIT).
-- **chrono 0.4.45** — MIT OR Apache-2.0. [LICENSE.txt](rust/chrono-0.4.45/LICENSE.txt).
 - **clipboard-win 5.4.3** — BSL-1.0. [LICENSE-BSL-1.0](rust/clipboard-win-5.4.3/LICENSE-BSL-1.0); [included source](sources/clipboard-win-5.4.3.crate).
 - **codespan-reporting 0.13.1** — Apache-2.0. [LICENSE](rust/codespan-reporting-0.13.1/LICENSE).
 - **color 0.3.3** — Apache-2.0 OR MIT. [LICENSE-APACHE](rust/color-0.3.3/LICENSE-APACHE), [LICENSE-MIT](rust/color-0.3.3/LICENSE-MIT).
@@ -145,6 +144,11 @@ Download Engine builds a modified copy of librqbit-utp 0.7.0 (bounded packet que
 - **ipnet 2.12.2** — MIT OR Apache-2.0. [LICENSE-APACHE](rust/ipnet-2.12.2/LICENSE-APACHE), [LICENSE-MIT](rust/ipnet-2.12.2/LICENSE-MIT).
 - **itertools 0.15.0** — MIT OR Apache-2.0. [LICENSE-APACHE](rust/itertools-0.15.0/LICENSE-APACHE), [LICENSE-MIT](rust/itertools-0.15.0/LICENSE-MIT).
 - **itoa 1.0.18** — MIT OR Apache-2.0. [LICENSE-APACHE](rust/itoa-1.0.18/LICENSE-APACHE), [LICENSE-MIT](rust/itoa-1.0.18/LICENSE-MIT).
+- **jiff 1.0.1** — Unlicense OR MIT. [COPYING](rust/jiff-1.0.1/COPYING), [LICENSE-MIT](rust/jiff-1.0.1/LICENSE-MIT).
+- **jiff-core 1.0.1** — Unlicense OR MIT. [COPYING](rust/jiff-core-1.0.1/COPYING), [LICENSE-MIT](rust/jiff-core-1.0.1/LICENSE-MIT).
+- **jiff-static 1.0.1** — Unlicense OR MIT. [COPYING](rust/jiff-static-1.0.1/COPYING), [LICENSE-MIT](rust/jiff-static-1.0.1/LICENSE-MIT).
+- **jiff-tzdb 1.0.0** — Unlicense OR MIT. [COPYING](rust/jiff-tzdb-1.0.0/COPYING), [LICENSE-MIT](rust/jiff-tzdb-1.0.0/LICENSE-MIT).
+- **jiff-tzdb-platform 1.0.0** — Unlicense OR MIT. [COPYING](rust/jiff-tzdb-platform-1.0.0/COPYING), [LICENSE-MIT](rust/jiff-tzdb-platform-1.0.0/LICENSE-MIT).
 - **jobserver 0.1.35** — MIT OR Apache-2.0. [LICENSE-APACHE](rust/jobserver-0.1.35/LICENSE-APACHE), [LICENSE-MIT](rust/jobserver-0.1.35/LICENSE-MIT).
 - **khronos_api 3.1.0** — Apache-2.0. [LICENSE-Apache-2.0](rust/khronos_api-3.1.0/LICENSE-Apache-2.0); [included source](sources/khronos_api-3.1.0.crate).
 - **kurbo 0.13.1** — Apache-2.0 OR MIT. [LICENSE-APACHE](rust/kurbo-0.13.1/LICENSE-APACHE), [LICENSE-MIT](rust/kurbo-0.13.1/LICENSE-MIT).

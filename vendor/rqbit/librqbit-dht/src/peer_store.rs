@@ -1,4 +1,4 @@
-// Modified by Download Engine: replaced rand and dashmap. See ../../patch.md.
+// Modified by Download Engine: replaced rand, dashmap and chrono. See ../../patch.md.
 use std::{
     collections::{HashMap, VecDeque},
     net::SocketAddr,
@@ -7,7 +7,7 @@ use std::{
 };
 
 use bencode::ByteBufOwned;
-use chrono::{DateTime, Utc};
+use jiff::Timestamp;
 use librqbit_core::{compact_ip::CompactSocketAddr, hash_id::Id20, random};
 use parking_lot::RwLock;
 use serde::{
@@ -29,7 +29,7 @@ struct StoredToken {
 #[derive(Serialize, Deserialize)]
 struct StoredPeer {
     addr: SocketAddr,
-    time: DateTime<Utc>,
+    time: Timestamp,
 }
 
 pub struct PeerStore {
@@ -160,7 +160,7 @@ impl PeerStore {
         match peers.entry(announce.info_hash) {
             Entry::Occupied(mut occ) => {
                 if let Some(s) = occ.get_mut().iter_mut().find(|s| s.addr == addr) {
-                    s.time = Utc::now();
+                    s.time = Timestamp::now();
                     return true;
                 }
                 if peers_len >= self.max_remembered_peers {
@@ -169,7 +169,7 @@ impl PeerStore {
                 }
                 occ.get_mut().push(StoredPeer {
                     addr,
-                    time: Utc::now(),
+                    time: Timestamp::now(),
                 });
             }
             Entry::Vacant(vac) => {
@@ -179,7 +179,7 @@ impl PeerStore {
                 }
                 vac.insert(vec![StoredPeer {
                     addr,
-                    time: Utc::now(),
+                    time: Timestamp::now(),
                 }]);
             }
         }
@@ -215,6 +215,24 @@ impl PeerStore {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn stored_peers_read_existing_rfc3339_and_preserve_timestamp_precision() {
+        for time in [
+            "2026-11-18T00:00:00Z",
+            "2026-11-18T00:00:00.123Z",
+            "2026-11-18T00:00:00.123456789Z",
+        ] {
+            let saved = serde_json::json!({"addr": "8.8.8.8:6881", "time": time});
+            let peer: StoredPeer = serde_json::from_value(saved.clone()).unwrap();
+            assert_eq!(serde_json::to_value(&peer).unwrap(), saved);
+        }
+        let peer: StoredPeer = serde_json::from_value(serde_json::json!({
+            "addr": "8.8.8.8:6881", "time": "2026-11-18T08:00:00.123+08:00"
+        }))
+        .unwrap();
+        assert_eq!(peer.time.to_string(), "2026-11-18T00:00:00.123Z");
+    }
     use std::sync::atomic::Ordering::SeqCst;
 
     /// Close enough to a store with an all-zero id to be accepted.

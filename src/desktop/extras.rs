@@ -1103,7 +1103,7 @@ mod tests {
         assert!(app.store.list().unwrap().is_empty());
         assert!(app.form_error.as_ref().unwrap().contains("64"));
         assert_eq!(app.dialog, Some(Dialog::Add));
-        let now = chrono::Utc::now().timestamp();
+        let now = jiff::Timestamp::now().as_second();
         app.store
             .schedule_queue(MAIN_QUEUE, now + 3600, now)
             .unwrap();
@@ -1301,7 +1301,7 @@ mod tests {
         // A file waiting for its automatic retry keeps the batch open.
         let mut waiting = app.jobs[0].clone();
         waiting.status = Status::Queued;
-        waiting.retry.next_at = Some(chrono::Utc::now().timestamp_millis() + 3_600_000);
+        waiting.retry.next_at = Some(jiff::Timestamp::now().as_millisecond() + 3_600_000);
         let mut waiting = app.store.enqueue(&waiting).unwrap();
         app.interface.completion_sound = true;
         app.extras.sound.record(false);

@@ -187,7 +187,7 @@ async fn transfer_throughput() {
                             hourly: Some(1024 * 1024 * 1024),
                             daily: None,
                         },
-                        chrono::Utc::now().timestamp(),
+                        jiff::Timestamp::now().as_second(),
                     )
                     .unwrap();
             }

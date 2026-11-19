@@ -188,7 +188,7 @@ fn wait_for(mut ready: impl FnMut() -> bool) {
 }
 fn persist(app: &mut Desktop) {
     // Keep action tests deterministic even when Resume wakes an idle Main queue.
-    let now = chrono::Utc::now().timestamp();
+    let now = jiff::Timestamp::now().as_second();
     app.store
         .schedule_queue(MAIN_QUEUE, now + 3600, now)
         .unwrap();

@@ -277,7 +277,7 @@ async fn scheduled_project_discovers_while_queue_paused_then_downloads_only_revi
             },
         )
         .unwrap();
-    let now = chrono::Utc::now().timestamp();
+    let now = jiff::Timestamp::now().as_second();
     // A persisted occurrence that became due while the desktop was closed.
     store
         .set_grabber_schedule(&project, now - 1, None, now - 2)

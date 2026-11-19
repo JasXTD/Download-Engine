@@ -215,7 +215,7 @@ impl State {
                     self.settings()? == project.settings && self.project_name == project.name,
                     tr("Save your project changes before scheduling scans")
                 );
-                let now = chrono::Utc::now().timestamp();
+                let now = jiff::Timestamp::now().as_second();
                 let at = local_schedule(&self.schedule.date, &self.schedule.time, now)?;
                 store.set_grabber_schedule(
                     project,
@@ -1020,7 +1020,7 @@ impl Desktop {
             let conn = crate::desktop::fixture_database::open(
                 self.store.paths.data.join("queue.sqlite3"),
             )?;
-            let at = chrono::Utc::now().timestamp();
+            let at = jiff::Timestamp::now().as_second();
             for file in &draft.report.as_ref().context("Missing file fixture")?.files {
                 let fingerprint = <sha2::Sha256 as sha2::Digest>::digest(file.url.as_bytes());
                 conn.execute("INSERT INTO grabber_pending(id,project_id,fingerprint,data,found_at) VALUES(?1,?2,?3,?4,?5)",

@@ -1304,7 +1304,7 @@ fn link_dialog_validates_drafts_and_cancel_ignores_late_results() {
 #[test]
 fn right_click_and_three_dot_menus_start_only_the_existing_selected_file() {
     for context_menu in [true, false] {
-        let now = chrono::Utc::now().timestamp();
+        let now = jiff::Timestamp::now().as_second();
         // Hold transfers with an explicit schedule and a full quota: the test
         // exercises real UI/scheduler dispatch without making network requests.
         // Configure this before Scheduler::start captures its initial quota
@@ -1600,7 +1600,7 @@ fn retry_details_fit_minimum_window_and_pause_is_actionable() {
     app.jobs[0].status = Status::Queued;
     app.jobs[0].retry = download_engine::retry::State {
         attempts: 3,
-        next_at: Some(chrono::Utc::now().timestamp_millis() + 120000),
+        next_at: Some(jiff::Timestamp::now().as_millisecond() + 120000),
     };
     app.jobs[0].error = Some("Server returned HTTP 503.".into());
     for theme in [egui::Theme::Light, egui::Theme::Dark] {
@@ -1625,7 +1625,7 @@ fn retry_details_fit_minimum_window_and_pause_is_actionable() {
     }
     // Persist the preview item with its queue scheduled: clicking Pause should
     // cancel the delayed retry through the real scheduler.
-    let now = chrono::Utc::now().timestamp();
+    let now = jiff::Timestamp::now().as_second();
     app.store
         .schedule_queue(&app.queue_id, now + 3600, now)
         .unwrap();
@@ -2186,7 +2186,7 @@ fn navigation_preserves_filters_and_queue_reordering_remains_reachable() {
 fn duplicate_preserves_the_original_file_and_requires_fresh_authentication() {
     for authenticated in [false, true] {
         let (_temp, mut app, ctx) = fixture();
-        let now = chrono::Utc::now().timestamp();
+        let now = jiff::Timestamp::now().as_second();
         app.store
             .schedule_queue(&app.queue_id, now + 3600, now)
             .unwrap();

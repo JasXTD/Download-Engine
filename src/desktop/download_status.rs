@@ -1350,14 +1350,14 @@ impl Window {
                     status_label(
                         job,
                         self.queue_running,
-                        chrono::Utc::now().timestamp_millis(),
+                        jiff::Timestamp::now().as_millisecond(),
                     )
                 })
         } else {
             status_label(
                 job,
                 self.queue_running,
-                chrono::Utc::now().timestamp_millis(),
+                jiff::Timestamp::now().as_millisecond(),
             )
         };
 

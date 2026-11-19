@@ -1,4 +1,3 @@
-use chrono::{Local, TimeZone};
 use download_engine::{
     bandwidth::Limiter,
     engine,
@@ -12,6 +11,7 @@ use download_engine::{
     store::Store,
     synchronization::Phase,
 };
+use jiff::tz::TimeZone;
 use std::{
     sync::{Arc, Mutex},
     time::Duration,
@@ -409,13 +409,12 @@ async fn browser_metadata_allows_a_new_size_but_keeps_the_file_type_guard() {
 }
 
 fn local(value: &str) -> i64 {
-    Local
-        .from_local_datetime(
-            &chrono::NaiveDateTime::parse_from_str(value, "%Y-%m-%d %H:%M").unwrap(),
-        )
-        .single()
+    TimeZone::try_system()
         .unwrap()
-        .timestamp()
+        .to_ambiguous_timestamp(jiff::civil::DateTime::strptime("%Y-%m-%d %H:%M", value).unwrap())
+        .unambiguous()
+        .unwrap()
+        .as_second()
 }
 #[tokio::test]
 async fn each_schedule_window_checks_once_even_after_restart_or_reenable() {

@@ -5,7 +5,7 @@ use std::io::Write;
 
 fn write_event(app: &Desktop, event: Event, level: Level, component: Component) -> Record {
     let record = Record {
-        time: chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Millis, true),
+        time: format!("{:.3}", jiff::Timestamp::now()),
         version: "0.1.0".into(),
         component,
         pid: 1,

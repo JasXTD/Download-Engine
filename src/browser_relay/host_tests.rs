@@ -44,7 +44,7 @@ impl Fixture {
         let session = Session {
             port: listener.local_addr().unwrap().port(),
             token: Uuid::new_v4(),
-            expires: chrono::Utc::now().timestamp() + 3600,
+            expires: jiff::Timestamp::now().as_second() + 3600,
             page: "http://127.0.0.1:34567/watch".into(),
             origins: vec!["http://127.0.0.1:34567".into()],
         };
@@ -280,7 +280,7 @@ async fn wrong_capabilities_and_unreviewed_servers_never_reach_browser() {
         assert!(result.is_err() || result.unwrap() == 0);
         assert!(f.commands.try_recv().is_err());
     }
-    f.session.expires = chrono::Utc::now().timestamp() - 1;
+    f.session.expires = jiff::Timestamp::now().as_second() - 1;
     f.session.validate().unwrap(); // Old saved jobs still load and display.
     assert!(f.get(CancellationToken::new()).await.unwrap().is_err());
 }

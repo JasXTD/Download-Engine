@@ -384,7 +384,7 @@ impl Desktop {
                                 if queue.has_schedule() {
                                     ui.label(
                                         RichText::new(
-                                            queue.state_label(chrono::Utc::now().timestamp()),
+                                            queue.state_label(jiff::Timestamp::now().as_second()),
                                         )
                                         .small()
                                         .color(p.blue),

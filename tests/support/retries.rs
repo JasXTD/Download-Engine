@@ -42,7 +42,7 @@ impl Replies {
                 }
                 seen.lock()
                     .unwrap()
-                    .push(chrono::Utc::now().timestamp_millis());
+                    .push(jiff::Timestamp::now().as_millisecond());
                 let failed = requests.fetch_add(1, Ordering::SeqCst) < failures;
                 let (code, headers, body, size) = if failed && truncated {
                     (200, "", "abc", 6)
@@ -106,7 +106,7 @@ async fn completed(store: &Store, id: &str) -> Job {
     })
 }
 async fn beyond(at: i64) {
-    let millis = (at - chrono::Utc::now().timestamp_millis()).max(0) as u64;
+    let millis = (at - jiff::Timestamp::now().as_millisecond()).max(0) as u64;
     tokio::time::sleep(Duration::from_millis(millis + 700)).await;
 }
 
@@ -182,9 +182,9 @@ async fn queue_pause_and_app_restart_preserve_retry_deadline_and_limit() {
     let (stopped, shutdown) = std::sync::mpsc::channel();
     std::thread::spawn(move || {
         drop(scheduler);
-        let _ = stopped.send(chrono::Utc::now().timestamp_millis());
+        let _ = stopped.send(jiff::Timestamp::now().as_millisecond());
     });
-    let remaining = (retry_at - chrono::Utc::now().timestamp_millis()).max(0) as u64;
+    let remaining = (retry_at - jiff::Timestamp::now().as_millisecond()).max(0) as u64;
     let stopped_at = shutdown
         .recv_timeout(Duration::from_millis(remaining))
         .expect("Scheduler shutdown hung or waited for the pending retry");
@@ -301,7 +301,7 @@ async fn http_classification_and_retry_after_apply_to_actual_responses() {
     for status in [408, 429, 500, 502, 503, 504, 401, 403, 404, 410, 501, 507] {
         let fixture = Replies::new(status, "Retry-After: 120\r\n", usize::MAX, false).await;
         let (_temp, store) = setup();
-        let before = chrono::Utc::now().timestamp_millis();
+        let before = jiff::Timestamp::now().as_millisecond();
         let job = run(&store, queued(&store, &fixture.url)).await;
         let transient = matches!(status, 408 | 429 | 500 | 502 | 503 | 504);
         assert_eq!(
@@ -364,7 +364,7 @@ async fn range_http_backoff_counts_one_retry_for_all_segments() {
     let fixture = Fixture::new(8 * 1024 * 1024, 15, false).await;
     let (_temp, store) = setup();
     let job = queued(&store, &fixture.url);
-    let before = chrono::Utc::now().timestamp_millis();
+    let before = jiff::Timestamp::now().as_millisecond();
     let _scheduler = Scheduler::start(store.clone()).unwrap();
     let pending = waiting(&store, &job.id).await;
     assert_eq!(pending.plan.as_ref().unwrap().segments.len(), 4);

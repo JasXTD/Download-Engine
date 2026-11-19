@@ -75,8 +75,14 @@ application.
 | `async-stream` | `TrackerPeers` in `librqbit-tracker-comms/src/tracker_comms.rs` |
 | `serde_with` | Serde's own reading of IP addresses from text |
 | `dashmap` | `HashMap` behind a `parking_lot` lock in `librqbit-dht` |
+| `chrono` | Jiff 1.0.1 `Timestamp` in the DHT peer store; saved timestamps remain RFC3339 strings |
 | `futures` | `futures-util`, under the name `futures`, without default features |
 | `crypto-hash` | `sha1` and `sha2` in `librqbit-sha1-wrapper` |
+
+The DHT peer store reads existing RFC3339 timestamps, including fractional seconds
+and numeric UTC offsets. App and torrent builds use their own lockfiles; standalone
+protocol tests use `vendor/rqbit/Cargo.lock`. Cargo ignores the older lockfiles
+inside individual workspace member directories.
 
 `bitvec`, `indexmap` and `tokio-stream` had no callers. `tracing` no longer uses its default
 features, because nothing here uses its `#[instrument]` macro. The `sha1-crypto-hash` feature

@@ -23,12 +23,8 @@ struct Entry {
 }
 impl Entry {
     fn new(record: Record) -> Self {
-        let time = chrono::DateTime::parse_from_rfc3339(&record.time)
-            .map(|date| {
-                date.with_timezone(&chrono::Local)
-                    .format("%d %b %Y %H:%M:%S%.3f")
-                    .to_string()
-            })
+        let time = download_engine::time_format::parse_rfc3339(&record.time)
+            .map(|date| date.display_in(jiff::tz::TimeZone::system()))
             .unwrap_or_else(|_| record.time.clone());
         let mut text = String::new();
         let mut spans = Vec::new();

@@ -74,7 +74,7 @@ pub fn serve(page: String, origins: Vec<String>, output: &mut impl io::Write) ->
         let session = Session {
             port: listener.local_addr()?.port(),
             token: Uuid::new_v4(),
-            expires: chrono::Utc::now().timestamp() + LIFETIME_SECONDS,
+            expires: jiff::Timestamp::now().as_second() + LIFETIME_SECONDS,
             page,
             origins,
         };

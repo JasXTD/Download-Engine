@@ -1237,7 +1237,7 @@ async fn altered_completed_segments_are_rejected_on_resume_and_restart_discards_
     assert_eq!(failed.status, Status::Failed);
     assert!(failed.error.as_deref().unwrap().contains("segment changed"));
     assert!(failed.saved_path.is_none());
-    let now = chrono::Utc::now().timestamp();
+    let now = jiff::Timestamp::now().as_second();
     store.schedule_queue(MAIN_QUEUE, now + 3600, now).unwrap();
     let scheduler = download_engine::scheduler::Scheduler::start(store.clone()).unwrap();
     scheduler
@@ -1287,7 +1287,7 @@ async fn hls_payload_obeys_shared_quota_and_restarts_only_the_incomplete_segment
                 hourly: Some(1024 * 1024),
                 daily: None,
             },
-            chrono::Utc::now().timestamp(),
+            jiff::Timestamp::now().as_second(),
         )
         .unwrap();
     let job = enqueue(&store, &playlist(&server, "/index.m3u8").await);
@@ -1309,7 +1309,7 @@ async fn hls_payload_obeys_shared_quota_and_restarts_only_the_incomplete_segment
     store
         .set_quota_limits_at(
             download_engine::quota::Limits::default(),
-            chrono::Utc::now().timestamp(),
+            jiff::Timestamp::now().as_second(),
         )
         .unwrap();
     let saved = run(&store, held).await;

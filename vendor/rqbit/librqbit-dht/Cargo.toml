@@ -9,7 +9,7 @@
 # will likely look very different (and much more reasonable).
 # See Cargo.toml.orig for the original contents.
 
-# Modified by Download Engine: removed the example, which contacts public DHT servers, and small dependencies. See ../patch.md.
+# Modified by Download Engine: removed the public-network example, replaced small dependencies and migrated timestamps to Jiff. See ../patch.md.
 
 [package]
 edition = "2024"
@@ -47,8 +47,8 @@ package = "librqbit-buffers"
 [dependencies.bytes]
 version = "1"
 
-[dependencies.chrono]
-version = "0.4"
+[dependencies.jiff]
+version = "=1.0.1"
 features = ["serde"]
 
 [dependencies.clone_to_owned]

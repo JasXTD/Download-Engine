@@ -1,5 +1,5 @@
-//! "Start with Windows" through the per-user Run key; no elevation is needed.
-//! The Run value is the only source of truth for the setting. This copy's data
+//! "Start with Windows" through the per-user Run key, or the MSIX StartupTask.
+//! Neither needs elevation. Windows is the source of truth. This copy's data
 //! folder records which executable it registered, so a moved copy can repair
 //! its own entry. Another copy's entry changes only when the user turns
 //! startup on here, which makes this copy the one that starts.
@@ -10,7 +10,7 @@ use std::{
     time::{Duration, Instant},
 };
 
-/// Shared by every copy, so at most one Download Engine starts with Windows.
+/// Shared by unpackaged copies. MSIX uses its separately managed startup task.
 /// Keeps the pre-2.0 name: older copies and Task Manager's on/off state use this
 /// value, and Windows shows the program's own description instead.
 pub const VALUE: &str = "XDownloader";
@@ -19,6 +19,10 @@ pub const ARGUMENT: &str = "--autostart";
 
 /// One named startup value, so tests never need the real Run key.
 pub trait Registry {
+    /// Only the classic Run entry needs an executable path saved for move repair.
+    fn tracks_executable(&self) -> bool {
+        true
+    }
     fn command(&self) -> Result<Option<String>>;
     fn set_command(&self, command: &str) -> Result<()>;
     fn remove_command(&self) -> Result<()>;
@@ -176,7 +180,9 @@ impl Settings {
     /// Loads the choices and repairs this copy's entry after a move. Returns an
     /// error message for the notice area when a needed repair failed.
     pub fn load(store: &Store) -> (Self, Option<String>) {
-        let (registry, executable) = environment();
+        Self::load_from(store, environment())
+    }
+    fn load_from(store: &Store, (registry, executable): Environment) -> (Self, Option<String>) {
         let mut notice = None;
         let preferences = store.startup_preferences().unwrap_or_else(|error| {
             notice = Some(tf!("Cannot check Windows startup: {error}", error = error));
@@ -189,7 +195,9 @@ impl Settings {
             start_hidden: preferences.start_hidden,
             checked: Instant::now(),
         };
-        if let Ok(executable) = &settings.executable {
+        if settings.registry.tracks_executable()
+            && let Ok(executable) = &settings.executable
+        {
             let result = repair(
                 settings.registry.as_ref(),
                 executable,
@@ -254,12 +262,14 @@ impl Settings {
             let mut preferences = store.startup_preferences()?;
             if enabled {
                 enable(self.registry.as_ref(), executable)?;
-                preferences.registered = Some(executable.clone());
             } else {
                 disable(self.registry.as_ref(), executable)?;
-                preferences.registered = None;
             }
-            store.save_startup_preferences(&preferences)
+            if self.registry.tracks_executable() {
+                preferences.registered = enabled.then(|| executable.clone());
+                store.save_startup_preferences(&preferences)?;
+            }
+            Ok(())
         })();
         // The page always shows what Windows will actually do, also after a failure.
         self.refresh();
@@ -307,10 +317,79 @@ fn environment() -> Environment {
         );
     }
     #[cfg(windows)]
-    let registry: Box<dyn Registry> = Box::new(WindowsRun::current_user());
+    let registry: Box<dyn Registry> = if download_engine::windows_package::is_packaged() {
+        Box::new(PackageStartup)
+    } else {
+        Box::new(WindowsRun::current_user())
+    };
     #[cfg(not(windows))]
     let registry: Box<dyn Registry> = Box::new(Unavailable);
     (registry, current_executable())
+}
+
+// Package registration follows Store upgrades and is removed by Windows on
+// uninstall. It must not rewrite the ordinary installer's shared Run value.
+#[cfg(all(windows, not(test)))]
+struct PackageStartup;
+
+#[cfg(all(windows, not(test)))]
+impl PackageStartup {
+    fn task() -> Result<windows::ApplicationModel::StartupTask> {
+        Ok(
+            windows::ApplicationModel::StartupTask::GetAsync(&windows_core::HSTRING::from(
+                download_engine::windows_package::STARTUP_TASK,
+            ))?
+            .join()?,
+        )
+    }
+}
+
+#[cfg(all(windows, not(test)))]
+impl Registry for PackageStartup {
+    fn tracks_executable(&self) -> bool {
+        false
+    }
+    fn command(&self) -> Result<Option<String>> {
+        use windows::ApplicationModel::StartupTaskState;
+        let state = Self::task()?.State()?;
+        if state == StartupTaskState::Disabled {
+            Ok(None)
+        } else {
+            Ok(Some(command(&std::env::current_exe()?)?))
+        }
+    }
+
+    fn set_command(&self, value: &str) -> Result<()> {
+        use windows::ApplicationModel::StartupTaskState;
+        ensure!(
+            value == command(&std::env::current_exe()?)?,
+            "Unexpected startup command"
+        );
+        let state = Self::task()?.RequestEnableAsync()?.join()?;
+        ensure!(
+            state == StartupTaskState::Enabled || state == StartupTaskState::EnabledByPolicy,
+            "Windows has disabled this startup task. Enable Download Engine in Windows Settings > Apps > Startup, or contact your administrator"
+        );
+        Ok(())
+    }
+
+    fn remove_command(&self) -> Result<()> {
+        Self::task()?.Disable()?;
+        Ok(())
+    }
+
+    fn approved(&self) -> Result<Option<bool>> {
+        use windows::ApplicationModel::StartupTaskState;
+        let state = Self::task()?.State()?;
+        Ok(Some(
+            state == StartupTaskState::Enabled || state == StartupTaskState::EnabledByPolicy,
+        ))
+    }
+
+    fn remove_approval(&self) -> Result<()> {
+        // Never override Task Manager or policy for an MSIX startup task.
+        Ok(())
+    }
 }
 
 #[cfg(not(test))]
@@ -340,6 +419,7 @@ impl Registry for Unavailable {
 pub struct Memory {
     command: std::cell::RefCell<Option<String>>,
     approval: std::cell::Cell<Option<bool>>,
+    system_managed: bool,
 }
 #[cfg(all(not(test), feature = "screenshot"))]
 impl Memory {
@@ -369,6 +449,9 @@ impl Memory {
 }
 #[cfg(any(test, feature = "screenshot"))]
 impl Registry for Memory {
+    fn tracks_executable(&self) -> bool {
+        !self.system_managed
+    }
     fn command(&self) -> Result<Option<String>> {
         Ok(self.command.borrow().clone())
     }
@@ -800,6 +883,30 @@ mod tests {
         assert_eq!(settings.state(), Ok(&State::OtherCopy(other)));
         settings.set_enabled(&store, true).unwrap();
         assert_eq!(settings.state(), Ok(&State::On));
+    }
+
+    #[test]
+    fn package_startup_keeps_the_classic_installers_move_repair_record() {
+        let (root, store) = store();
+        let classic = StartupPreferences {
+            registered: Some(exe(root.path(), "standalone")),
+            start_hidden: false,
+        };
+        store.save_startup_preferences(&classic).unwrap();
+        let packaged = exe(root.path(), "packaged");
+        let task = Memory {
+            system_managed: true,
+            ..Memory::default()
+        };
+        task.set_command(&command(&packaged).unwrap()).unwrap();
+        let (mut settings, notice) = Settings::load_from(&store, (Box::new(task), Ok(packaged)));
+        assert!(notice.is_none() && settings.enabled());
+        assert_eq!(store.startup_preferences().unwrap(), classic);
+        for enabled in [false, true] {
+            settings.set_enabled(&store, enabled).unwrap();
+            assert_eq!(settings.enabled(), enabled);
+            assert_eq!(store.startup_preferences().unwrap(), classic);
+        }
     }
 
     #[cfg(windows)]

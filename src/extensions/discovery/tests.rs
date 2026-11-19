@@ -199,3 +199,29 @@ fn rejects_symbolic_links_and_fifos_without_reading_their_targets() {
     symlink(&root, &alias).unwrap();
     assert!(scan(&alias).is_err());
 }
+
+#[cfg(windows)]
+#[test]
+fn only_bundled_msix_files_allow_read_only_hard_links() {
+    let temp = tempfile::tempdir().unwrap();
+    let immutable = temp.path().join("package-plugins");
+    let mutable = temp.path().join("custom-plugins");
+    fs::create_dir(&immutable).unwrap();
+    fs::create_dir(&mutable).unwrap();
+    let bytes = package("sample.linked", "1.0.0");
+    let source = write(&immutable, "sample", &bytes);
+    let alias = mutable.join("sample.de-extension.json");
+    fs::hard_link(&source, &alias).unwrap();
+    let mut file = read_windows_file(&source, Some(&immutable)).unwrap();
+    let mut loaded = Vec::new();
+    file.read_to_end(&mut loaded).unwrap();
+    assert_eq!(loaded, bytes);
+    assert!(read_windows_file(&source, None).is_err());
+    assert!(read_windows_file(&alias, Some(&immutable)).is_err());
+    assert!(read_windows_file(&immutable, Some(&immutable)).is_err());
+    assert_eq!(
+        fs::read(&source).unwrap(),
+        bytes,
+        "Discovery must never modify shared payload files"
+    );
+}

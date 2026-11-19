@@ -253,6 +253,7 @@ Source: "{#SourceRoot}\THIRD-PARTY-NOTICES.md"; DestDir: "{app}"; Flags: ignorev
 Source: "{#SourceRoot}\docs\licenses\*"; DestDir: "{app}\docs\licenses"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "{#SourceRoot}\docs\github-release.md"; DestDir: "{app}\docs"; Flags: ignoreversion
 Source: "{#SourceRoot}\docs\reference.md"; DestDir: "{app}\docs"; Flags: ignoreversion
+Source: "{#SourceRoot}\docs\msix.md"; DestDir: "{app}\docs"; Flags: ignoreversion
 Source: "{#SourceRoot}\docs\mega.md"; DestDir: "{app}\docs"; Flags: ignoreversion
 Source: "{#SourceRoot}\docs\wetransfer.md"; DestDir: "{app}\docs"; Flags: ignoreversion
 Source: "{#SourceRoot}\docs\images\*"; DestDir: "{app}\docs\images"; Flags: ignoreversion recursesubdirs createallsubdirs

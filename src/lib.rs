@@ -40,6 +40,7 @@ pub mod twitch;
 pub mod updates;
 pub mod website_grabber;
 pub mod wetransfer;
+pub mod windows_package;
 
 pub mod queue;
 pub mod queue_schedule;

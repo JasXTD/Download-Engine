@@ -196,6 +196,10 @@ for browser integration; the browser extension does not download on its own.
 - Every desktop package includes its native **FFmpeg**, with matching source and license notices.
   There is no Android package.
 
+Microsoft Store packaging is a separate [MSIX build target](docs/msix.md). The Inno Setup
+installer and portable ZIP remain available. A locally built Store-upload MSIX is unsigned;
+Microsoft signs it after certification. Store publication is not implied by this build target.
+
 ### Upgrade an existing copy
 
 Close Download Engine through **Tasks → Exit** before upgrading, and stop a separately started CLI

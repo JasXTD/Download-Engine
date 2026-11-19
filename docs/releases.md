@@ -187,6 +187,13 @@ For a focused packaging check, pass `--languages en,zh-CN,ar`. Each selected
 language still checks every bundled browser locale, the Extensions guide and all
 hash-pinned FFmpeg files. Omit the option to test every installer language.
 
+## Microsoft Store MSIX
+
+Keep the Inno Setup and portable outputs. `scripts/Build-MSIX.ps1` adds a separate
+Store-upload package using the public Partner Center identity, existing Windows SDK
+and clean portable payload. See [MSIX packaging and validation](msix.md) for the
+signing distinction, compatibility changes and installation test checklist.
+
 ## Windows memory checks
 
 Run the UI lifecycle check alone so other tests cannot distort its process counters:

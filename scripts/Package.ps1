@@ -116,6 +116,7 @@ try {
         Copy-Item -LiteralPath (Join-Path $workspaceRoot 'docs\lua-provider-core.md') -Destination (Join-Path $stage 'docs')
         Copy-Item -LiteralPath (Join-Path $workspaceRoot 'docs\lua-provider-lab.md') -Destination (Join-Path $stage 'docs')
         Copy-Item -LiteralPath (Join-Path $workspaceRoot 'docs\releases.md') -Destination (Join-Path $stage 'docs')
+        Copy-Item -LiteralPath (Join-Path $workspaceRoot 'docs\msix.md') -Destination (Join-Path $stage 'docs')
         Copy-Item -LiteralPath (Join-Path $workspaceRoot 'docs\localization.md') -Destination (Join-Path $stage 'docs')
         Copy-Item -LiteralPath (Join-Path $workspaceRoot 'docs\locales') -Destination (Join-Path $stage 'docs') -Recurse
         Copy-Item -LiteralPath (Join-Path $workspaceRoot 'docs\licenses') -Destination (Join-Path $stage 'docs') -Recurse

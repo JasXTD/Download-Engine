@@ -9,6 +9,8 @@ struct RegistrationChange {
 
 pub struct BrowserSetup {
     root: PathBuf,
+    manifest_directory: PathBuf,
+    host_program: PathBuf,
     // Every installed/portable copy uses the same per-user registration lock.
     lock_directory: PathBuf,
     registry_prefix: String,
@@ -19,11 +21,16 @@ impl BrowserSetup {
             .parent()
             .context("Missing application folder")?
             .to_owned();
-        let lock_directory =
-            PathBuf::from(std::env::var_os("LOCALAPPDATA").context("LOCALAPPDATA is unavailable")?)
-                .join("IDM_EX");
+        let local_app_data =
+            PathBuf::from(std::env::var_os("LOCALAPPDATA").context("LOCALAPPDATA is unavailable")?);
+        let family = crate::windows_package::family_name()?;
+        let (manifest_directory, host_program) =
+            crate::windows_package::browser_locations(&root, &local_app_data, family.as_deref());
+        let lock_directory = local_app_data.join("IDM_EX");
         Ok(Self {
             root,
+            manifest_directory,
+            host_program,
             lock_directory,
             registry_prefix: "Software".into(),
         })
@@ -39,11 +46,12 @@ impl BrowserSetup {
             .then(|| unpacked_extension_id(&folder))
     }
     fn manifest_path(&self, browser: Browser) -> PathBuf {
-        self.root
+        self.manifest_directory
             .join(format!("native-download-engine-{}.json", browser.slug()))
     }
     fn legacy_manifest_path(&self, browser: Browser) -> PathBuf {
-        self.root.join(format!("native-{}.json", browser.slug()))
+        self.manifest_directory
+            .join(format!("native-{}.json", browser.slug()))
     }
     fn registry_key(&self, browser: Browser) -> String {
         format!(
@@ -114,7 +122,7 @@ impl BrowserSetup {
             ensure!(
                 manifest.name == HOST_NAME
                     && manifest.transport == "stdio"
-                    && same_path(&manifest.path, &self.root.join(HOST_PROGRAM))
+                    && same_path(&manifest.path, &self.host_program)
                     && manifest.path.is_file(),
                 "Host manifest or executable needs repair"
             );
@@ -138,6 +146,12 @@ impl BrowserSetup {
             "Keep de.exe and de-host.exe together. Use the packaged application"
         );
         let _lock = self.lock()?;
+        ensure!(
+            self.host_program.is_file(),
+            "The browser host entry point is unavailable. Check Download Engine's App execution aliases in Windows Settings"
+        );
+        fs::create_dir_all(&self.manifest_directory)
+            .context("Cannot create the browser connection folder")?;
         self.register_locked(browser, &id)
     }
     // Both identities belong to one connection. Commit or restore both manifests
@@ -185,7 +199,7 @@ impl BrowserSetup {
                 manifest: HostManifest {
                     name: name.into(),
                     description: HOST_DESCRIPTION.into(),
-                    path: self.root.join(HOST_PROGRAM),
+                    path: self.host_program.clone(),
                     transport: "stdio".into(),
                     allowed_origins: if browser == Browser::Firefox {
                         vec![]
@@ -265,7 +279,7 @@ impl BrowserSetup {
     /// The old identity remains a separate alias for extensions not yet updated.
     /// Other copies and unrecognized manifests are never adopted or overwritten.
     pub fn migrate_legacy_host(&self) -> Result<Vec<Browser>> {
-        let host = self.root.join(HOST_PROGRAM);
+        let host = self.host_program.clone();
         let manifests = Browser::ALL.iter().any(|&browser| {
             self.manifest_path(browser).is_file() || self.legacy_manifest_path(browser).is_file()
         });
@@ -360,7 +374,7 @@ impl BrowserSetup {
     fn write_manifest_bytes(&self, path: &Path, data: &[u8]) -> Result<()> {
         // Replacing the directory entry avoids truncating a preexisting linked file.
         let temporary = self
-            .root
+            .manifest_directory
             .join(format!(".native-{}.tmp", uuid::Uuid::new_v4()));
         let write_result = (|| -> Result<()> {
             let mut file = fs::OpenOptions::new()
@@ -577,6 +591,8 @@ mod tests {
             }
             Self {
                 setup: BrowserSetup {
+                    manifest_directory: root.clone(),
+                    host_program: root.join(HOST_PROGRAM),
                     root,
                     lock_directory: temp.path().join("locks"),
                     registry_prefix: format!(r"Software\IDM_EX\Tests\{}", uuid::Uuid::new_v4()),
@@ -591,6 +607,57 @@ mod tests {
         }
     }
     const ID: &str = "abcdefghijklmnopabcdefghijklmnop";
+
+    #[test]
+    fn packaged_connections_use_writable_manifests_and_a_stable_host_alias() {
+        let mut fixture = Fixture::new();
+        let writable = fixture._temp.path().join("Local app data");
+        fs::create_dir(&writable).unwrap();
+        fixture.setup.manifest_directory = writable.join("Browser/package_family");
+        fixture.setup.host_program = writable.join("download-engine-host.exe");
+        fs::write(&fixture.setup.host_program, b"alias fixture").unwrap();
+        let setup = &fixture.setup;
+        for browser in Browser::ALL {
+            setup
+                .register(browser, if browser == Browser::Firefox { "" } else { ID })
+                .unwrap();
+            let manifest: HostManifest =
+                serde_json::from_slice(&fs::read(setup.manifest_path(browser)).unwrap()).unwrap();
+            assert_eq!(manifest.path, setup.host_program);
+            assert!(matches!(
+                setup.status(browser).unwrap(),
+                RegistrationStatus::Registered { .. }
+            ));
+            assert!(
+                !setup
+                    .root
+                    .join(format!("native-download-engine-{}.json", browser.slug()))
+                    .exists()
+            );
+        }
+        assert!(setup.migrate_legacy_host().unwrap().is_empty());
+        for browser in Browser::ALL {
+            assert!(setup.unregister(browser).unwrap());
+            assert_eq!(setup.status(browser).unwrap(), RegistrationStatus::Missing);
+        }
+        assert_eq!(
+            fs::read_dir(&setup.root).unwrap().count(),
+            2,
+            "Nothing is written into the read-only package layout"
+        );
+    }
+
+    #[test]
+    fn missing_package_alias_does_not_register_a_broken_connection() {
+        let mut fixture = Fixture::new();
+        fixture.setup.host_program = fixture._temp.path().join("disabled-alias.exe");
+        assert!(fixture.setup.register(Browser::Chrome, ID).is_err());
+        assert_eq!(
+            fixture.setup.status(Browser::Chrome).unwrap(),
+            RegistrationStatus::Missing
+        );
+    }
+
     fn seed_legacy(setup: &BrowserSetup, browser: Browser, program: &str) {
         let manifest = HostManifest {
             name: LEGACY_HOST_NAME.into(),

@@ -131,7 +131,12 @@ impl Desktop {
                     }
                 });
                 if !available {
-                    ui.label(RichText::new(tr("No new packages. Add a .de-extension.json file here, then Refresh.")).small().color(p.muted));
+                    let message = if download_engine::windows_package::is_packaged() {
+                        tr("Store app folders are read-only. Use Install from file for custom extensions.")
+                    } else {
+                        tr("No new packages. Add a .de-extension.json file here, then Refresh.")
+                    };
+                    ui.label(RichText::new(message).small().color(p.muted));
                 } else {
                     ui.label(RichText::new(tr("Review permissions before installing or updating.")).small().color(p.muted));
                 }

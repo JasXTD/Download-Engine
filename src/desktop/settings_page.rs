@@ -893,6 +893,9 @@ impl Desktop {
                 Ok(State::Missing(_)) => tr(
                     "Download Engine is set to start a missing program. Turn on to use this copy.",
                 ),
+                Ok(State::Blocked) if download_engine::windows_package::is_packaged() => {
+                    tr("Enable Download Engine in Windows Settings > Apps > Startup.")
+                }
                 Ok(State::Blocked) => tr("Turned off in Task Manager. Turn on to allow it again."),
                 Ok(State::On | State::Off) => {
                     tr("Open Download Engine when you sign in to Windows.")
@@ -922,14 +925,20 @@ impl Desktop {
                 });
             });
             section(ui, p, tr("Tray & notifications"), |ui| {
-                toggle(
-                    ui,
-                    p,
-                    tr("Check for updates on launch"),
-                    tr("Check GitHub when Download Engine opens. You choose whether to update."),
-                    "\u{e895}",
-                    &mut state.interface.check_updates_on_launch,
-                );
+                if download_engine::windows_package::is_packaged() {
+                    ui.label(tr("Microsoft Store manages updates for this installation."));
+                } else {
+                    toggle(
+                        ui,
+                        p,
+                        tr("Check for updates on launch"),
+                        tr(
+                            "Check GitHub when Download Engine opens. You choose whether to update.",
+                        ),
+                        "\u{e895}",
+                        &mut state.interface.check_updates_on_launch,
+                    );
+                }
                 ui.add_enabled_ui(
                     self.tray_available() || state.behavior.close_to_tray,
                     |ui| {

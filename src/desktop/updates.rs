@@ -90,7 +90,9 @@ impl State {
 impl Desktop {
     /// Called once by the desktop entry point, independently of Windows startup.
     pub fn check_updates_on_launch(&mut self, ctx: &egui::Context) {
-        if !self.interface.check_updates_on_launch {
+        if download_engine::windows_package::is_packaged()
+            || !self.interface.check_updates_on_launch
+        {
             return;
         }
         // Native UI captures use synthetic release results and never contact GitHub.
@@ -154,6 +156,10 @@ impl Desktop {
     }
 
     pub(super) fn updates_dialog(&mut self, ctx: &egui::Context, p: Palette) {
+        if download_engine::windows_package::is_packaged() {
+            self.store_updates_dialog(ctx, p, download_engine::windows_package::open_store_updates);
+            return;
+        }
         let state = self.extras.update_check.get_or_insert_with(State::default);
         state.poll();
         if state.task.is_none() && state.release.is_none() && state.error.is_none() {
@@ -242,6 +248,42 @@ impl Desktop {
             self.dialog = None;
         } else if retry {
             state.start(self.store.clone(), ctx.clone());
+        }
+    }
+
+    fn store_updates_dialog(
+        &mut self,
+        ctx: &egui::Context,
+        p: Palette,
+        open_store: impl FnOnce() -> anyhow::Result<()>,
+    ) {
+        let mut close = false;
+        let response = form_dialog::modal("check-updates", p).show(ctx, |ui| {
+            close = form_dialog::header(
+                ui,
+                tr("Check for updates"),
+                "Download Engine",
+                form_dialog::Icon::Download,
+                p,
+                true,
+            );
+            ui.label(tr("Microsoft Store manages updates for this installation."));
+            ui.horizontal(|ui| {
+                ui.label(tr("Installed version"));
+                ui.strong(env!("CARGO_PKG_VERSION"));
+            });
+            ui.add_space(10.0);
+            form_dialog::controls(ui, |ui| {
+                if form_dialog::primary_button(ui, tr("Open Microsoft Store")).clicked()
+                    && let Err(error) = open_store()
+                {
+                    self.notice = Some(Notice::error(error.to_string()));
+                }
+            });
+        });
+        if close || response.should_close() {
+            self.extras.update_check = None;
+            self.dialog = None;
         }
     }
 }
@@ -488,6 +530,93 @@ mod tests {
                     );
                     assert!(app.dialog.is_none() && app.extras.update_check.is_none());
                 }
+            }
+        }
+    }
+
+    #[test]
+    fn store_dialog_fits_opens_store_and_preserves_downloads_without_github_worker() {
+        for dark in [false, true] {
+            for size in [egui::vec2(860.0, 600.0), egui::vec2(1280.0, 860.0)] {
+                let (_temp, mut app, ctx) = fixture();
+                app.interface.appearance = if dark {
+                    Appearance::Dark
+                } else {
+                    Appearance::Light
+                };
+                app.configure_appearance(&ctx);
+                let selected = app.selected.clone();
+                let jobs = app.jobs.len();
+                app.open_updates();
+                let launches = std::cell::Cell::new(0);
+                let render = |app: &mut Desktop, events| {
+                    let mut output = ctx.run_ui(
+                        egui::RawInput {
+                            screen_rect: Some(egui::Rect::from_min_size(egui::Pos2::ZERO, size)),
+                            events,
+                            ..Default::default()
+                        },
+                        |ui| {
+                            app.store_updates_dialog(
+                                ui.ctx(),
+                                Palette::for_context(ui.ctx()),
+                                || {
+                                    launches.set(launches.get() + 1);
+                                    Ok(())
+                                },
+                            )
+                        },
+                    );
+                    // Match the existing headless harness: no GPU consumes these.
+                    output.textures_delta.clear();
+                    output
+                };
+                render(&mut app, vec![]);
+                let output = render(&mut app, vec![]);
+                for label in [
+                    "Check for updates",
+                    "Microsoft Store manages updates for this installation.",
+                    "Installed version",
+                    "Open Microsoft Store",
+                ] {
+                    assert!(
+                        egui::Rect::from_min_size(egui::Pos2::ZERO, size)
+                            .contains_rect(text_rect(&output, label)),
+                        "{label}"
+                    );
+                }
+                let pos = text_rect(&output, "Open Microsoft Store").center();
+                assert_eq!(launches.get(), 0);
+                for pressed in [true, false] {
+                    render(
+                        &mut app,
+                        vec![
+                            egui::Event::PointerMoved(pos),
+                            egui::Event::PointerButton {
+                                pos,
+                                button: egui::PointerButton::Primary,
+                                pressed,
+                                modifiers: egui::Modifiers::NONE,
+                            },
+                        ],
+                    );
+                }
+                assert_eq!(launches.get(), 1);
+                assert!(app.extras.update_check.as_ref().unwrap().task.is_none());
+                assert!(app.extras.launch_update_check.is_none());
+                assert_eq!(app.selected, selected);
+                assert_eq!(app.jobs.len(), jobs);
+                render(
+                    &mut app,
+                    vec![egui::Event::Key {
+                        key: egui::Key::Escape,
+                        physical_key: None,
+                        pressed: true,
+                        repeat: false,
+                        modifiers: egui::Modifiers::NONE,
+                    }],
+                );
+                assert!(app.dialog.is_none() && app.extras.update_check.is_none());
             }
         }
     }

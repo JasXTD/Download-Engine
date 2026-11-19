@@ -203,7 +203,16 @@ fn open_directory(path: &Path) -> std::io::Result<File> {
 }
 
 fn read_file(_directory: &File, path: &Path) -> Result<File> {
-    #[cfg(not(unix))]
+    #[cfg(windows)]
+    {
+        let packaged_plugins = if crate::windows_package::family_name()?.is_some() {
+            Some(directory()?)
+        } else {
+            None
+        };
+        read_windows_file(path, packaged_plugins.as_deref())
+    }
+    #[cfg(not(any(unix, windows)))]
     {
         crate::download_file::read_part_sync(path)
     }
@@ -236,6 +245,19 @@ fn read_file(_directory: &File, path: &Path) -> Result<File> {
             "Package must be a regular file without links"
         );
         Ok(file)
+    }
+}
+
+#[cfg(windows)]
+fn read_windows_file(path: &Path, packaged_plugins: Option<&Path>) -> Result<File> {
+    if packaged_plugins.is_some_and(|root| path.parent() == Some(root)) {
+        // Windows may deduplicate immutable MSIX payloads with hard links. This
+        // exception is read-only and confined to this process's bundled folder;
+        // reparse points, file type, size, parsing and permission review remain
+        // guarded. Mutable/custom plugin folders still reject hard links.
+        crate::download_file::read_completed(path)
+    } else {
+        crate::download_file::read_part_sync(path)
     }
 }
 

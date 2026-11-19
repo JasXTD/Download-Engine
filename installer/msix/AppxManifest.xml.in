@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Package xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10"
+         xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10"
+         xmlns:uap3="http://schemas.microsoft.com/appx/manifest/uap/windows10/3"
+         xmlns:uap5="http://schemas.microsoft.com/appx/manifest/uap/windows10/5"
+         xmlns:uap10="http://schemas.microsoft.com/appx/manifest/uap/windows10/10"
+         xmlns:desktop="http://schemas.microsoft.com/appx/manifest/desktop/windows10"
+         xmlns:desktop6="http://schemas.microsoft.com/appx/manifest/desktop/windows10/6"
+         xmlns:virtualization="http://schemas.microsoft.com/appx/manifest/virtualization/windows10"
+         xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
+         IgnorableNamespaces="uap uap3 uap5 uap10 desktop desktop6 virtualization rescap">
+  <Identity Name="{{NAME}}" Publisher="{{PUBLISHER}}" Version="{{VERSION}}" ProcessorArchitecture="x64" />
+  <Properties>
+    <DisplayName>{{DISPLAY_NAME}}</DisplayName>
+    <PublisherDisplayName>{{PUBLISHER_DISPLAY_NAME}}</PublisherDisplayName>
+    <Description>A desktop download manager with browser integration, queues and optional torrents.</Description>
+    <Logo>StoreAssets\StoreLogo.png</Logo>
+    <!-- Windows 10 fallback. Windows 11 uses the narrower exclusions below.
+         Browsers must see the native-host registrations and shared profile. -->
+    <desktop6:RegistryWriteVirtualization>disabled</desktop6:RegistryWriteVirtualization>
+    <desktop6:FileSystemWriteVirtualization>disabled</desktop6:FileSystemWriteVirtualization>
+    <virtualization:FileSystemWriteVirtualization>
+      <virtualization:ExcludedDirectories>
+        <virtualization:ExcludedDirectory>$(KnownFolder:LocalAppData)\Download Engine</virtualization:ExcludedDirectory>
+        <virtualization:ExcludedDirectory>$(KnownFolder:LocalAppData)\IDM_EX</virtualization:ExcludedDirectory>
+      </virtualization:ExcludedDirectories>
+    </virtualization:FileSystemWriteVirtualization>
+    <virtualization:RegistryWriteVirtualization>
+      <virtualization:ExcludedKeys>
+        <virtualization:ExcludedKey>HKEY_CURRENT_USER\Software\Google\Chrome\NativeMessagingHosts\com.xetro.downloadengine</virtualization:ExcludedKey>
+        <virtualization:ExcludedKey>HKEY_CURRENT_USER\Software\Microsoft\Edge\NativeMessagingHosts\com.xetro.downloadengine</virtualization:ExcludedKey>
+        <virtualization:ExcludedKey>HKEY_CURRENT_USER\Software\Chromium\NativeMessagingHosts\com.xetro.downloadengine</virtualization:ExcludedKey>
+        <virtualization:ExcludedKey>HKEY_CURRENT_USER\Software\Mozilla\NativeMessagingHosts\com.xetro.downloadengine</virtualization:ExcludedKey>
+      </virtualization:ExcludedKeys>
+    </virtualization:RegistryWriteVirtualization>
+  </Properties>
+  <Resources><Resource Language="en-US" /></Resources>
+  <Dependencies>
+    <TargetDeviceFamily Name="Windows.Desktop" MinVersion="10.0.19041.0" MaxVersionTested="10.0.26100.0" />
+    <!-- Our MSVC-built binaries import VCRUNTIME140.dll. The Store supplies
+         and services Microsoft's desktop runtime alongside this package. -->
+    <PackageDependency Name="Microsoft.VCLibs.140.00.UWPDesktop" MinVersion="14.0.30704.0" Publisher="CN=Microsoft Corporation, O=Microsoft Corporation, L=Redmond, S=Washington, C=US" />
+  </Dependencies>
+  <Applications>
+    <Application Id="DownloadEngine" Executable="de.exe" uap10:RuntimeBehavior="packagedClassicApp" uap10:TrustLevel="mediumIL" uap10:SupportsMultipleInstances="true">
+      <uap:VisualElements DisplayName="{{DISPLAY_NAME}}" Description="Download Engine"
+                          Square150x150Logo="StoreAssets\Square150x150Logo.png"
+                          Square44x44Logo="StoreAssets\Square44x44Logo.png" BackgroundColor="transparent" />
+      <Extensions>
+        <uap:Extension Category="windows.fileTypeAssociation">
+          <uap3:FileTypeAssociation Name="torrent" Parameters="--open &quot;%1&quot;">
+            <uap:DisplayName>Torrent file</uap:DisplayName>
+            <uap:SupportedFileTypes><uap:FileType>.torrent</uap:FileType></uap:SupportedFileTypes>
+          </uap3:FileTypeAssociation>
+        </uap:Extension>
+        <uap3:Extension Category="windows.protocol">
+          <uap3:Protocol Name="magnet" Parameters="--open &quot;%1&quot;" />
+        </uap3:Extension>
+        <desktop:Extension Category="windows.startupTask" Executable="de.exe" EntryPoint="Windows.FullTrustApplication" uap10:Parameters="--autostart">
+          <desktop:StartupTask TaskId="DownloadEngineStartup" Enabled="false" DisplayName="Download Engine" />
+        </desktop:Extension>
+        <!-- A package-specific alias survives versioned WindowsApps path changes.
+             Browsers launch it with inherited stdin/stdout for native messaging. -->
+        <uap5:Extension Category="windows.appExecutionAlias" Executable="de-host.exe" EntryPoint="Windows.FullTrustApplication">
+          <uap5:AppExecutionAlias uap10:Subsystem="console">
+            <uap5:ExecutionAlias Alias="download-engine-host.exe" />
+          </uap5:AppExecutionAlias>
+        </uap5:Extension>
+      </Extensions>
+    </Application>
+  </Applications>
+  <Capabilities>
+    <rescap:Capability Name="runFullTrust" />
+    <rescap:Capability Name="unvirtualizedResources" />
+  </Capabilities>
+</Package>

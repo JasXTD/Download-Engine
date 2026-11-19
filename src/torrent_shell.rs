@@ -17,6 +17,18 @@ pub enum Action {
     Defaults,
 }
 pub fn apply(action: Action) -> Result<Status> {
+    if crate::windows_package::is_packaged() {
+        // MSIX owns these declarations, including upgrade/uninstall cleanup.
+        // Never overwrite the separately installed copy's registry entries.
+        match action {
+            Action::Refresh => {}
+            Action::Register | Action::Defaults => open_defaults()?,
+            Action::Remove => anyhow::bail!(
+                "Manage torrent associations in Windows Default Apps; package registration is removed when the app is uninstalled"
+            ),
+        }
+        return Ok(Status::ThisCopy);
+    }
     let registration = Registration::new(std::env::current_exe()?);
     match action {
         Action::Refresh => {}
@@ -195,32 +207,11 @@ impl Registration {
     }
 }
 
-#[cfg(windows)]
 fn open_defaults() -> Result<()> {
-    use windows_sys::Win32::UI::Shell::ShellExecuteW;
-    let uri: Vec<u16> = "ms-settings:defaultapps?registeredAppUser=Download%20Engine"
-        .encode_utf16()
-        .chain(Some(0))
-        .collect();
-    let result = unsafe {
-        ShellExecuteW(
-            std::ptr::null_mut(),
-            std::ptr::null(),
-            uri.as_ptr(),
-            std::ptr::null(),
-            std::ptr::null(),
-            1,
-        )
-    };
-    ensure!(
-        result as isize > 32,
-        "Windows Default Apps could not be opened"
-    );
-    Ok(())
-}
-#[cfg(not(windows))]
-fn open_defaults() -> Result<()> {
-    anyhow::bail!("Windows integration is only available on Windows")
+    crate::windows_package::open_system_page(
+        "ms-settings:defaultapps?registeredAppUser=Download%20Engine",
+    )
+    .context("Windows Default Apps could not be opened")
 }
 
 #[cfg(windows)]

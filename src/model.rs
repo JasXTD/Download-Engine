@@ -147,8 +147,13 @@ pub struct Job {
     /// Queued files continue after reset. Paused, non-resumable files need review.
     #[serde(default)]
     pub quota_waiting: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub disk_wait: Option<crate::disk_space::Wait>,
     pub downloaded: u64,
     pub total: Option<u64>,
+    /// Digest of a whole HTTP response, recorded only after EOF and a successful disk sync.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub received_sha256: Option<String>,
     pub plan: Option<Plan>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub provider: Option<crate::provider::State>,
@@ -175,8 +180,33 @@ pub struct Job {
     pub created: u64,
 }
 impl Job {
+    pub fn supports_resume(&self) -> bool {
+        self.received_sha256.is_some()
+            || self.plan.is_some()
+            || self.hls.is_some()
+            || self.ftp.is_some()
+            || self.torrent.is_some()
+    }
+
     pub fn validate_persisted(&self) -> Result<()> {
         validate_job_id(&self.id)?;
+        if let Some(hash) = &self.received_sha256 {
+            ensure!(
+                hash.len() == 64
+                    && hash.bytes().all(|b| b.is_ascii_hexdigit())
+                    && self.total == Some(self.downloaded)
+                    && self.plan.is_none()
+                    && self.ftp.is_none()
+                    && self.hls.is_none()
+                    && self.torrent.is_none()
+                    && !crate::mega::is_url(&self.url)
+                    && self
+                        .provider
+                        .as_ref()
+                        .is_none_or(|p| p.plan.is_some() && p.media.is_none()),
+                "Invalid saved HTTP completion checkpoint. Restart this download."
+            );
+        }
         if let Some(torrent) = &self.torrent {
             torrent.validate(&self.url)?;
             ensure!(
@@ -317,8 +347,10 @@ impl Job {
             directory,
             status: Status::Queued,
             quota_waiting: false,
+            disk_wait: None,
             downloaded: 0,
             total: None,
+            received_sha256: None,
             plan: None,
             provider: None,
             hls: None,

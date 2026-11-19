@@ -67,6 +67,9 @@ pub(super) async fn transfer_with(
     job.server_name_pending = false;
     job.ftp.as_mut().unwrap().metadata = Some(metadata.clone());
     store.save(job)?;
+    if let Some(total) = job.total {
+        crate::disk_space::check_transfer(job, root, total, false)?;
+    }
     // SIZE/MDTM are not strong validators. An expected publisher checksum makes
     // REST safe because final publication requires that exact SHA-256. Otherwise
     // compare the entire saved prefix during this same RETR before appending.

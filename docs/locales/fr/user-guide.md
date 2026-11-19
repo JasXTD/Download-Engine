@@ -24,6 +24,8 @@ PNG / JPEG · jusqu’à 16 Mio et 16 mégapixels. Copie dans ce profil.
 
 ## Téléchargements et récupération
 
+Une fois l’espace disque suffisant, les téléchargements qui peuvent reprendre redémarrent selon les réglages de la file. Les téléchargements suspendus manuellement restent en pause. Déposez `SHA256SUMS` dans la fenêtre pour examiner les correspondances dans la file active et choisir les fichiers terminés à vérifier. Dans la fenêtre de fin d’un torrent, **Vérifier les fichiers enregistrés** lance le contrôle hors ligne. Certaines pièces partagées avec des fichiers ignorés peuvent être impossibles à vérifier.
+
 ### Téléchargements et récupération
 
 Double-cliquez sur un téléchargement pour voir progression, vitesse et temps restant. Pause et Arrêter conservent les données. Démarrer immédiatement donne la priorité aux fichiers choisis. La reprise dépend du serveur et de la concordance des données. Actualisez un lien expiré dans le menu contextuel. Effacer les terminés supprime seulement l’historique, pas les fichiers. Tâches → Exporter la liste… enregistre vos téléchargements dans un fichier, pour une sauvegarde ou un autre PC. Tâches → Importer une liste… montre les nouveautés avant de les ajouter ; les liens déjà présents sont ignorés et les nouveaux téléchargements restent en pause. Affichage → Zone de dépôt flottante affiche une petite zone qui reste au-dessus des autres fenêtres ; déposez-y des liens pour les télécharger, même quand Download Engine est dans la zone de notification.

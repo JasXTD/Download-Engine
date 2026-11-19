@@ -777,6 +777,7 @@ fn event_label(event: Event) -> &'static str {
         Event::DownloadCompleted => tr("Download completed"),
         Event::DownloadPaused => tr("Download paused"),
         Event::DownloadRetryScheduled => tr("Download retry scheduled"),
+        Event::DownloadDiskHeld => tr("Waiting for disk space"),
         Event::DownloadQuotaHeld => tr("Download waiting for quota"),
         Event::DownloadFailed => tr("Download failed"),
         Event::DownloadStateSaveFailed => tr("Could not save download state"),

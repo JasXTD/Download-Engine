@@ -596,6 +596,7 @@ impl Desktop {
             Some(Dialog::AntivirusSettings) => self.antivirus_settings_dialog(&ctx, p),
             Some(Dialog::AntivirusResult) => self.antivirus_result_dialog(&ctx, p),
             Some(Dialog::AntivirusScan) => self.antivirus_scan_dialog(&ctx, p),
+            Some(Dialog::ChecksumBatch) => self.checksum_batch_dialog(&ctx, p),
             Some(Dialog::Checksum) => self.checksum_dialog(&ctx, p),
             Some(Dialog::Columns) => self.columns_dialog(&ctx, p),
             Some(Dialog::Add) => self.add_dialog(&ctx, p),
@@ -1730,10 +1731,7 @@ impl Desktop {
                 self.open_authentication(job);
                 ui.close();
             }
-            if (job.plan.is_some()
-                || job.hls.is_some()
-                || job.ftp.is_some()
-                || job.torrent.is_some())
+            if job.supports_resume()
                 && ui
                     .button(tr("Restart"))
                     .on_hover_text(if job.hls.is_some() {

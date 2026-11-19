@@ -801,13 +801,16 @@ impl Desktop {
                     .unwrap_or_else(|| tr("Download status — Removed download").into())
             };
             // A torrent's details hold a piece map and a list, so its window starts taller.
-            let initial_size = if is_complete {
-                [520.0, 310.0]
-            } else if window.job.as_ref().is_some_and(|job| job.torrent.is_some()) {
-                [702.0, 640.0]
-            } else {
-                [702.0, 495.0]
-            };
+            let initial_size =
+                if is_complete && window.job.as_ref().is_some_and(|job| job.torrent.is_some()) {
+                    [520.0, 365.0]
+                } else if is_complete {
+                    [520.0, 310.0]
+                } else if window.job.as_ref().is_some_and(|job| job.torrent.is_some()) {
+                    [702.0, 640.0]
+                } else {
+                    [702.0, 495.0]
+                };
             window.torrents_on = self.torrents.settings.enabled;
             let prev_close_on_complete = window.close_on_complete;
             ctx.show_viewport_immediate(
@@ -902,6 +905,17 @@ impl Desktop {
         };
         for outgoing in std::mem::take(&mut window.torrent.outbox) {
             let sent = match outgoing {
+                Outgoing::VerifySaved => {
+                    let store = self.store.clone();
+                    let snapshot = job.clone();
+                    checksums::Reader::start(self.background_io.context.clone(), move |cancel| {
+                        download_engine::torrent::verify_saved(&store, &snapshot, &cancel)
+                    })
+                    .map(|reader| {
+                        window.torrent.message = None;
+                        window.torrent.verification = Some(reader);
+                    })
+                }
                 Outgoing::Files(chosen) => self
                     .scheduler
                     .send(Command::KeepTorrentFiles {
@@ -1303,6 +1317,10 @@ impl Window {
             }
         });
 
+        if job.torrent.is_some() {
+            ui.horizontal(|ui| self.verify_saved_button(ui));
+            self.torrent_message(ui, p);
+        }
         ui.add_space(3.0);
         ui.square_checkbox(
             &mut self.close_on_complete,
@@ -1429,10 +1447,7 @@ impl Window {
                     );
                     ui.add_space(12.0);
                     ui.label(RichText::new(tr("Resume")).small().color(p.muted));
-                    let supported = job.plan.is_some()
-                        || job.hls.is_some()
-                        || job.ftp.is_some()
-                        || job.torrent.is_some();
+                    let supported = job.supports_resume();
                     ui.label(
                         RichText::new(if supported {
                             tr("Supported")

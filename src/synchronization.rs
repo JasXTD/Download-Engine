@@ -228,6 +228,7 @@ pub(crate) async fn check(
     job.downloaded = 0;
     job.total = None;
     job.integrity.actual = None;
+    job.received_sha256 = None;
     // Browser size / ETag describe the old version. Preserve its MIME guard and
     // the user's expected SHA-256, but allow a new version to have a new size.
     job.expected_file = None;
@@ -320,6 +321,7 @@ pub(crate) async fn reuse_unchanged(
 /// a conditional check of the previous URL or a discarded download plan.
 pub(crate) fn restarting(job: &mut Job) {
     job.remote = None;
+    job.received_sha256 = None;
     if let Some(state) = &mut job.synchronization {
         state.phase = Phase::Updating;
         job.saved_path = None;

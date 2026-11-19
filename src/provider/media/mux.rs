@@ -123,7 +123,11 @@ pub(super) async fn finish(
     );
     plan.output_budget()?.include(processed_size)?;
     let max_output = budget::mux_limit(processed_size)?;
-    budget::check_space(&job.directory, max_output)?;
+    budget::check_space(
+        &job.directory,
+        crate::disk_space::Location::Destination,
+        max_output,
+    )?;
     job.downloaded = processed_size;
     job.total = Some(processed_size);
     store.checkpoint(job).await?;

@@ -77,6 +77,7 @@ impl Store {
         job.status = Status::Queued;
         job.retry = crate::retry::State::default();
         job.quota_waiting = false;
+        job.disk_wait = None;
         job.error = None;
         tx.execute(
             "UPDATE jobs SET data=?1 WHERE id=?2",

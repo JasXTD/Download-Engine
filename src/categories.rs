@@ -241,6 +241,8 @@ impl Store {
                 .download_folders()?
                 .destination(&self.paths.downloads, &job.name);
         }
+        #[cfg(windows)]
+        crate::download_file::check_destination(&job.directory, false)?;
         Ok(job)
     }
     pub fn new_batch_downloads(&self, text: &str, folder: Option<&Path>) -> Result<Vec<Job>> {
@@ -251,6 +253,15 @@ impl Store {
             let rules = self.download_folders()?;
             for job in &mut jobs {
                 job.directory = rules.destination(&self.paths.downloads, &job.name);
+            }
+        }
+        #[cfg(windows)]
+        {
+            let mut checked = std::collections::HashSet::new();
+            for job in &jobs {
+                if checked.insert(&job.directory) {
+                    crate::download_file::check_destination(&job.directory, false)?;
+                }
             }
         }
         Ok(jobs)

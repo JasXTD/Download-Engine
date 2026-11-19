@@ -469,6 +469,10 @@ impl Desktop {
                                 self.open_list_import();
                                 ui.close();
                             }
+                            if ui.button(tr("Verify checksum file…")).clicked() {
+                                self.choose_checksum_file();
+                                ui.close();
+                            }
                             ui.separator();
                             if ui
                                 .add_enabled(

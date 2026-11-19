@@ -10,6 +10,9 @@ static FAULTS: OnceLock<Mutex<HashMap<PathBuf, usize>>> = OnceLock::new();
 fn faults() -> &'static Mutex<HashMap<PathBuf, usize>> {
     FAULTS.get_or_init(Default::default)
 }
+pub(super) fn copy_fault_requested(path: &Path) -> bool {
+    faults().lock().unwrap().contains_key(path)
+}
 pub(super) fn before_write(path: &Path, bytes: usize) -> std::io::Result<()> {
     let mut faults = faults().lock().unwrap();
     if let Some(remaining) = faults.get_mut(path) {
@@ -49,20 +52,37 @@ impl Drop for Server {
     }
 }
 
-async fn check_disk_full(stage: &str) {
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Failure {
+    Single,
+    Segment,
+    Assembly,
+    CompletedCopy,
+    ChangedCopy,
+}
+
+async fn check_disk_full(stage: Failure) {
+    use Failure::*;
+    use std::sync::atomic::{AtomicUsize, Ordering};
     use tokio::net::TcpListener;
     let temp = tempfile::TempDir::new().unwrap();
+    let whole = matches!(stage, CompletedCopy | ChangedCopy);
+    let other = std::env::var_os("DOWNLOAD_ENGINE_TEST_OTHER_VOLUME")
+        .filter(|_| whole)
+        .map(|folder| tempfile::tempdir_in(folder).unwrap());
     let store = Store::open(crate::paths::AppPaths {
         data: temp.path().join("data"),
-        downloads: temp.path().join("downloads"),
+        downloads: other
+            .as_ref()
+            .map_or_else(|| temp.path().join("downloads"), |t| t.path().to_owned()),
     })
     .unwrap();
     let original = store.connection_settings().unwrap();
     let mut changed = original.clone();
-    changed.default_connections = if stage == "assembly" { 4 } else { 1 };
+    changed.default_connections = if stage == Assembly { 4 } else { 1 };
     store.save_connection_settings(&original, changed).unwrap();
     let payload = std::sync::Arc::new(
-        (0..if stage == "assembly" {
+        (0..if stage == Assembly {
             8 * 1024 * 1024
         } else {
             2 * 1024 * 1024
@@ -73,13 +93,16 @@ async fn check_disk_full(stage: &str) {
     let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
     let url = format!("http://{}/file.bin", listener.local_addr().unwrap());
     let data = payload.clone();
-    let ranged = stage != "single";
-    let _server = Server(tokio::spawn(async move {
+    let ranged = matches!(stage, Segment | Assembly);
+    let requests = std::sync::Arc::new(AtomicUsize::new(0));
+    let counted = requests.clone();
+    let server = Server(tokio::spawn(async move {
         let mut tasks = tokio::task::JoinSet::new();
         loop {
             tokio::select! {
                 connection = listener.accept() => {
                     let (mut socket, _) = connection.unwrap();
+                    counted.fetch_add(1, Ordering::SeqCst);
                     let data = data.clone();
                     tasks.spawn(async move {
                         let mut head = Vec::new();
@@ -126,8 +149,8 @@ async fn check_disk_full(stage: &str) {
     let job = store.enqueue(&job).unwrap();
     let partial = store.paths.parts(&job.id).unwrap();
     let target = match stage {
-        "single" => partial.join("whole.part"),
-        "segment" => partial.join("segment-0.part"),
+        Single => partial.join("whole.part"),
+        Segment => partial.join("segment-0.part"),
         _ => job.directory.join(format!(".idm-ex-{}.assembling", job.id)),
     };
     let fault = FullDisk::after(target.clone(), 512 * 1024);
@@ -139,34 +162,104 @@ async fn check_disk_full(stage: &str) {
     )
     .await
     .unwrap();
-    let failed = store.get(&job.id).unwrap().unwrap();
-    assert_eq!(failed.status, Status::Failed, "{failed:?}");
+    let mut failed = store.get(&job.id).unwrap().unwrap();
+    assert_eq!(
+        failed.status,
+        if stage == Single {
+            Status::Paused
+        } else {
+            Status::Queued
+        },
+        "{failed:?}"
+    );
+    let wait = failed.disk_wait.as_ref().unwrap();
+    assert_eq!(
+        wait.requirements[0].location,
+        if stage == Assembly || whole {
+            crate::disk_space::Location::Destination
+        } else {
+            crate::disk_space::Location::Temporary
+        }
+    );
+    assert!(!wait.ready(&store, &failed, wait.check_after - 1));
+    assert!(wait.ready(&store, &failed, wait.check_after));
     assert_eq!(failed.retry.attempts, 0);
     assert!(failed.retry.next_at.is_none());
     assert!(failed.saved_path.is_none());
     assert!(!job.directory.join(&job.name).exists());
     assert!(target.metadata().unwrap().len() > 0);
     assert!(target.metadata().unwrap().len() <= 512 * 1024);
-    #[cfg(windows)]
-    assert!(
-        failed.error.as_ref().unwrap().contains("112"),
-        "{:?}",
-        failed.error
-    );
-    if stage == "assembly" {
+    assert!(failed.error.as_deref().unwrap().contains("disk space"));
+    if stage == Assembly || whole {
         assert_eq!(failed.downloaded, payload.len() as u64);
     }
+    assert_eq!(failed.received_sha256.is_some(), whole);
+    let server = if whole {
+        assert_eq!(requests.load(Ordering::SeqCst), 1);
+        let source = partial.join("whole.part");
+        assert_eq!(std::fs::read(&source).unwrap(), *payload);
+        if other.is_some() {
+            let src = std::fs::File::open(&source).unwrap();
+            let dst = download_file::guard_download_parent(&target).unwrap();
+            assert!(!download_file::same_volume(&src, &dst).unwrap());
+        }
+        if stage == ChangedCopy {
+            use std::io::Write;
+            std::fs::OpenOptions::new()
+                .write(true)
+                .open(&source)
+                .unwrap()
+                .write_all(b"x")
+                .unwrap();
+        }
+        drop(server);
+        None
+    } else {
+        Some(server)
+    };
     drop(fault);
-    run(
-        store.clone(),
-        failed,
-        CancellationToken::new(),
-        Limiter::new(&store.bandwidth_limits().unwrap()).unwrap(),
-    )
+    // Bring the next probe forward without sleeping for a real low-space hold.
+    failed.disk_wait.as_mut().unwrap().check_after = 0;
+    store.save(&failed).unwrap();
+    let store = Store::open(store.paths.clone()).unwrap();
+    let scheduler = crate::scheduler::Scheduler::start(store.clone()).unwrap();
+    if stage == Single {
+        scheduler
+            .send(crate::scheduler::Command::Resume(job.id.clone()))
+            .unwrap();
+    }
+    let recovered = tokio::time::timeout(Duration::from_secs(20), async {
+        loop {
+            let current = store.get(&job.id).unwrap().unwrap();
+            if stage == ChangedCopy && current.status == Status::Failed {
+                break current;
+            }
+            assert_ne!(current.status, Status::Failed, "{:?}", current.error);
+            if current.status == Status::Complete && !partial.exists() {
+                break current;
+            }
+            tokio::time::sleep(Duration::from_millis(20)).await;
+        }
+    })
     .await
-    .unwrap();
-    let recovered = store.get(&job.id).unwrap().unwrap();
+    .expect("scheduler did not finish the recovered download");
+    drop(scheduler);
+    drop(server);
+    if whole {
+        assert_eq!(requests.load(Ordering::SeqCst), 1);
+    }
+    if stage == ChangedCopy {
+        assert!(
+            recovered
+                .error
+                .unwrap()
+                .contains("Cached HTTP file changed")
+        );
+        assert!(!job.directory.join(&job.name).exists());
+        return;
+    }
     assert_eq!(recovered.status, Status::Complete, "{:?}", recovered.error);
+    assert!(recovered.received_sha256.is_none());
     assert_eq!(
         std::fs::read(recovered.saved_path.unwrap()).unwrap(),
         *payload
@@ -177,13 +270,53 @@ async fn check_disk_full(stage: &str) {
 
 #[tokio::test]
 async fn disk_full_during_segment_retains_bytes_and_resumes() {
-    check_disk_full("segment").await;
+    check_disk_full(Failure::Segment).await;
 }
 #[tokio::test]
 async fn disk_full_during_single_stream_restarts_safely() {
-    check_disk_full("single").await;
+    check_disk_full(Failure::Single).await;
 }
 #[tokio::test]
 async fn disk_full_during_assembly_keeps_parts_for_retry() {
-    check_disk_full("assembly").await;
+    check_disk_full(Failure::Assembly).await;
+}
+
+#[tokio::test]
+async fn disk_full_after_http_eof_retries_the_copy_with_the_origin_offline() {
+    check_disk_full(Failure::CompletedCopy).await;
+}
+
+#[tokio::test]
+async fn disk_full_after_http_eof_rejects_a_changed_cache_file() {
+    check_disk_full(Failure::ChangedCopy).await;
+}
+
+#[cfg(windows)]
+#[tokio::test]
+async fn queued_destination_is_rechecked_before_any_http_request() {
+    let temp = tempfile::tempdir().unwrap();
+    let store = Store::open(crate::paths::AppPaths {
+        data: temp.path().join("data"),
+        downloads: temp.path().join("downloads"),
+    })
+    .unwrap();
+    let folder = temp.path().join("selected");
+    std::fs::create_dir(&folder).unwrap();
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let url = format!("http://{}/file", listener.local_addr().unwrap());
+    let job = store
+        .new_download(&url, None, Some(&folder), "changed-folder".into())
+        .unwrap();
+    store.enqueue(&job).unwrap();
+    std::fs::remove_dir(&folder).unwrap();
+    std::fs::write(&folder, b"keep").unwrap();
+    let limiter = Limiter::new(&store.bandwidth_limits().unwrap()).unwrap();
+    tokio::select! {
+        result = run(store.clone(), job.clone(), CancellationToken::new(), limiter) => result.unwrap(),
+        _ = listener.accept() => panic!("HTTP request started before checking the destination"),
+    }
+    let failed = store.get(&job.id).unwrap().unwrap();
+    assert_eq!(failed.status, Status::Failed);
+    assert!(failed.error.unwrap().contains("not a folder"));
+    assert_eq!(std::fs::read(folder).unwrap(), b"keep");
 }

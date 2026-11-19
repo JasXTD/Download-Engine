@@ -24,6 +24,8 @@ PNG / JPEG · bis 16 MiB und 16 Megapixel. Kopie in diesem Profil.
 
 ## Downloads & Wiederherstellung
 
+Sobald genug Platz frei ist, laufen fortsetzbare Downloads gemäss den Einstellungen der Warteschlange weiter. Manuell pausierte Downloads bleiben pausiert. Ziehen Sie `SHA256SUMS` ins Fenster, prüfen Sie die Treffer in der aktuellen Warteschlange und wählen Sie die fertigen Dateien zur Prüfung aus. Im Abschlussfenster eines Torrents prüft **Gespeicherte Dateien prüfen** die Daten offline. Teile, die auch Daten übersprungener Dateien enthalten, sind unter Umständen nicht überprüfbar.
+
 ### Downloads & Wiederherstellung
 
 Ein Doppelklick auf einen Download öffnet Fortschritt, Geschwindigkeit und Restzeit. Pause und Stopp behalten gespeicherte Daten. Sofort starten gibt ausgewählten Dateien Vorrang. Fortsetzen erfordert Serverunterstützung und passende Dateidaten. Abgelaufene Links lassen sich im Kontextmenü aktualisieren. Fertige entfernen löscht nur Verlaufseinträge, nicht die gespeicherten Dateien. Aufgaben → Liste exportieren… speichert Ihre Downloads in einer Datei, als Sicherung oder für einen anderen PC. Aufgaben → Liste importieren… zeigt vor dem Hinzufügen, was neu ist; vorhandene Links werden übersprungen, neue Downloads bleiben pausiert. Ansicht → Schwebendes Ablagefeld zeigt ein kleines Feld, das über anderen Fenstern bleibt; legen Sie Links darauf ab, um sie herunterzuladen, auch wenn Download Engine im Infobereich ist.

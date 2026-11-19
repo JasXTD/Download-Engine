@@ -7,6 +7,7 @@ mod automation;
 mod background_io;
 mod browser_video;
 mod browsers;
+mod checksums;
 mod clipboard;
 mod crash_reports;
 mod diagnostics;
@@ -145,6 +146,7 @@ enum Dialog {
     AntivirusResult,
     AntivirusScan,
     Checksum,
+    ChecksumBatch,
     Columns,
     Add,
     Browsers,

@@ -15,10 +15,14 @@ use crate::meta::TorrentMeta;
 
 mod directory;
 mod legacy;
+mod space;
+mod verify;
 pub use directory::Directory;
 pub use legacy::import_verified_pieces;
 #[cfg(windows)]
 pub use native::rename_into;
+pub use space::available_space;
+pub use verify::{Verification, verify_saved};
 pub fn file_identity(file: &File) -> io::Result<String> {
     native::identity(file)
 }

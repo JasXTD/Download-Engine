@@ -30,6 +30,12 @@ pub fn urls(text: &str) -> Result<String> {
     Ok(result.join("\n"))
 }
 #[cfg(windows)]
+#[derive(Debug, PartialEq, Eq)]
+pub enum Input {
+    Links(String),
+    Checksum(std::path::PathBuf),
+}
+#[cfg(windows)]
 pub use native::{Guard, Registration};
 #[cfg(windows)]
 mod native {
@@ -59,7 +65,7 @@ mod native {
     };
     #[implement(IDropTarget)]
     struct Target {
-        sender: SyncSender<String>,
+        sender: SyncSender<Input>,
         ctx: eframe::egui::Context,
         accepted: Cell<bool>,
         url_format: u16,
@@ -109,7 +115,7 @@ mod native {
         value
     }
     impl Target {
-        fn files(medium: &STGMEDIUM) -> Option<String> {
+        fn files(medium: &STGMEDIUM) -> Option<Input> {
             if medium.tymed != TYMED_HGLOBAL.0 as u32 {
                 return None;
             }
@@ -145,13 +151,20 @@ mod native {
                 loop {
                     let length = remaining.iter().position(|unit| *unit == 0)?;
                     if length == 0 {
-                        return (!paths.is_empty()).then(|| paths.join("\n"));
+                        return (!paths.is_empty()).then(|| Input::Links(paths.join("\n")));
                     }
                     if length > 32768 || paths.len() >= download_engine::external_open::MAX_PENDING
                     {
                         return None;
                     }
                     let path = String::from_utf16(&remaining[..length]).ok()?;
+                    let local = std::path::Path::new(&path);
+                    if download_engine::integrity::manifest::drop_path(local) {
+                        return (paths.is_empty()
+                            && !path.chars().any(char::is_control)
+                            && remaining.get(length + 1) == Some(&0))
+                        .then(|| Input::Checksum(local.to_owned()));
+                    }
                     let target = download_engine::external_open::Target::parse(
                         std::ffi::OsStr::new(&path),
                         std::path::Path::new(""),
@@ -172,7 +185,7 @@ mod native {
             }
             result
         }
-        fn text(&self, data: Ref<IDataObject>) -> Option<String> {
+        fn text(&self, data: Ref<IDataObject>) -> Option<Input> {
             let data = data.as_ref()?;
             if let Ok(medium) = unsafe { data.GetData(&format(CF_HDROP.0)) } {
                 let medium = Medium(medium);
@@ -182,6 +195,7 @@ mod native {
             read(data, self.url_format)
                 .or_else(|| read(data, CF_UNICODETEXT.0))
                 .and_then(|s| urls(&s).ok())
+                .map(Input::Links)
         }
         fn hover(&self, accepted: bool) {
             if let Some(hover) = &self.hover {
@@ -268,7 +282,7 @@ mod native {
 
     /// The main window's drop target; its own bounded queue holds dropped links.
     pub struct Registration {
-        pub events: Receiver<String>,
+        pub events: Receiver<Input>,
         _guard: Guard,
     }
     impl Registration {
@@ -293,7 +307,7 @@ mod native {
         pub fn new(
             hwnd: isize,
             ctx: eframe::egui::Context,
-            sender: SyncSender<String>,
+            sender: SyncSender<Input>,
             hover: Option<Box<dyn Fn(bool)>>,
         ) -> Result<Self> {
             unsafe {
@@ -417,7 +431,7 @@ mod native {
             }
         }
         #[test]
-        fn ole_file_drop_reviews_only_bounded_torrent_paths() {
+        fn ole_file_drop_reviews_bounded_torrents_or_one_checksum_file() {
             let (sender, events) = mpsc::sync_channel(8);
             let target: IDropTarget = Target {
                 sender,
@@ -435,7 +449,12 @@ mod native {
                 .join("not-created-b.torrent")
                 .display()
                 .to_string();
+            let manifest = std::env::temp_dir().join("SHA256SUMS");
+            let manifest_text = manifest.display().to_string();
             for (names, valid) in [
+                (vec![manifest_text.clone()], true),
+                (vec![manifest_text.clone(), a.clone()], false),
+                (vec![a.clone(), manifest_text.clone()], false),
                 (vec![a.clone(), b.clone()], true),
                 (vec![a.clone(), "C:\\bad.exe".into()], false),
                 (vec![a.clone(); 9], false),
@@ -443,6 +462,7 @@ mod native {
                 let mut text = vec![0u16; 10];
                 text[0] = 20;
                 text[8] = 1;
+                let is_manifest = names.as_slice() == [manifest_text.as_str()];
                 for name in names {
                     text.extend(name.encode_utf16());
                     text.push(0);
@@ -469,7 +489,14 @@ mod native {
                 let received = events.try_recv();
                 assert_eq!(received.is_ok(), valid);
                 if valid {
-                    assert_eq!(received.unwrap(), format!("{a}\n{b}"));
+                    assert_eq!(
+                        received.unwrap(),
+                        if is_manifest {
+                            Input::Checksum(manifest.clone())
+                        } else {
+                            Input::Links(format!("{a}\n{b}"))
+                        }
+                    );
                 }
             }
             for text in [
@@ -505,6 +532,7 @@ mod native {
             for (text, terminated, accepted) in [
                 ("https://example.com/clip.mp4", true, true),
                 ("file:///C:/secret", true, false),
+                (r"C:\local\SHA256SUMS", true, false),
                 ("https://example.com/file", false, false),
             ] {
                 let mut text: Vec<_> = text.encode_utf16().collect();
@@ -655,7 +683,7 @@ mod native {
             assert_eq!(effect, DROPEFFECT_COPY);
             assert_eq!(
                 events.try_recv().unwrap(),
-                "https://example.com/a.zip\nhttps://example.com/b.zip"
+                Input::Links("https://example.com/a.zip\nhttps://example.com/b.zip".into())
             );
             assert!(events.try_recv().is_err());
             let mut expected = vec![true, false];

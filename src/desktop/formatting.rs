@@ -62,6 +62,9 @@ pub(super) fn status_label(job: &Job, queue_running: bool, now: i64) -> String {
     {
         return tr("Merging audio and video").into();
     }
+    if job.status == Status::Queued && job.disk_wait.is_some() {
+        return tr("Waiting for disk space").into();
+    }
     if job.status == Status::Queued && job.quota_waiting {
         return if queue_running {
             tr("Quota reached")
@@ -123,7 +126,7 @@ pub(super) fn supports_authentication(job: &Job) -> bool {
 }
 
 pub(super) fn resume_action(job: &Job) -> &'static str {
-    if job.plan.is_some() || job.hls.is_some() || job.ftp.is_some() || job.torrent.is_some() {
+    if job.supports_resume() {
         tr("Resume")
     } else {
         tr("Start again")
@@ -137,7 +140,7 @@ pub(super) fn resume_description(job: &Job) -> &'static str {
         tr("Resumes from the last complete video segment")
     } else if job.ftp.is_some() {
         tr("Verifies saved bytes before continuing; a publisher SHA-256 can allow faster resume")
-    } else if job.plan.is_some() || job.torrent.is_some() {
+    } else if job.supports_resume() {
         tr("Supported")
     } else if job.downloaded > 0 {
         tr("Starts from the beginning")

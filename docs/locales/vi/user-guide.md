@@ -24,6 +24,8 @@ PNG / JPEG · tối đa 16 MiB và 16 megapixel. Sao chép vào hồ sơ này.
 
 ## Tải xuống và khôi phục
 
+Khi có đủ dung lượng, các lượt tải có thể tiếp tục sẽ chạy lại theo thiết lập hàng đợi. Các lượt đã tạm dừng thủ công vẫn tạm dừng. Thả `SHA256SUMS` vào cửa sổ để xem các tệp hoàn tất có tên khớp trong hàng đợi và chọn tệp cần xác minh. Trong cửa sổ hoàn tất torrent, chọn **Xác minh tệp đã lưu** để kiểm tra ngoại tuyến. Có thể không xác minh được những mảnh chung với tệp đã bỏ qua.
+
 ### Tải xuống và khôi phục
 
 Nhấp đúp lượt tải để xem tiến độ, tốc độ và thời gian còn lại. Tạm dừng và Dừng giữ dữ liệu đã tải. Bắt đầu ngay ưu tiên tệp đã chọn. Tiếp tục cần máy chủ hỗ trợ và xác minh cùng tệp. Dùng cập nhật liên kết trong menu chuột phải nếu liên kết hết hạn. Xóa mục đã xong chỉ xóa lịch sử, không xóa tệp. Tác vụ → Xuất danh sách… lưu các mục tải xuống vào tệp để sao lưu hoặc chuyển sang PC khác. Tác vụ → Nhập danh sách… cho xem mục mới trước khi thêm; liên kết đã có sẽ bị bỏ qua và mục mới vẫn tạm dừng. Xem → Ô thả nổi hiện một ô nhỏ luôn nằm trên các cửa sổ khác; thả liên kết vào đó để tải xuống, kể cả khi Download Engine đang ở khay hệ thống.

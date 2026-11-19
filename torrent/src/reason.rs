@@ -43,8 +43,16 @@ pub const DHT_SEARCH_TIMEOUT: Reason = Reason {
     message: "No one shared this torrent's file list. The DHT search stopped after 10 minutes.",
 };
 
-/// The code of an error, when it is one of these, however much context was added on top.
+pub const DISK_FULL: &str = "disk_full";
+
+/// Stable reason codes survive context added by workers and the helper protocol.
 pub fn code_of(error: &anyhow::Error) -> Option<&'static str> {
+    if error.chain().any(|e| {
+        e.downcast_ref::<std::io::Error>()
+            .is_some_and(|e| e.kind() == std::io::ErrorKind::StorageFull)
+    }) {
+        return Some(DISK_FULL);
+    }
     error.downcast_ref::<Reason>().map(|reason| reason.code)
 }
 
@@ -61,5 +69,8 @@ mod tests {
         assert_eq!(code_of(&error), Some("dht_off"));
         assert!(format!("{error:#}").contains("DHT"));
         assert_eq!(code_of(&anyhow::anyhow!("something else")), None);
+        let full = anyhow::Error::new(std::io::Error::from(std::io::ErrorKind::StorageFull))
+            .context("writing a piece");
+        assert_eq!(code_of(&full), Some(DISK_FULL));
     }
 }

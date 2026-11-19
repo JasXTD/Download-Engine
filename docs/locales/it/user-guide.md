@@ -24,6 +24,8 @@ PNG / JPEG · fino a 16 MiB e 16 megapixel. Copia in questo profilo.
 
 ## Download e recupero
 
+Quando lo spazio torna sufficiente, i download che supportano la ripresa ripartono secondo le impostazioni della coda. Quelli messi in pausa manualmente restano in pausa. Trascina `SHA256SUMS` nella finestra per esaminare le corrispondenze nella coda attiva e scegliere i file completati da verificare. Nella finestra del torrent completato, **Verifica i file salvati** avvia il controllo offline. Le parti condivise con file saltati potrebbero non essere verificabili.
+
 ### Download e recupero
 
 Fai doppio clic su un download per vedere avanzamento, velocità e tempo rimasto. Pausa e Arresta conservano i dati parziali. Avvia subito dà priorità ai file selezionati; valgono comunque i limiti dell’app e le quote dati. Per un link scaduto usa Aggiorna link di download nel menu contestuale. Il recupero controlla i dati salvati prima di riprendere. Rimuovi completati cancella le voci della cronologia e conserva i file. Attività → Esporta elenco… salva i download in un file, come backup o per un altro PC. Attività → Importa elenco… mostra le novità prima di aggiungerle; i link già presenti vengono saltati e i nuovi download restano in pausa. Visualizza → Area di rilascio fluttuante mostra una piccola area che resta sopra le altre finestre; rilascia qui i link per scaricarli, anche quando Download Engine è nell’area di notifica.

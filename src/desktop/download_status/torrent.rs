@@ -45,6 +45,7 @@ pub(super) enum TorrentTab {
 
 /// What the window still has to hand to the scheduler.
 pub(super) enum Outgoing {
+    VerifySaved,
     Files(Vec<usize>),
     Request(Request),
 }
@@ -73,6 +74,7 @@ pub(super) struct TorrentView {
     /// The outcome of the last request: whether it worked, and what to say.
     pub(super) message: Option<(bool, String)>,
     pub(super) outbox: Vec<Outgoing>,
+    pub(super) verification: Option<checksums::Reader<de_torrent::storage::Verification>>,
 }
 
 impl TorrentView {
@@ -346,6 +348,56 @@ fn legend(ui: &mut egui::Ui, p: Palette) {
 }
 
 impl Window {
+    pub(super) fn verify_saved_button(&mut self, ui: &mut egui::Ui) {
+        if let Some(result) = self
+            .torrent
+            .verification
+            .as_ref()
+            .and_then(checksums::Reader::poll)
+        {
+            self.torrent.verification = None;
+            self.torrent.message = Some(match result {
+                Err(error) => (false, tr(&error.to_string()).to_owned()),
+                Ok(report) => {
+                    let damaged = report.damaged_pieces > 0
+                        || report.wrong_size_files > 0
+                        || report.missing_files > 0;
+                    let title = if damaged {
+                        "Verification failed"
+                    } else if report.shared_pieces > 0 {
+                        "Partially verifiable"
+                    } else {
+                        "Verified"
+                    };
+                    let mut details = vec![
+                        tr(title).to_owned(),
+                        format!("{} {}", tr("Verified pieces"), report.verified_pieces),
+                    ];
+                    for (label, count) in [
+                        ("Damaged pieces", u64::from(report.damaged_pieces)),
+                        ("Shared with skipped files", u64::from(report.shared_pieces)),
+                        ("Missing files", report.missing_files as u64),
+                        ("Wrong file size", report.wrong_size_files as u64),
+                    ] {
+                        if count > 0 {
+                            details.push(format!("{} {count}", tr(label)));
+                        }
+                    }
+                    (!damaged, details.join(" · "))
+                }
+            });
+        }
+        if let Some(reader) = &self.torrent.verification {
+            ui.spinner();
+            if ui.small_button(tr("Cancel calculation")).clicked() {
+                reader.cancel.cancel();
+            }
+            ui.ctx().request_repaint_after(Duration::from_millis(150));
+        } else if ui.small_button(tr("Verify saved files")).clicked() {
+            self.torrent.outbox.push(Outgoing::VerifySaved);
+        }
+    }
+
     fn torrent_running(&self) -> bool {
         self.phase.is_some()
     }
@@ -403,7 +455,9 @@ impl Window {
                     .size(11.0)
                     .color(p.muted),
             );
-            if job.status != Status::Complete {
+            if job.status == Status::Complete {
+                self.verify_saved_button(ui);
+            } else {
                 ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
                     let allowed = self.recheck_allowed(job);
                     let button = ui
@@ -521,6 +575,10 @@ impl Window {
                     TorrentTab::Trackers => self.draw_trackers(ui, job, p, height),
                 }
             });
+        self.torrent_message(ui, p);
+    }
+
+    pub(super) fn torrent_message(&self, ui: &mut egui::Ui, p: Palette) {
         if let Some((ok, message)) = &self.torrent.message {
             ui.add(
                 egui::Label::new(RichText::new(message).size(11.0).color(if *ok {

@@ -206,7 +206,7 @@ impl Rates {
 pub(crate) enum Event {
     WebVerified(u32),
     PieceComplete(u32),
-    Fatal(String),
+    Fatal(anyhow::Error),
     Ban(SocketAddr),
 }
 
@@ -831,6 +831,11 @@ impl Torrent {
         self.meta.get().cloned()
     }
 
+    fn failed_phase(&self, error: anyhow::Error) -> Phase {
+        *self.error_code.lock() = reason::code_of(&error);
+        Phase::Error(format!("{error:#}"))
+    }
+
     fn set_phase(&self, phase: Phase) {
         *self.phase.lock() = phase;
     }
@@ -913,8 +918,7 @@ impl Torrent {
         match self.run_stages(&cancel).await {
             Ok(()) => {}
             Err(error) => {
-                *self.error_code.lock() = reason::code_of(&error);
-                self.set_phase(Phase::Error(format!("{error:#}")));
+                self.set_phase(self.failed_phase(error));
             }
         }
     }
@@ -1625,8 +1629,8 @@ async fn run_swarm(
             Some(event) = events.recv() => match event {
                 Event::PieceComplete(piece) => waiting.push_back(piece),
                 Event::WebVerified(piece) => live.piece_passed(piece),
-                Event::Fatal(message) => {
-                    outcome = Some(Phase::Error(message));
+                Event::Fatal(error) => {
+                    outcome = Some(torrent.failed_phase(error));
                     break;
                 }
                 Event::Ban(addr) => book.ban(addr),
@@ -1709,7 +1713,7 @@ async fn run_swarm(
         match event {
             Event::PieceComplete(piece) => waiting.push_back(piece),
             Event::WebVerified(piece) => live.piece_passed(piece),
-            Event::Fatal(message) => outcome = Some(Phase::Error(message)),
+            Event::Fatal(error) => outcome = Some(torrent.failed_phase(error)),
             Event::Ban(_) => {}
         }
     }

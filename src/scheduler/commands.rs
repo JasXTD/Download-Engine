@@ -122,6 +122,9 @@ pub(super) fn apply(
             let state = job.torrent.as_mut().context("This is not a torrent")?;
             state.stage = crate::torrent::Stage::Chosen;
             job.total = Some(files.chosen_size());
+            if job.disk_wait.take().is_some() {
+                job.error = None;
+            }
             if start && job.status == Status::Paused {
                 job.status = Status::Queued;
                 job.error = None;
@@ -190,6 +193,7 @@ pub(super) fn apply(
             if job.status == Status::Queued {
                 job.status = Status::Paused;
                 job.quota_waiting = false;
+                job.disk_wait = None;
                 job.retry.next_at = None;
                 job.error = None;
                 store.save(&job)?;
@@ -199,6 +203,7 @@ pub(super) fn apply(
             if matches!(job.status, Status::Paused | Status::Failed) {
                 job.status = Status::Queued;
                 job.quota_waiting = false;
+                job.disk_wait = None;
                 job.retry = retry::State::default();
                 job.error = None;
                 store.save_for_start(&job)?;
@@ -213,6 +218,7 @@ pub(super) fn apply(
             crate::torrent::discard(store, &job)?;
             job.retry = retry::State::default();
             job.quota_waiting = false;
+            job.disk_wait = None;
             job.plan = None;
             if let Some(provider) = &mut job.provider {
                 provider.plan = None;
@@ -361,6 +367,7 @@ fn reconcile_workers(store: &Store, active: &HashMap<String, Active>) -> Result<
     Ok(())
 }
 
+#[cfg(test)]
 pub(super) fn ready_jobs(
     store: &Store,
     active: &HashMap<String, Active>,
@@ -369,12 +376,28 @@ pub(super) fn ready_jobs(
     ready_jobs_at(store, active, turn, chrono::Utc::now().timestamp_millis())
 }
 
+#[cfg(test)]
 pub(super) fn ready_jobs_at(
     store: &Store,
     active: &HashMap<String, Active>,
     turn: &mut usize,
     now: i64,
 ) -> Result<Vec<(String, Job)>> {
+    select_jobs(store, active, turn, now, true)
+}
+
+pub(super) fn select_jobs(
+    store: &Store,
+    active: &HashMap<String, Active>,
+    turn: &mut usize,
+    now: i64,
+    check_disk: bool,
+) -> Result<Vec<(String, Job)>> {
+    let disk_ready = |job: &Job| {
+        job.disk_wait
+            .as_ref()
+            .is_none_or(|wait| check_disk && wait.ready(store, job, now))
+    };
     store.apply_queue_schedules(now / 1000)?;
     reconcile_workers(store, active)?;
     for id in store.queue_paused_jobs()? {
@@ -397,6 +420,7 @@ pub(super) fn ready_jobs_at(
             && let Some(job) = store.get(id)?
             && job.status == Status::Queued
             && job.retry.ready(now)
+            && disk_ready(&job)
         {
             let queue = store
                 .job_queue(id)?
@@ -425,6 +449,7 @@ pub(super) fn ready_jobs_at(
             .filter(|j| {
                 j.status == Status::Queued
                     && j.retry.ready(now)
+                    && disk_ready(j)
                     && !active.contains_key(&j.id)
                     && !immediate.contains(&j.id)
             })

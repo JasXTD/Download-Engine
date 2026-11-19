@@ -199,6 +199,153 @@ pub(crate) fn same_volume(first: &File, second: &File) -> Result<bool> {
     }
 }
 
+/// Query the selected directory, following a redirected folder to its real volume.
+/// A new subfolder inherits its nearest existing parent's filesystem.
+#[cfg(windows)]
+pub(crate) fn check_destination(folder: &Path, torrent: bool) -> Result<()> {
+    use std::{
+        os::windows::{fs::OpenOptionsExt, io::AsRawHandle},
+        ptr::null_mut,
+    };
+    use windows_sys::Win32::Storage::FileSystem::{
+        FILE_FLAG_BACKUP_SEMANTICS, FILE_READ_ATTRIBUTES, GetVolumeInformationByHandleW,
+    };
+
+    for ancestor in folder.ancestors() {
+        let directory = match OpenOptions::new()
+            .access_mode(FILE_READ_ATTRIBUTES)
+            .custom_flags(FILE_FLAG_BACKUP_SEMANTICS)
+            .open(ancestor)
+        {
+            Ok(file) => file,
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => continue,
+            Err(e) => {
+                return Err(e).with_context(|| {
+                    format!("Cannot inspect destination folder {}", folder.display())
+                });
+            }
+        };
+        ensure!(
+            directory.metadata()?.is_dir(),
+            "The download destination is not a folder: {}",
+            ancestor.display()
+        );
+        let mut flags = 0;
+        // The borrowed directory handle stays open. Only the filesystem flags are requested.
+        if unsafe {
+            GetVolumeInformationByHandleW(
+                directory.as_raw_handle(),
+                null_mut(),
+                0,
+                null_mut(),
+                null_mut(),
+                &mut flags,
+                null_mut(),
+                0,
+            )
+        } == 0
+        {
+            return Err(std::io::Error::last_os_error()).with_context(|| {
+                format!("Cannot inspect the filesystem for {}", folder.display())
+            });
+        }
+        return require_destination_features(folder, flags, torrent);
+    }
+    anyhow::bail!("Cannot find the destination drive for {}", folder.display())
+}
+
+#[cfg(windows)]
+fn require_destination_features(folder: &Path, flags: u32, torrent: bool) -> Result<()> {
+    use windows::Win32::System::SystemServices::{FILE_NAMED_STREAMS, FILE_SUPPORTS_HARD_LINKS};
+    ensure!(
+        flags & FILE_NAMED_STREAMS != 0,
+        "{} cannot store the Windows Internet-zone mark. Choose another folder, such as one on an NTFS drive.",
+        folder.display()
+    );
+    // Torrents publish by renaming the verified file or directory.
+    ensure!(
+        torrent || flags & FILE_SUPPORTS_HARD_LINKS != 0,
+        "{} cannot publish downloads using hard links. Choose another folder, such as one on an NTFS drive.",
+        folder.display()
+    );
+    Ok(())
+}
+
+#[cfg(all(test, windows))]
+mod destination_tests {
+    use super::*;
+    use windows::Win32::System::SystemServices::{FILE_NAMED_STREAMS, FILE_SUPPORTS_HARD_LINKS};
+
+    #[test]
+    fn destination_checks_the_features_used_for_each_kind_of_publication() {
+        let folder = Path::new("X:\\Downloads");
+        for torrent in [false, true] {
+            for flags in [0, FILE_SUPPORTS_HARD_LINKS] {
+                assert!(
+                    require_destination_features(folder, flags, torrent)
+                        .unwrap_err()
+                        .to_string()
+                        .contains("Internet-zone")
+                );
+            }
+            assert!(
+                require_destination_features(
+                    folder,
+                    FILE_NAMED_STREAMS | FILE_SUPPORTS_HARD_LINKS,
+                    torrent
+                )
+                .is_ok()
+            );
+        }
+        assert!(
+            require_destination_features(folder, FILE_NAMED_STREAMS, false)
+                .unwrap_err()
+                .to_string()
+                .contains("hard links")
+        );
+        assert!(require_destination_features(folder, FILE_NAMED_STREAMS, true).is_ok());
+    }
+
+    #[test]
+    fn destination_is_checked_before_adding_a_file_or_creating_its_folder() {
+        let temp = tempfile::tempdir().unwrap();
+        let store = crate::store::Store::open(crate::paths::AppPaths {
+            data: temp.path().join("data"),
+            downloads: temp.path().join("downloads"),
+        })
+        .unwrap();
+        let folder = temp.path().join("new").join("subfolder");
+        store
+            .new_download(
+                "https://example.invalid/file",
+                None,
+                Some(&folder),
+                "new".into(),
+            )
+            .unwrap();
+        assert!(!folder.exists());
+        let file = temp.path().join("already-a-file");
+        std::fs::write(&file, b"keep").unwrap();
+        assert!(
+            store
+                .new_download(
+                    "https://example.invalid/file",
+                    None,
+                    Some(&file),
+                    "bad".into()
+                )
+                .is_err()
+        );
+        assert!(
+            store
+                .new_batch_downloads("https://example.invalid/file", Some(&file))
+                .is_err()
+        );
+        assert!(store.list().unwrap().is_empty());
+        assert_eq!(std::fs::read(file).unwrap(), b"keep");
+    }
+}
+
 /// Keep the selected download folder open during finalization. Unlike explicit
 /// saved-file move/delete operations, downloads already allow redirected folders
 /// and network paths; open the selected directory target without widening access.

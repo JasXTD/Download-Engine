@@ -863,6 +863,25 @@ fn a_lone_file_lands_in_the_download_folder_and_nothing_stays_behind() {
     let saved = bench.folder.join("one.bin");
     assert_eq!(finished.saved_path.as_deref(), Some(saved.as_path()));
     assert_eq!(std::fs::read(&saved).unwrap(), bench.seeder.sample.data);
+    bench.set_enabled(false);
+    bench.wait_for_helper_to_stop();
+    let verify = || {
+        download_engine::torrent::verify_saved(
+            &bench.store,
+            &finished,
+            &tokio_util::sync::CancellationToken::new(),
+        )
+        .unwrap()
+    };
+    let report = verify();
+    assert!(report.verified_pieces > 0);
+    assert_eq!(report.damaged_pieces, 0);
+    let mut changed = bench.seeder.sample.data.clone();
+    changed[0] ^= 1;
+    std::fs::write(&saved, &changed).unwrap();
+    assert_eq!(verify().damaged_pieces, 1);
+    assert_eq!(std::fs::read(&saved).unwrap(), changed);
+    assert!(!bench.store.torrents.is_running());
     assert_eq!(finished.downloaded, 300_000);
     assert_eq!(bench.leftovers(), Vec::<String>::new());
     bench.wait_for_helper_to_stop();
@@ -926,6 +945,16 @@ fn several_files_keep_their_folder_and_skipped_files_are_not_kept() {
     );
     assert!(!folder.join("a.bin").exists());
     assert!(!folder.join("c.bin").exists());
+    let report = download_engine::torrent::verify_saved(
+        &bench.store,
+        &finished,
+        &tokio_util::sync::CancellationToken::new(),
+    )
+    .unwrap();
+    assert_eq!(report.shared_pieces, 2);
+    assert_eq!(report.damaged_pieces, 0);
+    assert!(report.verified_pieces > 0);
+    assert!(!folder.join("a.bin").exists());
     assert_eq!(bench.leftovers(), Vec::<String>::new());
 }
 

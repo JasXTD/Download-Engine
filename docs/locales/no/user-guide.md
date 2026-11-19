@@ -24,6 +24,8 @@ PNG / JPEG · opptil 16 MiB og 16 megapiksler. Kopieres til profilen.
 
 ## Nedlastinger og gjenoppretting
 
+Når det er nok diskplass, fortsetter nedlastinger som kan gjenopptas, etter køens innstillinger. Nedlastinger som er satt på pause manuelt, forblir på pause. Dra `SHA256SUMS` til vinduet for å se treffene i den aktive køen og velge fullførte filer til verifisering. Velg **Verifiser lagrede filer** i fullføringsvinduet for en torrent for å sjekke dem frakoblet. Deler som er felles med filer som ble hoppet over, kan være umulige å verifisere.
+
 ### Nedlastinger og gjenoppretting
 
 Dobbeltklikk en nedlasting for fremdrift, hastighet og gjenstående tid. Pause og Stopp beholder lagrede data. Start umiddelbart prioriterer valgte filer. Fortsettelse krever serverstøtte og samsvarende data. Oppdater utløpte lenker i hurtigmenyen. Fjern fullførte fjerner bare historikk, ikke lagrede filer. Oppgaver → Eksporter liste… lagrer nedlastingene i en fil som sikkerhetskopi eller for en annen PC. Oppgaver → Importer liste… viser hva som er nytt før det legges til; eksisterende lenker hoppes over, og nye nedlastinger forblir pauset. Vis → Flytende slippboks viser en liten boks som ligger over andre vinduer; slipp lenker på den for å laste dem ned, også når Download Engine er i systemstatusfeltet.

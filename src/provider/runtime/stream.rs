@@ -27,7 +27,11 @@ impl Spool {
             .checked_add(bytes.len() as u64)
             .context("Stream output size overflow")?;
         ensure!(end <= limit, "Stream output exceeds its limit");
-        budget::check_space(&std::env::temp_dir(), bytes.len() as u64)?;
+        budget::check_space(
+            &std::env::temp_dir(),
+            crate::disk_space::Location::SystemTemp,
+            bytes.len() as u64,
+        )?;
         // write_all may write a prefix before failing. Charge the full request
         // first so a Lua pcall cannot retry failed writes for uncounted disk use.
         self.len = end;

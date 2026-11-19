@@ -26,6 +26,8 @@ PNG / JPEG · hingga 16 MiB dan 16 megapiksel. Disalin ke profil ini.
 
 ## Muat turun dan pemulihan
 
+Muat turun yang boleh disambung akan diteruskan mengikut tetapan baris gilir apabila ruang cakera mencukupi. Muat turun yang dijeda secara manual kekal dijeda. Seret `SHA256SUMS` ke tetingkap untuk menyemak padanan dan memilih fail siap dalam baris gilir semasa. Dalam tetingkap torrent yang telah selesai, pilih **Sahkan fail yang disimpan** untuk menyemak secara luar talian. Bahagian yang dikongsi dengan fail yang dilangkau mungkin tidak dapat disahkan.
+
 ### Lihat kemajuan dan kawal muat turun
 
 Klik dua kali muat turun atau gunakan menu klik kanan untuk membuka tetingkap status. Ia menunjukkan kemajuan, kelajuan, baki masa dan sambungan. Jeda mengekalkan kemajuan. Henti menyimpan data pemulihan dan menghalang baris gilir daripada memulakan semula item itu secara automatik. Sambung meneruskan pemindahan yang disokong pelayan. Mula serta-merta boleh memulakan item terpilih terus. Henti semua mempengaruhi semua kerja semasa. Tugas → Eksport senarai… menyimpan muat turun anda ke fail untuk sandaran atau PC lain. Tugas → Import senarai… menunjukkan item baharu sebelum menambahnya; pautan yang sudah ada dilangkau dan muat turun baharu kekal dijeda. Paparan → Kotak lepas terapung memaparkan kotak kecil yang sentiasa di atas tetingkap lain; lepaskan pautan padanya untuk memuat turun, walaupun Download Engine berada dalam dulang.

@@ -24,6 +24,8 @@ PNG / JPEG · do 16 MiB i 16 megapikseli. Kopia w tym profilu.
 
 ## Pobieranie i odzyskiwanie
 
+Gdy zwolni się miejsce na dysku, pliki obsługujące wznawianie pobierają się dalej zgodnie z ustawieniami kolejki. Pliki wstrzymane ręcznie pozostają wstrzymane. Przeciągnij `SHA256SUMS` do okna, przejrzyj zgodne pliki z bieżącej kolejki i wybierz te do sprawdzenia. W oknie ukończonego torrenta wybierz **Sprawdź zapisane pliki**, aby sprawdzić je offline. Części wspólne z pominiętymi plikami mogą być niemożliwe do sprawdzenia.
+
 ### Pobieranie i odzyskiwanie
 
 Kliknij pobranie dwukrotnie, aby zobaczyć postęp, prędkość i pozostały czas. Wstrzymanie i zatrzymanie zachowują dane. Rozpocznij teraz daje pierwszeństwo wybranym plikom. Wznawianie wymaga obsługi serwera i zgodności pliku. Wygasły link odświeżysz w menu kontekstowym. Wyczyść ukończone usuwa tylko historię, pozostawiając pliki. Zadania → Eksportuj listę… zapisuje pobrania w pliku jako kopię zapasową lub do przeniesienia na inny komputer. Zadania → Importuj listę… pokazuje nowe pozycje przed dodaniem; linki już obecne są pomijane, a nowe pobrania pozostają wstrzymane. Widok → Pływające pole upuszczania pokazuje małe pole zawsze nad innymi oknami; upuść na nim linki, aby je pobrać, także gdy Download Engine jest w zasobniku.

@@ -235,6 +235,7 @@ fn refused(receipt: Receipt, needle: &str) {
     let error = receipt.error.unwrap();
     assert!(error.contains(needle), "{error}");
 }
+#[cfg(windows)]
 fn finished_file(s: &Store, name: &str) -> Job {
     let job = s
         .new_download(&format!("https://example.com/{name}"), None, None, id())

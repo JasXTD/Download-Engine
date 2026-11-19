@@ -24,6 +24,8 @@ PNG / JPEG · fin a 16 MiB e 16 megapixels. Copia en quest profil.
 
 ## Telechargiadas e recuperaziun
 
+Cur ch’i dat avunda plaz sin il disc, cuntinueschan las telechargiadas che pon vegnir cuntinuadas tenor ils parameters da la glista da spetga. Telechargiadas interruttas manualmain restan en pausa. Tira `SHA256SUMS` en la fanestra per vesair las datotecas terminadas correspundentas da la glista actuala e tscherner quellas da verifitgar. En la fanestra dal torrent terminà, tscherna **Verifitgar las datotecas memorisadas** per las controllar offline. Tocs che cuntegnan era datas da datotecas sursiglidas na sa laschan betg adina verifitgar.
+
 ### Telechargiadas e recuperaziun
 
 Clicca duas giadas sin ina telechargiada per vesair progress, sveltezza e temp restant. Pausa e Fermar conservan las datas parzialas. Aviar immediatamain dat prioritad a las datotecas tschernidas; ils limits da l’app e las quotas da datas valan vinavant. Per ina colliaziun scadida dovra Actualisar la colliaziun da telechargiada en il menu contextual. La recuperaziun verifitgescha las datas memorisadas avant cuntinuar. Allontanar las terminadas stizza mo endataziuns da la cronologia e conserva las datotecas. Incumbensas → Exportar la glista… memorisescha tias telechargiadas en ina datoteca, sco copia da segirezza u per in auter PC. Incumbensas → Importar ina glista… mussa las novitads avant che agiuntar ellas; colliaziuns existentas vegnan sursiglidas e novas telechargiadas restan en pausa. Vista → Zona da laschar crudar mobila mussa ina pitschna zona che resta sur las autras fanestras; lascha crudar colliaziuns sin ella per las telechargiar, era cur che Download Engine è en la zona da notificaziun.

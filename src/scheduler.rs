@@ -1,9 +1,9 @@
 mod commands;
 mod file_operations;
 mod runtime;
+use commands::apply;
 #[cfg(test)]
-use commands::ready_jobs_at;
-use commands::{apply, ready_jobs};
+use commands::{ready_jobs, ready_jobs_at};
 
 use crate::{
     auth, bandwidth, engine, link_recovery,
@@ -226,6 +226,7 @@ fn finish_worker(
             {
                 job.status = Status::Failed;
                 job.quota_waiting = false;
+                job.disk_wait = None;
                 job.retry.next_at = None;
                 job.error = Some(error.unwrap_or_else(|| {
                     "The download worker stopped unexpectedly. Resume to retry.".into()
@@ -314,11 +315,12 @@ fn settle_worker(store: &Store, worker: &Active, id: &str) -> Result<()> {
     if worker.user_paused
         && let Some(mut job) = store.get(id)?
         && job.status == Status::Queued
-        && (job.retry.next_at.is_some() || job.quota_waiting)
+        && (job.retry.next_at.is_some() || job.quota_waiting || job.disk_wait.is_some())
     {
         job.status = Status::Paused;
         job.retry.next_at = None;
         job.quota_waiting = false;
+        job.disk_wait = None;
         job.error = None;
         store.save(&job)?;
     }

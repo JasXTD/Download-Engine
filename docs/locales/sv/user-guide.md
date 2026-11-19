@@ -24,6 +24,8 @@ PNG / JPEG · högst 16 MiB och 16 megapixlar. Kopieras till profilen.
 
 ## Hämtningar och återställning
 
+När det finns tillräckligt med diskutrymme fortsätter återupptagbara hämtningar enligt köns inställningar. Manuellt pausade hämtningar förblir pausade. Dra `SHA256SUMS` till fönstret för att granska träffarna i den aktiva kön och välja slutförda filer att verifiera. Välj **Verifiera sparade filer** i torrentens slutfönster för att kontrollera dem offline. Delar som delas med överhoppade filer kan vara omöjliga att verifiera.
+
 ### Hämtningar och återställning
 
 Dubbelklicka på en hämtning för förlopp, hastighet och återstående tid. Paus och Stopp behåller sparade data. Starta direkt prioriterar valda filer. Återupptagning kräver serverstöd och matchande data. Uppdatera utgångna länkar i snabbmenyn. Rensa slutförda tar bara bort historik, inte sparade filer. Uppgifter → Exportera lista… sparar dina hämtningar i en fil som säkerhetskopia eller för en annan dator. Uppgifter → Importera lista… visar vad som är nytt innan det läggs till; befintliga länkar hoppas över och nya hämtningar förblir pausade. Visa → Flytande släppruta visar en liten ruta som ligger ovanpå andra fönster; släpp länkar på den för att hämta dem, även när Download Engine ligger i meddelandefältet.

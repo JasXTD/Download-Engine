@@ -381,9 +381,9 @@ pub(crate) async fn run_connection(
         let error = match write.await {
             Ok((Ok(()), _lease)) => None,
             Ok((Err(error), _lease)) => {
-                Some(format!("Could not write to the download folder: {error}"))
+                Some(anyhow::Error::new(error).context("Could not write to the download folder"))
             }
-            Err(error) => Some(format!("A peer disk write failed: {error}")),
+            Err(error) => Some(anyhow::Error::new(error).context("A peer disk write failed")),
         };
         if let Some(error) = error {
             let _ = live.events.send(Event::Fatal(error));
@@ -909,9 +909,10 @@ impl Reader {
         self.pending_write.take();
         let (written, _write_lease) = written?;
         if let Err(error) = written {
-            let message = format!("Could not write to the download folder: {error}");
-            let _ = self.live.events.send(Event::Fatal(message));
-            bail!("write failed: {error}");
+            let failure =
+                anyhow::Error::new(error).context("Could not write to the download folder");
+            let _ = self.live.events.send(Event::Fatal(failure));
+            bail!("Peer disk write failed");
         }
 
         core.count_downloaded(size);

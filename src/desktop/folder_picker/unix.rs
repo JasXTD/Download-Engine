@@ -61,15 +61,19 @@ fn file_dialog(
     filter: (&str, &str),
 ) -> rfd::FileDialog {
     let dialog = dialog.set_title(title).set_directory(folder);
-    let extensions: Vec<_> = filter
+    // Extension-only native filters cannot represent extensionless names such as SHA256SUMS.
+    let extensions: Option<Vec<_>> = filter
         .1
         .split(';')
-        .filter_map(|pattern| pattern.trim().strip_prefix("*."))
-        .filter(|extension| !extension.contains('*'))
+        .map(|pattern| {
+            pattern
+                .trim()
+                .strip_prefix("*.")
+                .filter(|extension| !extension.contains('*'))
+        })
         .collect();
-    if extensions.is_empty() {
-        dialog
-    } else {
-        dialog.add_filter(filter.0, &extensions)
+    match extensions {
+        Some(extensions) if !extensions.is_empty() => dialog.add_filter(filter.0, &extensions),
+        _ => dialog,
     }
 }

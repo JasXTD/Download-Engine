@@ -17,6 +17,7 @@ struct Runtime {
     store: Store,
     active: HashMap<String, Active>,
     queue_turn: usize,
+    next_space_check: std::time::Instant,
     links: link_recovery::Controller,
     grabber: crate::grabber_schedule::Controller,
     scripts: crate::script_automation::Controller,
@@ -41,6 +42,7 @@ pub(super) async fn run(
         store,
         active: HashMap::new(),
         queue_turn: 0,
+        next_space_check: std::time::Instant::now(),
         grabber: crate::grabber_schedule::Controller::default(),
         scripts: crate::script_automation::Controller::default(),
         files: file_operations::Controller::default(),
@@ -576,7 +578,18 @@ impl Runtime {
                 return;
             }
         }
-        let jobs = match ready_jobs(&self.store, &self.active, &mut self.queue_turn) {
+        let now = std::time::Instant::now();
+        let check_disk = now >= self.next_space_check;
+        if check_disk {
+            self.next_space_check = now + Duration::from_secs(10);
+        }
+        let jobs = match commands::select_jobs(
+            &self.store,
+            &self.active,
+            &mut self.queue_turn,
+            chrono::Utc::now().timestamp_millis(),
+            check_disk,
+        ) {
             Ok(jobs) => jobs,
             Err(error) => {
                 self.report(format!("{error:#}"));
@@ -606,6 +619,7 @@ impl Runtime {
             }
             job.status = Status::Downloading;
             job.quota_waiting = false;
+            job.disk_wait = None;
             job.error = None;
             job.retry.next_at = None;
             if let Err(error) = self.store.save(&job) {

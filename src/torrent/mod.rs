@@ -233,10 +233,10 @@ impl Files {
             !self.chosen.is_empty(),
             "Select at least one file to download"
         );
+        let listed: std::collections::HashSet<_> =
+            self.list.iter().map(|file| file.index).collect();
         ensure!(
-            self.chosen
-                .iter()
-                .all(|index| self.list.iter().any(|file| file.index == *index)),
+            self.chosen.iter().all(|index| listed.contains(index)),
             "This torrent has no such file"
         );
         Ok(())
@@ -270,6 +270,67 @@ pub fn completed_files(store: &Store, job: &Job) -> Result<Vec<(PathBuf, u64)>> 
             )
         })
         .collect())
+}
+
+/// Verify published files directly from the cached metainfo, including when torrents are off.
+pub fn verify_saved(
+    store: &Store,
+    job: &Job,
+    cancel: &CancellationToken,
+) -> Result<de_torrent::storage::Verification> {
+    let current = || -> Result<Job> {
+        let current = store
+            .get(&job.id)?
+            .context("This torrent has been removed from history")?;
+        ensure!(
+            current.status == Status::Complete
+                && current.torrent.is_some()
+                && current.saved_path == job.saved_path
+                && current.url == job.url,
+            "The saved torrent changed during verification"
+        );
+        Ok(current)
+    };
+    let current_job = current()?;
+    let saved = current_job
+        .saved_path
+        .as_deref()
+        .context("The saved torrent location is unavailable")?;
+    let files = store.torrent_files(&job.id)?;
+    files.validate()?;
+    let lone = files.list.len() == 1 && files.list[0].saved_as.components().count() == 1;
+    let (root, single_name) = if lone {
+        (
+            saved.parent().context("Missing download folder")?,
+            Some(
+                saved
+                    .file_name()
+                    .and_then(|s| s.to_str())
+                    .context("Invalid saved torrent filename")?
+                    .to_owned(),
+            ),
+        )
+    } else {
+        (saved, None)
+    };
+    let selected: Vec<_> = files
+        .chosen_files()
+        .map(|f| (f.index, f.saved_as.clone(), f.len))
+        .collect();
+    let report = de_torrent::storage::verify_saved(
+        &store.paths.data.join("torrents"),
+        de_torrent::v2::InfoHashes::parse_magnet(&job.url)?,
+        root,
+        single_name,
+        &selected,
+        cancel,
+    )?;
+    current()?;
+    ensure!(
+        store.torrent_files(&job.id)? == files,
+        "The saved torrent selection changed during verification"
+    );
+    Ok(report)
 }
 
 /// The helper reads names from strangers. Its answers are checked here too, because these
@@ -442,6 +503,8 @@ impl Store {
                 .download_folders()?
                 .destination(&self.paths.downloads, name),
         };
+        #[cfg(windows)]
+        crate::download_file::check_destination(&directory, true)?;
         Job::new_torrent(link, name, directory, request_id, stage)
     }
 
@@ -667,6 +730,13 @@ pub(crate) async fn transfer(
     let (stage_store, stage_job, stage_cancel) = (store.clone(), job.clone(), cancel.clone());
     let prepared = tokio::task::spawn_blocking(move || -> Result<_> {
         let files = stage_store.torrent_files(&stage_job.id)?;
+        if !files.chosen.is_empty() {
+            crate::disk_space::check(
+                &stage_job.directory,
+                crate::disk_space::Location::Destination,
+                files.chosen_size().saturating_sub(stage_job.downloaded),
+            )?;
+        }
         let chosen = files.chosen;
         let stage = staging::Stage::prepare(&stage_store, &stage_job, &chosen, &stage_cancel)?;
         Ok(stage.map(|(stage, guard)| (stage, guard, chosen)))
@@ -919,29 +989,7 @@ async fn share_speed_limits(
 /// How much room a folder's drive has. A folder that doesn't exist yet uses the nearest
 /// one above it, because that's where it will be made.
 pub fn free_space(folder: &Path) -> Option<u64> {
-    let folder = folder.ancestors().find(|path| path.is_dir())?;
-    #[cfg(windows)]
-    {
-        use std::os::windows::ffi::OsStrExt;
-        use windows_sys::Win32::Storage::FileSystem::GetDiskFreeSpaceExW;
-        let wide: Vec<u16> = folder.as_os_str().encode_wide().chain(Some(0)).collect();
-        let mut free = 0u64;
-        // The path ends in a zero, and only the first output is asked for.
-        let done = unsafe {
-            GetDiskFreeSpaceExW(
-                wide.as_ptr(),
-                &mut free,
-                std::ptr::null_mut(),
-                std::ptr::null_mut(),
-            )
-        };
-        (done != 0).then_some(free)
-    }
-    #[cfg(not(windows))]
-    {
-        let _ = folder;
-        None
-    }
+    crate::disk_space::available(folder).ok()
 }
 
 /// Whether a torrent has its file list and waits for someone to choose from it.

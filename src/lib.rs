@@ -9,6 +9,7 @@ pub mod control;
 pub mod crash_reports;
 pub mod dash;
 pub mod diagnostics;
+pub mod disk_space;
 pub mod engine;
 pub mod extensions;
 pub mod external_open;

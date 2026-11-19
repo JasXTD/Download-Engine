@@ -52,40 +52,16 @@ pub(crate) fn mux_limit(size: u64) -> Result<u64> {
         .context("Media mux size overflow")
 }
 
-pub(crate) fn available(folder: &Path) -> Result<u64> {
-    #[cfg(windows)]
-    {
-        crate::torrent::free_space(folder).context("Cannot check free space for media processing")
-    }
-    #[cfg(unix)]
-    {
-        use std::os::unix::ffi::OsStrExt;
-        let folder = folder
-            .ancestors()
-            .find(|p| p.is_dir())
-            .context("Missing media storage directory")?;
-        let name = std::ffi::CString::new(folder.as_os_str().as_bytes())?;
-        let mut info = std::mem::MaybeUninit::<libc::statvfs>::uninit();
-        // SAFETY: name is NUL-terminated and info is valid writable storage.
-        if unsafe { libc::statvfs(name.as_ptr(), info.as_mut_ptr()) } != 0 {
-            return Err(io::Error::last_os_error())
-                .context("Cannot check free space for media processing");
-        }
-        // SAFETY: statvfs succeeded and initialized info. f_bavail honors reserved blocks.
-        let info = unsafe { info.assume_init() };
-        u64::try_from((info.f_bavail as u128) * (info.f_frsize as u128))
-            .context("Available media space overflow")
-    }
-}
-pub(crate) fn check_space(folder: &Path, bytes: u64) -> Result<()> {
+pub(crate) use crate::disk_space::available;
+pub(crate) fn check_space(
+    folder: &Path,
+    location: crate::disk_space::Location,
+    bytes: u64,
+) -> Result<()> {
     let required = bytes
         .checked_add(FREE_HEADROOM)
         .context("Media space requirement overflow")?;
-    ensure!(
-        available(folder)? >= required,
-        "Not enough free space for media processing; keep 64 MiB free beyond temporary and output files"
-    );
-    Ok(())
+    crate::disk_space::Wait::check_known(location, required, available(folder)?)
 }
 
 /// Account conservatively as if cache, temp and destination share one volume.
@@ -112,10 +88,14 @@ pub(crate) fn check_processing_space(
         .and_then(|n| n.checked_add(mux))
         .and_then(|n| n.checked_add(scratch))
         .context("Media space requirement overflow")?;
-    check_space(cache, cache_bytes)?;
-    check_space(destination, mux)?;
+    check_space(cache, crate::disk_space::Location::Temporary, cache_bytes)?;
+    check_space(destination, crate::disk_space::Location::Destination, mux)?;
     if scratch > 0 {
-        check_space(&std::env::temp_dir(), scratch)?;
+        check_space(
+            &std::env::temp_dir(),
+            crate::disk_space::Location::SystemTemp,
+            scratch,
+        )?;
     }
     Ok(())
 }
@@ -127,7 +107,12 @@ pub(crate) struct DiskWriter<'a> {
 }
 impl Write for DiskWriter<'_> {
     fn write(&mut self, bytes: &[u8]) -> io::Result<usize> {
-        check_space(self.directory, bytes.len() as u64).map_err(io::Error::other)?;
+        check_space(
+            self.directory,
+            crate::disk_space::Location::Temporary,
+            bytes.len() as u64,
+        )
+        .map_err(io::Error::other)?;
         self.file.write(bytes)
     }
     fn flush(&mut self) -> io::Result<()> {
@@ -154,10 +139,24 @@ mod tests {
     fn disk_checks_fail_closed_without_allocating_large_files() {
         let root = tempfile::tempdir().unwrap();
         assert!(available(root.path()).unwrap() > 0);
-        check_space(root.path(), 1).unwrap();
+        check_space(root.path(), crate::disk_space::Location::Temporary, 1).unwrap();
         // Deterministic even if another process frees space between queries.
-        assert!(check_space(root.path(), u64::MAX - FREE_HEADROOM).is_err());
-        assert!(check_space(root.path(), u64::MAX).is_err());
+        assert!(
+            check_space(
+                root.path(),
+                crate::disk_space::Location::Temporary,
+                u64::MAX - FREE_HEADROOM
+            )
+            .is_err()
+        );
+        assert!(
+            check_space(
+                root.path(),
+                crate::disk_space::Location::Temporary,
+                u64::MAX
+            )
+            .is_err()
+        );
         assert!(check_processing_space(root.path(), root.path(), u64::MAX, 1, None).is_err());
     }
 }

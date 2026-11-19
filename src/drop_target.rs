@@ -667,7 +667,7 @@ mod native {
         commands: mpsc::Sender<Command>,
         events: mpsc::Receiver<Event>,
         /// Validated link text, one URL per line.
-        pub drops: mpsc::Receiver<String>,
+        pub drops: mpsc::Receiver<crate::url_drop::Input>,
         thread: Option<thread::JoinHandle<()>>,
     }
     impl DropTarget {

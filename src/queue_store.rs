@@ -434,9 +434,12 @@ impl Store {
             .optional()?;
         if let Some(data) = data {
             let mut job = crate::store::decode_job(id, &data)?;
-            // A quota can require manual restart on a non-resumable server.
+            // A quota or disk-space hold can require a manual restart.
             // Automatic queue ownership must not turn that hold into a retry.
-            if matches!(job.status, Status::Paused | Status::Downloading) && !job.quota_waiting {
+            if matches!(job.status, Status::Paused | Status::Downloading)
+                && !job.quota_waiting
+                && job.disk_wait.is_none()
+            {
                 job.status = Status::Queued;
                 job.error = None;
                 tx.execute(

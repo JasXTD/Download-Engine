@@ -46,6 +46,41 @@ fn clear_history_rechecks_status_and_queue_when_the_command_executes() {
 }
 
 #[test]
+fn restart_discards_the_completed_http_checkpoint_and_its_cached_file() {
+    let (_temp, store) = setup();
+    let mut job = add(&store, MAIN_QUEUE, 1).remove(0);
+    assert!(
+        serde_json::to_value(&job)
+            .unwrap()
+            .get("received_sha256")
+            .is_none()
+    );
+    let root = store.paths.parts(&job.id).unwrap();
+    std::fs::create_dir_all(&root).unwrap();
+    let file = root.join("whole.part");
+    std::fs::write(&file, b"abc").unwrap();
+    job.status = Status::Failed;
+    job.downloaded = 3;
+    job.total = Some(3);
+    job.received_sha256 =
+        Some("ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad".into());
+    store.save(&job).unwrap();
+    apply(
+        &store,
+        &mut HashMap::new(),
+        Command::Restart(job.id.clone()),
+    )
+    .unwrap();
+    let reset = store.get(&job.id).unwrap().unwrap();
+    assert!(reset.received_sha256.is_none());
+    assert_eq!(
+        (reset.status, reset.downloaded, reset.total),
+        (Status::Queued, 0, None)
+    );
+    assert!(!file.exists());
+}
+
+#[test]
 fn restart_clears_both_contiguous_and_out_of_order_video_receipts() {
     let (_temp, store) = setup();
     let mut job = add(&store, MAIN_QUEUE, 1).remove(0);
@@ -1188,6 +1223,52 @@ fn full_capacity_ticks_do_not_steal_another_queues_turn() {
     assert_eq!(next.len(), 1);
     assert_eq!(next[0].0, other.id);
 }
+#[test]
+fn disk_wait_releases_the_queue_slot_and_respects_manual_pause_after_reopen() {
+    use crate::disk_space::{Location, Requirement, Wait};
+    let (_temp, store) = setup();
+    store.set_queue_limit(MAIN_QUEUE, 1).unwrap();
+    let mut jobs = add(&store, MAIN_QUEUE, 2);
+    let first = &mut jobs[0];
+    first.disk_wait = Some(Wait {
+        requirements: vec![Requirement {
+            location: Location::Destination,
+            required: u64::MAX,
+            available: 0,
+        }],
+        check_after: 1,
+    });
+    store.save(first).unwrap();
+    let store = Store::open(store.paths.clone()).unwrap();
+    let mut active = HashMap::new();
+    let next = || {
+        ready_jobs_at(&store, &HashMap::new(), &mut 0, 10)
+            .unwrap()
+            .remove(0)
+            .1
+            .id
+    };
+    assert_ne!(next(), first.id);
+    first.disk_wait.as_mut().unwrap().requirements[0].required = 1;
+    store.save(first).unwrap();
+    assert_eq!(next(), first.id);
+    apply(&store, &mut active, Command::Pause(first.id.clone())).unwrap();
+    assert_ne!(next(), first.id);
+    let paused = store.get(&first.id).unwrap().unwrap();
+    assert_eq!(paused.status, Status::Paused);
+    assert!(paused.disk_wait.is_none());
+    let version: i64 = store
+        .connect()
+        .unwrap()
+        .query_row(
+            "SELECT min_writer_version FROM profile_format WHERE id=1",
+            [],
+            |r| r.get(0),
+        )
+        .unwrap();
+    assert_eq!(version, 14);
+}
+
 #[test]
 fn retry_wait_skips_slots_preserves_order_and_obeys_queue_controls() {
     let (_temp, store) = setup();

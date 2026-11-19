@@ -145,8 +145,14 @@ impl Desktop {
                     }
                 }
             }
-            for text in drops {
-                self.receive_dropped_links(ctx, &text);
+            for input in drops {
+                match input {
+                    crate::url_drop::Input::Links(text) => self.receive_dropped_links(ctx, &text),
+                    crate::url_drop::Input::Checksum(path) => {
+                        self.show_window(ctx);
+                        self.open_checksum_file(path);
+                    }
+                }
             }
         }
         if self.dialog.is_none()

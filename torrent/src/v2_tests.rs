@@ -66,6 +66,32 @@ fn sample(data: &[u8], piece: usize) -> Vec<u8> {
 }
 
 #[test]
+fn verifies_finished_v2_file_with_cached_piece_layers() {
+    let temp = TempFolder::new();
+    let root = temp.path();
+    let data = vec![37; 65000];
+    let meta = TorrentMeta::from_torrent_file(&sample(&data, 32768)).unwrap();
+    crate::resume::save_info(&root, &meta).unwrap();
+    let file = &meta.files[0];
+    let selected = [(0, file.path.clone(), file.len)];
+    let verify = || {
+        crate::storage::verify_saved(
+            &root,
+            meta.hashes,
+            &root,
+            Some("finished.bin".into()),
+            &selected,
+            &tokio_util::sync::CancellationToken::new(),
+        )
+        .unwrap()
+    };
+    std::fs::write(root.join("finished.bin"), &data).unwrap();
+    assert_eq!(verify().verified_pieces, 2);
+    std::fs::write(root.join("finished.bin"), vec![51; data.len()]).unwrap();
+    assert_eq!(verify().damaged_pieces, 2);
+}
+
+#[test]
 fn v2_payload_hashes_cover_short_blocks_and_merkle_padding() {
     for piece in [16384, 32768, 131072] {
         for len in [1, 16383, 16384, 16385, 65539, 200013] {

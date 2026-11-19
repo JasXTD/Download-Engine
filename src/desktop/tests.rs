@@ -160,7 +160,11 @@ fn progress_distinguishes_unknown_sizes_and_empty_completed_files() {
 
 #[test]
 fn no_resume_plan_keeps_restart_semantics_explicit() {
-    let job = job(Status::Paused);
+    let mut job = job(Status::Paused);
     assert_eq!(resume_action(&job), "Start again");
     assert_eq!(resume_description(&job), "Starts from the beginning");
+    job.total = Some(job.downloaded);
+    job.received_sha256 = Some("00".repeat(32));
+    assert_eq!(resume_action(&job), "Resume");
+    assert_eq!(resume_description(&job), "Supported");
 }

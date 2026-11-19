@@ -46,6 +46,12 @@ pub(super) async fn finish(
         discard_cancelled(prepared)?;
         return Ok(None);
     }
+    if let Some(received) = &job.received_sha256 {
+        ensure!(
+            received.eq_ignore_ascii_case(&prepared.hash),
+            "Cached HTTP file changed. Restart this download."
+        );
+    }
     if let Some(provider) = &job.provider {
         let plan = provider.plan.as_ref().context("Missing provider plan")?;
         ensure!(
@@ -133,6 +139,11 @@ fn prepare_direct(
         download_file::guard_download_parent(&source)?,
     ];
     let mut file = download_file::read_part_sync(&source)?;
+    // Exercise the real copy path with a single-volume test fixture.
+    #[cfg(test)]
+    if storage_tests::copy_fault_requested(&staging) {
+        return Ok(Direct::CopyRequired);
+    }
     if !download_file::same_volume(&file, &parents[0])? {
         return Ok(Direct::CopyRequired);
     }
@@ -187,6 +198,11 @@ async fn prepare_copy(
     })
     .await??;
     let mut output = download_file::fresh(&staging).await?;
+    crate::disk_space::check(
+        &job.directory,
+        crate::disk_space::Location::Destination,
+        job.downloaded,
+    )?;
     // Keep the original asynchronous read/write overlap for multi-part and
     // cross-volume copies. A synchronous-copy experiment did not improve it.
     let outcome: Result<Option<String>> = async {

@@ -66,6 +66,7 @@ pub enum Event {
     DownloadPaused,
     DownloadRetryScheduled,
     DownloadQuotaHeld,
+    DownloadDiskHeld,
     DownloadFailed,
     DownloadStateSaveFailed,
     WorkerFailed,
@@ -182,6 +183,17 @@ impl Failure {
         // Prefer structured codes. Display chains may contain secrets supplied
         // by a server, a URL parser, the OS, or a panic payload.
         for source in error.chain() {
+            if source.is::<crate::disk_space::Wait>()
+                || source
+                    .downcast_ref::<crate::torrent::HelperError>()
+                    .is_some_and(|e| e.code.as_deref() == Some(de_torrent::reason::DISK_FULL))
+            {
+                return Self {
+                    kind: FailureKind::DiskFull,
+                    code: None,
+                    http_status: None,
+                };
+            }
             if let Some(error) = source.downcast_ref::<rusqlite::Error>() {
                 return Self {
                     kind: FailureKind::Database,

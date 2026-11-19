@@ -43,13 +43,23 @@ fn draw(
     events: Vec<egui::Event>,
 ) -> egui::FullOutput {
     let mut window = app.download_status.windows.remove(id).unwrap();
+    let size = if window.phase.is_none()
+        && window
+            .job
+            .as_ref()
+            .is_some_and(|job| job.status == Status::Complete)
+    {
+        egui::vec2(520.0, 365.0)
+    } else {
+        SIZE
+    };
     window.torrents_on = app.torrents.settings.enabled;
     let current_watch = app.extras.watches.get(&window.queue_id).map(|w| w.action);
     let power_states = app.extras.power_states;
     let mut action = None;
     let mut output = ctx.run_ui(
         egui::RawInput {
-            screen_rect: Some(egui::Rect::from_min_size(egui::Pos2::ZERO, SIZE)),
+            screen_rect: Some(egui::Rect::from_min_size(egui::Pos2::ZERO, size)),
             events,
             ..Default::default()
         },
@@ -388,6 +398,41 @@ fn ticking_a_file_of_a_paused_torrent_saves_the_choice_and_keeps_it_paused() {
         saved.status,
         Status::Paused,
         "a tick never starts a torrent"
+    );
+    assert!(!app.store.torrents.is_running());
+}
+
+#[test]
+fn finished_torrent_can_request_offline_verification_with_networking_off() {
+    let (_temp, mut app, ctx) = fixture();
+    let mut job = paused_torrent(&mut app);
+    app.store
+        .save_torrent_settings(&Settings::default())
+        .unwrap();
+    app.torrents.settings.enabled = false;
+    job.status = Status::Complete;
+    job.saved_path = Some(job.directory.join("Sample pack"));
+    app.store.save(&job).unwrap();
+    app.open_status_and_wait(&job);
+    click_text(&mut app, &ctx, &job.id, "Verify saved files");
+    let end = Instant::now() + Duration::from_secs(5);
+    while app.download_status.windows[&job.id]
+        .torrent
+        .message
+        .is_none()
+    {
+        assert!(Instant::now() < end);
+        draw(&mut app, &ctx, &job.id, vec![]);
+    }
+    let (ok, message) = app.download_status.windows[&job.id]
+        .torrent
+        .message
+        .as_ref()
+        .unwrap();
+    assert!(!ok && message.contains("unavailable offline"), "{message}");
+    assert_eq!(
+        app.store.get(&job.id).unwrap().unwrap().status,
+        Status::Complete
     );
     assert!(!app.store.torrents.is_running());
 }

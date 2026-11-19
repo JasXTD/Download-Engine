@@ -26,6 +26,7 @@ pub(super) struct Extras {
     pub(super) update_check: Option<updates::State>,
     pub(super) launch_update_check: Option<updates::State>,
     checksum: Option<ChecksumDialog>,
+    pub(super) checksum_batch: Option<checksums::Batch>,
     pub(super) watches: HashMap<String, Watch>,
     pub(super) exit_deadline: Option<Instant>,
     /// The shut down, sleep or hibernate countdown. Other code cancels it by
@@ -52,6 +53,7 @@ impl Default for Extras {
             update_check: None,
             launch_update_check: None,
             checksum: None,
+            checksum_batch: None,
             watches: HashMap::new(),
             exit_deadline: None,
             shutdown_deadline: None,
@@ -435,7 +437,11 @@ impl Desktop {
             // Unix delivers native file drops through egui. Feed the same bounded
             // review inbox as Explorer/browser activation; never auto-start a job.
             let dropped = ctx.input_mut(|input| std::mem::take(&mut input.raw.dropped_files));
-            if !dropped.is_empty() {
+            if let [file] = dropped.as_slice()
+                && download_engine::integrity::manifest::drop_path(file.path())
+            {
+                self.open_checksum_file(file.path().to_owned());
+            } else if !dropped.is_empty() {
                 let result = (|| -> anyhow::Result<()> {
                     anyhow::ensure!(
                         dropped.len() <= download_engine::external_open::MAX_PENDING,
@@ -472,14 +478,20 @@ impl Desktop {
                 }
             }
             #[cfg(windows)]
-            if let Some(text) = self
+            if let Some(input) = self
                 .extras
                 .drop_target
                 .as_ref()
                 .and_then(|t| t.events.try_recv().ok())
-                && let Err(error) = self.review_dropped_urls(&text)
             {
-                self.notice = Some(Notice::error(error.to_string()));
+                match input {
+                    crate::url_drop::Input::Checksum(path) => self.open_checksum_file(path),
+                    crate::url_drop::Input::Links(text) => {
+                        if let Err(error) = self.review_dropped_urls(&text) {
+                            self.notice = Some(Notice::error(error.to_string()));
+                        }
+                    }
+                }
             }
         }
         if let Some(draft) = &mut self.extras.checksum

@@ -141,6 +141,7 @@ pub(crate) async fn run(
     store.activity.set(&job.id, Phase::CheckingSaved);
     let plan = job.plan.as_ref().context("Missing range plan")?;
     job.downloaded = bytes_on_disk(root, plan).await?;
+    crate::disk_space::check_transfer(job, root, plan.size, plan.segments.len() > 1)?;
     let mut workers = Vec::with_capacity(plan.segments.len());
     for index in 0..plan.segments.len() {
         workers.push(SegmentWorker {

@@ -180,6 +180,7 @@ pub async fn run(
     let limiter = limiter.with_store(&store)?;
     job.retry.next_at = None;
     job.quota_waiting = false;
+    job.disk_wait = None;
     let outcome = transfer(&store, &mut job, &cancel, &limiter).await;
     let failure = outcome
         .as_ref()
@@ -188,6 +189,7 @@ pub async fn run(
     let mut completed_guard = None;
     match outcome {
         Ok(Some(file)) => {
+            job.received_sha256 = None;
             job.status = Status::Complete;
             job.retry = retry::State::default();
             job.saved_path = Some(file.path);
@@ -202,14 +204,31 @@ pub async fn run(
             if cancel.is_cancelled() {
                 job.status = Status::Paused;
                 job.error = None;
+            } else if let Some(wait) = crate::disk_space::Wait::from_error(&store, &job, &error) {
+                let resumable = job.supports_resume()
+                    || job
+                        .provider
+                        .as_ref()
+                        .is_some_and(|provider| provider.media.is_some())
+                    || job.downloaded == 0;
+                job.status = if resumable {
+                    Status::Queued
+                } else {
+                    Status::Paused
+                };
+                let details = wait.describe(&store, &job);
+                job.error = Some(if resumable {
+                    details
+                } else {
+                    format!(
+                        "{details} {}",
+                        crate::i18n::tr("Resume manually to restart this stream.")
+                    )
+                });
+                job.disk_wait = Some(wait);
             } else if crate::quota::reached(&error) {
                 job.quota_waiting = true;
-                if job.plan.is_some()
-                    || job.hls.is_some()
-                    || job.ftp.is_some()
-                    || job.torrent.is_some()
-                    || job.downloaded == 0
-                {
+                if job.supports_resume() || job.downloaded == 0 {
                     job.status = Status::Queued;
                     job.error = Some(error.to_string());
                 } else {
@@ -237,6 +256,7 @@ pub async fn run(
     }
     let event = match job.status {
         Status::Complete => Event::DownloadCompleted,
+        _ if job.disk_wait.is_some() => Event::DownloadDiskHeld,
         _ if job.quota_waiting => Event::DownloadQuotaHeld,
         Status::Paused => Event::DownloadPaused,
         _ if job.retry.next_at.is_some() => Event::DownloadRetryScheduled,
@@ -279,6 +299,13 @@ async fn transfer(
     cancel: &CancellationToken,
     limiter: &Limiter,
 ) -> Result<Option<FinishedFile>> {
+    #[cfg(windows)]
+    {
+        let folder = job.directory.clone();
+        let torrent = job.torrent.is_some();
+        tokio::task::spawn_blocking(move || download_file::check_destination(&folder, torrent))
+            .await??;
+    }
     limiter.check_quota().await?;
     if job.torrent.is_some() {
         return crate::torrent::transfer(store, job, cancel, limiter).await;
@@ -301,6 +328,9 @@ async fn transfer(
     tokio::fs::create_dir_all(&job.directory)
         .await
         .context("Cannot create the download folder")?;
+    if job.received_sha256.is_some() {
+        return finalize(store, job, &root, cancel, false).await;
+    }
     if job.provider.is_some() {
         return match crate::provider::resolve(store, job, cancel).await? {
             crate::provider::Source::File(source) => {
@@ -347,9 +377,14 @@ async fn single(
     cancel: &CancellationToken,
     limiter: &Limiter,
 ) -> Result<bool> {
+    use sha2::{Digest, Sha256};
     let mut file = download_file::buffered(download_file::fresh(&root.join("whole.part")).await?);
+    if let Some(total) = job.total {
+        crate::disk_space::check_transfer(job, root, total, false)?;
+    }
     store.activity.set(&job.id, Phase::Downloading);
     let mut checkpoint = std::time::Instant::now();
+    let mut received = Sha256::new();
     let outcome = async {
         loop {
             if job.total != Some(job.downloaded) {
@@ -384,6 +419,7 @@ async fn single(
                     checkpoint = std::time::Instant::now();
                 }
             }
+            received.update(&chunk);
         }
         if let Some(size) = job.total
             && job.downloaded != size
@@ -398,7 +434,12 @@ async fn single(
     .await;
     // Quota holds, like manual pauses, must release ownership only after I/O.
     download_file::flush_and_sync(&mut file).await?;
-    outcome
+    let complete = outcome?;
+    if complete {
+        // finish() saves the checkpoint before it opens or copies the source.
+        job.received_sha256 = Some(format!("{:x}", received.finalize()));
+    }
+    Ok(complete)
 }
 async fn finalize(
     store: &Store,

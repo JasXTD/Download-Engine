@@ -420,9 +420,9 @@ pub(crate) async fn run(live: Arc<Live>) {
     ) {
         Ok(http) => http,
         Err(_) => {
-            let _ = live.events.send(Event::Fatal(
-                "Could not initialize web seed HTTP client".into(),
-            ));
+            let _ = live.events.send(Event::Fatal(anyhow::anyhow!(
+                "Could not initialize web seed HTTP client"
+            )));
             return;
         }
     };
@@ -475,7 +475,7 @@ pub(crate) async fn run(live: Arc<Live>) {
         match download_claim(&live, &http, &sources[index].seed, &claim).await {
             Ok(()) => sources[index].failures = 0,
             Err(error) if error.is::<DiskFailure>() => {
-                let _ = live.events.send(Event::Fatal(error.to_string()));
+                let _ = live.events.send(Event::Fatal(error));
                 return;
             }
             Err(error) if error.is::<BadHash>() => sources[index].disabled = true,
@@ -579,7 +579,10 @@ async fn download_claim(live: &Live, http: &Http, seed: &Seed, claim: &Claim) ->
         tokio::task::spawn_blocking(move || storage.write(offset, &bytes))
             .await
             .map_err(|e| DiskFailure(format!("A web seed disk write failed: {e}")))?
-            .map_err(|e| DiskFailure(format!("Could not write to the download folder: {e}")))?;
+            .map_err(|e| {
+                anyhow::Error::new(e)
+                    .context(DiskFailure("Could not write to the download folder".into()))
+            })?;
         offset += len as u64;
         while verified < claim.pieces.len() {
             let number = claim.pieces[verified];

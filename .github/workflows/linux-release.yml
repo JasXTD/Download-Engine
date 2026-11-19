@@ -67,18 +67,24 @@ jobs:
           SAVE_RUST_CACHE: ${{ github.ref == 'refs/heads/main' && steps.rust-cache.outputs.cache-hit != 'true' }}
         run: |
           name="download-engine-ci-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
-          cleanup() { docker rm -f "$name" >/dev/null 2>&1 || true; }
+          cache="$RUNNER_TEMP/rust-cache"
+          mkdir -p "$cache/cargo-registry" "$cache/target" "$cache/torrent-target"
+          cleanup() {
+            docker rm -f "$name" >/dev/null 2>&1 || true
+            sudo chown -hR -- "$(id -u):$(id -g)" "$cache"
+          }
           trap cleanup EXIT
           mkdir "$RUNNER_TEMP/linux-packages"
-          mkdir -p "$RUNNER_TEMP/rust-cache/cargo-registry" "$RUNNER_TEMP/rust-cache/target" "$RUNNER_TEMP/rust-cache/torrent-target"
+          # The runner owns restored files. Container UID 0 has no DAC override.
+          sudo chown -hR -- 0:0 "$cache"
           source_hash=$(sha256sum "$RUNNER_TEMP/linux-source.tar" | cut -d ' ' -f 1)
           docker run --detach --pull never --name "$name" --cap-drop ALL --security-opt no-new-privileges --pids-limit 512 --cpus 2 --memory 8g \
             --mount "type=bind,source=$RUNNER_TEMP/linux-source.tar,target=/source.tar,readonly" \
             --mount "type=bind,source=$RUNNER_TEMP/linux-ci-inputs,target=/ci-inputs,readonly" \
             --mount "type=bind,source=$GITHUB_WORKSPACE/scripts/Run-LinuxCi.sh,target=/run-linux-ci.sh,readonly" \
-            --mount "type=bind,source=$RUNNER_TEMP/rust-cache/cargo-registry,target=/usr/local/cargo/registry" \
-            --mount "type=bind,source=$RUNNER_TEMP/rust-cache/target,target=/source/target" \
-            --mount "type=bind,source=$RUNNER_TEMP/rust-cache/torrent-target,target=/source/torrent/target" \
+            --mount "type=bind,source=$cache/cargo-registry,target=/usr/local/cargo/registry" \
+            --mount "type=bind,source=$cache/target,target=/source/target" \
+            --mount "type=bind,source=$cache/torrent-target,target=/source/torrent/target" \
             --env GITHUB_ACTIONS=true --env "DE_SOURCE_COMMIT=$GITHUB_SHA" --env "DE_SOURCE_SHA256=$source_hash" \
             --env "DOWNLOAD_ENGINE_SKIP_FFMPEG_TESTS=$DOWNLOAD_ENGINE_SKIP_FFMPEG_TESTS" \
             "$RUST_IMAGE" sleep infinity

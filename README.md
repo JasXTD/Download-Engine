@@ -63,11 +63,16 @@ rather than Reddit so we can track and resolve them.
 
 ## Features
 
+The features below describe builds from the `main` branch.
+
 - **Files:** HTTP, HTTPS, FTP and FTPS, with parallel connections where the server supports them.
   Add batches, import and export lists, and use proxies or site logins.
   [Downloads guide](docs/user-guide.md#downloads--recovery)
-- **Recovery:** pause, resume and retry, recover unfinished downloads after a restart, and replace
-  an expired link. [Pause and recover](docs/user-guide.md#pause-stop-resume-and-recover)
+- **Recovery** lets you pause, resume, retry, recover unfinished downloads after a restart, and
+  replace an expired link. A download waiting for disk space frees its queue slot. Restarting
+  with a replacement link checks space for the new file. A direct HTTP download that cached the
+  whole file in a single response can finish saving once space is available, even at the data quota.
+  [Pause and recover](docs/user-guide.md#pause-stop-resume-and-recover)
 - **Hosting links:** MEGA public files, public WeTransfer transfers, and exposed file links on
   other download pages. [MEGA](docs/mega.md) · [WeTransfer](docs/wetransfer.md) ·
   [Link discovery](docs/user-guide.md#find-files-on-a-website)
@@ -83,8 +88,11 @@ rather than Reddit so we can track and resolve them.
   a page, or pick links from it. [Browser integration](#browser-integration)
 - **Web Grabber:** find files on a website, save and schedule scans, or save a static website for
   offline viewing. [Offline websites](docs/user-guide.md#offline-websites)
-- **Checks:** SHA-256 verification, optional antivirus scans and ZIP contents preview.
-  [Antivirus guide](docs/user-guide.md#antivirus-scanning)
+- **File checks** include SHA-256 verification, optional antivirus scans and ZIP contents preview.
+  Select a queue and drop a checksum file such as `SHA256SUMS-<version>` or
+  `SHA256SUMS-MSIX-<version>` onto the window, or open it with **Tasks → Verify checksum file…**.
+  Review the matching completed downloads and choose **Verify selected files**.
+  [Checksum guide](docs/user-guide.md#downloads--recovery) · [Antivirus guide](docs/user-guide.md#antivirus-scanning)
 - **Automation:** routing rules, Lua and PowerShell scripts, Lua site readers and download
   providers, shareable extensions, a JSON CLI and a local MCP server for AI clients.
   [Automation and AI clients](#automation-and-ai-clients)
@@ -139,6 +147,9 @@ as a media file. These are capabilities of the shipped readers, not additional
 - **Off until you turn it on.** The app asks first, then you choose the files to download. The usual
   queue, **Stop** and **Stop all** controls apply. Verified pieces are kept, and existing files are
   never overwritten.
+- **Verify saved files** in a completed torrent's window checks your selected files against cached
+  torrent metadata. It works offline and reports missing files, damaged pieces and pieces shared
+  with skipped files.
 - **Sharing** settings live in **Preferences → Torrents**: uploads, upload limits and DHT. Uploading,
   sharing after completion, incoming connections and UPnP start off. Saved choices are preserved
   when upgrading; data quotas count any enabled uploads. Enabling incoming connections or UPnP
@@ -210,10 +221,12 @@ Some upgrades change the profile in a way that older versions refuse, so back up
 going back to an older version. Versions 3.0 and 3.6 need extra steps; see the
 [upgrade notes by version](docs/reference.md#upgrade-notes-by-version).
 
-The app checks for updates when it opens; turn this off in **Preferences → Startup & tray** on Windows
-(**Preferences → Updates** on macOS/Linux), or
-check manually from **Help → Check for updates**. Updates are downloaded and installed manually
-from the official GitHub release page.
+By default, desktop packages from GitHub check for updates at launch. Turn off launch checks in
+**Preferences → Startup & tray** on Windows or **Preferences → Updates** on macOS and Linux.
+To check manually, choose **Help → Check for updates**. When a newer version is available,
+**Open release page** opens the official release in your browser so you can download and install it.
+In a Microsoft Store build, **Help → Check for updates** offers **Open Microsoft Store** to reach
+the Store's updates page.
 
 ## Quick start
 

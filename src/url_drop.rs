@@ -451,18 +451,26 @@ mod native {
                 .to_string();
             let manifest = std::env::temp_dir().join("SHA256SUMS");
             let manifest_text = manifest.display().to_string();
-            for (names, valid) in [
-                (vec![manifest_text.clone()], true),
-                (vec![manifest_text.clone(), a.clone()], false),
-                (vec![a.clone(), manifest_text.clone()], false),
-                (vec![a.clone(), b.clone()], true),
-                (vec![a.clone(), "C:\\bad.exe".into()], false),
-                (vec![a.clone(); 9], false),
+            let release =
+                std::env::temp_dir().join(concat!("SHA256SUMS-", env!("CARGO_PKG_VERSION")));
+            for (names, expected) in [
+                (vec![manifest_text.clone()], Some(Input::Checksum(manifest))),
+                (
+                    vec![release.display().to_string()],
+                    Some(Input::Checksum(release)),
+                ),
+                (vec![manifest_text.clone(), a.clone()], None),
+                (vec![a.clone(), manifest_text], None),
+                (
+                    vec![a.clone(), b.clone()],
+                    Some(Input::Links(format!("{a}\n{b}"))),
+                ),
+                (vec![a.clone(), "C:\\bad.exe".into()], None),
+                (vec![a.clone(); 9], None),
             ] {
                 let mut text = vec![0u16; 10];
                 text[0] = 20;
                 text[8] = 1;
-                let is_manifest = names.as_slice() == [manifest_text.as_str()];
                 for name in names {
                     text.extend(name.encode_utf16());
                     text.push(0);
@@ -480,24 +488,13 @@ mod native {
                         .unwrap();
                 }
                 assert!(events.try_recv().is_err());
-                assert_eq!(effect == DROPEFFECT_COPY, valid);
+                assert_eq!(effect == DROPEFFECT_COPY, expected.is_some());
                 unsafe {
                     target
                         .Drop(&data, MODIFIERKEYS_FLAGS(0), POINTL::default(), &mut effect)
                         .unwrap();
                 }
-                let received = events.try_recv();
-                assert_eq!(received.is_ok(), valid);
-                if valid {
-                    assert_eq!(
-                        received.unwrap(),
-                        if is_manifest {
-                            Input::Checksum(manifest.clone())
-                        } else {
-                            Input::Links(format!("{a}\n{b}"))
-                        }
-                    );
-                }
+                assert_eq!(events.try_recv().ok(), expected);
             }
             for text in [
                 vec![65535u16; 12],

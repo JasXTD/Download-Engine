@@ -54,7 +54,7 @@ impl Release {
             name == self.version,
             "Release page does not match the checked version"
         );
-        version(name)?;
+        parse_version(name)?;
         Ok(&self.page_url)
     }
 }
@@ -66,7 +66,7 @@ struct Metadata {
     prerelease: bool,
 }
 
-fn version(value: &str) -> Result<[u16; 3]> {
+pub(crate) fn parse_version(value: &str) -> Result<[u16; 3]> {
     let mut result = [0; 3];
     let mut parts = value.split('.');
     for number in &mut result {
@@ -90,8 +90,8 @@ fn parse(body: &[u8], installed: &str) -> Result<Release> {
         "Expected a stable public release"
     );
     let name = data.tag_name.strip_prefix('v').unwrap_or(&data.tag_name);
-    let latest = version(name)?;
-    let current = version(installed)?;
+    let latest = parse_version(name)?;
+    let current = parse_version(installed)?;
     Ok(Release {
         version: name.into(),
         // Construct the destination from a validated numeric tag, never an API-supplied URL.

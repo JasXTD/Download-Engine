@@ -25,8 +25,14 @@ pub fn drop_path(path: &Path) -> bool {
     let Some(name) = path.file_name().and_then(|name| name.to_str()) else {
         return false;
     };
+    let versioned = name.rsplit_once('-').is_some_and(|(prefix, version)| {
+        (prefix.eq_ignore_ascii_case("SHA256SUMS")
+            || prefix.eq_ignore_ascii_case("SHA256SUMS-MSIX"))
+            && crate::updates::parse_version(version).is_ok()
+    });
     path.is_absolute()
-        && (name.eq_ignore_ascii_case("SHA256SUMS")
+        && (versioned
+            || name.eq_ignore_ascii_case("SHA256SUMS")
             || name.eq_ignore_ascii_case("SHA256SUMS.txt")
             || path
                 .extension()
@@ -205,6 +211,31 @@ mod tests {
     use super::*;
     use std::fs;
     const ABC: &str = "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad";
+
+    #[test]
+    fn checksum_drops_recognize_versioned_release_manifests() {
+        let folder = std::env::temp_dir();
+        for name in [
+            "SHA256SUMS",
+            "SHA256SUMS.txt",
+            "download.sha256",
+            "SHA256SUMS-3.20.1",
+            "sha256sums-msix-12.10.0",
+        ] {
+            assert!(drop_path(&folder.join(name)), "{name}");
+            assert!(!drop_path(Path::new(name)), "{name}");
+        }
+        for name in [
+            "SHA256SUMS-",
+            "SHA256SUMS-3.20",
+            "SHA256SUMS-3.20.1.exe",
+            "SHA256SUMS-notes",
+            "SHA256SUMS-notes-3.20.1",
+            "notes-3.20.1",
+        ] {
+            assert!(!drop_path(&folder.join(name)), "{name}");
+        }
+    }
 
     #[test]
     fn manifest_names_never_select_files_outside_the_queue() {

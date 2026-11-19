@@ -218,7 +218,6 @@ pub(super) fn apply(
             crate::torrent::discard(store, &job)?;
             job.retry = retry::State::default();
             job.quota_waiting = false;
-            job.disk_wait = None;
             job.plan = None;
             if let Some(provider) = &mut job.provider {
                 provider.plan = None;

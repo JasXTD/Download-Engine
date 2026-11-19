@@ -503,6 +503,48 @@ async fn unresumable_replacements_require_explicit_restart_and_keep_completed_fi
 }
 
 #[tokio::test]
+async fn restarting_with_a_smaller_replacement_clears_the_old_disk_hold() {
+    use download_engine::disk_space::{Location, Requirement, Wait};
+
+    let fixture = Fixture::new(3, 1, false).await;
+    let (_temp, store) = setup();
+    let mut job = enqueue(&store, "http://127.0.0.1:1/old.bin");
+    let parts = store.paths.parts(&job.id).unwrap();
+    std::fs::create_dir_all(&parts).unwrap();
+    std::fs::write(parts.join("whole.part"), b"old").unwrap();
+    job.status = Status::Paused;
+    job.downloaded = 3;
+    let old_size = i64::MAX as u64;
+    job.total = Some(old_size);
+    job.disk_wait = Some(Wait {
+        requirements: vec![Requirement {
+            location: Location::Temporary,
+            required: old_size - job.downloaded,
+            available: 0,
+        }],
+        check_after: 0,
+    });
+    store.save(&job).unwrap();
+
+    let scheduler = Scheduler::start(store.clone()).unwrap();
+    let (request, outcome) = checked(&scheduler, &job, &fixture.url).await;
+    assert!(matches!(outcome, Outcome::RestartRequired(_)));
+    assert!(store.get(&job.id).unwrap().unwrap().disk_wait.is_some());
+    assert!(matches!(
+        apply(&scheduler, request, true).await,
+        Event::Applied { .. }
+    ));
+    assert!(store.get(&job.id).unwrap().unwrap().disk_wait.is_none());
+    let saved = completed(&store, &job.id, &fixture, &scheduler)
+        .await
+        .unwrap();
+    assert_eq!(
+        std::fs::read(saved.saved_path.unwrap()).unwrap(),
+        *fixture.data
+    );
+}
+
+#[tokio::test]
 async fn size_change_and_single_connection_partials_offer_restart() {
     for has_plan in [true, false] {
         let fixture = Fixture::new(128 * 1024, 0, false).await;

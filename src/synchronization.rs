@@ -317,11 +317,12 @@ pub(crate) async fn reuse_unchanged(
     Ok(None)
 }
 
-/// Explicit restart, link replacement, or authentication changes must not reuse
-/// a conditional check of the previous URL or a discarded download plan.
+/// Restart, link replacement and authentication changes recheck the source
+/// and available disk space for the new transfer.
 pub(crate) fn restarting(job: &mut Job) {
     job.remote = None;
     job.received_sha256 = None;
+    job.disk_wait = None;
     if let Some(state) = &mut job.synchronization {
         state.phase = Phase::Updating;
         job.saved_path = None;

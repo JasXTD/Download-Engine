@@ -1,3 +1,19 @@
+## 3.21.0 — 2026-11-20
+
+### Kontroller lagrede filer
+
+- Kontroller flere fullførte nedlastinger i en kø med en fil med SHA-256-kontrollsummer. For en fullført torrent kan du kontrollere de valgte filene uten nett ved hjelp av lagrede metadata.
+
+### Fortsett nedlastinger når det blir ledig plass
+
+- Nedlastinger som venter på diskplass, frigjør plassen sin i køen. Når det er ledig plass igjen, kan en HTTP-nedlasting som er mottatt i ett svar og mellomlagret i sin helhet, lagres ferdig selv om overføringskvoten er nådd.
+
+### Oppdateringer i skrivebordsappen
+
+- Knappen for utgivelsessiden åpner standardnettleseren og melder fra hvis den ikke kan åpnes. Windows-versjonen kan nå også pakkes som MSIX.
+
+[English details](../../../CHANGELOG.md#3210--2026-11-20)
+
 ## 3.20.1 — 2026-11-14
 
 ### Rettelser for nettlesernedlastinger og grensesnitt

@@ -46,16 +46,15 @@ Get published packages from the [releases page](https://github.com/JasXTD/Downlo
 and read the [changelog](CHANGELOG.md) for release and development notes.
 
 <!-- current-release:start -->
-**[Download 3.20.1](https://github.com/JasXTD/Download-Engine/releases/tag/v3.20.1)** —
+**[Download 3.21.0](https://github.com/JasXTD/Download-Engine/releases/tag/v3.21.0)** —
 Windows, Apple Silicon and Intel Macs, and Linux x64. Native FFmpeg is bundled;
 browser extensions, source code and SHA-256 checksums accompany releases.
 
-**New in 3.20.1:** improved compatibility with more streaming and download sites.
-Reviewed video downloads can retry through your actual browser after a desktop
-HTTP 403, with clearer diagnostics and verified-segment recovery.
-Also fixes crash-report export and the list jumping when opening a folder.
-Upgrade the desktop and browser extension together and keep the reviewed tab open.
-See the [browser download guide](docs/user-guide.md).
+**New in 3.21.0:** batch SHA-256 checks for completed downloads and offline
+verification of saved torrent files. Downloads waiting for disk space free their
+queue slots. A fully cached single-response HTTP download can finish saving when
+space returns, even at the transfer quota.
+[Downloads and recovery guide](docs/user-guide.md#downloads--recovery)
 
 Please report bugs on [GitHub Issues](https://github.com/JasXTD/Download-Engine/issues)
 rather than Reddit so we can track and resolve them.

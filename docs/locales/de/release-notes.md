@@ -1,3 +1,19 @@
+## 3.21.0 — 2026-11-20
+
+### Gespeicherte Dateien prüfen
+
+- Mit einer SHA-256-Prüfsummendatei lassen sich mehrere abgeschlossene Downloads einer Warteschlange überprüfen. Bei einem abgeschlossenen Torrent können Sie die ausgewählten Dateien anhand der gespeicherten Metadaten offline prüfen.
+
+### Downloads bei freiem Speicherplatz fortsetzen
+
+- Downloads, die auf freien Speicherplatz warten, geben ihren Platz in der Warteschlange frei. Sobald wieder Platz verfügbar ist, lässt sich ein vollständig in einer HTTP-Antwort zwischengespeicherter Download auch bei erreichtem Datenlimit fertig speichern.
+
+### Desktop-Updates
+
+- Die Schaltfläche für die Versionsseite öffnet den Standardbrowser und meldet Fehler beim Öffnen. Windows-Builds unterstützen jetzt auch das MSIX-Paketformat.
+
+[English details](../../../CHANGELOG.md#3210--2026-11-20)
+
 ## 3.20.1 — 2026-11-14
 
 ### Browserdownloads und Oberflächenkorrekturen

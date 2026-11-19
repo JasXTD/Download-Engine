@@ -1,3 +1,19 @@
+## 3.21.0 — 2026-11-20
+
+### Verificare i file salvati
+
+- Verifica più download completati in una coda usando un file di checksum SHA-256. Per un torrent completato puoi verificare offline i file selezionati usando i metadati salvati.
+
+### Riprendere i download quando si libera spazio
+
+- I download in attesa di spazio su disco liberano il loro posto nella coda. Quando lo spazio torna disponibile, un download HTTP ricevuto in una sola risposta e interamente in cache può essere salvato anche se è stata raggiunta la quota di trasferimento.
+
+### Aggiornamenti dell’app desktop
+
+- Il pulsante per la pagina della versione apre il browser predefinito e segnala eventuali errori di apertura. Le build per Windows supportano anche il formato MSIX.
+
+[English details](../../../CHANGELOG.md#3210--2026-11-20)
+
 ## 3.20.1 — 2026-11-14
 
 ### Correzioni dei download dal browser e dell’interfaccia

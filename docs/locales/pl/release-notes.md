@@ -1,3 +1,19 @@
+## 3.21.0 — 2026-11-20
+
+### Weryfikacja zapisanych plików
+
+- Plik z sumami SHA-256 pozwala sprawdzić kilka ukończonych pobrań z tej samej kolejki. Wybrane pliki ukończonego torrenta można sprawdzić bez połączenia z siecią, korzystając z zapisanych metadanych.
+
+### Wznawianie po zwolnieniu miejsca
+
+- Pobrania oczekujące na miejsce na dysku zwalniają swoją pozycję wykonawczą w kolejce. Gdy miejsce będzie dostępne, plik odebrany w jednej odpowiedzi HTTP i zapisany w całości w pamięci podręcznej można zapisać na dysku nawet po osiągnięciu limitu transferu.
+
+### Aktualizacje aplikacji
+
+- Przycisk strony wydania otwiera domyślną przeglądarkę i zgłasza błąd, jeśli nie uda się jej uruchomić. Wersję dla Windows można teraz także spakować w formacie MSIX.
+
+[English details](../../../CHANGELOG.md#3210--2026-11-20)
+
 ## 3.20.1 — 2026-11-14
 
 ### Poprawki pobierania przez przeglądarkę i interfejsu

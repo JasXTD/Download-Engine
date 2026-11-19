@@ -1,3 +1,19 @@
+## 3.21.0 — 2026-11-20
+
+### Vérifier les fichiers enregistrés
+
+- Vérifiez plusieurs téléchargements terminés d’une file à l’aide d’un fichier de sommes SHA-256. Pour un torrent terminé, vous pouvez vérifier hors ligne les fichiers sélectionnés à partir des métadonnées conservées.
+
+### Reprendre un téléchargement après avoir libéré de l’espace
+
+- Un téléchargement qui attend de l’espace disque libère sa place dans la file. Une fois l’espace disponible, un téléchargement HTTP reçu en une seule réponse et entièrement en cache peut être enregistré même si le quota de transfert est atteint.
+
+### Mises à jour de l’application
+
+- Le bouton de la page de version ouvre le navigateur par défaut et signale les échecs d’ouverture. Les versions Windows peuvent désormais être distribuées au format MSIX.
+
+[English details](../../../CHANGELOG.md#3210--2026-11-20)
+
 ## 3.20.1 — 2026-11-14
 
 ### Corrections des téléchargements et de l’interface

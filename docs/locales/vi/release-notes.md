@@ -1,3 +1,19 @@
+## 3.21.0 — 2026-11-20
+
+### Kiểm tra các tệp đã lưu
+
+- Dùng tệp tổng kiểm tra SHA-256 để kiểm tra nhiều lượt tải đã hoàn tất trong một hàng đợi. Với torrent đã tải xong, bạn có thể kiểm tra ngoại tuyến các tệp đã chọn bằng siêu dữ liệu đã lưu.
+
+### Tiếp tục tải khi đĩa có chỗ trống
+
+- Lượt tải đang chờ dung lượng đĩa sẽ nhường chỗ trong hàng đợi. Nếu toàn bộ tệp đã được nhận trong một phản hồi HTTP và lưu vào bộ nhớ đệm, ứng dụng có thể ghi tệp ra đĩa khi có chỗ trống, kể cả khi đã đạt hạn mức truyền dữ liệu.
+
+### Cập nhật ứng dụng máy tính
+
+- Nút mở trang phát hành sẽ mở trình duyệt mặc định và thông báo nếu không thể mở được. Bản Windows hiện cũng hỗ trợ đóng gói theo định dạng MSIX.
+
+[English details](../../../CHANGELOG.md#3210--2026-11-20)
+
 ## 3.20.1 — 2026-11-14
 
 ### Sửa lỗi tải qua trình duyệt và giao diện

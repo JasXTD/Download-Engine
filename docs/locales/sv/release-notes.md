@@ -1,3 +1,19 @@
+## 3.21.0 — 2026-11-20
+
+### Kontrollera sparade filer
+
+- Kontrollera flera slutförda hämtningar i en kö med en fil som innehåller SHA-256-kontrollsummor. För en slutförd torrent kan du kontrollera de valda filerna offline med hjälp av sparade metadata.
+
+### Återuppta när diskutrymme blir ledigt
+
+- Hämtningar som väntar på diskutrymme frigör sin plats i kön. När det finns ledigt utrymme igen kan en HTTP-hämtning som tagits emot i ett enda svar och mellanlagrats i sin helhet sparas färdigt även om överföringskvoten har uppnåtts.
+
+### Uppdateringar av skrivbordsappen
+
+- Knappen för versionssidan öppnar standardwebbläsaren och visar ett felmeddelande om den inte går att öppna. Windows-versionen kan nu även paketeras som MSIX.
+
+[English details](../../../CHANGELOG.md#3210--2026-11-20)
+
 ## 3.20.1 — 2026-11-14
 
 ### Korrigeringar för webbläsarhämtningar och gränssnitt

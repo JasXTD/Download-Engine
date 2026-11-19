@@ -2,6 +2,23 @@
 
 Release notes are available offline in Help → Changelog. Newest releases appear first.
 
+## 3.21.0 — 2026-11-20
+
+### Verify saved files offline
+
+- Check several completed downloads in a queue against a SHA-256 checksum file. Open **Tasks → Verify checksum file…** or drop the file onto the window. Versioned release manifests such as `SHA256SUMS-3.21.0` work too. Review the filename matches before verifying your selection.
+- Open a completed torrent and choose **Verify saved files** to check the selected files against cached torrent metadata. The check works offline and reports missing files, damaged pieces and pieces shared with skipped files. The engine also rechecks file and folder identities before publishing or recording verified results.
+- Partial torrent seed checks respect the selected files when deciding whether an existing file can supply a piece.
+
+### Recover downloads after disk space runs low
+
+- Downloads waiting for disk space release their queue slots. Restarting with a replacement link checks the space needed for the new file. A complete, cached single-response HTTP download can finish saving after space becomes available, even at the transfer quota.
+
+### Desktop updates
+
+- **Open release page** opens the default browser on classic Windows, macOS and Linux and reports launch failures.
+- Add MSIX packaging with separate browser registration for packaged Windows installations. GitHub continues to offer the Windows installer and portable ZIP.
+
 ## 3.20.1 — 2026-11-14
 
 ### Browser downloads and desktop fixes

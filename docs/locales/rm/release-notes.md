@@ -1,3 +1,19 @@
+## 3.21.0 — 2026-11-20
+
+### Verifitgar las datotecas memorisadas
+
+- Cun ina datoteca da summas da controlla SHA-256 pudais Vus verifitgar pliras telechargiadas terminadas en ina colonna. Per in torrent terminà pudais Vus verifitgar offline las datotecas tschernidas cun las metadatas memorisadas.
+
+### Cuntinuar cura ch’i dat puspè plazza
+
+- Las telechargiadas che spetgan plazza sin il disc dattan liber lur plaz en la colonna. Sch’i dat puspè plazza, po ina telechargiada HTTP retschavida en ina suletta resposta e memorisada cumplettamain en il cache vegnir arcunada era sche la quota da transfer è cuntanschida.
+
+### Actualisaziuns da l’applicaziun
+
+- Il buttun per la pagina da la versiun avra il navigatur da standard ed annunzia sch’el na po betg vegnir avert. La versiun per Windows po ussa era vegnir pachetada en il format MSIX.
+
+[English details](../../../CHANGELOG.md#3210--2026-11-20)
+
 ## 3.20.1 — 2026-11-14
 
 ### Correcturas dals downloads e da l’interfatscha

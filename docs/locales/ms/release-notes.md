@@ -1,3 +1,19 @@
+## 3.21.0 — 2026-11-20
+
+### Semak fail yang disimpan
+
+- Semak beberapa muat turun yang telah selesai dalam baris gilir menggunakan fail jumlah semak SHA-256. Bagi torrent yang telah selesai, anda boleh menyemak fail yang dipilih di luar talian menggunakan metadata yang disimpan.
+
+### Sambung muat turun apabila ruang tersedia
+
+- Muat turun yang menunggu ruang cakera memberi laluan kepada muat turun lain dalam baris gilir. Apabila ruang tersedia semula, muat turun HTTP yang diterima dalam satu respons dan dicache sepenuhnya boleh selesai disimpan walaupun kuota pemindahan telah dicapai.
+
+### Kemas kini aplikasi desktop
+
+- Butang halaman keluaran membuka pelayar lalai dan memaklumkan pengguna jika pelayar gagal dibuka. Binaan Windows kini turut menyokong pembungkusan MSIX.
+
+[English details](../../../CHANGELOG.md#3210--2026-11-20)
+
 ## 3.20.1 — 2026-11-14
 
 ### Pembetulan muat turun pelayar dan antara muka

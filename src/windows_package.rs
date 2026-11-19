@@ -10,10 +10,11 @@ pub fn open_store_updates() -> Result<()> {
         .context("Cannot open Microsoft Store")
 }
 
-/// Both callers supply a fixed Windows protocol URI. ShellExecute returns a
+/// Callers supply a fixed OS page or a validated release URL. ShellExecute returns a
 /// status, not an owned handle; the terminated URI stays live throughout the call.
 #[cfg(windows)]
-pub(crate) fn open_system_page(uri: &'static str) -> Result<()> {
+pub(crate) fn open_system_page(uri: &str) -> Result<()> {
+    anyhow::ensure!(!uri.contains('\0'), "Invalid page address");
     let uri: Vec<u16> = uri.encode_utf16().chain(Some(0)).collect();
     let result = unsafe {
         windows_sys::Win32::UI::Shell::ShellExecuteW(
@@ -33,7 +34,7 @@ pub(crate) fn open_system_page(uri: &'static str) -> Result<()> {
 }
 
 #[cfg(not(windows))]
-pub(crate) fn open_system_page(_: &'static str) -> Result<()> {
+pub(crate) fn open_system_page(_: &str) -> Result<()> {
     anyhow::bail!("Windows integration is only available on Windows")
 }
 

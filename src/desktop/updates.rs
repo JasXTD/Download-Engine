@@ -160,6 +160,22 @@ impl Desktop {
             self.store_updates_dialog(ctx, p, download_engine::windows_package::open_store_updates);
             return;
         }
+        #[cfg(windows)]
+        let open_page = Release::open_windows_page;
+        #[cfg(not(windows))]
+        let open_page = |release: &Release| {
+            ctx.open_url(egui::OpenUrl::new_tab(&release.page_url));
+            Ok(())
+        };
+        self.classic_updates_dialog(ctx, p, open_page);
+    }
+
+    fn classic_updates_dialog(
+        &mut self,
+        ctx: &egui::Context,
+        p: Palette,
+        open_page: impl FnOnce(&Release) -> anyhow::Result<()>,
+    ) {
         let state = self.extras.update_check.get_or_insert_with(State::default);
         state.poll();
         if state.task.is_none() && state.release.is_none() && state.error.is_none() {
@@ -205,7 +221,9 @@ impl Desktop {
                 });
             }
             if let Some(error) = &state.error {
-                ui.colored_label(p.warning, tr("Unable to check for updates"));
+                if state.release.is_none() {
+                    ui.colored_label(p.warning, tr("Unable to check for updates"));
+                }
                 ui.add(egui::Label::new(error).wrap());
             }
             ui.add_space(10.0);
@@ -232,8 +250,13 @@ impl Desktop {
                         )
                         .clicked()
                     {
-                        ctx.open_url(egui::OpenUrl::new_tab(&release.page_url));
-                        close = state.automatic;
+                        match open_page(release) {
+                            Ok(()) => {
+                                state.error = None;
+                                close |= state.automatic;
+                            }
+                            Err(error) => state.error = Some(error.to_string()),
+                        }
                     }
                     if state.automatic {
                         close |= form_dialog::secondary_button(ui, tr("Later")).clicked();
@@ -292,6 +315,44 @@ impl Desktop {
 mod tests {
     use super::*;
     use crate::desktop::interaction_tests::{fixture, frame, text_rect};
+
+    fn expected_page(version: &str) -> String {
+        format!("{}/releases/tag/v{version}", service::REPOSITORY_URL)
+    }
+
+    fn click_classic_action(
+        app: &mut Desktop,
+        ctx: &egui::Context,
+        size: egui::Vec2,
+        pos: egui::Pos2,
+        mut open_page: impl FnMut(&Release) -> anyhow::Result<()>,
+    ) {
+        for pressed in [true, false] {
+            let mut output = ctx.run_ui(
+                egui::RawInput {
+                    screen_rect: Some(egui::Rect::from_min_size(egui::Pos2::ZERO, size)),
+                    events: vec![
+                        egui::Event::PointerMoved(pos),
+                        egui::Event::PointerButton {
+                            pos,
+                            button: egui::PointerButton::Primary,
+                            pressed,
+                            modifiers: egui::Modifiers::NONE,
+                        },
+                    ],
+                    ..Default::default()
+                },
+                |ui| {
+                    app.classic_updates_dialog(
+                        ui.ctx(),
+                        Palette::for_context(ui.ctx()),
+                        &mut open_page,
+                    )
+                },
+            );
+            output.textures_delta.clear();
+        }
+    }
 
     fn pending_launch(
         app: &mut Desktop,
@@ -413,7 +474,7 @@ mod tests {
                         "{label}"
                     );
                 }
-                let mut opened = false;
+                let mut opened = Vec::new();
                 if action == "Escape" {
                     frame(
                         &mut app,
@@ -429,25 +490,16 @@ mod tests {
                     );
                 } else {
                     let pos = text_rect(&output, action).center();
-                    for pressed in [true, false] {
-                        let out = frame(
-                            &mut app,
-                            &ctx,
-                            size,
-                            vec![
-                                egui::Event::PointerMoved(pos),
-                                egui::Event::PointerButton {
-                                    pos,
-                                    button: egui::PointerButton::Primary,
-                                    pressed,
-                                    modifiers: egui::Modifiers::NONE,
-                                },
-                            ],
-                        );
-                        opened |= out.platform_output.commands.iter().any(|c| matches!(c, egui::OutputCommand::OpenUrl(url) if url.url == format!("{}/releases/tag/v99.0.0", service::REPOSITORY_URL)));
-                    }
+                    click_classic_action(&mut app, &ctx, size, pos, |release| {
+                        opened.push(release.page_url.clone());
+                        Ok(())
+                    });
                 }
-                assert_eq!(opened, action == "Get update");
+                if action == "Get update" {
+                    assert_eq!(opened, [expected_page("99.0.0")]);
+                } else {
+                    assert!(opened.is_empty());
+                }
                 assert!(app.dialog.is_none() && app.extras.update_check.is_none());
                 frame(&mut app, &ctx, size, vec![]);
                 assert!(
@@ -495,25 +547,18 @@ mod tests {
                     }
                     if mode != "updates-error" {
                         let pos = text_rect(&output, "Open release page").center();
-                        for pressed in [true, false] {
-                            let out = frame(
-                                &mut app,
-                                &ctx,
-                                size,
-                                vec![
-                                    egui::Event::PointerMoved(pos),
-                                    egui::Event::PointerButton {
-                                        pos,
-                                        button: egui::PointerButton::Primary,
-                                        pressed,
-                                        modifiers: egui::Modifiers::NONE,
-                                    },
-                                ],
-                            );
-                            if !pressed {
-                                assert!(out.platform_output.commands.iter().any(|c| matches!(c, egui::OutputCommand::OpenUrl(url) if url.url == app.extras.update_check.as_ref().unwrap().release.as_ref().unwrap().page_url)));
-                            }
-                        }
+                        let mut opened = Vec::new();
+                        click_classic_action(&mut app, &ctx, size, pos, |release| {
+                            opened.push(release.page_url.clone());
+                            Ok(())
+                        });
+                        let version = if mode == "updates-available" {
+                            "99.0.0"
+                        } else {
+                            env!("CARGO_PKG_VERSION")
+                        };
+                        assert_eq!(opened, [expected_page(version)]);
+                        assert_eq!(app.dialog, Some(Dialog::CheckUpdates));
                     }
                     assert_eq!(app.selected, selected);
                     frame(
@@ -530,6 +575,44 @@ mod tests {
                     );
                     assert!(app.dialog.is_none() && app.extras.update_check.is_none());
                 }
+            }
+        }
+    }
+
+    #[test]
+    fn failed_browser_launch_keeps_the_release_available_for_retry() {
+        let size = egui::vec2(860.0, 600.0);
+        for (mode, button) in [
+            ("updates-available", "Open release page"),
+            ("updates-launch", "Get update"),
+        ] {
+            let (_temp, mut app, ctx) = fixture();
+            app.dialog = Some(Dialog::CheckUpdates);
+            app.extras.update_check = Some(State::sample(mode));
+            frame(&mut app, &ctx, size, vec![]);
+            let output = frame(&mut app, &ctx, size, vec![]);
+            let pos = text_rect(&output, button).center();
+            click_classic_action(&mut app, &ctx, size, pos, |_| {
+                anyhow::bail!("Fixture browser is unavailable")
+            });
+            assert_eq!(app.dialog, Some(Dialog::CheckUpdates));
+            let output = frame(&mut app, &ctx, size, vec![]);
+            text_rect(&output, "Fixture browser is unavailable");
+            assert!(app.extras.update_check.as_ref().unwrap().task.is_none());
+
+            let output = frame(&mut app, &ctx, size, vec![]);
+            let pos = text_rect(&output, button).center();
+            let mut opened = Vec::new();
+            click_classic_action(&mut app, &ctx, size, pos, |release| {
+                opened.push(release.page_url.clone());
+                Ok(())
+            });
+            assert_eq!(opened, [expected_page("99.0.0")]);
+            if mode == "updates-launch" {
+                assert!(app.dialog.is_none() && app.extras.update_check.is_none());
+            } else {
+                assert_eq!(app.dialog, Some(Dialog::CheckUpdates));
+                assert!(app.extras.update_check.as_ref().unwrap().error.is_none());
             }
         }
     }

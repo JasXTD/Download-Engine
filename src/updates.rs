@@ -17,6 +17,31 @@ pub struct Release {
     pub newer: bool,
 }
 
+#[cfg(any(windows, test))]
+impl Release {
+    #[cfg(windows)]
+    pub fn open_windows_page(&self) -> Result<()> {
+        crate::windows_package::open_system_page(self.checked_page_url()?)
+    }
+
+    fn checked_page_url(&self) -> Result<&str> {
+        // ShellExecute also accepts files and other protocols. Only hand it the
+        // canonical HTTPS page for the version shown in the update dialog.
+        let tag = self
+            .page_url
+            .strip_prefix(REPOSITORY_URL)
+            .and_then(|path| path.strip_prefix("/releases/tag/"))
+            .context("Invalid release page")?;
+        let name = tag.strip_prefix('v').unwrap_or(tag);
+        ensure!(
+            name == self.version,
+            "Release page does not match the checked version"
+        );
+        version(name)?;
+        Ok(&self.page_url)
+    }
+}
+
 #[derive(Deserialize)]
 struct Metadata {
     tag_name: String,
@@ -133,7 +158,7 @@ mod tests {
             let result = parse(&metadata(tag), installed).unwrap();
             assert_eq!(result.newer, newer);
             assert_eq!(
-                result.page_url,
+                result.checked_page_url().unwrap(),
                 format!("{REPOSITORY_URL}/releases/tag/{tag}")
             );
         }
@@ -164,6 +189,24 @@ mod tests {
         ] {
             assert!(parse(body.as_bytes(), "3.2.0").is_err());
         }
+    }
+
+    #[test]
+    fn browser_handoff_rejects_modified_release_destinations() {
+        let mut release = parse(&metadata("v3.2.0"), "3.1.0").unwrap();
+        for url in [
+            "https://example.invalid/releases/tag/v3.2.0".into(),
+            "file:///offline-fixture.html".into(),
+            format!("{REPOSITORY_URL}/releases/download/v3.2.0/file.zip"),
+            format!("{REPOSITORY_URL}/releases/tag/v3.2.1"),
+            format!("{REPOSITORY_URL}/releases/tag/v3.2.0?extra"),
+        ] {
+            release.page_url = url;
+            assert!(release.checked_page_url().is_err(), "{}", release.page_url);
+        }
+        release.version = "3.2.0/notes".into();
+        release.page_url = format!("{REPOSITORY_URL}/releases/tag/v{}", release.version);
+        assert!(release.checked_page_url().is_err());
     }
 
     async fn server(response: String) -> (String, tokio::task::JoinHandle<String>) {

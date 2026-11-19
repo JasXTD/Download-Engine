@@ -227,9 +227,11 @@ silently leaking direct traffic. The tests use harmless fixtures in a network-no
 
 ## Remaining limits
 
-- Unbound HTTPS trackers and web seeds use the app's reqwest TLS features. Bound
-  HTTPS also works in standalone builds through the native TLS connector.
-  Standalone test builds of this folder use HTTP and UDP.
+- The desktop build enables TLS in reqwest for unbound HTTPS trackers and web seeds.
+  In the default standalone build, HTTPS for either requires interface binding.
+  Both builds use native TLS for bound HTTPS. With `SSL_CERT_FILE` set to its
+  local test certificate, the opt-in binding lab checks that the bound connector
+  accepts `fixture.test` and rejects `wrong.fixture.test` on the same server.
 - Router setup speaks UPnP IGD only (no
   NAT-PMP, PCP or IPv6 openings), and reads the routing table on Windows and Linux only.
 - Peer exchange is only read. The engine doesn't send peer lists of its own.

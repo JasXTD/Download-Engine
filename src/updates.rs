@@ -17,15 +17,32 @@ pub struct Release {
     pub newer: bool,
 }
 
-#[cfg(any(windows, test))]
 impl Release {
     #[cfg(windows)]
     pub fn open_windows_page(&self) -> Result<()> {
         crate::windows_package::open_system_page(self.checked_page_url()?)
     }
 
+    #[cfg(not(windows))]
+    pub fn open_unix_page(&self) -> Result<()> {
+        self.open_with(&crate::paths::file_browser()?)
+    }
+
+    #[cfg(not(windows))]
+    fn open_with(&self, opener: &std::path::Path) -> Result<()> {
+        let status = std::process::Command::new(opener)
+            .arg(self.checked_page_url()?)
+            .status()
+            .context("Could not start the desktop browser opener")?;
+        ensure!(
+            status.success(),
+            "The desktop browser opener failed ({status})"
+        );
+        Ok(())
+    }
+
     fn checked_page_url(&self) -> Result<&str> {
-        // ShellExecute also accepts files and other protocols. Only hand it the
+        // Desktop openers also accept files and other protocols. Only hand them the
         // canonical HTTPS page for the version shown in the update dialog.
         let tag = self
             .page_url
@@ -138,6 +155,36 @@ async fn fetch(
 mod tests {
     use super::*;
     use tokio::io::{AsyncReadExt, AsyncWriteExt};
+
+    #[cfg(unix)]
+    #[test]
+    fn desktop_opener_receives_one_checked_url_and_propagates_failures() {
+        use std::{fs, os::unix::fs::PermissionsExt};
+        let dir = tempfile::tempdir().unwrap();
+        let opener = dir.path().join("test-opener");
+        let receipt = dir.path().join("test-opener.receipt");
+        fs::write(
+            &opener,
+            "#!/bin/sh\nprintf '%s\\n' \"$#\" \"$@\" > \"$0.receipt\"\n",
+        )
+        .unwrap();
+        fs::set_permissions(&opener, fs::Permissions::from_mode(0o700)).unwrap();
+        let mut release = parse(&metadata("v3.2.0"), "3.1.0").unwrap();
+        release.open_with(&opener).unwrap();
+        assert_eq!(
+            fs::read_to_string(&receipt).unwrap(),
+            format!("1\n{REPOSITORY_URL}/releases/tag/v3.2.0\n")
+        );
+        assert!(
+            release
+                .open_with(std::path::Path::new("/bin/false"))
+                .is_err()
+        );
+        fs::remove_file(&receipt).unwrap();
+        release.page_url = "file:///tmp/other".into();
+        assert!(release.open_with(&opener).is_err());
+        assert!(!receipt.exists());
+    }
 
     fn metadata(tag: &str) -> Vec<u8> {
         serde_json::to_vec(

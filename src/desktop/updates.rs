@@ -3,9 +3,21 @@ use download_engine::updates::{self as service, Release};
 use std::sync::mpsc;
 use tokio_util::sync::CancellationToken;
 
+type WorkerResult<T> = mpsc::Receiver<anyhow::Result<T>>;
+
+fn completed<T>(result: &WorkerResult<T>) -> Option<anyhow::Result<T>> {
+    match result.try_recv() {
+        Ok(result) => Some(result),
+        Err(mpsc::TryRecvError::Empty) => None,
+        Err(mpsc::TryRecvError::Disconnected) => {
+            Some(Err(anyhow::anyhow!("Update worker stopped")))
+        }
+    }
+}
+
 struct Task {
     cancel: CancellationToken,
-    result: mpsc::Receiver<anyhow::Result<Release>>,
+    result: WorkerResult<Release>,
 }
 impl Drop for Task {
     fn drop(&mut self) {
@@ -17,6 +29,7 @@ impl Drop for Task {
 pub(super) struct State {
     automatic: bool,
     task: Option<Task>,
+    opening: Option<WorkerResult<()>>,
     release: Option<Release>,
     error: Option<String>,
 }
@@ -49,10 +62,8 @@ impl State {
         let Some(task) = &self.task else {
             return;
         };
-        let result = match task.result.try_recv() {
-            Ok(result) => result,
-            Err(mpsc::TryRecvError::Empty) => return,
-            Err(mpsc::TryRecvError::Disconnected) => Err(anyhow::anyhow!("Update worker stopped")),
+        let Some(result) = completed(&task.result) else {
+            return;
         };
         self.task = None;
         match result {
@@ -160,21 +171,32 @@ impl Desktop {
             self.store_updates_dialog(ctx, p, download_engine::windows_package::open_store_updates);
             return;
         }
-        #[cfg(windows)]
-        let open_page = Release::open_windows_page;
-        #[cfg(not(windows))]
-        let open_page = |release: &Release| {
-            ctx.open_url(egui::OpenUrl::new_tab(&release.page_url));
-            Ok(())
-        };
-        self.classic_updates_dialog(ctx, p, open_page);
+        self.classic_updates_dialog(ctx, p, |release| {
+            let (sender, result) = mpsc::channel();
+            #[cfg(windows)]
+            let _ = sender.send(release.open_windows_page());
+            #[cfg(not(windows))]
+            {
+                // Some desktop openers wait for the browser. Keep the UI responsive
+                // and report the opener's exit status to this dialog only.
+                let release = release.clone();
+                let ctx = ctx.clone();
+                std::thread::Builder::new()
+                    .name("open-release-page".into())
+                    .spawn(move || {
+                        let _ = sender.send(release.open_unix_page());
+                        ctx.request_repaint();
+                    })?;
+            }
+            Ok(result)
+        });
     }
 
     fn classic_updates_dialog(
         &mut self,
         ctx: &egui::Context,
         p: Palette,
-        open_page: impl FnOnce(&Release) -> anyhow::Result<()>,
+        open_page: impl FnOnce(&Release) -> anyhow::Result<WorkerResult<()>>,
     ) {
         let state = self.extras.update_check.get_or_insert_with(State::default);
         state.poll();
@@ -237,7 +259,9 @@ impl Desktop {
                 )
                 .wrap(),
             );
-            if state.task.is_none() {
+            if state.opening.is_some() {
+                ui.spinner();
+            } else if state.task.is_none() {
                 form_dialog::controls(ui, |ui| {
                     if let Some(release) = &state.release
                         && form_dialog::primary_button(
@@ -251,9 +275,9 @@ impl Desktop {
                         .clicked()
                     {
                         match open_page(release) {
-                            Ok(()) => {
+                            Ok(result) => {
                                 state.error = None;
-                                close |= state.automatic;
+                                state.opening = Some(result);
                             }
                             Err(error) => state.error = Some(error.to_string()),
                         }
@@ -266,6 +290,14 @@ impl Desktop {
                 });
             }
         });
+        if let Some(result) = state.opening.as_ref().and_then(completed) {
+            state.opening = None;
+            match result {
+                Ok(()) => close |= state.automatic,
+                Err(error) => state.error = Some(error.to_string()),
+            }
+            ctx.request_repaint();
+        }
         if close || response.should_close() {
             self.extras.update_check = None;
             self.dialog = None;
@@ -346,7 +378,11 @@ mod tests {
                     app.classic_updates_dialog(
                         ui.ctx(),
                         Palette::for_context(ui.ctx()),
-                        &mut open_page,
+                        |release| {
+                            let (send, result) = mpsc::channel();
+                            send.send(open_page(release)).unwrap();
+                            Ok(result)
+                        },
                     )
                 },
             );
@@ -577,6 +613,28 @@ mod tests {
                 }
             }
         }
+    }
+
+    #[test]
+    fn launch_prompt_waits_for_desktop_acknowledgement() {
+        let (_temp, mut app, ctx) = fixture();
+        let size = egui::vec2(860.0, 600.0);
+        app.dialog = Some(Dialog::CheckUpdates);
+        let (send, result) = mpsc::channel();
+        let state = State {
+            opening: Some(result),
+            ..State::sample("updates-launch")
+        };
+        app.extras.update_check = Some(state);
+        frame(&mut app, &ctx, size, vec![]);
+        assert_eq!(app.dialog, Some(Dialog::CheckUpdates));
+        assert!(app.extras.update_check.as_ref().unwrap().opening.is_some());
+        send.send(Err(anyhow::anyhow!("No default browser")))
+            .unwrap();
+        frame(&mut app, &ctx, size, vec![]);
+        let output = frame(&mut app, &ctx, size, vec![]);
+        text_rect(&output, "No default browser");
+        text_rect(&output, "Get update");
     }
 
     #[test]

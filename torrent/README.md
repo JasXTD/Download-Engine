@@ -166,7 +166,7 @@ torrent to its current safe file name. These sharing sessions do not overwrite
 download resume state. Partial seeds report the full torrent's remaining bytes to
 trackers, rather than claiming that an incomplete selection is a complete seed.
 
-The desktop calls `storage::verify_saved` to verify a published torrent without starting a session. It checks the selected filenames and lengths against the cached metainfo and reports shared, unverifiable pieces separately from damaged pieces and missing files.
+The desktop calls `storage::verify_saved` to verify a published torrent without starting a session. It checks the selected filenames and lengths against the cached metainfo and reports shared, unverifiable pieces separately from damaged pieces and missing files. Before returning the result, it checks the saved folder and files again so a move, replacement or edit during verification can be reported.
 
 ## Testing
 

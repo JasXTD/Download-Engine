@@ -8,6 +8,55 @@ use std::{
 };
 use tokio_util::sync::CancellationToken;
 
+#[derive(PartialEq, Eq)]
+struct FileVersion {
+    len: u64,
+    modified: std::time::SystemTime,
+    #[cfg(unix)]
+    device_inode: (u64, u64),
+    #[cfg(unix)]
+    changed: (i64, i64),
+    #[cfg(windows)]
+    id: String,
+}
+
+impl FileVersion {
+    fn read(file: std::fs::File) -> io::Result<Self> {
+        #[cfg(unix)]
+        use std::os::unix::fs::MetadataExt;
+        let meta = file.metadata()?;
+        Ok(Self {
+            len: meta.len(),
+            modified: meta.modified()?,
+            #[cfg(unix)]
+            device_inode: (meta.dev(), meta.ino()),
+            #[cfg(unix)]
+            changed: (meta.ctime(), meta.ctime_nsec()),
+            #[cfg(windows)]
+            id: super::native::identity(&file)?,
+        })
+    }
+}
+
+fn confirm_saved_files(
+    storage: &Storage,
+    versions: &[(usize, FileVersion)],
+    check_cancel: impl Fn() -> io::Result<()>,
+) -> Result<()> {
+    const CHANGED: &str = "Saved torrent files changed during verification. Check them again.";
+    for (index, before) in versions {
+        check_cancel()?;
+        // Reopen the published name. A cached piece handle can still read an old inode.
+        let after = storage
+            .native_file(*index, false)
+            .and_then(FileVersion::read);
+        ensure!(*before == after.context(CHANGED)?, CHANGED);
+    }
+    let named = Directory::open(&storage.root).and_then(|d| d.identity());
+    ensure!(named.context(CHANGED)? == storage.directory_id()?, CHANGED);
+    Ok(())
+}
+
 #[derive(Debug, Default, PartialEq, Eq)]
 pub struct Verification {
     pub verified_pieces: u32,
@@ -71,14 +120,21 @@ pub fn verify_saved(
     }
     let mut unavailable = Bitfield::new(meta.lengths.total_pieces());
     let mut shared = Bitfield::new(meta.lengths.total_pieces());
+    let mut versions = Vec::with_capacity(indices.len());
     for (index, file) in meta.files.iter().enumerate() {
         check_cancel()?;
         if file.virtual_file {
             continue;
         }
         let mask = if chosen[index] {
-            match storage.native_file(index, false).and_then(|f| f.metadata()) {
-                Ok(metadata) if metadata.len() == file.len => continue,
+            match storage
+                .native_file(index, false)
+                .and_then(FileVersion::read)
+            {
+                Ok(version) if version.len == file.len => {
+                    versions.push((index, version));
+                    continue;
+                }
                 Ok(_) => report.wrong_size_files += 1,
                 Err(e) if e.kind() == io::ErrorKind::NotFound => report.missing_files += 1,
                 Err(e) => {
@@ -106,6 +162,7 @@ pub fn verify_saved(
             report.damaged_pieces += 1;
         }
     }
+    confirm_saved_files(&storage, &versions, check_cancel)?;
     check_cancel()?;
     Ok(report)
 }
@@ -115,6 +172,47 @@ mod tests {
     use super::*;
     use crate::testkit::{TempFolder, meta_of, multi_file_torrent, single_file_torrent};
     use std::fs;
+
+    #[cfg(unix)]
+    #[test]
+    fn saved_versions_detect_edits_replacements_and_a_moved_download_folder() {
+        let temp = TempFolder::new();
+        let root = temp.path().join("download");
+        fs::create_dir(&root).unwrap();
+        let path = root.join("saved");
+        fs::write(&path, b"original").unwrap();
+        let meta = meta_of(&single_file_torrent("saved", b"original", 16384));
+        let storage = Storage::for_seeding(meta, root.clone(), None, Some(&[0])).unwrap();
+        let snapshot = || {
+            [(
+                0,
+                FileVersion::read(storage.native_file(0, false).unwrap()).unwrap(),
+            )]
+        };
+        let before = snapshot();
+        confirm_saved_files(&storage, &before, || Ok(())).unwrap();
+        fs::write(&path, b"modified").unwrap();
+        fs::File::open(&path)
+            .unwrap()
+            .set_modified(std::time::SystemTime::UNIX_EPOCH)
+            .unwrap();
+        assert!(confirm_saved_files(&storage, &before, || Ok(())).is_err());
+
+        let before = snapshot();
+        let replacement = root.join("new");
+        fs::write(&replacement, b"new data").unwrap();
+        fs::File::open(&replacement)
+            .unwrap()
+            .set_modified(before[0].1.modified)
+            .unwrap();
+        fs::rename(replacement, &path).unwrap();
+        assert!(confirm_saved_files(&storage, &before, || Ok(())).is_err());
+
+        let before = snapshot();
+        fs::rename(&root, temp.path().join("moved")).unwrap();
+        fs::create_dir(&root).unwrap();
+        assert!(confirm_saved_files(&storage, &before, || Ok(())).is_err());
+    }
 
     #[test]
     fn verifies_saved_files_without_creating_skipped_boundary_or_empty_files() {

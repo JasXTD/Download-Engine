@@ -177,6 +177,16 @@ impl Store {
         Ok(())
     }
 
+    /// Avoid loading the queue history on each scheduler tick while the quota is full.
+    pub(crate) fn has_queued_http_checkpoint(&self) -> Result<bool> {
+        Ok(self.connect()?.query_row(
+            "SELECT EXISTS(SELECT 1 FROM jobs WHERE json_extract(data,'$.status')='queued'
+             AND json_extract(data,'$.received_sha256') IS NOT NULL)",
+            [],
+            |row| row.get(0),
+        )?)
+    }
+
     pub fn queue_jobs(&self, queue: &str) -> Result<Vec<Job>> {
         let conn = self.connect()?;
         let mut stmt = conn.prepare(

@@ -180,6 +180,18 @@ pub struct Job {
     pub created: u64,
 }
 impl Job {
+    pub(crate) fn can_finalize_offline(&self) -> bool {
+        // A provider may refresh its processing plan, and a synchronization
+        // check may probe the origin even when a complete response is cached.
+        self.received_sha256.is_some()
+            && self.provider.is_none()
+            && self.torrent.is_none()
+            && self
+                .synchronization
+                .as_ref()
+                .is_none_or(|state| state.phase != crate::synchronization::Phase::Checking)
+    }
+
     pub fn supports_resume(&self) -> bool {
         self.received_sha256.is_some()
             || self.plan.is_some()

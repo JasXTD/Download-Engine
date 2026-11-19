@@ -306,7 +306,9 @@ async fn transfer(
         tokio::task::spawn_blocking(move || download_file::check_destination(&folder, torrent))
             .await??;
     }
-    limiter.check_quota().await?;
+    if !job.can_finalize_offline() {
+        limiter.check_quota().await?;
+    }
     if job.torrent.is_some() {
         return crate::torrent::transfer(store, job, cancel, limiter).await;
     }

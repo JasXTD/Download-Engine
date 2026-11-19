@@ -90,6 +90,17 @@ async fn check_disk_full(stage: Failure) {
             .map(|i| (i % 251) as u8)
             .collect::<Vec<_>>(),
     );
+    if whole {
+        store
+            .set_quota_limits_at(
+                crate::quota::Limits {
+                    daily: Some(payload.len() as u64),
+                    hourly: None,
+                },
+                jiff::Timestamp::now().as_second(),
+            )
+            .unwrap();
+    }
     let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
     let url = format!("http://{}/file.bin", listener.local_addr().unwrap());
     let data = payload.clone();
@@ -195,6 +206,7 @@ async fn check_disk_full(stage: Failure) {
     }
     assert_eq!(failed.received_sha256.is_some(), whole);
     let server = if whole {
+        assert!(store.quota_status().unwrap().blocked());
         assert_eq!(requests.load(Ordering::SeqCst), 1);
         let source = partial.join("whole.part");
         assert_eq!(std::fs::read(&source).unwrap(), *payload);
@@ -247,6 +259,10 @@ async fn check_disk_full(stage: Failure) {
     drop(server);
     if whole {
         assert_eq!(requests.load(Ordering::SeqCst), 1);
+        assert_eq!(
+            store.quota_status().unwrap().daily_used,
+            payload.len() as u64
+        );
     }
     if stage == ChangedCopy {
         assert!(
@@ -282,7 +298,7 @@ async fn disk_full_during_assembly_keeps_parts_for_retry() {
 }
 
 #[tokio::test]
-async fn disk_full_after_http_eof_retries_the_copy_with_the_origin_offline() {
+async fn disk_full_after_http_eof_publishes_with_full_quota_and_origin_offline() {
     check_disk_full(Failure::CompletedCopy).await;
 }
 

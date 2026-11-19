@@ -1222,6 +1222,49 @@ fn full_capacity_ticks_do_not_steal_another_queues_turn() {
     assert_eq!(next[0].0, other.id);
 }
 #[test]
+fn full_quota_admits_only_local_publication_in_regular_and_immediate_queues() {
+    let (_temp, store) = setup();
+    let mut jobs = add(&store, MAIN_QUEUE, 3);
+    for job in &mut jobs[1..] {
+        job.downloaded = 10;
+        job.total = Some(10);
+        job.received_sha256 = Some("ab".repeat(32));
+    }
+    let checking = &mut jobs[2];
+    checking.status = Status::Complete;
+    checking.saved_path = Some(checking.directory.join(&checking.name));
+    crate::synchronization::State::begin(checking).unwrap();
+    store.save(checking).unwrap();
+    store.save(&jobs[1]).unwrap();
+    let now = jiff::Timestamp::now().as_second();
+    let limit = quota::MIN_LIMIT;
+    store
+        .set_quota_limits_at(
+            quota::Limits {
+                daily: Some(limit),
+                hourly: None,
+            },
+            now,
+        )
+        .unwrap();
+    assert!(store.record_quota_bytes_at(limit, now).unwrap().blocked());
+    let selected = || {
+        ready_jobs_at(&store, &HashMap::new(), &mut 0, now * 1000)
+            .unwrap()
+            .into_iter()
+            .map(|(_, j)| j.id)
+            .collect::<Vec<_>>()
+    };
+    assert_eq!(selected(), [jobs[1].id.as_str()]);
+    store.set_queue_running(MAIN_QUEUE, false).unwrap();
+    assert!(selected().is_empty());
+    for job in &jobs {
+        store.start_immediately(&job.id).unwrap();
+    }
+    assert_eq!(selected(), [jobs[1].id.as_str()]);
+}
+
+#[test]
 fn disk_wait_releases_the_queue_slot_and_respects_manual_pause_after_reopen() {
     use crate::disk_space::{Location, Requirement, Wait};
     let (_temp, store) = setup();

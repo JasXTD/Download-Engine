@@ -393,11 +393,6 @@ pub(super) fn select_jobs(
     now: i64,
     check_disk: bool,
 ) -> Result<Vec<(String, Job)>> {
-    let disk_ready = |job: &Job| {
-        job.disk_wait
-            .as_ref()
-            .is_none_or(|wait| check_disk && wait.ready(store, job, now))
-    };
     store.apply_queue_schedules(now / 1000)?;
     reconcile_workers(store, active)?;
     for id in store.queue_paused_jobs()? {
@@ -405,9 +400,19 @@ pub(super) fn select_jobs(
             store.finish_queue_pause(&id)?;
         }
     }
-    if store.quota_status_at(now / 1000)?.blocked() {
+    let quota_blocked = store.quota_status_at(now / 1000)?.blocked();
+    if quota_blocked && !store.has_queued_http_checkpoint()? {
         return Ok(Vec::new());
     }
+    let eligible = |job: &Job| {
+        job.status == Status::Queued
+            && job.retry.ready(now)
+            && (!quota_blocked || job.can_finalize_offline())
+            && job
+                .disk_wait
+                .as_ref()
+                .is_none_or(|wait| check_disk && wait.ready(store, job, now))
+    };
     let mut queues = store.queues()?;
     let mut ready = Vec::new();
     let immediate = store.immediate_downloads()?;
@@ -418,9 +423,7 @@ pub(super) fn select_jobs(
         }
         if !active.contains_key(id)
             && let Some(job) = store.get(id)?
-            && job.status == Status::Queued
-            && job.retry.ready(now)
-            && disk_ready(&job)
+            && eligible(&job)
         {
             let queue = store
                 .job_queue(id)?
@@ -446,13 +449,7 @@ pub(super) fn select_jobs(
         let jobs = store
             .queue_jobs(&queue.id)?
             .into_iter()
-            .filter(|j| {
-                j.status == Status::Queued
-                    && j.retry.ready(now)
-                    && disk_ready(j)
-                    && !active.contains_key(&j.id)
-                    && !immediate.contains(&j.id)
-            })
+            .filter(|j| eligible(j) && !active.contains_key(&j.id) && !immediate.contains(&j.id))
             .take(queue_slots)
             .collect::<Vec<_>>();
         candidates.push((

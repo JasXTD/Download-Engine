@@ -4,7 +4,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
-const { fixturePaths } = require('./Run-MacTests.cjs');
+const { fixturePaths, withTorrentHelper } = require('./Run-MacTests.cjs');
 
 function fixture(t) {
   const root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'download-engine-mac-test-')));
@@ -44,6 +44,26 @@ test('a missing dedicated test keychain never falls back to the user keychain', 
   const f = fixture(t);
   fs.unlinkSync(f.keychain);
   assert.throws(() => fixturePaths(f.workspace, f.runnerTemp, [f.executable]), /ENOENT/);
+});
+
+test('the torrent suite sees the built helper beside it and a failed run cleans up only that link', t => {
+  const f = fixture(t);
+  const helper = path.join(f.target, 'de-torrent');
+  const suiteDir = path.join(f.target, 'deps', 'integration');
+  fs.mkdirSync(suiteDir, { recursive: true });
+  const suite = path.join(suiteDir, 'torrents-test');
+  const adjacent = path.join(suiteDir, 'de-torrent');
+  fs.writeFileSync(suite, 'suite', { mode: 0o700 });
+  fs.writeFileSync(helper, 'built helper', { mode: 0o700 });
+  assert.throws(() => withTorrentHelper(f.target, suite, () => {
+    assert.equal(fs.readFileSync(adjacent, 'utf8'), 'built helper');
+    throw new Error('fixture failure');
+  }), /fixture failure/);
+  assert.equal(fs.existsSync(adjacent), false);
+  assert.equal(withTorrentHelper(f.target, f.executable, () => fs.readFileSync(helper, 'utf8')), 'built helper');
+  fs.writeFileSync(adjacent, 'existing file');
+  assert.throws(() => withTorrentHelper(f.target, suite, () => assert.fail()), { code: 'EEXIST' });
+  assert.equal(fs.readFileSync(adjacent, 'utf8'), 'existing file');
 });
 
 test('linked executables and keychains are rejected', { skip: process.platform === 'win32' }, t => {

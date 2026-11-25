@@ -44,6 +44,7 @@ function fixturePaths(workspace, runnerTemp, executables) {
 
 async function compileTests() {
   const programs = [];
+  let torrentTest;
   const child = spawn('cargo', [...testArgs, '--no-run', '--message-format=json-render-diagnostics'], {
     stdio: ['ignore', 'pipe', 'inherit'],
   });
@@ -53,7 +54,10 @@ async function compileTests() {
     try {
       assert(line.length < 4 * 1024 * 1024);
       const message = JSON.parse(line);
-      if (message.reason === 'compiler-artifact' && message.executable) programs.push(message.executable);
+      if (message.reason === 'compiler-artifact' && message.executable) {
+        programs.push(message.executable);
+        if (message.target.name === 'torrents' && message.target.kind.includes('test')) torrentTest = message.executable;
+      }
       if (message.reason === 'compiler-message' && message.message?.rendered) process.stderr.write(message.message.rendered);
     } catch {
       invalid = true;
@@ -68,7 +72,21 @@ async function compileTests() {
       else resolve();
     });
   });
-  return programs;
+  assert(torrentTest, 'Cargo did not build the torrent integration test');
+  return { programs, torrentTest };
+}
+
+// The installed app looks for its helper beside its executable. Reproduce that
+// layout for Cargo's test executable without changing the app's search path.
+function withTorrentHelper(debug, torrentTest, run) {
+  assert(within(debug, torrentTest) && fs.realpathSync(torrentTest) === torrentTest, 'Unexpected torrent test path');
+  const helper = path.join(debug, 'de-torrent');
+  assert(fs.lstatSync(helper).isFile() && fs.realpathSync(helper) === helper, 'Expected the built torrent helper');
+  fs.accessSync(helper, fs.constants.X_OK);
+  const adjacent = path.join(path.dirname(torrentTest), 'de-torrent');
+  if (adjacent === helper) return run();
+  fs.linkSync(helper, adjacent);
+  try { return run(); } finally { fs.unlinkSync(adjacent); }
 }
 
 function security(args) {
@@ -81,7 +99,10 @@ async function main() {
   assert(process.platform === 'darwin' && process.env.GITHUB_ACTIONS === 'true', 'This helper runs only in the disposable macOS CI job');
   assert(process.env.RUNNER_TEMP && process.env.GITHUB_WORKSPACE, 'Missing CI scratch directories');
   assert.equal(fs.realpathSync(process.cwd()), fs.realpathSync(process.env.GITHUB_WORKSPACE));
-  const { keychain, programs } = fixturePaths(process.cwd(), process.env.RUNNER_TEMP, await compileTests());
+  const helperBuild = spawnSync('cargo', ['build', '--locked', '--offline', '--bin', 'de-torrent', '-j', '2'], { stdio: 'inherit' });
+  assert(!helperBuild.error && helperBuild.status === 0, 'Could not build the torrent helper for native tests');
+  const compiled = await compileTests();
+  const { keychain, programs } = fixturePaths(process.cwd(), process.env.RUNNER_TEMP, compiled.programs);
   const key = randomBytes(32);
   try {
     // No -A (allow every application) or -U (overwrite an existing item).
@@ -92,7 +113,9 @@ async function main() {
   }
   console.log(`Prepared isolated Keychain access for ${programs.length} compiled test programs.`);
   try {
-    const result = spawnSync('cargo', [...testArgs, '--', '--test-threads=2'], { stdio: 'inherit' });
+    const debug = fs.realpathSync(path.join(process.cwd(), 'target', 'debug'));
+    const result = withTorrentHelper(debug, compiled.torrentTest,
+      () => spawnSync('cargo', [...testArgs, '--', '--test-threads=2'], { stdio: 'inherit' }));
     if (result.error) throw new Error('Could not launch native regression tests');
     process.exitCode = result.status === 0 ? 0 : 1;
   } finally {
@@ -103,7 +126,7 @@ async function main() {
   }
 }
 
-module.exports = { fixturePaths };
+module.exports = { fixturePaths, withTorrentHelper };
 if (require.main === module) main().catch(error => {
   console.error(error.message);
   process.exitCode = 1;

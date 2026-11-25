@@ -21,10 +21,11 @@ portable app, installer and source archive.
 
 Install the prerequisites described in the README (Rust/MSVC build tools, Node.js
 and Inno Setup). For a fresh Cargo cache, run `cargo fetch --locked` before the
-offline checks below. Git checkouts and the source-only ZIP exclude executable
-files: copy the matching `tools/ffmpeg/ffmpeg.exe` from the portable release, or rebuild it using
-`tools/ffmpeg/source/README.md` and update the documented hash pins. Then run
-`scripts/Prepare-MediaTools.ps1` to verify the complete media bundle.
+offline checks below. The source ZIP omits the FFmpeg and LAME executables. A Git
+checkout includes the pinned Windows LAME encoder. Copy any missing helpers from
+the matching portable release into `tools/ffmpeg`, or rebuild them using
+`tools/ffmpeg/source/README.md`. Run `scripts/Prepare-MediaTools.ps1` to verify
+the resulting files against the release hash pins.
 
 Keep `tools/ffmpeg/ffmpeg.exe` locally as an ignored packaging input. Publish it
 inside the installer and portable release assets, not as a tracked source file.
@@ -61,18 +62,18 @@ Build and verify the macOS arm64, macOS x64 and Linux x64 packages using the
 [native release workflow](releases.md#native-release-packages). Stage those three
 archives alongside the Windows outputs before generating checksums.
 
-For version 3.21.0, upload only these ten files from
-`dist/releases/3.21.0` after checksum generation succeeds:
+For version 3.22.0, upload only these ten files from
+`dist/releases/3.22.0` after checksum generation succeeds:
 
-- `DownloadEngine-3.21.0-Unsigned-windows-x64.zip` — Windows portable application.
-- `DownloadEngine-3.21.0-UnsignedSetup.exe` — Windows installer.
-- `DownloadEngine-3.21.0-macos-arm64.zip` — Apple Silicon Mac.
-- `DownloadEngine-3.21.0-macos-x64.zip` — Intel Mac.
-- `DownloadEngine-3.21.0-linux-x64.tar.gz` — Linux x64.
-- `download-engine-chrome-3.21.0.zip`, `download-engine-edge-3.21.0.zip`, and
-  `download-engine-firefox-3.21.0.zip` — extension source/developer-loading packages.
-- `DownloadEngine-3.21.0-Source.zip` — matching application and dependency sources.
-- `SHA256SUMS-3.21.0` — checksums for the nine payloads above.
+- `DownloadEngine-3.22.0-Unsigned-windows-x64.zip` — Windows portable application.
+- `DownloadEngine-3.22.0-UnsignedSetup.exe` — Windows installer.
+- `DownloadEngine-3.22.0-macos-arm64.zip` — Apple Silicon Mac.
+- `DownloadEngine-3.22.0-macos-x64.zip` — Intel Mac.
+- `DownloadEngine-3.22.0-linux-x64.tar.gz` — Linux x64.
+- `download-engine-chrome-3.22.0.zip`, `download-engine-edge-3.22.0.zip`, and
+  `download-engine-firefox-3.22.0.zip` — extension source/developer-loading packages.
+- `DownloadEngine-3.22.0-Source.zip` — matching application and dependency sources.
+- `SHA256SUMS-3.22.0` — checksums for the nine payloads above.
 
 The version folder rejects unexpected files, links, subdirectories, old versions
 and test artifacts. Do not use a wildcard upload against `dist`. Older outputs

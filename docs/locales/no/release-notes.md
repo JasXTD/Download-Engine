@@ -1,3 +1,16 @@
+## 3.22.0 — 2026-11-26
+
+### Konverter lokale filer til MP3 eller WAV
+
+- Åpne konverteringsverktøyet fra verktøymenyen og velg én eller flere lyd- eller videofiler. Verktøyet lagrer det første lydsporet fra hver fil og fungerer uten nett.
+- For MP3 kan du velge 128, 192, 256 eller 320 kbit/s. Standardverdien er 192 kbit/s. WAV lagres som ukomprimert 16-bits PCM. Hvis du avbryter, beholder du filene som allerede er konvertert.
+
+### Nedlastinger og nettleserintegrasjon
+
+- FTP-, HLS- og DASH-overføringer unngår gjentatte forsøk når datakvoten er brukt opp. Nettleserutvidelsen kan gjenopprette lenkevalg som venter på behandling. Filhåndteringen er forbedret, og Vorbis-dekoderen i den medfølgende FFmpeg-versjonen er rettet.
+
+[English details](../../../CHANGELOG.md#3220--2026-11-26)
+
 ## 3.21.0 — 2026-11-20
 
 ### Kontroller lagrede filer

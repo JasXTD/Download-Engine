@@ -1,3 +1,16 @@
+## 3.22.0 — 2026-11-26
+
+### Chuyển tệp âm thanh và video trên máy sang MP3 hoặc WAV
+
+- Mở bộ chuyển đổi trong trình đơn Công cụ và chọn một hoặc nhiều tệp. Bộ chuyển đổi lấy luồng âm thanh đầu tiên của mỗi tệp và hoạt động ngoại tuyến.
+- MP3 hỗ trợ 128, 192, 256 hoặc 320 kbps, mặc định là 192 kbps. WAV dùng PCM 16 bit không nén. Khi hủy chuyển đổi hàng loạt, các tệp đã chuyển đổi xong vẫn được giữ lại.
+
+### Tải xuống và tích hợp trình duyệt
+
+- Các tác vụ FTP, HLS và DASH tránh thử lại liên tục khi hết hạn mức dữ liệu. Tiện ích trình duyệt có thể khôi phục các liên kết đã chọn đang chờ xử lý. Bản này cũng cải thiện việc xử lý tệp và sửa lỗi bộ giải mã Vorbis trong FFmpeg đi kèm.
+
+[English details](../../../CHANGELOG.md#3220--2026-11-26)
+
 ## 3.21.0 — 2026-11-20
 
 ### Kiểm tra các tệp đã lưu

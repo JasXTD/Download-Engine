@@ -2,6 +2,20 @@
 
 Release notes are available offline in Help → Changelog. Newest releases appear first.
 
+## 3.22.0 — 2026-11-26
+
+### Convert local audio and video to MP3 or WAV
+
+- Open **Converter** on the toolbar or choose **Tools → Converter**. Select one or more local files to save the first audio track from each. Supported inputs include MP4, MKV, WebM, M4A, Ogg, FLAC and WAV.
+- Choose MP3 at 128, 192, 256 or 320 kbps, or uncompressed 16-bit PCM WAV. Both formats produce 44.1 kHz stereo. FFmpeg and the LAME MP3 encoder are bundled on Windows, macOS and Linux, so conversion works offline.
+- Save beside the originals or choose an output folder for the batch. Review each result, retry failed files, or cancel and keep the files already converted. Existing files are preserved.
+
+### Downloads and browser integration
+
+- FTP transfers with an unknown size can finish exactly at the data quota. HLS and DASH transfers keep verified segments and pause when a segment cannot fit the quota or repeated attempts make no progress.
+- Browser link selection recovers pending handoffs, frees abandoned picker tabs and preserves playable streams found alongside ordinary file links. Concurrent captures and distinct magnet links keep their own requests.
+- Release torrent file handles when removing a download. Verify file ownership when moving, publishing or cleaning up files, and include the Vorbis decoder fix in the bundled FFmpeg.
+
 ## 3.21.0 — 2026-11-20
 
 ### Verify saved files offline

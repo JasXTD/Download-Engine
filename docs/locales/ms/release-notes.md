@@ -1,3 +1,16 @@
+## 3.22.0 — 2026-11-26
+
+### Tukar fail media setempat kepada MP3 atau WAV
+
+- Buka penukar dalam menu Alat dan pilih satu atau beberapa fail audio atau video. Penukar mengambil trek audio pertama daripada setiap fail dan boleh digunakan di luar talian.
+- Pilih 128, 192, 256 atau 320 kbps untuk MP3. Tetapan lalai ialah 192 kbps. WAV menggunakan PCM 16 bit tanpa pemampatan. Fail yang siap ditukar dikekalkan jika anda membatalkan kelompok tersebut.
+
+### Muat turun dan integrasi pelayar
+
+- Muat turun FTP, HLS dan DASH mengelakkan percubaan berulang apabila kuota data habis. Sambungan pelayar boleh memulihkan pemilihan pautan yang masih menunggu. Keluaran ini juga menambah baik pengendalian fail dan membetulkan penyahkod Vorbis dalam FFmpeg yang disertakan.
+
+[English details](../../../CHANGELOG.md#3220--2026-11-26)
+
 ## 3.21.0 — 2026-11-20
 
 ### Semak fail yang disimpan

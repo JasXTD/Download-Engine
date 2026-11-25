@@ -1,3 +1,16 @@
+## 3.22.0 — 2026-11-26
+
+### Lokale Medien in MP3 oder WAV umwandeln
+
+- Öffnen Sie den Konverter im Menü Werkzeuge und wählen Sie eine oder mehrere Audio- oder Videodateien aus. Der Konverter speichert die erste Tonspur jeder Datei und funktioniert offline.
+- Für MP3 stehen 128, 192, 256 und 320 kbit/s zur Auswahl. Voreingestellt sind 192 kbit/s. WAV verwendet unkomprimiertes 16-Bit-PCM. Bei einem Abbruch bleiben die bereits konvertierten Dateien erhalten.
+
+### Downloads und Browserintegration
+
+- Bei FTP-, HLS- und DASH-Downloads wurden wiederholte Versuche nach Erreichen des Datenlimits behoben. Die Browsererweiterung kann ausstehende Linkauswahlen wiederherstellen. Die Dateiverarbeitung wurde verbessert und der Vorbis-Decoder im mitgelieferten FFmpeg korrigiert.
+
+[English details](../../../CHANGELOG.md#3220--2026-11-26)
+
 ## 3.21.0 — 2026-11-20
 
 ### Gespeicherte Dateien prüfen

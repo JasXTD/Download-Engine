@@ -50,7 +50,7 @@ test('README current download label, tag and presence are checked independently'
   rejects('README.md', s => s.replace(`[Download ${version}]`, `[Download ${oldVersion}]`), /README.md: Download label/);
   rejects('README.md', s => s.replace(`/tag/v${version}`, `/tag/v${oldVersion}`), /README.md:.*release link/);
   rejects('README.md', s => s.replace(`[Download ${version}]`, '[Get the app]'), /expected one current Download/);
-  rejects('README.md', s => s.replace(`**New in ${version}:**`, `**New in ${oldVersion}:**`), /current-release highlights/);
+  rejects('README.md', s => s.replace(`**New in ${version}`, `**New in ${oldVersion}`), /current-release highlights/);
   rejects('README.md', s => s.replace('<!-- current-release:start -->', ''), /marked current-release section/);
 });
 

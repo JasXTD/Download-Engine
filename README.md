@@ -46,15 +46,15 @@ Get published packages from the [releases page](https://github.com/JasXTD/Downlo
 and read the [changelog](CHANGELOG.md) for release and development notes.
 
 <!-- current-release:start -->
-**[Download 3.21.0](https://github.com/JasXTD/Download-Engine/releases/tag/v3.21.0)** —
-Windows, Apple Silicon and Intel Macs, and Linux x64. Native FFmpeg is bundled;
-browser extensions, source code and SHA-256 checksums accompany releases.
+**[Download 3.22.0](https://github.com/JasXTD/Download-Engine/releases/tag/v3.22.0)** —
+Windows, Apple Silicon and Intel Macs, and Linux x64. Desktop packages include
+native FFmpeg and the LAME MP3 encoder. Browser extensions, source code and SHA-256
+checksums are available on the release page.
 
-**New in 3.21.0:** batch SHA-256 checks for completed downloads and offline
-verification of saved torrent files. Downloads waiting for disk space free their
-queue slots. A fully cached single-response HTTP download can finish saving when
-space returns, even at the transfer quota.
-[Downloads and recovery guide](docs/user-guide.md#downloads--recovery)
+**New in 3.22.0** — Open **Tools → Converter** to turn local audio or video into
+MP3 or WAV. Select several files at once, choose an MP3 bitrate and review the
+result for each file. Conversion runs offline and preserves your originals.
+[Converter guide](docs/user-guide.md#convert-local-media-files)
 
 Please report bugs on [GitHub Issues](https://github.com/JasXTD/Download-Engine/issues)
 rather than Reddit so we can track and resolve them.
@@ -80,6 +80,9 @@ The features below describe builds from the `main` branch.
   [Setup](#bundled-account-plugins)
 - **Video:** YouTube, TikTok, Bilibili, Twitch and compatible HLS and DASH streams, with a choice of
   quality and audio. [Supported sites](#supported-video-sites-and-formats)
+- **Audio conversion** extracts the first audio track from supported files such as MP4, MKV, WebM,
+  M4A, Ogg and FLAC. Choose MP3 at 128, 192, 256 or 320 kbps, or uncompressed 16-bit WAV.
+  [Convert local media files](docs/user-guide.md#convert-local-media-files)
 - **Torrents:** v1, v2 and hybrid torrents; optional and off by default. [Torrent downloads](#torrent-downloads)
 - **Queues and schedules:** named queues, one-time or recurring schedules, speed limits, data
   quotas and completion actions. [Queues guide](docs/user-guide.md#queues--schedules)
@@ -203,7 +206,7 @@ for browser integration; the browser extension does not download on its own.
 - **macOS packages are ad-hoc signed, not Apple-notarized.** See
   [how to open them](docs/cross-platform.md#macos) and the
   [Linux runtime and keyring requirements](docs/cross-platform.md#linux).
-- Every desktop package includes its native **FFmpeg**, with matching source and license notices.
+- Every desktop package includes native **FFmpeg** and **LAME**, with matching source and license notices.
   There is no Android package.
 
 Microsoft Store packaging is a separate [MSIX build target](docs/msix.md). The Inno Setup
@@ -380,11 +383,13 @@ Windows SDK (including `rc.exe`), then run:
 cargo build --release --locked --bins
 ```
 
-This builds `de.exe`, `de-cli.exe`, `de-host.exe` and `de-torrent.exe` in `target/release`; keep
-them together. Video merging also needs the pinned FFmpeg helper, which Git checkouts and source
-ZIPs omit: copy `tools/ffmpeg/ffmpeg.exe` from the matching portable release, or follow the
-[FFmpeg build instructions](tools/ffmpeg/source/README.md). Node.js runs the JavaScript tests and
-packaging tools, and Inno Setup builds the installer; the packaged app needs neither.
+This builds `de.exe`, `de-cli.exe`, `de-host.exe` and `de-torrent.exe` in `target/release`.
+Keep them together. Video merging and audio conversion use the pinned FFmpeg helper. MP3
+output also uses LAME. Copy any missing `tools/ffmpeg/ffmpeg.exe` and `tools/ffmpeg/lame.exe`
+from the matching portable release, or rebuild them from source.
+[Media helper build instructions](tools/ffmpeg/source/README.md)
+
+Node.js runs the JavaScript tests and packaging tools. Inno Setup builds the Windows installer.
 
 - macOS and Linux: [native build instructions](docs/cross-platform.md#build-and-validate)
 - Tests and checks: [build and verification details](docs/reference.md#build-and-verify)

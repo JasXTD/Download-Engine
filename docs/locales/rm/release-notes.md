@@ -1,3 +1,16 @@
+## 3.22.0 — 2026-11-26
+
+### Converter datotecas localas en MP3 u WAV
+
+- Avra il convertider en il menu d'utensils e tscherna ina u pliras datotecas d'audio u da video. Il convertider memorisescha l'emprima pista d'audio da mintga datoteca e funcziuna era senza connexiun cun l'internet.
+- Per MP3 pos ti tscherner 128, 192, 256 u 320 kbit/s. La valur da standard è 192 kbit/s. WAV dovra PCM da 16 bits senza cumpressiun. Sche ti interrumpas la conversiun, restan las datotecas gia convertidas memorisadas.
+
+### Telechargiadas ed integraziun en il navigatur
+
+- Las telechargiadas cun FTP, HLS e DASH eviteschan emprovas repetidas cura che la quota da datas è exaurida. L’extensiun dal navigatur po restabilir las colliaziuns selecziunadas che spetgan anc. Questa versiun meglierescha era la gestiun da datotecas e curregia il decodader Vorbis en FFmpeg.
+
+[English details](../../../CHANGELOG.md#3220--2026-11-26)
+
 ## 3.21.0 — 2026-11-20
 
 ### Verifitgar las datotecas memorisadas

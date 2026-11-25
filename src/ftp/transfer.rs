@@ -81,17 +81,11 @@ pub(super) async fn transfer_with(
     let (data, mut received) = control.prepare_retrieval(requested, cancel).await?;
     let verifying_prefix = received < saved;
     if verifying_prefix {
-        // A reset can only help if a full window can verify the saved prefix
-        // and deliver at least one new byte (or finish a fully cached file).
-        let required = saved - received + u64::from(metadata.size != Some(saved));
-        let limits = limiter.quota_status().await?.limits;
-        if [limits.hourly, limits.daily]
-            .into_iter()
-            .flatten()
-            .any(|limit| limit < required)
-        {
-            return Err(crate::quota::Reached::FtpPrefix.into());
-        }
+        // Without SIZE, the saved prefix may already contain the entire file.
+        let required = saved - received + u64::from(metadata.size.is_some_and(|size| size > saved));
+        limiter
+            .check_quota_capacity(required, crate::quota::Reached::FtpPrefix)
+            .await?;
     }
     let mut data = control.retrieve(data, cancel).await?;
     store.activity.set(
@@ -108,8 +102,24 @@ pub(super) async fn transfer_with(
     let mut checkpoint = Instant::now();
     let outcome: Result<bool> = async {
         loop {
-            if metadata.size != Some(received) {
-                limiter.check_quota().await?;
+            if metadata.size != Some(received)
+                && let Err(error) = limiter.check_quota().await
+            {
+                if metadata.size.is_none() && crate::quota::reached(&error) {
+                    // A single-byte read distinguishes EOF without replaying a buffer.
+                    let extra = client::read(&mut data, &mut buffer[..1], cancel).await?;
+                    if extra == 0 {
+                        break;
+                    }
+                    limiter.record_payload(extra).await?;
+                    // Another byte proves that replaying this prefix alone cannot finish.
+                    if job.integrity.expected.is_none() || verifying_prefix {
+                        limiter
+                            .check_quota_capacity(job.downloaded + 1, crate::quota::Reached::FtpPrefix)
+                            .await?;
+                    }
+                }
+                return Err(error);
             }
             let count = client::read(&mut data, &mut buffer, cancel).await?;
             if count == 0 {

@@ -37,6 +37,7 @@ struct Reply {
     required_origin: Option<String>,
     body: Vec<u8>,
     headers: String,
+    omit_length: bool,
     status: u16,
     cut: bool,
     ignore_range: bool,
@@ -50,6 +51,7 @@ impl Reply {
             required_origin: None,
             body: body.as_ref().into(),
             headers: String::new(),
+            omit_length: false,
             status: 200,
             cut: false,
             ignore_range: false,
@@ -144,7 +146,8 @@ impl Server {
                                     reply.headers.push_str(&format!("Content-Range: bytes {start}-{end}/{total}\r\n"));
                                 } else { reply.status = 416; reply.body.clear(); }
                             }
-                            let header = format!("HTTP/1.1 {} fixture\r\nContent-Length: {}\r\nConnection: close\r\n{}\r\n",reply.status,reply.body.len(),reply.headers);
+                            let length = if reply.omit_length { String::new() } else { format!("Content-Length: {}\r\n", reply.body.len()) };
+                            let header = format!("HTTP/1.1 {} fixture\r\n{length}Connection: close\r\n{}\r\n", reply.status, reply.headers);
                             if socket.write_all(header.as_bytes()).await.is_err() {return;}
                             if let Some(gate) = reply.gate { let Ok(permit) = gate.acquire_owned().await else {return;}; permit.forget(); }
                             let body = if reply.cut { &reply.body[..reply.body.len()/2] } else { &reply.body };
@@ -1276,20 +1279,22 @@ async fn hls_payload_obeys_shared_quota_and_restarts_only_the_incomplete_segment
     let server = Server::new().await;
     let (_temp, store) = fixture();
     let first = ts(100, 2);
-    let large = ts(12000, 3);
+    let large = ts(5000, 3);
     server.set("/index.m3u8", Reply::bytes(media(&["a.ts", "b.ts"])));
     server.set("/a.ts", Reply::bytes(&first));
     server.set("/b.ts", Reply::bytes(&large));
     let limiter = Limiter::new(&Limits::default()).unwrap();
+    let now = jiff::Timestamp::now().as_second();
     store
         .set_quota_limits_at(
             download_engine::quota::Limits {
                 hourly: Some(1024 * 1024),
                 daily: None,
             },
-            jiff::Timestamp::now().as_second(),
+            now,
         )
         .unwrap();
+    store.record_quota_bytes_at(800_000, now).unwrap();
     let job = enqueue(&store, &playlist(&server, "/index.m3u8").await);
     let id = job.id.clone();
     engine::run(
@@ -1307,18 +1312,130 @@ async fn hls_payload_obeys_shared_quota_and_restarts_only_the_incomplete_segment
     assert_eq!(held.hls.as_ref().unwrap().completed.len(), 1);
     assert!(store.quota_status().unwrap().hourly_used >= 1024 * 1024);
     store
-        .set_quota_limits_at(
-            download_engine::quota::Limits::default(),
-            jiff::Timestamp::now().as_second(),
-        )
+        .quota_status_at(now + download_engine::quota::HOUR)
         .unwrap();
     let saved = run(&store, held).await;
     assert_eq!(saved.status, Status::Complete, "{:?}", saved.error);
     assert_eq!(server.count("/a.ts"), 1);
+    assert_eq!(server.count("/b.ts"), 2);
+    assert_eq!(
+        store.quota_status().unwrap().hourly_used,
+        large.len() as u64
+    );
     assert_eq!(
         std::fs::read(saved.saved_path.unwrap()).unwrap(),
         [first, large].concat()
     );
+}
+
+#[tokio::test]
+async fn hls_quota_pauses_oversized_segments_and_accepts_an_exact_window() {
+    use download_engine::quota::{HOUR, Limits as Quota};
+    use download_engine::scheduler::{Command, Scheduler};
+    let body = ts(12000, 3);
+    for omit_length in [false, true] {
+        let server = Server::new().await;
+        let (_temp, store) = fixture();
+        server.set("/index.m3u8", Reply::bytes(media(&["part.ts"])));
+        server.set(
+            "/part.ts",
+            Reply {
+                omit_length,
+                ..Reply::bytes(&body)
+            },
+        );
+        let now = jiff::Timestamp::now().as_second();
+        let cap = body.len() as u64;
+        store
+            .set_quota_limits_at(
+                Quota {
+                    hourly: Some(cap / 2),
+                    daily: Some(cap * 2),
+                },
+                now,
+            )
+            .unwrap();
+        let job = enqueue(&store, &playlist(&server, "/index.m3u8").await);
+        let held = run(&store, job).await;
+        assert_eq!(held.status, Status::Paused, "{:?}", held.error);
+        assert!(held.quota_waiting && held.saved_path.is_none());
+        assert!(held.error.as_deref().unwrap().contains("segment"));
+        assert!(held.hls.as_ref().unwrap().completed.is_empty());
+        assert_eq!(held.retry.attempts, 0);
+        let used = store.quota_status().unwrap().hourly_used;
+        if omit_length {
+            assert!(used >= cap / 2);
+        } else {
+            assert_eq!(used, 0, "A declared oversized segment needs no body bytes");
+        }
+        store.quota_status_at(now + HOUR).unwrap();
+        server.set("/other.m3u8", Reply::bytes(media(&["small.ts"])));
+        server.set("/small.ts", Reply::bytes(ts(10, 2)));
+        let other = enqueue(&store, &playlist(&server, "/other.m3u8").await);
+        let scheduler = Scheduler::start(store.clone()).unwrap();
+        parallel::wait_saved(&store, &other.id, |job| job.status == Status::Complete).await;
+        assert_eq!(store.get(&held.id).unwrap().unwrap().status, Status::Paused);
+        assert_eq!(server.count("/part.ts"), 1);
+        store
+            .set_quota_limits_at(
+                Quota {
+                    hourly: Some(cap),
+                    daily: None,
+                },
+                now + 2 * HOUR,
+            )
+            .unwrap();
+        scheduler.send(Command::Resume(held.id.clone())).unwrap();
+        let complete =
+            parallel::wait_saved(&store, &held.id, |job| job.status == Status::Complete).await;
+        assert_eq!(std::fs::read(complete.saved_path.unwrap()).unwrap(), body);
+        assert_eq!(store.quota_status().unwrap().hourly_used, cap);
+    }
+}
+
+#[tokio::test]
+async fn hls_shared_quota_stops_replaying_an_unfinished_segment_without_progress() {
+    use download_engine::quota::{HOUR, Limits as Quota, MIN_LIMIT};
+    let server = Server::new().await;
+    let (_temp, store) = fixture();
+    let body = ts(4000, 7);
+    server.set("/index.m3u8", Reply::bytes(media(&["part.ts"])));
+    server.set(
+        "/part.ts",
+        Reply {
+            omit_length: true,
+            ..Reply::bytes(&body)
+        },
+    );
+    let now = jiff::Timestamp::now().as_second();
+    store
+        .set_quota_limits_at(
+            Quota {
+                hourly: Some(MIN_LIMIT),
+                daily: None,
+            },
+            now,
+        )
+        .unwrap();
+    let mut job = enqueue(&store, &playlist(&server, "/index.m3u8").await);
+    for (window, expected) in [Status::Queued, Status::Paused].into_iter().enumerate() {
+        // Other downloads have used nearly all of each shared allowance.
+        store
+            .record_quota_bytes_at(MIN_LIMIT - 1, now + window as i64 * HOUR)
+            .unwrap();
+        job = run(&store, job).await;
+        assert_eq!(job.status, expected, "{:?}", job.error);
+        assert!(job.quota_waiting && job.saved_path.is_none());
+        assert!(job.downloaded > 0 && job.downloaded < body.len() as u64);
+        assert_eq!(job.hls.as_ref().unwrap().completed_count(), 0);
+    }
+    assert!(job.error.as_deref().unwrap().contains("Resume"));
+    assert_eq!(server.count("/part.ts"), 2);
+    store.quota_status_at(now + 2 * HOUR).unwrap();
+    let complete = run(&store, job).await;
+    assert_eq!(complete.status, Status::Complete, "{:?}", complete.error);
+    assert_eq!(std::fs::read(complete.saved_path.unwrap()).unwrap(), body);
+    assert_eq!(store.quota_status().unwrap().hourly_used, body.len() as u64);
 }
 
 #[tokio::test]

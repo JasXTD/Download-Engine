@@ -1,6 +1,6 @@
 //! Bounded video workers. Only flushed, validated parts enter durable recovery state.
 use super::*;
-use crate::{hls::Part, retry, transfer_activity::Activity};
+use crate::{hls::Part, quota, retry, transfer_activity::Activity};
 use std::sync::{
     Arc,
     atomic::{AtomicU64, Ordering},
@@ -183,6 +183,12 @@ async fn receive(
         expected.is_none_or(|size| size > 0 && size <= MAX_PART_BYTES),
         "HLS segment exceeds 256 MiB or is empty"
     );
+    // Only a complete, verified segment can be reused after a window reset.
+    if let Some(size) = expected {
+        limiter
+            .check_quota_capacity(size, quota::Reached::MediaSegment)
+            .await?;
+    }
     live.total = expected;
     live.state = SegmentState::ReceivingData;
     activity.set_media(id, live);
@@ -192,7 +198,7 @@ async fn receive(
     let mut updated = Instant::now();
     let result: Result<bool> = async {
         loop {
-            if expected != Some(received) {
+            if expected.is_some_and(|size| size != received) {
                 limiter.check_quota().await?;
             }
             let chunk = tokio::select! {
@@ -202,8 +208,13 @@ async fn receive(
             let Some(chunk) = chunk else {
                 break;
             };
-            limiter.record_payload(chunk.len()).await?;
+            if chunk.is_empty() {
+                continue;
+            }
             received += chunk.len() as u64;
+            limiter
+                .record_response_payload(chunk.len(), expected)
+                .await?;
             ensure!(
                 received <= expected.unwrap_or(MAX_PART_BYTES),
                 "HLS segment is larger than declared or exceeds 256 MiB"
@@ -235,6 +246,12 @@ async fn receive(
     .await;
     download_file::flush_and_sync(&mut file).await?;
     drop(file);
+    if result.as_ref().is_err_and(quota::reached) {
+        // Account for unknown lengths and limits changed during the response.
+        limiter
+            .check_quota_capacity(expected.unwrap_or(received), quota::Reached::MediaSegment)
+            .await?;
+    }
     if !result? || cancel.is_cancelled() {
         return Ok(None);
     }

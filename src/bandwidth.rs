@@ -215,6 +215,31 @@ impl Limiter {
         }
         Ok(())
     }
+    pub(crate) async fn check_quota_capacity(
+        &self,
+        bytes: u64,
+        reason: crate::quota::Reached,
+    ) -> Result<()> {
+        if let Some(meter) = &self.quota {
+            meter.check_capacity(bytes, reason).await?;
+        }
+        Ok(())
+    }
+    pub(crate) async fn record_response_payload(
+        &self,
+        bytes: usize,
+        total: Option<u64>,
+    ) -> Result<()> {
+        // With no declared length, read first to distinguish EOF from more
+        // payload. Charge even a chunk that must be discarded at the limit.
+        let allowance = if total.is_none() {
+            self.check_quota().await
+        } else {
+            Ok(())
+        };
+        self.record_payload(bytes).await?;
+        allowance
+    }
     pub(crate) async fn quota_status(&self) -> Result<crate::quota::Status> {
         self.quota
             .as_ref()

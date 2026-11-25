@@ -153,13 +153,20 @@ pub(crate) fn failed(job: &mut Job, error: &anyhow::Error, now: i64) {
     job.status = Status::Queued;
 }
 
-/// Drain every range worker. A disk/validation failure takes precedence over a
-/// transient error; otherwise preserve the longest Retry-After across workers.
+/// Drain every worker. Keep permanent failures ahead of quota holds, manual
+/// holds ahead of a window reset, and the longest Retry-After among transients.
 pub(crate) fn merge_error(current: &mut Option<anyhow::Error>, incoming: anyhow::Error) {
     let replace = match current.as_ref() {
         None => true,
         Some(previous) if crate::quota::reached(previous) => {
-            !crate::quota::reached(&incoming) && incoming.downcast_ref::<Transient>().is_none()
+            use crate::quota::Reached;
+            match incoming.downcast_ref::<Reached>() {
+                Some(hold) => {
+                    matches!(previous.downcast_ref(), Some(Reached::Window))
+                        && !matches!(hold, Reached::Window)
+                }
+                None => incoming.downcast_ref::<Transient>().is_none(),
+            }
         }
         Some(previous) => match (
             previous.downcast_ref::<Transient>(),

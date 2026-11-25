@@ -8,6 +8,7 @@ use crate::{
     bandwidth::Limiter,
     download_file, engine,
     model::Job,
+    quota::Reached,
     store::Store,
     synchronization::FinishedFile,
     transfer_activity::{MediaSnapshot, SegmentState},
@@ -112,6 +113,7 @@ pub(crate) async fn transfer(
                 .flat_map(|a| a.parts.iter().map(|p| (p.clone(), a.format))),
         )
         .collect();
+    let previous_downloaded = job.downloaded;
     job.downloaded = 0;
     store
         .activity
@@ -147,8 +149,21 @@ pub(crate) async fn transfer(
         job.downloaded += completed.size;
     }
     store.save(job)?;
-    if !parallel::run(network, store, job, root, cancel, limiter, parts).await? {
-        return Ok(None);
+    let verified = job.downloaded;
+    match parallel::run(network, store, job, root, cancel, limiter, parts).await {
+        Ok(true) => {}
+        Ok(false) => return Ok(None),
+        // Concurrent downloads can exhaust a window before any one segment
+        // reveals its size. Stop if replay used more data without a new receipt.
+        Err(error)
+            if matches!(error.downcast_ref(), Some(Reached::Window))
+                && previous_downloaded > verified
+                && job.downloaded > verified
+                && job.hls.as_ref().unwrap().saved_bytes() == verified =>
+        {
+            return Err(Reached::MediaReplay.into());
+        }
+        Err(error) => return Err(error),
     }
     job.total = Some(job.downloaded);
     store.save(job)?;

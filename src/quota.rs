@@ -99,12 +99,16 @@ pub struct Event {
 pub(crate) enum Reached {
     Window,
     FtpPrefix,
+    MediaSegment,
+    MediaReplay,
 }
 impl std::fmt::Display for Reached {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str(match self {
             Self::Window => "Data quota reached. Downloads will continue when the allowance resets.",
             Self::FtpPrefix => "Resume when enough data quota is available to verify the saved FTP bytes and continue. If a full allowance is too small, raise or disable the limit.",
+            Self::MediaSegment => "A video segment is larger than a full data quota window. Raise or disable the limiting quota, then resume the download.",
+            Self::MediaReplay => "Retrying unfinished video segments used the available data quota without completing a segment. Resume when more quota is available, or raise the limit.",
         })
     }
 }
@@ -273,6 +277,19 @@ impl Meter {
         }
         Ok(())
     }
+    pub(crate) async fn check_capacity(&self, bytes: u64, reason: Reached) -> Result<()> {
+        if bytes > MIN_LIMIT && self.0.enabled.load(Ordering::Acquire) {
+            let limits = self.status().await?.limits;
+            if [limits.hourly, limits.daily]
+                .into_iter()
+                .flatten()
+                .any(|limit| bytes > limit)
+            {
+                return Err(reason.into());
+            }
+        }
+        Ok(())
+    }
     pub(crate) async fn record(&self, bytes: usize) -> Result<()> {
         if self.0.enabled.load(Ordering::Acquire) && bytes != 0 {
             // Window selection follows the serialized accounting order, including
@@ -382,6 +399,12 @@ mod tests {
         let mut error = Some(anyhow::Error::from(Reached::Window));
         crate::retry::merge_error(&mut error, crate::retry::incomplete("temporary"));
         assert!(reached(error.as_ref().unwrap()));
+        crate::retry::merge_error(&mut error, Reached::MediaSegment.into());
+        crate::retry::merge_error(&mut error, Reached::Window.into());
+        assert!(matches!(
+            error.as_ref().unwrap().downcast_ref(),
+            Some(Reached::MediaSegment)
+        ));
         crate::retry::merge_error(&mut error, anyhow::anyhow!("file changed"));
         assert_eq!(error.as_ref().unwrap().to_string(), "file changed");
         crate::retry::merge_error(&mut error, Reached::Window.into());

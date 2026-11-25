@@ -233,7 +233,7 @@ pub async fn run(
                     Reached::Window if job.supports_resume() || job.downloaded == 0 =>
                         (Status::Queued, error.to_string()),
                     Reached::Window => (Status::Paused, "Data quota reached. This server cannot safely resume the file. Raise or disable the quota, then resume to restart this download.".into()),
-                    Reached::FtpPrefix => (Status::Paused, error.to_string()),
+                    Reached::FtpPrefix | Reached::MediaSegment | Reached::MediaReplay => (Status::Paused, error.to_string()),
                 };
                 job.status = status;
                 job.error = Some(message);
@@ -404,15 +404,9 @@ async fn single(
             if chunk.is_empty() {
                 continue;
             }
-            // For an unknown length, only the next read can distinguish EOF
-            // from more payload. Charge even a chunk discarded at the limit.
-            let allowance = if job.total.is_none() {
-                limiter.check_quota().await
-            } else {
-                Ok(())
-            };
-            limiter.record_payload(chunk.len()).await?;
-            allowance?;
+            limiter
+                .record_response_payload(chunk.len(), job.total)
+                .await?;
             if let Some(size) = job.total {
                 ensure!(
                     job.downloaded + chunk.len() as u64 <= size,

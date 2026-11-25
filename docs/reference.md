@@ -536,6 +536,12 @@ requires manual action: raise or disable the quota, then choose **Start again**.
 This avoids repeatedly downloading the same prefix each window. A link check
 interrupted by a quota keeps the original URL and saved bytes; rerun it later.
 
+HLS and DASH downloads keep verified segments across resets. If a single segment
+exceeds a full hourly or daily allowance, the download pauses. Raise or disable
+the limiting quota and choose **Resume** to continue with the remaining segments.
+If a retry exhausts a shared allowance without finishing another segment, the
+download also pauses. Choose **Resume** when more of the allowance is available.
+
 Usage counts received file payload, including retransferred bytes after retries
 and replacement-link verification. Deleting a download does not refund usage.
 Chunks are accounted when their database write is processed. An in-flight chunk
@@ -1763,6 +1769,8 @@ bytes stop the transfer and ask for Restart.
 If a full hourly or daily allowance cannot cover the saved prefix and the next
 byte, the download pauses before requesting the file again. Raise or disable
 the limiting quota, then choose **Resume** to keep the partial file.
+When the server omits the file size, the engine checks for end of file at the
+quota boundary. A file that fits the allowance exactly can finish.
 If other downloads exhaust the shared allowance during verification and the
 saved file makes no progress, choose **Resume** when enough allowance is available.
 

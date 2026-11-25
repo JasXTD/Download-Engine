@@ -111,20 +111,37 @@ test('a warm dependency cache rebuilds current app code and still catches failin
     assert.equal(result.status, expected, output);
     return output;
   };
+  // Cargo 1.100 moved dependency outputs out of deps/. Use the compiler's
+  // artifact records to check the exact files kept by the dependency cache.
+  const cached = cachePaths(step(mac, 'Save Rust dependencies'));
+  const dependencyArtifact = (profile, args) => {
+    const records = cargo([...args, '--message-format=json']).split(/\r?\n/)
+      .filter(line => line.startsWith('{')).map(line => JSON.parse(line));
+    const libraries = records
+      .filter(record => record.reason === 'compiler-artifact' && record.target.name === 'cache_dependency')
+      .flatMap(record => record.filenames).filter(file => file.endsWith('.rlib'));
+    assert.equal(libraries.length, 1, 'Expected the compiled fixture dependency');
+    const relative = path.relative(root, libraries[0]).split(path.sep).join('/');
+    assert.ok(cached.some(dir => dir.startsWith(profile + '/') && relative.startsWith(dir + '/')),
+      `Dependency outside the cached profile directories: ${relative}`);
+    return libraries[0];
+  };
   // The initial test commands create their local lockfiles offline.
-  cargo(['test', '--offline', '--lib', '--verbose']);
-  cargo(['test', '--offline', '--manifest-path', 'torrent/Cargo.toml', '--lib']);
-  cargo(['build', '--locked', '--offline', '--release', '--lib']);
-  const profiles = ['target/debug', 'target/release', 'torrent/target/debug'];
-  const dependencyFiles = profiles.flatMap(profile => fs.readdirSync(path.join(root, profile, 'deps'))
-    .filter(name => /^libcache_dependency-.*\.rlib$/.test(name))
-    .map(name => path.join(root, profile, 'deps', name)));
-  assert.equal(dependencyFiles.length, 3);
+  const dependencyFiles = [
+    dependencyArtifact('target/debug', ['test', '--offline', '--lib']),
+    dependencyArtifact('torrent/target/debug', ['test', '--offline', '--manifest-path', 'torrent/Cargo.toml', '--lib']),
+    dependencyArtifact('target/release', ['build', '--locked', '--offline', '--release', '--lib']),
+  ];
   const timestamps = dependencyFiles.map(file => fs.statSync(file).mtimeMs);
   for (const command of cleanCommands) cargo(command.split(/\s+/).slice(1));
-  for (const profile of profiles) {
-    assert.ok(!fs.readdirSync(path.join(root, profile, 'deps')).some(name => /^(?:lib)?(?:download_engine|de_torrent)-/.test(name)), `App artifacts retained in ${profile}`);
-    assert.ok(!fs.readdirSync(path.join(root, profile, '.fingerprint')).some(name => /^(?:download-engine|de-torrent)-/.test(name)), `App fingerprints retained in ${profile}`);
+  for (const dir of cached.filter(dir => /^(?:torrent\/)?target\//.test(dir))) {
+    const folder = path.join(root, dir);
+    if (!fs.existsSync(folder)) continue;
+    for (const entry of fs.readdirSync(folder, { recursive: true })) {
+      if (/(?:^|[\\/])(?:lib)?(?:download[-_]engine|de[-_]torrent)(?:[-.]|$)/.test(entry)) {
+        assert.ok(!fs.lstatSync(path.join(folder, entry)).isFile(), `App artifact retained in ${dir}: ${entry}`);
+      }
+    }
   }
   assert.deepEqual(dependencyFiles.map(file => fs.statSync(file).mtimeMs), timestamps);
   const warm = cargo(['test', '--locked', '--offline', '--lib', '--verbose']);

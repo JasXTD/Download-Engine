@@ -82,10 +82,9 @@ fn check_tone(path: &Path, format: Format) {
         "s16le",
         "pipe:1",
     ]);
-    let samples: Vec<_> = pcm
-        .chunks_exact(2)
-        .map(|s| i16::from_le_bytes([s[0], s[1]]))
-        .collect();
+    let (pairs, remainder) = pcm.as_chunks::<2>();
+    assert!(remainder.is_empty(), "incomplete 16-bit PCM sample");
+    let samples: Vec<_> = pairs.iter().copied().map(i16::from_le_bytes).collect();
     assert!(
         (7900..9000).contains(&samples.len()),
         "duration: {} samples",

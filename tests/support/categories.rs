@@ -109,7 +109,6 @@ async fn invalid_destination_reports_failure_without_overwriting_the_existing_fi
     let fixture = Fixture::new(32000, 0, false).await;
     let (root, store) = setup();
     let blocked = root.path().join("not-a-directory");
-    std::fs::write(&blocked, b"preserve").unwrap();
     let mut rules = store.download_folders().unwrap();
     rules.overrides.insert(Category::Documents, blocked.clone());
     store.save_download_folders(&rules).unwrap();
@@ -122,13 +121,33 @@ async fn invalid_destination_reports_failure_without_overwriting_the_existing_fi
         )
         .unwrap();
     store.enqueue(&job).unwrap();
+    // The destination was available when queued, but is now occupied by a file.
+    std::fs::write(&blocked, b"preserve").unwrap();
+    #[cfg(windows)]
+    {
+        let error = store
+            .new_download(
+                &fixture.url,
+                Some("another.pdf"),
+                None,
+                "category-blocked-at-add".into(),
+            )
+            .unwrap_err();
+        assert!(
+            error
+                .to_string()
+                .contains("download destination is not a folder")
+        );
+    }
     let done = run(&store, job).await;
     assert_eq!(done.status, Status::Failed);
-    assert!(
-        done.error
-            .unwrap()
-            .contains("Cannot create the download folder")
-    );
+    let expected = if cfg!(windows) {
+        "download destination is not a folder"
+    } else {
+        "Cannot create the download folder"
+    };
+    let error = done.error.unwrap();
+    assert!(error.contains(expected), "{error}");
     assert_eq!(std::fs::read(&blocked).unwrap(), b"preserve");
     assert!(fixture.requests.lock().unwrap().is_empty());
 }

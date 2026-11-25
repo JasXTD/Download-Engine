@@ -150,9 +150,11 @@ impl DenyWrites {
         assert!(output.status.success());
         let sid = String::from_utf8(output.stdout).unwrap().trim().to_owned();
         assert!(sid.starts_with("S-1-"));
+        // Keep metadata readable so the transfer can start. Deny adding files and
+        // subdirectories to exercise recovery when publishing the verified bytes.
         let output = Process::new("icacls.exe")
             .arg(&path)
-            .args(["/deny", &format!("*{sid}:(OI)(CI)(W)")])
+            .args(["/deny", &format!("*{sid}:(OI)(CI)(WD,AD)")])
             .output()
             .unwrap();
         assert!(
@@ -203,7 +205,12 @@ async fn denied_destination_reports_failure_and_recovers_without_redownloading()
     let failed = run(&store, job).await;
     denied.restore();
     assert_failure(&failed);
-    assert_eq!(failed.downloaded, fixture.data.len() as u64);
+    assert_eq!(
+        failed.downloaded,
+        fixture.data.len() as u64,
+        "{:?}",
+        failed.error
+    );
     let request_count = fixture.requests.lock().unwrap().len();
     recover(&store, failed, &fixture).await;
     assert_eq!(fixture.requests.lock().unwrap().len(), request_count + 1);

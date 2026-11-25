@@ -1,7 +1,7 @@
 name: macOS build validation
 on:
   push:
-    branches: [main, 'codex/release-*']
+    branches: [main, 'codex/release-*', 'codex/mp3-converter-ui-macos-20261125']
   workflow_dispatch:
     inputs:
       validation:
@@ -27,6 +27,7 @@ jobs:
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 120
     env:
+      CONVERTER_TEST: ${{ github.event_name == 'push' && github.ref_name == 'codex/mp3-converter-ui-macos-20261125' }}
       CARGO_INCREMENTAL: '0'
       CARGO_PROFILE_DEV_DEBUG: '0'
       MACOSX_DEPLOYMENT_TARGET: '11.0'
@@ -99,7 +100,7 @@ jobs:
           security list-keychains -d user -s "$keychain"
           security default-keychain -d user -s "$keychain"
       - name: Torrent regression tests
-        if: github.event.inputs.validation == '' || github.event.inputs.validation == 'full'
+        if: env.CONVERTER_TEST != 'true' && (github.event.inputs.validation == '' || github.event.inputs.validation == 'full')
         timeout-minutes: 15
         env:
           DOWNLOAD_ENGINE_CI_IDLE_TIMEOUT_MS: '300000'
@@ -112,6 +113,7 @@ jobs:
           echo "DOWNLOAD_ENGINE_FFMPEG_PATH=$RUNNER_TEMP/native-ffmpeg/ffmpeg" >> "$GITHUB_ENV"
           echo "DOWNLOAD_ENGINE_NATIVE_FFMPEG=$RUNNER_TEMP/native-ffmpeg" >> "$GITHUB_ENV"
           echo "DOWNLOAD_ENGINE_FFMPEG_SHA256=$(awk '/  ffmpeg$/ {print $1}' "$RUNNER_TEMP/native-ffmpeg/build-record/binaries.sha256")" >> "$GITHUB_ENV"
+          echo "DOWNLOAD_ENGINE_LAME_SHA256=$(awk '/  lame$/ {print $1}' "$RUNNER_TEMP/native-ffmpeg/build-record/binaries.sha256")" >> "$GITHUB_ENV"
       - name: Native regression tests
         if: github.event.inputs.validation == '' || github.event.inputs.validation == 'full'
         # Intel needed 37 minutes through desktop tests alone. Leave room for
@@ -120,9 +122,13 @@ jobs:
         env:
           DOWNLOAD_ENGINE_CI_IDLE_TIMEOUT_MS: '300000'
         run: |
-          node scripts/Run-NativeCi.cjs root-tests "$RUNNER_TEMP/native-diagnostics" node scripts/Run-MacTests.cjs
+          args=()
+          if [[ "$CONVERTER_TEST" == true ]]; then
+            args+=(--converter)
+          fi
+          node scripts/Run-NativeCi.cjs root-tests "$RUNNER_TEMP/native-diagnostics" node scripts/Run-MacTests.cjs "${args[@]}"
       - name: Package preview
-        if: github.event.inputs.validation != 'ui'
+        if: env.CONVERTER_TEST != 'true' && github.event.inputs.validation != 'ui'
         run: |
           node scripts/Run-NativeCi.cjs packaging-tests "$RUNNER_TEMP/native-diagnostics" bash scripts/Test-UnixPackaging.sh
           node scripts/Run-NativeCi.cjs package "$RUNNER_TEMP/native-diagnostics" bash scripts/Package-Unix.sh "$RUNNER_TEMP/packages"
@@ -131,10 +137,12 @@ jobs:
           [[ ${#packages[@]} -eq 1 ]] || { echo '::error::Expected exactly one native package'; exit 1; }
           node scripts/Run-NativeCi.cjs package-smoke "$RUNNER_TEMP/native-diagnostics" bash scripts/Test-NativePackage.sh "${packages[0]}"
       - name: Build native UI test executable
+        if: env.CONVERTER_TEST != 'true'
         timeout-minutes: 25
         run: |
           node scripts/Run-NativeCi.cjs ui-build "$RUNNER_TEMP/native-diagnostics" cargo build --locked --offline --bin de --features screenshot -j 2
       - name: Native UI rendering checks
+        if: env.CONVERTER_TEST != 'true'
         timeout-minutes: 5
         run: |
           node scripts/Run-NativeCi.cjs ui-tests "$RUNNER_TEMP/native-diagnostics" node scripts/Test-NativeUi.cjs target/debug/de
@@ -147,7 +155,7 @@ jobs:
           if-no-files-found: ignore
           retention-days: 1
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        if: success() && github.event.inputs.validation != 'ui'
+        if: success() && env.CONVERTER_TEST != 'true' && github.event.inputs.validation != 'ui'
         with:
           name: macos-preview-${{ matrix.runner }}
           path: |

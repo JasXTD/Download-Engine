@@ -23,7 +23,7 @@ function New-MsixFixtureArchive([string]$Name, [string[]]$Extra = @()) {
     $archive = Join-Path $testRoot "$Name.zip"
     $zip = [IO.Compression.ZipFile]::Open($archive, [IO.Compression.ZipArchiveMode]::Create)
     try {
-        foreach ($entryName in @('de.exe','de-host.exe','de-cli.exe','de-torrent.exe','portable.json','Register-Browsers.ps1','tools/ffmpeg/ffmpeg.exe','tools/ffmpeg/PROVENANCE.md','LICENSE','THIRD-PARTY-NOTICES.md','plugins/example.de-extension.json') + $Extra) {
+        foreach ($entryName in @('de.exe','de-host.exe','de-cli.exe','de-torrent.exe','portable.json','Register-Browsers.ps1','tools/ffmpeg/ffmpeg.exe','tools/ffmpeg/lame.exe','tools/ffmpeg/PROVENANCE.md','LICENSE','THIRD-PARTY-NOTICES.md','plugins/example.de-extension.json') + $Extra) {
             $entry = $zip.CreateEntry($entryName)
             $writer = [IO.StreamWriter]::new($entry.Open())
             try { $writer.Write('offline packaging fixture - never executable') } finally { $writer.Dispose() }
@@ -93,6 +93,7 @@ try {
         Assert-Msix (-not (Test-Path -LiteralPath (Join-Path $stage 'portable.json'))) 'Portable profile would write into WindowsApps'
         Assert-Msix (-not (Test-Path -LiteralPath (Join-Path $stage 'Register-Browsers.ps1'))) 'Unpackaged registration script must not ship in MSIX'
         Assert-Msix (Test-Path -LiteralPath (Join-Path $stage 'tools/ffmpeg/ffmpeg.exe')) 'FFmpeg missing'
+        Assert-Msix (Test-Path -LiteralPath (Join-Path $stage 'tools/ffmpeg/lame.exe')) 'MP3 encoder missing'
         Assert-Msix (Test-Path -LiteralPath (Join-Path $stage 'plugins/example.de-extension.json')) 'Bundled extension missing'
         Assert-Msix (Test-Path -LiteralPath (Join-Path $stage 'tools/ffmpeg/source/build-record/compiler-version.log')) 'Public, pinned media build record missing'
         Assert-MsixRejected { Copy-MsixPayload $archive $stage } 'Staging must not reuse a runtime directory'

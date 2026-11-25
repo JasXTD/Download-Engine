@@ -3,6 +3,7 @@ mod about;
 mod add_download;
 mod add_login;
 mod authentication;
+mod audio_conversion;
 mod automation;
 mod background_io;
 mod browser_video;
@@ -134,6 +135,7 @@ impl Filter {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum Dialog {
     Automation,
+    Converter,
     Confirm,
     About,
     CheckUpdates,

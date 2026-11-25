@@ -5,6 +5,10 @@ FFmpeg 9.0.2, Windows x64, built by the Download Engine project on
 It is a separate executable used to remux downloaded, local HLS/DASH tracks
 without re-encoding. The application never passes it a network URL. Network
 support and automatic external-library detection are disabled in this build.
+The MP3 converter also uses this build to decode a local file's audio. A separate
+LAME 4.0 executable encodes the resulting PCM. The upstream source archive was
+obtained from Debian and matched its published SHA-256,
+`3df5124d5ad3a98312ffd7ba6a9b36230e4f8a3e66d3ce0f425e336c32d216eb`.
 
 - FFmpeg revision: `946fcce07b6dcd0331c8cc609192aeff5e1924f8`
   ([upstream](https://github.com/FFmpeg/FFmpeg/commit/946fcce07b6dcd0331c8cc609192aeff5e1924f8)).

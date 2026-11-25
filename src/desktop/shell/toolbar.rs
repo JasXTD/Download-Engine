@@ -16,12 +16,13 @@ enum Action {
     Scheduler,
     Scripts,
     Grabber,
+    Converter,
     Mcp,
     Logs,
     Preferences,
 }
 
-const OPTIONAL: [Action; 10] = [
+const OPTIONAL: [Action; 11] = [
     Action::Remove,
     Action::Folder,
     Action::Clear,
@@ -29,6 +30,7 @@ const OPTIONAL: [Action; 10] = [
     Action::Scheduler,
     Action::Scripts,
     Action::Grabber,
+    Action::Converter,
     Action::Mcp,
     Action::Logs,
     Action::Preferences,
@@ -57,6 +59,7 @@ impl Action {
             Self::Scheduler => "Scheduler",
             Self::Scripts => "Extensions",
             Self::Grabber => "Grabber",
+            Self::Converter => "Converter",
             Self::Mcp => "MCP",
             Self::Logs => "Logs",
             Self::Preferences => "Preferences",
@@ -76,6 +79,7 @@ impl Action {
             Self::Scheduler => CALENDAR,
             Self::Scripts => AUTOMATION,
             Self::Grabber => GRABBER,
+            Self::Converter => super::super::audio_conversion::GLYPH,
             Self::Mcp => "\u{e839}",
             Self::Logs => LOGS,
             Self::Preferences => SETTINGS,
@@ -97,12 +101,32 @@ impl Action {
             Self::Clear => "Clear completed entries from the selected queue. Saved files are kept.",
             Self::Scripts => "Extensions, scripts, rules and run history",
             Self::Grabber => "Find website files or save an offline website",
+            Self::Converter => "Convert local media files",
             Self::Mcp => "AI connection settings and server controls",
             _ => return self.label(),
         })
     }
     fn file_action(self) -> bool {
         matches!(self, Self::Remove | Self::Folder | Self::Clear)
+    }
+
+    fn pin(self, prefs: &mut InterfacePreferences) -> Option<&mut bool> {
+        // These indices belong to saved profiles, independent of the visual order.
+        let index = match self {
+            Self::Remove => 0,
+            Self::Folder => 1,
+            Self::Clear => 2,
+            Self::Queues => 3,
+            Self::Scheduler => 4,
+            Self::Scripts => 5,
+            Self::Grabber => 6,
+            Self::Mcp => 7,
+            Self::Logs => 8,
+            Self::Preferences => 9,
+            Self::Converter => return Some(&mut prefs.toolbar_converter),
+            _ => return None,
+        };
+        Some(&mut prefs.toolbar_pins[index])
     }
 }
 
@@ -179,6 +203,7 @@ impl Desktop {
                 self.refresh_automation();
             }
             Action::Grabber => self.open_grabber(),
+            Action::Converter => self.open_converter(),
             Action::Mcp => self.open_mcp(),
             Action::Logs => {
                 self.view = View::Logs;
@@ -226,10 +251,7 @@ impl Desktop {
                 let mut hidden = Vec::new();
                 let mut shown = Vec::new();
                 for action in actions {
-                    let pinned = OPTIONAL
-                        .iter()
-                        .position(|a| *a == action)
-                        .is_none_or(|i| self.interface.toolbar_pins[i]);
+                    let pinned = action.pin(&mut self.interface).is_none_or(|pin| *pin);
                     let width = if downloads {
                         preferred_width(ui, action)
                     } else {
@@ -276,6 +298,7 @@ impl Desktop {
                             Action::Logs => self.view == View::Logs,
                             Action::Preferences => self.preferences_window.is_some(),
                             Action::Grabber => self.dialog == Some(Dialog::Grabber),
+                            Action::Converter => self.dialog == Some(Dialog::Converter),
                             Action::Mcp => self.dialog == Some(Dialog::Mcp),
                             _ => false,
                         };
@@ -326,8 +349,10 @@ impl Desktop {
                         ui.menu_button(tr("Customize toolbar"), |ui| {
                             ui.label(tr("Pinned actions appear when space allows."));
                             let mut preferences = self.interface;
-                            for (i, action) in OPTIONAL.iter().enumerate() {
-                                ui.checkbox(&mut preferences.toolbar_pins[i], action.label());
+                            for action in OPTIONAL {
+                                if let Some(pin) = action.pin(&mut preferences) {
+                                    ui.checkbox(pin, action.label());
+                                }
                             }
                             if preferences != self.interface {
                                 self.save_interface(ui.ctx(), preferences);
@@ -430,6 +455,12 @@ mod tests {
         assert!(!app.interface.toolbar_pins[6]);
         assert!(!app.store.interface_preferences().unwrap().toolbar_pins[6]);
         egui::Popup::close_all(&ctx);
+        click(&mut app, &ctx, "More");
+        click(&mut app, &ctx, "Customize toolbar");
+        click(&mut app, &ctx, "Converter");
+        assert!(!app.store.interface_preferences().unwrap().toolbar_converter);
+        assert!(app.interface.toolbar_pins[7], "MCP must keep its own pin");
+        egui::Popup::close_all(&ctx);
         app.open_preferences_window();
         app.preferences_window
             .as_mut()
@@ -438,6 +469,7 @@ mod tests {
             .compact_rows = true;
         click(&mut app, &ctx, "×");
         assert!(!app.interface.toolbar_pins[6]);
+        assert!(!app.interface.toolbar_converter);
         assert!(!app.interface.compact_rows);
     }
 }

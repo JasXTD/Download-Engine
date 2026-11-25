@@ -22,6 +22,15 @@ pub(super) fn icon(ui: &egui::Ui, at: egui::Pos2, glyph: &str, size: f32, color:
     let point = |x: f32, y: f32| at + vec2(x - 10.0, y - 10.0) * (size / 20.0);
     let stroke = Stroke::new(1.4, color);
     match glyph {
+        "convert" => {
+            for (from, to) in [
+                (point(2.0, 6.0), point(18.0, 6.0)),
+                (point(18.0, 14.0), point(2.0, 14.0)),
+            ] {
+                ui.painter().arrow(from, to - from, stroke);
+            }
+            return;
+        }
         "layers" => {
             ui.painter().add(egui::Shape::closed_line(
                 [(10.0, 2.0), (19.0, 7.0), (10.0, 12.0), (1.0, 7.0)]
@@ -569,12 +578,14 @@ impl Desktop {
             });
         self.clipboard_card(&ctx, p);
         self.poll_crash_reports(&ctx);
+        self.poll_conversion(&ctx);
         self.poll_launch_updates(&ctx);
         if self.dialog != Some(Dialog::CheckUpdates) {
             self.extras.update_check = None;
         }
         match self.dialog {
             Some(Dialog::Automation) => self.automation_dialog(&ctx, p),
+            Some(Dialog::Converter) => self.converter_dialog(&ctx, p),
             Some(Dialog::ScriptSample) => self.script_sample_dialog(&ctx, p),
             Some(Dialog::ScriptReplace) => self.script_replace_dialog(&ctx, p),
             Some(Dialog::ExtensionReview) => self.extension_review_dialog(&ctx, p),

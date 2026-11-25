@@ -39,7 +39,8 @@ case "${1:-}" in
     mkdir -p artifacts
     export DOWNLOAD_ENGINE_NATIVE_FFMPEG=/native-ffmpeg DOWNLOAD_ENGINE_FFMPEG_PATH=/native-ffmpeg/ffmpeg
     DOWNLOAD_ENGINE_FFMPEG_SHA256=$(awk '/  ffmpeg$/ {print $1}' /native-ffmpeg/build-record/binaries.sha256)
-    export DOWNLOAD_ENGINE_FFMPEG_SHA256
+    DOWNLOAD_ENGINE_LAME_SHA256=$(awk '/  lame$/ {print $1}' /native-ffmpeg/build-record/binaries.sha256)
+    export DOWNLOAD_ENGINE_FFMPEG_SHA256 DOWNLOAD_ENGINE_LAME_SHA256
     fixture=$(mktemp -d /tmp/de-linux-ci.XXXXXXXX)
     keyring_pid=''
     cleanup() {
@@ -64,6 +65,7 @@ case "${1:-}" in
     fi
     cargo test --locked --offline --manifest-path torrent/Cargo.toml -j 2 -- --test-threads=2
     cargo test --locked --offline --lib extensions:: -j 2 -- --test-threads=2
+    cargo test --locked --offline --lib --bin de audio_conversion:: -j 2 -- --test-threads=2
     cargo test --locked --offline --test extension_jobs -j 2 -- --test-threads=2
     cargo test --locked --offline --test hls --test browser_video -j 2 -- --test-threads=2
     cargo test --locked --offline --bin de desktop::extensions::tests -j 2 -- --test-threads=2

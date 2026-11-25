@@ -81,6 +81,12 @@ Ctrl+N opens Add URL. Ctrl+F searches downloads (or logs when the Logs page is o
 
 ## Downloads & recovery
 
+### Convert local media files
+
+Open **Converter** on the toolbar (under **More** on narrow windows) or from the **Tools** menu. Click **Choose files** and select one or more local audio or video files. Under **Output format**, choose **MP3** or **WAV**. For MP3, **Bitrate** offers 128, 192, 256 and 320 kbps. The default is 192 kbps. WAV saves uncompressed 16-bit PCM. Both formats use the first audio track and produce 44.1 kHz stereo. Supported inputs include WAV, FLAC, MP3, Ogg, M4A, MP4, MKV and WebM with a decodable audio track.
+
+Each output is suggested beside its source. For one file, **Save as…** lets you change its name and folder. For a batch, **Choose a folder** puts all outputs in one place. Review the names and click **Convert**. The list shows the outcome for each file. If you cancel a batch, completed files are kept. Existing files are preserved. Conversion requires a self-contained local input with a decodable audio track.
+
 ### Add one file or a batch
 
 Add URL accepts direct HTTP, HTTPS, FTP and FTPS links. Tasks → Add batch accepts one link per line. Choose a queue and destination before adding the files.

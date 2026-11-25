@@ -185,10 +185,10 @@ async fn packed_aac_remux_preserves_the_transport_timestamp_against_video() {
 fn untrusted_or_missing_helper_is_never_started() {
     let temp = tempfile::tempdir().unwrap();
     let path = temp.path().join("ffmpeg.exe");
-    assert!(Helper::at(&path, &CancellationToken::new()).is_err());
+    assert!(Helper::at(&path, FFMPEG_SHA256, &CancellationToken::new()).is_err());
     std::fs::write(&path, b"not the bundled helper").unwrap();
-    let error = Helper::at(&path, &CancellationToken::new()).err().unwrap();
-    assert!(error.to_string().contains("merger changed"));
+    let error = Helper::at(&path, FFMPEG_SHA256, &CancellationToken::new()).err().unwrap();
+    assert!(error.to_string().contains("media helper changed"));
 }
 
 // A child of the unit-test executable, never an arbitrary command or live scanner.

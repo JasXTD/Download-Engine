@@ -27,6 +27,7 @@ $media = Join-Path $fixture 'tools/ffmpeg'
 New-Item -ItemType Directory -Path (Join-Path $media 'source'),(Join-Path $fixture 'src/hls') -Force | Out-Null
 try {
     $names = @('ffmpeg.exe','LICENSE','README.txt','PROVENANCE.md','source/Dockerfile','source/build.sh','source/apply-security-fixes.sh','source/test-hdr-metadata.c','source/SHA256SUMS','source/README.md',
+        'lame.exe','licenses/LAME-COPYING','source/lame-4.0.tar.gz','source/Build-Lame.ps1','source/build-lame.sh',
         'licenses/x264-COPYING','licenses/LICENSE.md','licenses/mingw-w64-COPYRIGHT','licenses/gcc-runtime-COPYRIGHT',
         'source/build-record/config.mak','source/build-record/toolchain-packages.tsv','source/build-record/binaries.sha256',
         ('source/ffmpeg-' + ('a' * 40) + '.tar.gz'),('source/x264-' + ('b' * 40) + '.tar.gz'))
@@ -41,7 +42,8 @@ try {
     function Save-Manifest { $manifest | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath $manifestPath -Encoding utf8 }
     Save-Manifest
     $runtime = Join-Path $fixture 'src/hls/merge.rs'
-    [IO.File]::WriteAllText($runtime, ('const FFMPEG_SHA256: &str = "{0}";' -f $files[0].sha256))
+    $pins = ('const FFMPEG_SHA256: &str = "{0}";' -f $files[0].sha256) + [Environment]::NewLine + ('const LAME_SHA256: &str = "{0}";' -f ($files | Where-Object path -eq 'lame.exe').sha256)
+    [IO.File]::WriteAllText($runtime, $pins)
     Assert-MediaBundle -Root $fixture
     $script:passed++
     $notice = Join-Path $media 'README.txt'
@@ -72,7 +74,7 @@ try {
     $manifest.files = $files; Save-Manifest
     [IO.File]::WriteAllText($runtime, ('const FFMPEG_SHA256: &str = "{0}";' -f ('e' * 64)))
     Expect-Rejection { Assert-MediaBundle -Root $fixture } 'hash pin disagree'
-    [IO.File]::WriteAllText($runtime, ('const FFMPEG_SHA256: &str = "{0}";' -f $files[0].sha256))
+    [IO.File]::WriteAllText($runtime, $pins)
     Expect-Rejection { Assert-MediaBundle -Root $fixture -TestTools } 'Test ffprobe'
     Assert-MediaBundle -Root $fixture
     $script:passed++

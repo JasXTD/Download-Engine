@@ -21,6 +21,7 @@ function Assert-MediaBundle {
         if ((Get-FileHash -LiteralPath $target -Algorithm SHA256).Hash -ine $file.sha256) { throw "Media checksum mismatch: $($file.path)" }
     }
     foreach ($required in @('ffmpeg.exe','LICENSE','README.txt','PROVENANCE.md','source/Dockerfile','source/build.sh','source/apply-security-fixes.sh','source/test-hdr-metadata.c','source/SHA256SUMS','source/README.md',
+        'lame.exe','licenses/LAME-COPYING','source/lame-4.0.tar.gz','source/Build-Lame.ps1','source/build-lame.sh',
         'licenses/x264-COPYING','licenses/LICENSE.md','licenses/mingw-w64-COPYRIGHT','licenses/gcc-runtime-COPYRIGHT',
         'source/build-record/config.mak','source/build-record/toolchain-packages.tsv','source/build-record/binaries.sha256')) {
         if (-not $listed.Contains($required)) { throw "Missing required media manifest entry: $required" }
@@ -37,6 +38,8 @@ function Assert-MediaBundle {
     $runtimePin = [regex]::Match($runtimeSource, 'const FFMPEG_SHA256: &str = "([a-f0-9]{64})";').Groups[1].Value
     $binaryPin = ($manifest.files | Where-Object path -eq 'ffmpeg.exe').sha256
     if ($runtimePin -cne $binaryPin) { throw 'Media manifest and runtime hash pin disagree.' }
+    $encoderPin = [regex]::Match($runtimeSource, 'const LAME_SHA256: &str = "([a-f0-9]{64})";').Groups[1].Value
+    if ($encoderPin -cne ($manifest.files | Where-Object path -eq 'lame.exe').sha256) { throw 'MP3 encoder manifest and runtime hash pin disagree.' }
     if ($TestTools) {
         $probe = Join-Path $Root 'artifacts/ffmpeg-tools/ffprobe.exe'
         if (-not (Test-Path -LiteralPath $probe -PathType Leaf) -or (Get-FileHash -LiteralPath $probe -Algorithm SHA256).Hash -ine $manifest.ffprobeSha256) { throw 'Test ffprobe is missing or changed; rebuild it from tools/ffmpeg/source.' }

@@ -13,7 +13,9 @@ const { spawn, spawnSync } = require('node:child_process');
 
 const account = 'master-key-v1';
 const service = 'com.xetro.downloadengine.protected-data';
-const testArgs = ['test', '--locked', '--offline', '--all-targets', '-j', '2'];
+const converter = process.argv[2] === '--converter';
+const targets = converter ? ['--lib', '--bin', 'de'] : ['--all-targets'];
+const testArgs = ['test', '--locked', '--offline', ...targets, '-j', '2'];
 
 function within(root, candidate) {
   const relative = path.relative(root, candidate);
@@ -92,7 +94,8 @@ async function main() {
   }
   console.log(`Prepared isolated Keychain access for ${programs.length} compiled test programs.`);
   try {
-    const result = spawnSync('cargo', [...testArgs, '--', '--test-threads=2'], { stdio: 'inherit' });
+    const filters = converter ? ['audio_conversion::'] : [];
+    const result = spawnSync('cargo', [...testArgs, '--', ...filters, '--test-threads=2'], { stdio: 'inherit' });
     if (result.error) throw new Error('Could not launch native regression tests');
     process.exitCode = result.status === 0 ? 0 : 1;
   } finally {

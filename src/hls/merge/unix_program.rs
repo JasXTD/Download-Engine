@@ -47,19 +47,19 @@ impl Program {
         expected: &str,
         cancel: &CancellationToken,
     ) -> Result<Arc<Self>> {
-        ensure!(expected.len() == 64, "Missing media merger checksum");
-        ensure!(!cancel.is_cancelled(), "HLS merge cancelled");
+        ensure!(expected.len() == 64, "Missing media helper checksum");
+        ensure!(!cancel.is_cancelled(), "Operation cancelled");
         let size = source.metadata()?.len();
         ensure!(
             source.metadata()?.is_file() && size <= MAX_PROGRAM_BYTES,
-            "The bundled media merger is not a bounded regular file"
+            "The bundled media helper is not a bounded regular file"
         );
         let folder = tempfile::Builder::new()
             .prefix("download-engine-merger-")
             // Create privately even when the caller's umask allows other users.
             .permissions(std::fs::Permissions::from_mode(0o700))
             .tempdir()
-            .context("Cannot create a private media merger directory")?;
+            .context("Cannot create a private media helper directory")?;
         let directory = File::open(folder.path())?;
         let metadata = directory.metadata()?;
         ensure!(
@@ -85,7 +85,7 @@ impl Program {
         };
         ensure!(
             fd >= 0,
-            "Cannot create the private media merger: {}",
+            "Cannot create the private media helper: {}",
             std::io::Error::last_os_error()
         );
         // SAFETY: openat returned a new descriptor; this File is its sole owner.
@@ -94,7 +94,7 @@ impl Program {
         let mut buffer = vec![0; 256 * 1024];
         let mut copied = 0u64;
         loop {
-            ensure!(!cancel.is_cancelled(), "HLS merge cancelled");
+            ensure!(!cancel.is_cancelled(), "Operation cancelled");
             let count = source.read(&mut buffer)?;
             if count == 0 {
                 break;
@@ -102,16 +102,16 @@ impl Program {
             copied += count as u64;
             ensure!(
                 copied <= size,
-                "The bundled media merger changed while being copied"
+                "The bundled media helper changed while being copied"
             );
             copy.write_all(&buffer[..count])?;
             hash.update(&buffer[..count]);
         }
         ensure!(
             copied == size && format!("{:x}", hash.finalize()) == expected,
-            "The bundled media merger changed. Repair or re-extract Download Engine before downloading separate tracks."
+            "The bundled media helper changed. Repair or re-extract Download Engine."
         );
-        ensure!(!cancel.is_cancelled(), "HLS merge cancelled");
+        ensure!(!cancel.is_cancelled(), "Operation cancelled");
         // A writable executable descriptor would cause ETXTBSY at exec on Linux.
         drop(copy);
         Ok(Arc::new(program))

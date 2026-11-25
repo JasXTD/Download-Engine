@@ -26,6 +26,13 @@ const FFMPEG_SHA256: &str = match option_env!("DOWNLOAD_ENGINE_FFMPEG_SHA256") {
     Some(hash) => hash,
     None => "",
 };
+#[cfg(windows)]
+const LAME_SHA256: &str = "69eaab70da2efc0cb41eff79897ceb293976cc9ecbdfd124285f6dfaa3c0c31f";
+#[cfg(unix)]
+const LAME_SHA256: &str = match option_env!("DOWNLOAD_ENGINE_LAME_SHA256") {
+    Some(hash) => hash,
+    None => "",
+};
 const MERGE_TIMEOUT: Duration = Duration::from_secs(30 * 60);
 
 #[cfg(unix)]
@@ -55,36 +62,44 @@ impl Helper {
     }
     pub(crate) async fn checked(cancel: &CancellationToken) -> Result<Self> {
         let cancel = cancel.clone();
-        tokio::task::spawn_blocking(move || {
-            #[allow(unused_mut)]
-            let mut path = crate::paths::resource_directory()?
-                .join("tools/ffmpeg")
-                .join(crate::paths::executable_name("ffmpeg"));
-            // Development binaries use the exact same pinned helper as the package.
-            #[cfg(all(debug_assertions, windows))]
-            if !path.exists() {
-                path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tools/ffmpeg/ffmpeg.exe");
-            }
-            #[cfg(all(debug_assertions, unix))]
-            if !path.exists()
-                && let Some(development) = option_env!("DOWNLOAD_ENGINE_FFMPEG_PATH")
-            {
-                path = PathBuf::from(development);
-            }
-            Self::at(&path, &cancel)
-        })
-        .await?
+        tokio::task::spawn_blocking(move || Self::ffmpeg(&cancel)).await?
     }
-    fn at(path: &Path, cancel: &CancellationToken) -> Result<Self> {
+    pub(crate) fn ffmpeg(cancel: &CancellationToken) -> Result<Self> {
+        Self::bundled("ffmpeg", FFMPEG_SHA256, cancel)
+    }
+    pub(crate) fn mp3_encoder(cancel: &CancellationToken) -> Result<Self> {
+        Self::bundled("lame", LAME_SHA256, cancel).context("Cannot verify the bundled MP3 encoder")
+    }
+    fn bundled(name: &str, hash: &str, cancel: &CancellationToken) -> Result<Self> {
+        let binary = crate::paths::executable_name(name);
+        #[allow(unused_mut)]
+        let mut path = crate::paths::resource_directory()?
+            .join("tools/ffmpeg")
+            .join(&binary);
+        #[cfg(all(debug_assertions, windows))]
+        if !path.exists() {
+            path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+                .join("tools/ffmpeg")
+                .join(&binary);
+        }
+        #[cfg(all(debug_assertions, unix))]
+        if !path.exists()
+            && let Some(development) = option_env!("DOWNLOAD_ENGINE_FFMPEG_PATH")
+        {
+            path = PathBuf::from(development).with_file_name(binary);
+        }
+        Self::at(&path, hash, cancel)
+    }
+    fn at(path: &Path, hash_pin: &str, cancel: &CancellationToken) -> Result<Self> {
         ensure!(
-            FFMPEG_SHA256.len() == 64,
-            "This build has no verified media merger. Build and package the native FFmpeg helper first."
+            hash_pin.len() == 64,
+            "This build is missing the checksum for its bundled media helper."
         );
         let folders = download_file::guard_parents(path).context(
-            "The bundled media merger is missing. Repair or re-extract Download Engine.",
+            "The bundled media helper is missing. Repair or re-extract Download Engine.",
         )?;
         let program = download_file::read_completed(path).context(
-            "The bundled media merger is missing. Repair or re-extract Download Engine.",
+            "The bundled media helper is missing. Repair or re-extract Download Engine.",
         )?;
         #[cfg(windows)]
         let mut program = program;
@@ -93,7 +108,7 @@ impl Helper {
             let mut hash = Sha256::new();
             let mut buffer = vec![0; 256 * 1024];
             loop {
-                ensure!(!cancel.is_cancelled(), "HLS merge cancelled");
+                ensure!(!cancel.is_cancelled(), "Operation cancelled");
                 let n = program.read(&mut buffer)?;
                 if n == 0 {
                     break;
@@ -101,12 +116,12 @@ impl Helper {
                 hash.update(&buffer[..n]);
             }
             ensure!(
-                format!("{:x}", hash.finalize()) == FFMPEG_SHA256,
-                "The bundled media merger changed. Repair or re-extract Download Engine before downloading separate tracks."
+                format!("{:x}", hash.finalize()) == hash_pin,
+                "The bundled media helper changed. Repair or re-extract Download Engine."
             );
         }
         #[cfg(unix)]
-        let program = unix_program::Program::verified(program, FFMPEG_SHA256, cancel)?;
+        let program = unix_program::Program::verified(program, hash_pin, cancel)?;
         Ok(Self {
             #[cfg(windows)]
             path: path.to_owned(),

@@ -54,7 +54,7 @@ pub(super) fn open_file(
     Ok(file_dialog(dialog, title, folder, filter).pick_file())
 }
 
-fn file_dialog(
+pub(super) fn file_dialog(
     dialog: rfd::FileDialog,
     title: &str,
     folder: &Path,

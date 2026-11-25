@@ -73,6 +73,56 @@ fn same_file(first: &File, second: &File) -> io::Result<bool> {
     Ok(first.dev() == second.dev() && first.ino() == second.ino())
 }
 
+/// Publish the converter output from a verified private link.
+pub(crate) struct VerifiedLink {
+    directory: de_torrent::storage::Directory,
+    path: PathBuf,
+    linked: bool,
+}
+
+impl VerifiedLink {
+    pub(crate) fn new(file: &File, source: &Path, path: PathBuf) -> Result<Self> {
+        let source = name(source.as_os_str())?;
+        let directory = de_torrent::storage::Directory::create_new(&path)?;
+        let mut link = Self {
+            directory,
+            path,
+            linked: false,
+        };
+        let fd = link.directory.handle().as_raw_fd();
+        if unsafe { libc::linkat(libc::AT_FDCWD, source.as_ptr(), fd, c"entry".as_ptr(), 0) } != 0 {
+            return Err(io::Error::last_os_error())
+                .context("Cannot claim the download for publication");
+        }
+        link.linked = true;
+        ensure!(
+            same_file(file, &open_at(fd, c"entry")?)?,
+            "Verified download was replaced before publication"
+        );
+        Ok(link)
+    }
+
+    pub(crate) fn publish(&mut self, destination: &File, leaf: &std::ffi::OsStr) -> io::Result<()> {
+        rename_at(
+            self.directory.handle().as_raw_fd(),
+            c"entry",
+            destination.as_raw_fd(),
+            &name(leaf)?,
+        )?;
+        self.linked = false;
+        Ok(())
+    }
+}
+
+impl Drop for VerifiedLink {
+    fn drop(&mut self) {
+        if self.linked {
+            let _ = self.directory.remove(Path::new("entry"), false);
+        }
+        let _ = delete_owned(self.directory.handle(), &self.path);
+    }
+}
+
 fn rename_at(from_dir: RawFd, from: &CStr, to_dir: RawFd, to: &CStr) -> io::Result<()> {
     #[cfg(target_os = "linux")]
     let result = unsafe {

@@ -92,7 +92,7 @@ try {
         Copy-Item -LiteralPath (Join-Path $workspaceRoot 'examples/extensions') -Destination $examplesRoot -Recurse
         $mediaRoot = Join-Path $stage 'tools\ffmpeg'
         New-Item -ItemType Directory -Force -Path $mediaRoot | Out-Null
-        foreach ($file in @('ffmpeg.exe','LICENSE','README.txt','PROVENANCE.md','media-manifest.json')) {
+        foreach ($file in @('ffmpeg.exe','lame.exe','LICENSE','README.txt','PROVENANCE.md','media-manifest.json')) {
             Copy-Item -LiteralPath (Join-Path $workspaceRoot "tools\ffmpeg\$file") -Destination $mediaRoot
         }
         foreach ($directory in @('source','licenses')) {

@@ -13,6 +13,10 @@ pub(super) struct FolderPicker {
     parent_dialog: rfd::FileDialog,
     #[cfg(test)]
     pub response: Option<anyhow::Result<Option<String>>>,
+    #[cfg(test)]
+    pub save_response: Option<anyhow::Result<Option<String>>>,
+    #[cfg(test)]
+    pub files_response: Option<anyhow::Result<Option<Vec<PathBuf>>>>,
 }
 impl FolderPicker {
     pub fn set_owner(&mut self, frame: &eframe::Frame) {
@@ -126,7 +130,7 @@ impl FolderPicker {
         extension: &str,
     ) -> anyhow::Result<Option<PathBuf>> {
         #[cfg(test)]
-        if let Some(response) = self.response.take() {
+        if let Some(response) = self.save_response.take().or_else(|| self.response.take()) {
             return response.map(|path| path.map(PathBuf::from));
         }
         #[cfg(windows)]
@@ -157,6 +161,25 @@ impl FolderPicker {
         #[cfg(not(windows))]
         {
             unix::open_file(self.native_dialog(), title, folder, filter)
+        }
+    }
+    pub fn open_files(
+        &mut self,
+        title: &str,
+        folder: &Path,
+        filter: (&str, &str),
+    ) -> anyhow::Result<Option<Vec<PathBuf>>> {
+        #[cfg(test)]
+        if let Some(response) = self.files_response.take() {
+            return response;
+        }
+        #[cfg(windows)]
+        {
+            native::open_files(self.file_owner()?, title, folder, filter)
+        }
+        #[cfg(not(windows))]
+        {
+            Ok(unix::file_dialog(self.native_dialog(), title, folder, filter).pick_files())
         }
     }
     #[cfg(windows)]
@@ -276,17 +299,19 @@ mod native {
             Ok(dialog)
         }
     }
-    fn open_dialog() -> windows::core::Result<IFileOpenDialog> {
+    fn open_dialog(multiple: bool) -> windows::core::Result<IFileOpenDialog> {
         unsafe {
             let dialog: IFileOpenDialog =
                 CoCreateInstance(&FileOpenDialog, None, CLSCTX_INPROC_SERVER)?;
-            dialog.SetOptions(
-                dialog.GetOptions()?
-                    | FOS_FORCEFILESYSTEM
-                    | FOS_FILEMUSTEXIST
-                    | FOS_PATHMUSTEXIST
-                    | FOS_NOCHANGEDIR,
-            )?;
+            let mut options = dialog.GetOptions()?
+                | FOS_FORCEFILESYSTEM
+                | FOS_FILEMUSTEXIST
+                | FOS_PATHMUSTEXIST
+                | FOS_NOCHANGEDIR;
+            if multiple {
+                options |= FOS_ALLOWMULTISELECT;
+            }
+            dialog.SetOptions(options)?;
             Ok(dialog)
         }
     }
@@ -296,7 +321,7 @@ mod native {
         title: &str,
         folder: &Path,
         (name, spec): (&str, &str),
-    ) -> anyhow::Result<Option<String>> {
+    ) -> anyhow::Result<bool> {
         let (name, spec) = (HSTRING::from(name), HSTRING::from(spec));
         unsafe {
             dialog.SetTitle(&HSTRING::from(title))?;
@@ -308,11 +333,11 @@ mod native {
                 dialog.SetDefaultFolder(&shell_item(initial)?)?;
             }
             match dialog.Show(Some(HWND(owner as *mut std::ffi::c_void))) {
-                Ok(()) => Ok(Some(path(&dialog.GetResult()?)?)),
+                Ok(()) => Ok(true),
                 Err(error)
                     if error.code() == windows::core::HRESULT::from_win32(ERROR_CANCELLED.0) =>
                 {
-                    Ok(None)
+                    Ok(false)
                 }
                 Err(error) => Err(error.into()),
             }
@@ -332,7 +357,11 @@ mod native {
             dialog.SetFileName(&HSTRING::from(name))?;
             dialog.SetDefaultExtension(&HSTRING::from(extension))?;
         }
-        show_file(&dialog, owner, title, folder, filter)
+        if show_file(&dialog, owner, title, folder, filter)? {
+            Ok(Some(path(&unsafe { dialog.GetResult()? })?))
+        } else {
+            Ok(None)
+        }
     }
     pub(super) fn open_file(
         owner: isize,
@@ -341,8 +370,29 @@ mod native {
         filter: (&str, &str),
     ) -> anyhow::Result<Option<String>> {
         let _apartment = Apartment::new()?;
-        let dialog = open_dialog()?;
-        show_file(&dialog, owner, title, folder, filter)
+        let dialog = open_dialog(false)?;
+        if show_file(&dialog, owner, title, folder, filter)? {
+            Ok(Some(path(&unsafe { dialog.GetResult()? })?))
+        } else {
+            Ok(None)
+        }
+    }
+    pub(super) fn open_files(
+        owner: isize,
+        title: &str,
+        folder: &Path,
+        filter: (&str, &str),
+    ) -> anyhow::Result<Option<Vec<PathBuf>>> {
+        let _apartment = Apartment::new()?;
+        let dialog = open_dialog(true)?;
+        if !show_file(&dialog, owner, title, folder, filter)? {
+            return Ok(None);
+        }
+        let selected = unsafe { dialog.GetResults()? };
+        let paths = (0..unsafe { selected.GetCount()? })
+            .map(|i| path(&unsafe { selected.GetItemAt(i)? }).map(PathBuf::from))
+            .collect::<anyhow::Result<Vec<_>>>()?;
+        Ok(Some(paths))
     }
 
     #[cfg(test)]
@@ -383,11 +433,14 @@ mod native {
             ] {
                 assert_eq!(save.0 & flag.0, flag.0);
             }
-            let open = unsafe { open_dialog().unwrap().GetOptions().unwrap() };
+            let open = unsafe { open_dialog(false).unwrap().GetOptions().unwrap() };
             for flag in [FOS_FORCEFILESYSTEM, FOS_FILEMUSTEXIST, FOS_PATHMUSTEXIST] {
                 assert_eq!(open.0 & flag.0, flag.0);
             }
             assert_eq!(open.0 & FOS_PICKFOLDERS.0, 0);
+            assert_eq!(open.0 & FOS_ALLOWMULTISELECT.0, 0);
+            let multi = unsafe { open_dialog(true).unwrap().GetOptions().unwrap() };
+            assert_eq!(multi.0, open.0 | FOS_ALLOWMULTISELECT.0);
         }
     }
 }

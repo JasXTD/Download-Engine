@@ -1,5 +1,6 @@
 #[macro_use]
 pub mod i18n;
+pub mod audio_conversion;
 pub mod automation;
 pub mod bandwidth;
 pub mod bilibili;

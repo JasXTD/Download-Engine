@@ -252,6 +252,7 @@ pub(super) fn click(app: &mut Desktop, ctx: &egui::Context, label: &str) {
             "Scheduler",
             "Extensions",
             "Grabber",
+            "Converter",
             "MCP",
             "Logs",
             "Preferences",

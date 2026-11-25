@@ -47,7 +47,7 @@
     },
     {
       "path": "PROVENANCE.md",
-      "sha256": "043feeae0f03ec4589fcc414112d9d78c83bc0751498b46005fa2c1296e17176"
+      "sha256": "a7369c59a1d3669e027bd0d124a93e1a94d2bd0d45f591d616e87d1cccb5de68"
     },
     {
       "path": "README.txt",
@@ -115,7 +115,7 @@
     },
     {
       "path": "source/README.md",
-      "sha256": "bc1933968b4dba48706d1c5caed24407ff0e8825786234766f9f24a0dbb7f1f3"
+      "sha256": "90be20aaeff26e286143eb08b96660bc6ede8dfa3dbff50a48b957cc3763c2ce"
     },
     {
       "path": "source/SHA256SUMS",
@@ -128,6 +128,26 @@
     {
       "path": "source/x264-0480cb05fa188d37ae87e8f4fd8f1aea3711f7ee.tar.gz",
       "sha256": "d0967a1348c85dfde363bb52610403be898171493100561efa0dd05d5fd1ae50"
+    },
+    {
+      "path": "lame.exe",
+      "sha256": "69eaab70da2efc0cb41eff79897ceb293976cc9ecbdfd124285f6dfaa3c0c31f"
+    },
+    {
+      "path": "licenses/LAME-COPYING",
+      "sha256": "e64f9c5a18f56828c10a575df13ade641aa3af4512a7afe6c411256943b57aaf"
+    },
+    {
+      "path": "source/Build-Lame.ps1",
+      "sha256": "504e8fa008dd2cb9e05fb1d0b26a66d9a38415f059e6dcac1f65b6ccd09e3638"
+    },
+    {
+      "path": "source/build-lame.sh",
+      "sha256": "6a299c81efcea25e233f493103bd62e84985460b7ac3476bc79165795ef22454"
+    },
+    {
+      "path": "source/lame-4.0.tar.gz",
+      "sha256": "3df5124d5ad3a98312ffd7ba6a9b36230e4f8a3e66d3ce0f425e336c32d216eb"
     }
   ]
 }

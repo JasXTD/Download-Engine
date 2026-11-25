@@ -63,8 +63,8 @@ cd "$repo/tools/ffmpeg/source"
 stage=source-checksums
 sha256sum --check SHA256SUMS
 stage=source-extraction
-tar -xzf ffmpeg-946fcce07b6dcd0331c8cc609192aeff5e1924f8.tar.gz -C "$build"
-tar -xzf x264-0480cb05fa188d37ae87e8f4fd8f1aea3711f7ee.tar.gz -C "$build"
+tar --no-same-owner -xzf ffmpeg-946fcce07b6dcd0331c8cc609192aeff5e1924f8.tar.gz -C "$build"
+tar --no-same-owner -xzf x264-0480cb05fa188d37ae87e8f4fd8f1aea3711f7ee.tar.gz -C "$build"
 mkdir -p "$output/licenses" "$output/build-record" "$build/prefix"
 # Patch before compiling x264 so a source verification failure is immediate.
 cd "$build/FFmpeg-946fcce07b6dcd0331c8cc609192aeff5e1924f8"

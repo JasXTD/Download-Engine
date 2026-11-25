@@ -13,7 +13,8 @@ fi
 [[ ${digest%% *} == 3df5124d5ad3a98312ffd7ba6a9b36230e4f8a3e66d3ce0f425e336c32d216eb ]] || { echo 'LAME source checksum mismatch' >&2; exit 1; }
 work=$(mktemp -d "${TMPDIR:-/tmp}/de-lame.XXXXXXXX")
 trap 'rm -rf -- "$work"' EXIT
-tar -xzf "$archive" -C "$work"
+# Source ownership belongs to the builder. Debian's tarball records its packager's UID.
+tar --no-same-owner -xzf "$archive" -C "$work"
 cd "$work/lame-4.0"
 # LAME calls setlocale even when iconv is unavailable on macOS. Move its
 # standard header beside ctype.h, outside the optional iconv block.

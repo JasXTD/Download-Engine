@@ -147,7 +147,7 @@
     },
     {
       "path": "source/build-lame.sh",
-      "sha256": "99ba9cc90dbb41a0924308de2cc8e2a9fdfbb88e901acf515a0c791699792703"
+      "sha256": "0346031dfbd5ad1c80936a1260f3808d7b01c0017d4ba187ec6a2ab89139597c"
     },
     {
       "path": "source/lame-4.0.tar.gz",

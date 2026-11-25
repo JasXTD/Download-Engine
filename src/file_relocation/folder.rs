@@ -1,6 +1,7 @@
 //! Folder moves use the same durable intent as single files. Cross-volume
 //! copies are verified before publication; cleanup uses recorded file IDs.
 use super::*;
+use crate::torrent::receipts::{self, FileReceipt, Receipts};
 use std::collections::{BTreeSet, VecDeque};
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -9,6 +10,29 @@ pub(super) struct Entry {
     source: Snapshot,
     target: Option<Snapshot>,
     hash: Option<[u8; 32]>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    copied_receipt: Option<(FileReceipt, FileReceipt)>,
+}
+
+/// Transfer ownership only for copies of the files the torrent actually published.
+/// Recovery commits the same checkpointed identities as an uninterrupted move.
+pub(super) fn commit_receipts(
+    tx: &rusqlite::Transaction<'_>,
+    job: &str,
+    entries: &[Entry],
+) -> Result<()> {
+    let Some(originals) = receipts::load(tx, job)? else {
+        return Ok(());
+    };
+    let mut copied = Receipts::new();
+    for entry in entries {
+        if let Some((source, target)) = &entry.copied_receipt
+            && originals.get(&entry.relative) == Some(source)
+        {
+            copied.insert(entry.relative.clone(), target.clone());
+        }
+    }
+    receipts::save(tx, job, &copied)
 }
 
 fn relative(path: &Path) -> Result<()> {
@@ -67,6 +91,7 @@ fn collect(root: &Path, cancel: &CancellationToken) -> Result<(Vec<Entry>, Vec<O
                 source: snapshot,
                 target: None,
                 hash: None,
+                copied_receipt: None,
             });
             handles.push(Some(file));
         }
@@ -187,7 +212,7 @@ pub(super) fn relocate(
         "Destination already exists; choose another name or folder"
     );
     let original = handles::open_directory(&source, false)?;
-    let source_snapshot = Snapshot::read(&original)?;
+    let source_snapshot = snapshot_source(store, job, &original)?;
     let copied = force_copy
         || !download_file::same_volume(
             &original,
@@ -196,6 +221,11 @@ pub(super) fn relocate(
                 .context("Missing destination folder")?,
         )?;
     let (entries, mut originals) = collect(&source, cancel)?;
+    let receipts = if copied {
+        receipts::load(&store.connect()?, &job.id)?
+    } else {
+        None
+    };
     if copied {
         handles::check_copy(&original)?;
         for file in originals.iter().flatten() {
@@ -267,7 +297,14 @@ pub(super) fn relocate(
                 }
                 handles::copy_streams(&from, &to, cancel, copy_stream)?;
                 handles::copy_metadata(source, &created)?;
-                intent.tree.as_mut().unwrap()[index].target = Some(Snapshot::read(&created)?);
+                let entry = &mut intent.tree.as_mut().unwrap()[index];
+                entry.target = Some(Snapshot::read(&created)?);
+                if let Some(expected) = receipts.as_ref().and_then(|r| r.get(&entry.relative))
+                    && !entry.source.directory
+                    && expected.matches(source)?
+                {
+                    entry.copied_receipt = Some((expected.clone(), FileReceipt::read(&created)?));
+                }
                 save_entry(store, &intent, index)?;
             }
             ensure!(
@@ -294,7 +331,11 @@ pub(super) fn relocate(
         published = true;
         #[cfg(test)]
         tests::after_publish(&intent.job);
-        commit(store, &mut intent)?;
+        commit(
+            store,
+            &mut intent,
+            staging.as_ref().map_or(&original, |(_, file)| file),
+        )?;
         Ok(())
     })();
     drop(originals);
@@ -311,6 +352,8 @@ pub(super) fn relocate(
         }
         clear(store, &intent.job)?;
     } else if !published {
+        #[cfg(unix)]
+        restore_move_source(&intent)?;
         if let Some((stage, key)) = &intent.temporary {
             cleanup(stage, key, intent.tree.as_ref().unwrap(), true)?;
         }
@@ -394,7 +437,11 @@ pub(super) fn recover(store: &Store, mut intent: Intent, cancel: &CancellationTo
                 verified.push(file);
             }
         }
-        commit(store, &mut intent)?;
+        commit(
+            store,
+            &mut intent,
+            target.as_ref().context("Missing moved folder")?,
+        )?;
         if intent.temporary.is_some() && intent.source.try_exists()? {
             cleanup(
                 &intent.source,
@@ -441,11 +488,72 @@ mod folder_tests {
         )?;
         Ok(target)
     }
+    fn record_published_folder(store: &Store, job: &Job) {
+        let root = job.saved_path.as_ref().unwrap();
+        let directory = de_torrent::storage::Directory::open(root).unwrap();
+        let mut records = Receipts::new();
+        for (path, _) in crate::torrent::completed_files(store, job).unwrap() {
+            let relative = path.strip_prefix(root).unwrap();
+            records.insert(
+                relative.to_owned(),
+                FileReceipt::read(&directory.read_file(relative).unwrap()).unwrap(),
+            );
+        }
+        let mut conn = store.connect().unwrap();
+        let tx = conn.transaction().unwrap();
+        tx.execute(
+            "INSERT INTO torrent_staging(job_id,nonce,directory_id,published_id,import_legacy) VALUES(?1,?2,?3,?3,0)",
+            params![job.id, uuid::Uuid::new_v4().to_string(), directory.identity().unwrap()],
+        ).unwrap();
+        receipts::save(&tx, &job.id, &records).unwrap();
+        tx.commit().unwrap();
+    }
+
+    #[test]
+    fn deleting_a_legacy_folder_without_per_file_receipts_preserves_the_payload() {
+        let (_temp, store, job) = crate::torrent::completed_folder_fixture();
+        record_published_folder(&store, &job);
+        store
+            .connect()
+            .unwrap()
+            .execute(
+                "DELETE FROM torrent_file_receipts WHERE job_id=?1",
+                [&job.id],
+            )
+            .unwrap();
+        let root = job.saved_path.as_ref().unwrap();
+        let error = crate::torrent::delete_saved(&store, &job, root).unwrap_err();
+        assert!(error.to_string().contains("per-file ownership"));
+        assert_eq!(
+            std::fs::read(root.join("nested/c.bin")).unwrap(),
+            b"sample!!"
+        );
+    }
+
+    #[test]
+    fn moving_a_replaced_torrent_folder_preserves_both_folders() {
+        let (temp, store, job) = crate::torrent::completed_folder_fixture();
+        record_published_folder(&store, &job);
+        let source = job.saved_path.as_ref().unwrap();
+        let original = temp.path().join("original");
+        std::fs::rename(source, &original).unwrap();
+        std::fs::create_dir(source).unwrap();
+        std::fs::write(source.join("notes"), b"other").unwrap();
+        let error = run(&store, &job, false, &CancellationToken::new()).unwrap_err();
+        assert!(
+            error.to_string().contains("published torrent changed"),
+            "{error}"
+        );
+        assert_eq!(std::fs::read(source.join("notes")).unwrap(), b"other");
+        assert_eq!(std::fs::read(original.join("a.bin")).unwrap(), b"harmless");
+    }
+
     #[test]
     fn folder_rename_and_verified_copy_keep_selected_files_extras_and_empty_directories() {
         for copy in [false, true] {
             let (_temp, store, job) = crate::torrent::completed_folder_fixture();
             let source = job.saved_path.as_ref().unwrap();
+            record_published_folder(&store, &job);
             std::fs::write(source.join("personal-note.bin"), b"keep me").unwrap();
             std::fs::create_dir(source.join("empty")).unwrap();
             let target = run(&store, &job, copy, &CancellationToken::new()).unwrap();
@@ -469,6 +577,12 @@ mod folder_tests {
                 target.join("nested/c.bin")
             );
             assert!(!is_pending(&store, &job.id).unwrap());
+            crate::torrent::delete_saved(&store, &saved, &target).unwrap();
+            assert!(!target.join("a.bin").exists());
+            assert_eq!(
+                std::fs::read(target.join("personal-note.bin")).unwrap(),
+                b"keep me"
+            );
         }
     }
     #[test]
@@ -499,7 +613,18 @@ mod folder_tests {
     #[test]
     fn folder_copy_recovery_commits_only_verified_files_after_publication() {
         for copy in [false, true] {
-            let (_temp, store, job) = crate::torrent::completed_folder_fixture();
+            let (temp, store, job) = crate::torrent::completed_folder_fixture();
+            record_published_folder(&store, &job);
+            let replaced = job.saved_path.as_ref().unwrap().join("a.bin");
+            let original_time = replaced.metadata().unwrap().modified().unwrap();
+            std::fs::rename(&replaced, temp.path().join("original")).unwrap();
+            std::fs::write(&replaced, b"personal").unwrap();
+            std::fs::OpenOptions::new()
+                .write(true)
+                .open(&replaced)
+                .unwrap()
+                .set_modified(original_time)
+                .unwrap();
             let _gate = tests::Gate::new(&job.id, copy, 2);
             let crashed = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
                 run(&store, &job, copy, &CancellationToken::new())
@@ -509,11 +634,15 @@ mod folder_tests {
             super::super::recover(&store, &job.id, &CancellationToken::new()).unwrap();
             let saved = store.get(&job.id).unwrap().unwrap();
             assert_eq!(
-                std::fs::read(saved.saved_path.unwrap().join("nested/c.bin")).unwrap(),
+                std::fs::read(saved.saved_path.as_ref().unwrap().join("nested/c.bin")).unwrap(),
                 b"sample!!"
             );
             assert!(!job.saved_path.unwrap().exists());
             assert!(!is_pending(&store, &job.id).unwrap());
+            let target = saved.saved_path.as_ref().unwrap();
+            crate::torrent::delete_saved(&store, &saved, target).unwrap();
+            assert_eq!(std::fs::read(target.join("a.bin")).unwrap(), b"personal");
+            assert!(!target.join("nested/c.bin").exists());
         }
     }
     #[cfg(windows)]

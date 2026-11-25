@@ -6,8 +6,10 @@ use rusqlite::{Connection, OptionalExtension, TransactionBehavior, functions::Fu
 
 const SCHEMA_VERSION: i64 = 1;
 pub(super) const DISK_WAIT_VERSION: i64 = 14;
-const DATA_VERSION: i64 = DISK_WAIT_VERSION;
-const WRITER_VERSION: i64 = DISK_WAIT_VERSION;
+pub(crate) const PRIVATE_STAGE_VERSION: i64 = 15;
+pub(crate) const TORRENT_RECEIPT_VERSION: i64 = 16;
+const DATA_VERSION: i64 = TORRENT_RECEIPT_VERSION;
+const WRITER_VERSION: i64 = TORRENT_RECEIPT_VERSION;
 
 pub(super) fn register_writer(conn: &Connection) -> Result<()> {
     conn.create_scalar_function(

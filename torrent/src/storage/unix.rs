@@ -53,12 +53,78 @@ pub(super) fn directory_at(parent: &File, part: &OsStr, creation: Creation) -> i
     let directory =
         opened(unsafe { libc::openat(parent.as_raw_fd(), part.as_ptr(), DIRECTORY_FLAGS) })?;
     if creation == Creation::New {
-        let metadata = directory.metadata()?;
-        if metadata.uid() != unsafe { libc::geteuid() } || metadata.mode() & 0o077 != 0 {
-            return Err(io::ErrorKind::PermissionDenied.into());
-        }
+        require_private_directory(&directory)?;
     }
     Ok(directory)
+}
+
+/// Check the open directory itself before using it to protect a file operation.
+pub fn require_private_directory(directory: &File) -> io::Result<()> {
+    let metadata = directory.metadata()?;
+    if !metadata.is_dir()
+        || metadata.uid() != unsafe { libc::geteuid() }
+        || metadata.mode() & 0o077 != 0
+    {
+        return Err(io::Error::new(
+            io::ErrorKind::PermissionDenied,
+            "The temporary folder is no longer private",
+        ));
+    }
+    // On Darwin, inherited ACL grants can give access even with mode 0700.
+    #[cfg(target_os = "macos")]
+    verify_private_acl(directory.as_raw_fd())?;
+    Ok(())
+}
+
+#[cfg(target_os = "macos")]
+fn verify_private_acl(fd: libc::c_int) -> io::Result<()> {
+    use libc::{c_int, c_void};
+
+    unsafe extern "C" {
+        fn acl_get_fd(fd: c_int) -> *mut c_void;
+        fn acl_free(acl: *mut c_void) -> c_int;
+        fn acl_get_entry(acl: *mut c_void, selector: c_int, entry: *mut *mut c_void) -> c_int;
+        fn acl_get_tag_type(entry: *mut c_void, tag: *mut c_int) -> c_int;
+    }
+    const ACL_FIRST_ENTRY: c_int = 0;
+    const ACL_NEXT_ENTRY: c_int = -1;
+    const ACL_EXTENDED_DENY: c_int = 2;
+
+    let acl = unsafe { acl_get_fd(fd) };
+    if acl.is_null() {
+        let error = io::Error::last_os_error();
+        return if error.raw_os_error() == Some(libc::ENOENT) {
+            Ok(())
+        } else {
+            Err(error)
+        };
+    }
+    let mut selector = ACL_FIRST_ENTRY;
+    let result = loop {
+        let mut entry = std::ptr::null_mut();
+        if unsafe { acl_get_entry(acl, selector, &mut entry) } != 0 {
+            // Darwin reports EINVAL at the end of a valid ACL.
+            let error = io::Error::last_os_error();
+            break if error.raw_os_error() == Some(libc::EINVAL) {
+                Ok(())
+            } else {
+                Err(error)
+            };
+        }
+        let mut tag = 0;
+        if unsafe { acl_get_tag_type(entry, &mut tag) } != 0 {
+            break Err(io::Error::last_os_error());
+        }
+        if tag != ACL_EXTENDED_DENY {
+            break Err(io::Error::new(
+                io::ErrorKind::PermissionDenied,
+                "The temporary folder has an ACL granting access",
+            ));
+        }
+        selector = ACL_NEXT_ENTRY;
+    };
+    unsafe { acl_free(acl) };
+    result
 }
 
 pub(super) fn identity(file: &File) -> io::Result<String> {
@@ -116,6 +182,18 @@ pub(super) fn file_at(
 
 pub(super) fn file_for_move(parent: &File, leaf: &OsStr) -> io::Result<File> {
     file_at(parent, leaf, None, false)
+}
+
+pub(super) fn create_file(parent: &File, leaf: &OsStr) -> io::Result<File> {
+    let leaf = name(leaf)?;
+    opened(unsafe {
+        libc::openat(
+            parent.as_raw_fd(),
+            leaf.as_ptr(),
+            libc::O_RDWR | libc::O_CREAT | libc::O_EXCL | libc::O_NOFOLLOW | libc::O_CLOEXEC,
+            0o600,
+        )
+    })
 }
 
 pub(super) fn remove_at(parent: &File, leaf: &OsStr, directory: bool) -> io::Result<()> {

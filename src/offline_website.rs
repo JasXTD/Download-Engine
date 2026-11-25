@@ -164,10 +164,15 @@ fn filename(url: &Url, extension: &str) -> String {
     format!("{:x}.{extension}", Sha256::digest(key(url).as_bytes()))
 }
 
-/// Only a newly-created, unique directory is ever removed on failure. Once a
-/// report exists we retain it, including intentionally stopped partial copies.
+/// Retain a handle to the output directory and the identities of entries we
+/// created. A failed capture may share its destination with a sync client.
 struct Output {
     path: PathBuf,
+    directory: de_torrent::storage::Directory,
+    created: Vec<(String, String)>,
+    // Filesystems without a birth time can reuse an inode after its last unlink.
+    #[cfg(unix)]
+    pinned_inodes: Vec<std::fs::File>,
     keep: bool,
 }
 impl Output {
@@ -184,25 +189,52 @@ impl Output {
             jiff::ZonedDateTime::now().strftime("%Y%m%d-%H%M%S"),
             uuid::Uuid::new_v4().simple()
         ));
-        std::fs::create_dir(&path).context("Cannot create the offline copy folder")?;
-        Ok(Self { path, keep: false })
+        let created = de_torrent::storage::Directory::create_new(&path)
+            .context("Cannot create the offline copy folder")?;
+        let id = created.identity()?;
+        drop(created);
+        let directory = de_torrent::storage::Directory::open_for_move(&path)?;
+        directory.verify(&id)?;
+        Ok(Self {
+            path,
+            directory,
+            created: Vec::new(),
+            #[cfg(unix)]
+            pinned_inodes: Vec::new(),
+            keep: false,
+        })
     }
-    fn write(&self, name: &str, data: &[u8]) -> Result<()> {
+    fn write(&mut self, name: &str, data: &[u8]) -> Result<()> {
         use std::io::Write;
-        // All names are generated internally; remote paths never become paths on disk.
-        let mut file = std::fs::OpenOptions::new()
-            .write(true)
-            .create_new(true)
-            .open(self.path.join(name))
+        let mut file = self
+            .directory
+            .create_file(Path::new(name))
             .context("Cannot save an offline file")?;
-        file.write_all(data)?;
+        self.created
+            .push((name.to_owned(), de_torrent::storage::file_identity(&file)?));
+        #[cfg(unix)]
+        let pin = file.metadata()?.created().is_err();
+        let written = file.write_all(data);
+        #[cfg(unix)]
+        if pin {
+            self.pinned_inodes.push(file);
+        }
+        written?;
         Ok(())
     }
 }
 impl Drop for Output {
     fn drop(&mut self) {
         if !self.keep {
-            let _ = std::fs::remove_dir_all(&self.path);
+            for (name, id) in &self.created {
+                let _ = crate::download_file::delete_relative_file(
+                    &self.directory,
+                    Path::new(name),
+                    |file| Ok(&de_torrent::storage::file_identity(file)? == id),
+                );
+            }
+            // This removes only the original directory, and only when empty.
+            let _ = crate::file_relocation::delete_owned(self.directory.handle(), &self.path);
         }
     }
 }
@@ -529,6 +561,8 @@ pub async fn save(
     }
     output.write("report.html", report_html(&crawl.report).as_bytes())?;
     output.write("report.json", &serde_json::to_vec_pretty(&crawl.report)?)?;
+    #[cfg(unix)]
+    de_torrent::storage::Directory::open(&output.path)?.verify(&output.directory.identity()?)?;
     output.keep = true;
     progress(Progress {
         pages: crawl.report.pages,
@@ -571,4 +605,46 @@ fn report_html(report: &Report) -> String {
         report.issue_count
     ));
     text
+}
+
+#[cfg(test)]
+mod output_tests {
+    use super::*;
+
+    #[test]
+    fn failed_capture_removes_only_the_entries_it_created() {
+        let parent = tempfile::tempdir().unwrap();
+        let mut output =
+            Output::create(parent.path(), &Url::parse("https://example.org").unwrap()).unwrap();
+        let folder = output.path.clone();
+        output.write("page.html", b"page").unwrap();
+        output.write("image.png", b"image").unwrap();
+        let moved = parent.path().join("moved.png");
+        std::fs::rename(folder.join("image.png"), &moved).unwrap();
+        std::fs::write(folder.join("image.png"), b"other").unwrap();
+        std::fs::write(folder.join("notes"), b"notes").unwrap();
+        assert!(output.write("notes", b"capture").is_err());
+        drop(output);
+        assert!(!folder.join("page.html").exists());
+        assert_eq!(std::fs::read(moved).unwrap(), b"image");
+        assert_eq!(std::fs::read(folder.join("image.png")).unwrap(), b"other");
+        assert_eq!(std::fs::read(folder.join("notes")).unwrap(), b"notes");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn cleanup_stays_with_the_open_directory_if_its_name_moves() {
+        let parent = tempfile::tempdir().unwrap();
+        let mut output =
+            Output::create(parent.path(), &Url::parse("https://example.org").unwrap()).unwrap();
+        let path = output.path.clone();
+        output.write("index.html", b"page").unwrap();
+        let original = parent.path().join("moved");
+        std::fs::rename(&path, &original).unwrap();
+        std::fs::create_dir(&path).unwrap();
+        std::fs::write(path.join("index.html"), b"keep").unwrap();
+        drop(output);
+        assert_eq!(std::fs::read(path.join("index.html")).unwrap(), b"keep");
+        assert!(!original.join("index.html").exists());
+    }
 }

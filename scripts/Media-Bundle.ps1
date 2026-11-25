@@ -20,7 +20,7 @@ function Assert-MediaBundle {
         if (-not (Test-Path -LiteralPath $target -PathType Leaf)) { throw "Missing media source/notice/binary: $($file.path)" }
         if ((Get-FileHash -LiteralPath $target -Algorithm SHA256).Hash -ine $file.sha256) { throw "Media checksum mismatch: $($file.path)" }
     }
-    foreach ($required in @('ffmpeg.exe','LICENSE','README.txt','PROVENANCE.md','source/Dockerfile','source/build.sh','source/apply-security-fixes.sh','source/test-hdr-metadata.c','source/SHA256SUMS','source/README.md',
+    foreach ($required in @('ffmpeg.exe','LICENSE','README.md','PROVENANCE.md','source/Dockerfile','source/build.sh','source/apply-security-fixes.sh','source/test-hdr-metadata.c','source/test-vorbis-init.c','source/SHA256SUMS','source/README.md',
         'licenses/x264-COPYING','licenses/LICENSE.md','licenses/mingw-w64-COPYRIGHT','licenses/gcc-runtime-COPYRIGHT',
         'source/build-record/config.mak','source/build-record/toolchain-packages.tsv','source/build-record/binaries.sha256')) {
         if (-not $listed.Contains($required)) { throw "Missing required media manifest entry: $required" }

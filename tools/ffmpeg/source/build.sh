@@ -29,7 +29,7 @@ bash /input/apply-security-fixes.sh
     --disable-ffplay --disable-pthreads --enable-w32threads \
     --enable-gpl --enable-version3 --enable-libx264 \
     --extra-cflags=-I/build/prefix/include --extra-ldflags='-L/build/prefix/lib -static' \
-    --extra-version=xdownloader-security2
+    --extra-version=xdownloader-security3
 make -j"$jobs" ffmpeg.exe ffprobe.exe
 cp ffmpeg.exe ffprobe.exe /output/
 # Test the same Windows library that is linked into the helper. Run this
@@ -37,6 +37,9 @@ cp ffmpeg.exe ffprobe.exe /output/
 x86_64-w64-mingw32-gcc -std=c17 -O2 -Wall -Wextra -Werror -static -I. \
     /input/test-hdr-metadata.c libavutil/libavutil.a -lm -luser32 -lbcrypt -latomic \
     -o /output/hdr-metadata-test.exe
+x86_64-w64-mingw32-gcc -std=c17 -O2 -Wall -Wextra -Werror -static -I. \
+    /input/test-vorbis-init.c libavcodec/libavcodec.a libavutil/libavutil.a \
+    -lm -luser32 -lbcrypt -latomic -o /output/vorbis-init-test.exe
 cp config.h config_components.h ffbuild/config.mak ffbuild/config.log /output/build-record/
 cp COPYING.GPLv3 /output/LICENSE
 cp COPYING.* LICENSE.md /output/licenses/
@@ -47,4 +50,4 @@ x86_64-w64-mingw32-objdump -p /output/ffprobe.exe > /output/build-record/ffprobe
 cp /usr/share/doc/mingw-w64-common/copyright /output/licenses/mingw-w64-COPYRIGHT
 cp /usr/share/doc/gcc-mingw-w64-x86-64-win32/copyright /output/licenses/gcc-runtime-COPYRIGHT
 cd /output
-sha256sum ffmpeg.exe ffprobe.exe hdr-metadata-test.exe > build-record/binaries.sha256
+sha256sum ffmpeg.exe ffprobe.exe hdr-metadata-test.exe vorbis-init-test.exe > build-record/binaries.sha256

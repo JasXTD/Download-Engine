@@ -20,7 +20,7 @@ use tokio::io::{AsyncReadExt, AsyncSeekExt, AsyncWriteExt};
 use tokio_util::sync::CancellationToken;
 
 #[cfg(windows)]
-const FFMPEG_SHA256: &str = "f1f9097330cc07678bebe983e1e5854bacce5f36cd851e234cdcf074ea54d577";
+const FFMPEG_SHA256: &str = "4ac14da35b445022c0a339f1bf39f56d26b69d1501d7b7317de24c179d349854";
 #[cfg(unix)]
 const FFMPEG_SHA256: &str = match option_env!("DOWNLOAD_ENGINE_FFMPEG_SHA256") {
     Some(hash) => hash,
@@ -250,11 +250,12 @@ async fn finish_inner(
     if cancel.is_cancelled() {
         return Ok(None);
     }
-    let path = engine::publish_without_overwrite(store, job, paths[2]).await?;
+    let output = output.into_std().await;
+    let path = engine::publish_without_overwrite(store, job, paths[2], &output).await?;
     // Retain the verified handle through the durable completion transaction.
     Ok(Some(FinishedFile {
         path,
-        guard: Some(output.into_std().await),
+        guard: Some(output),
     }))
 }
 

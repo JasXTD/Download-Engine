@@ -498,10 +498,20 @@ pub(crate) async fn publish_without_overwrite(
     store: &Store,
     job: &mut Job,
     source: &Path,
+    verified: &std::fs::File,
 ) -> Result<PathBuf> {
     store.activity.set(&job.id, Phase::Saving);
     let name = job.name.clone();
     let directory = job.directory.clone();
+    #[cfg(unix)]
+    let (parent, mut link) = {
+        let parent = download_file::guard_download_parent(&directory.join(&name))?;
+        let link =
+            crate::unix_files::VerifiedLink::new(verified, source, finalization::claim_path(job))?;
+        (parent, link)
+    };
+    #[cfg(windows)]
+    let _ = verified; // Its sharing mode pins the staging file through publication.
     let original = Path::new(&name);
     let stem = original
         .file_stem()
@@ -519,13 +529,20 @@ pub(crate) async fn publish_without_overwrite(
         };
         let path = directory.join(candidate);
         // Write intent before publishing. If the process stops immediately
-        // after hard_link, the staging and destination identities prove success.
+        // after publication, the staging and destination identities prove success.
         job.saved_path = Some(path.clone());
         store.save(job)?;
-        match tokio::fs::hard_link(source,&path).await {
-            Ok(())=>return Ok(path),
-            Err(e) if e.kind()==std::io::ErrorKind::AlreadyExists=>continue,
-            Err(e)=>return Err(e).context("Cannot publish the file safely. Choose a local folder on a filesystem that supports hard links (such as NTFS).")
+        #[cfg(unix)]
+        let published = link.publish(
+            &parent,
+            path.file_name().context("Missing download filename")?,
+        );
+        #[cfg(windows)]
+        let published = tokio::fs::hard_link(source, &path).await;
+        match published {
+            Ok(()) => return Ok(path),
+            Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists => continue,
+            Err(e) => return Err(e).context("Cannot publish the file safely. Choose a local folder on a filesystem that supports hard links (such as NTFS)."),
         }
     }
     bail!("Too many files have this name")

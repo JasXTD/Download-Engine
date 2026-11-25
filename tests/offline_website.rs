@@ -124,6 +124,36 @@ fn text(path: &std::path::Path) -> String {
     std::fs::read_to_string(path).unwrap()
 }
 
+#[cfg(windows)]
+#[tokio::test]
+async fn every_offline_file_including_reports_has_the_internet_zone() {
+    let site = Site::new().await;
+    let parent = tempfile::tempdir().unwrap();
+    site.put("/", Reply::html("<img src=/picture.png>"));
+    site.put("/picture.png", Reply::new("image/png", b"picture bytes"));
+    let report = save(
+        site.config(parent.path(), 0, 1),
+        CancellationToken::new(),
+        |_| {},
+    )
+    .await
+    .unwrap();
+    assert_eq!((report.pages, report.assets, report.issue_count), (1, 1, 0));
+    for path in [
+        report.entry(),
+        file(&report, "/picture.png"),
+        report.folder.join("report.html"),
+        report.folder.join("report.json"),
+    ] {
+        let mut stream = path.into_os_string();
+        stream.push(":Zone.Identifier");
+        assert_eq!(
+            std::fs::read(stream).unwrap(),
+            b"[ZoneTransfer]\r\nZoneId=3\r\n"
+        );
+    }
+}
+
 #[tokio::test]
 async fn linked_assets_are_saved_in_either_reference_order_without_false_omissions() {
     for links_first in [true, false] {
@@ -378,6 +408,7 @@ async fn size_limit_checks_streaming_bodies_and_keeps_existing_user_files() {
 async fn failed_or_cancelled_start_leaves_no_copy_and_invalid_config_never_connects() {
     let site = Site::new().await;
     let root = tempfile::tempdir().unwrap();
+    assert!(Config::new("blob:https://example.org/id", root.path().to_owned(), 0, 1).is_err());
     site.put(
         "/",
         Reply::new("text/html; charset=windows-1252", "wrong encoding"),
@@ -502,7 +533,7 @@ async fn proxy_snapshot_routes_pages_and_assets_and_never_falls_back_to_direct()
         .unwrap();
     proxy.put(
         &format!("{}/", target.base),
-        Reply::html("<h1>Through proxy</h1><link rel=stylesheet href=/style.css>"),
+        Reply::html("<h1>Through proxy</h1><link rel=stylesheet href=/style.css><img src='http://cdn.example.invalid/picture.png'>"),
     );
     proxy.put(
         &format!("{}/style.css", target.base),
@@ -519,7 +550,12 @@ async fn proxy_snapshot_routes_pages_and_assets_and_never_falls_back_to_direct()
     let report = save(config, CancellationToken::new(), |_| {})
         .await
         .unwrap();
-    assert_eq!((report.pages, report.assets, report.issue_count), (1, 1, 0));
+    assert_eq!((report.pages, report.assets, report.issue_count), (1, 1, 1));
+    assert!(
+        report.issues[0]
+            .message
+            .contains("External assets require Direct connection")
+    );
     assert!(target.requests.lock().unwrap().is_empty());
     assert_eq!(proxy.requests.lock().unwrap().len(), 2);
     let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();

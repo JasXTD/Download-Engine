@@ -88,7 +88,14 @@ pub(crate) fn initialize(conn: &Connection) -> Result<()> {
         CREATE TABLE IF NOT EXISTS torrent_staging (
         job_id TEXT PRIMARY KEY REFERENCES jobs(id) ON DELETE CASCADE,
         nonce TEXT NOT NULL, directory_id TEXT NOT NULL, published_id TEXT,
-        import_legacy INTEGER NOT NULL CHECK(import_legacy IN (0,1)));",
+        import_legacy INTEGER NOT NULL CHECK(import_legacy IN (0,1)));
+        CREATE TABLE IF NOT EXISTS torrent_file_receipts (
+        job_id TEXT PRIMARY KEY REFERENCES torrent_staging(job_id) ON DELETE CASCADE,
+        files TEXT NOT NULL);
+        CREATE TABLE IF NOT EXISTS torrent_private_staging (
+        job_id TEXT PRIMARY KEY REFERENCES torrent_staging(job_id) ON DELETE CASCADE,
+        directory_id TEXT NOT NULL, source_nonce TEXT, source_id TEXT,
+        CHECK ((source_nonce IS NULL) = (source_id IS NULL)));",
     )?;
     conn.execute_batch("CREATE TABLE IF NOT EXISTS torrent_sharing_settings (
         id INTEGER PRIMARY KEY CHECK(id=1), seed_completed INTEGER NOT NULL CHECK(seed_completed IN (0,1)),
@@ -165,6 +172,8 @@ pub(crate) fn initialize(conn: &Connection) -> Result<()> {
         "torrent_network_binding",
         "torrent_settings",
         "torrent_staging",
+        "torrent_file_receipts",
+        "torrent_private_staging",
     ] {
         crate::store::migrations::guard_table(conn, table)?;
     }

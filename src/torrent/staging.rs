@@ -9,6 +9,7 @@ use tokio_util::sync::CancellationToken;
 use uuid::Uuid;
 
 pub(super) struct Stage {
+    nonce: Uuid,
     pub path: PathBuf,
     pub identity: String,
     pub published: Option<String>,
@@ -24,6 +25,7 @@ impl Stage {
         row.map(|(nonce, identity, published, import_legacy)| {
             let nonce = Uuid::parse_str(&nonce).context("Invalid saved torrent staging name")?;
             Ok(Self {
+                nonce,
                 path: Self::path(job, nonce),
                 identity,
                 published,
@@ -56,21 +58,41 @@ impl Stage {
         let mut conn = store.connect()?;
         let tx = conn.transaction_with_behavior(TransactionBehavior::Immediate)?;
         let state_dir = store.paths.data.join("torrents");
-        let (stage, directory) = match Self::load(&tx, job)? {
-            Some(stage) => {
+        let registered = Self::load(&tx, job)?;
+        let mut source: Option<(String, String)> = None;
+        let mut upgrade = false;
+        if let Some(stage) = &registered {
+            let receipt = tx.query_row(
+                "SELECT source_nonce, source_id FROM torrent_private_staging WHERE job_id=?1 AND directory_id=?2",
+                params![job.id, stage.identity], |r| Ok((r.get::<_, Option<String>>(0)?, r.get::<_, Option<String>>(1)?))
+            ).optional()?;
+            upgrade = cfg!(windows) && receipt.is_none();
+            source = receipt.and_then(|(nonce, id)| nonce.zip(id));
+        }
+        let (stage, directory) = match registered {
+            Some(stage) if !upgrade => {
                 let directory = Directory::open(&stage.path)
                     .context("Cannot reopen the torrent staging folder")?;
                 directory.verify(&stage.identity)?;
                 (stage, directory)
             }
-            None => {
+            previous => {
                 // Only the profile can indicate an old transfer. A precreated name in a
                 // shared download folder must not make a new job read or import anything.
-                let import_legacy = !chosen.is_empty()
-                    && (job.downloaded > 0
-                        || state_dir
-                            .join(format!("{}.resume.json", hashes.key()))
-                            .try_exists()?);
+                let import_legacy = if let Some(old) = previous {
+                    // An inherited Windows ACL can leave previously opened write
+                    // handles active. Import authenticated pieces into a fresh
+                    // directory instead of changing permissions on the live tree.
+                    Directory::open(&old.path)?.verify(&old.identity)?;
+                    source = Some((old.nonce.to_string(), old.identity));
+                    old.import_legacy
+                } else {
+                    !chosen.is_empty()
+                        && (job.downloaded > 0
+                            || state_dir
+                                .join(format!("{}.resume.json", hashes.key()))
+                                .try_exists()?)
+                };
                 let nonce = Uuid::new_v4();
                 let path = Self::path(job, nonce);
                 // A crash before the transaction commits can leave an empty directory.
@@ -78,12 +100,20 @@ impl Stage {
                 let directory = Directory::create_new(&path)
                     .context("Cannot create a private torrent staging folder")?;
                 let identity = directory.identity()?;
-                tx.execute("INSERT INTO torrent_staging(job_id, nonce, directory_id, import_legacy) VALUES(?1,?2,?3,?4)",
+                tx.execute("INSERT INTO torrent_staging(job_id, nonce, directory_id, import_legacy) VALUES(?1,?2,?3,?4)
+                    ON CONFLICT(job_id) DO UPDATE SET nonce=excluded.nonce,directory_id=excluded.directory_id,published_id=NULL,import_legacy=excluded.import_legacy",
                     params![job.id, nonce.to_string(), identity, import_legacy])?;
-                // A writer that ignores the receipt would resume into the old staging name.
-                tx.execute("UPDATE profile_format SET data_version=MAX(data_version,13),min_writer_version=MAX(min_writer_version,13) WHERE id=1", [])?;
+                tx.execute(
+                    "DELETE FROM torrent_file_receipts WHERE job_id=?1",
+                    [&job.id],
+                )?;
+                tx.execute("INSERT OR REPLACE INTO torrent_private_staging(job_id,directory_id,source_nonce,source_id) VALUES(?1,?2,?3,?4)",
+                    params![job.id, identity, source.as_ref().map(|s| &s.0), source.as_ref().map(|s| &s.1)])?;
+                tx.execute("UPDATE profile_format SET data_version=MAX(data_version,?1),min_writer_version=MAX(min_writer_version,?1) WHERE id=1",
+                    [crate::store::migrations::PRIVATE_STAGE_VERSION])?;
                 (
                     Self {
+                        nonce,
                         path,
                         identity,
                         published: None,
@@ -95,6 +125,22 @@ impl Stage {
         };
         tx.commit()?;
         let directory = Arc::new(directory);
+        if let Some((nonce, id)) = source {
+            let previous = Self::path(job, Uuid::parse_str(&nonce)?);
+            if !de_torrent::storage::import_verified_pieces(
+                &state_dir,
+                hashes,
+                chosen,
+                &previous,
+                Some(&id),
+                directory.clone(),
+                cancel,
+            )? {
+                return Ok(None);
+            }
+            conn.execute("UPDATE torrent_private_staging SET source_nonce=NULL,source_id=NULL WHERE job_id=?1 AND directory_id=?2",
+                params![job.id, stage.identity])?;
+        }
         if stage.import_legacy {
             let legacy_path = job.directory.join(format!(".idm-ex-{}.torrent", job.id));
             if !de_torrent::storage::import_verified_pieces(
@@ -102,6 +148,7 @@ impl Stage {
                 hashes,
                 chosen,
                 &legacy_path,
+                None,
                 directory.clone(),
                 cancel,
             )? {

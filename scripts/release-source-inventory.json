@@ -204,8 +204,8 @@
     "docs/licenses/rust/foldhash-0.2.0/LICENSE",
     "docs/licenses/rust/font-types-0.12.6/LICENSE-APACHE",
     "docs/licenses/rust/font-types-0.12.6/LICENSE-MIT",
-    "docs/licenses/rust/form_urlencoded-1.2.2/LICENSE-APACHE",
-    "docs/licenses/rust/form_urlencoded-1.2.2/LICENSE-MIT",
+    "docs/licenses/rust/form_urlencoded-1.2.3/LICENSE-APACHE",
+    "docs/licenses/rust/form_urlencoded-1.2.3/LICENSE-MIT",
     "docs/licenses/rust/funty-2.0.0/LICENSE.txt",
     "docs/licenses/rust/futures-channel-0.3.34/LICENSE-APACHE",
     "docs/licenses/rust/futures-channel-0.3.34/LICENSE-MIT",
@@ -541,8 +541,8 @@
     "docs/licenses/rust/unicode-width-0.2.3/COPYRIGHT",
     "docs/licenses/rust/unicode-width-0.2.3/LICENSE-APACHE",
     "docs/licenses/rust/unicode-width-0.2.3/LICENSE-MIT",
-    "docs/licenses/rust/url-2.5.8/LICENSE-APACHE",
-    "docs/licenses/rust/url-2.5.8/LICENSE-MIT",
+    "docs/licenses/rust/url-2.5.9/LICENSE-APACHE",
+    "docs/licenses/rust/url-2.5.9/LICENSE-MIT",
     "docs/licenses/rust/utf8_iter-1.0.4/COPYRIGHT",
     "docs/licenses/rust/utf8_iter-1.0.4/LICENSE-APACHE",
     "docs/licenses/rust/utf8_iter-1.0.4/LICENSE-MIT",
@@ -1268,6 +1268,7 @@
     "src/torrent/limits.rs",
     "src/torrent/mod.rs",
     "src/torrent/publish.rs",
+    "src/torrent/receipts.rs",
     "src/torrent/seeding.rs",
     "src/torrent/settings.rs",
     "src/torrent/staging.rs",
@@ -1380,7 +1381,7 @@
     "tests/zip_preview.rs",
     "tools/ffmpeg/LICENSE",
     "tools/ffmpeg/PROVENANCE.md",
-    "tools/ffmpeg/README.txt",
+    "tools/ffmpeg/README.md",
     "tools/ffmpeg/licenses/COPYING.GPLv2",
     "tools/ffmpeg/licenses/COPYING.GPLv3",
     "tools/ffmpeg/licenses/COPYING.LGPLv2.1",
@@ -1408,6 +1409,7 @@
     "tools/ffmpeg/source/build.sh",
     "tools/ffmpeg/source/ffmpeg-946fcce07b6dcd0331c8cc609192aeff5e1924f8.tar.gz",
     "tools/ffmpeg/source/test-hdr-metadata.c",
+    "tools/ffmpeg/source/test-vorbis-init.c",
     "tools/ffmpeg/source/x264-0480cb05fa188d37ae87e8f4fd8f1aea3711f7ee.tar.gz",
     "torrent/.gitignore",
     "torrent/Cargo.lock",
@@ -1683,17 +1685,17 @@
     },
     {
       "path": "tools/ffmpeg/source/build-record/config.log",
-      "sha256": "b5415e44715d829305b08ef473aac01c77ac25f3206e386cc61f92ccc9a4346b",
+      "sha256": "5381fe837631c29435a0361bf84598733320e270d7919567fd8728fe04a61fc0",
       "reason": "Reviewed FFmpeg build record; also verified by the pinned media manifest."
     },
     {
       "path": "tools/ffmpeg/source/build-record/ffmpeg-pe.log",
-      "sha256": "43c636c0091523e485fa3d1dab60ad88864c2127eda70826a2c20c2d85adcd56",
+      "sha256": "910df3c04d160e51c78456799d046690c648fba06c8c6068915fedbba943c918",
       "reason": "Reviewed FFmpeg build record; also verified by the pinned media manifest."
     },
     {
       "path": "tools/ffmpeg/source/build-record/ffprobe-pe.log",
-      "sha256": "47fb525c5609ce4a69d0b8b037afcb8f4114fb506cb357b8caf454dea9fc0398",
+      "sha256": "425caaadbbe02a34ed50b7e8b275239f32bb2d7bac1b9ef8fb502917cd7b55c9",
       "reason": "Reviewed FFmpeg build record; also verified by the pinned media manifest."
     }
   ]

@@ -21,6 +21,8 @@ pub use directory::Directory;
 pub use legacy::import_verified_pieces;
 #[cfg(windows)]
 pub use native::rename_into;
+#[cfg(unix)]
+pub use native::require_private_directory;
 pub use space::available_space;
 pub use verify::{Verification, verify_saved};
 pub fn file_identity(file: &File) -> io::Result<String> {

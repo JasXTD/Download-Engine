@@ -62,7 +62,7 @@ copy_media_build_record() {
   mkdir -p "$destination" || return
   # Never copy the whole directory: FFmpeg's config.log dumps the environment,
   # and callers may supply a helper built before that log was excluded.
-  for record in binaries.sha256 compiler-version.log config_components.h config.h config.mak ffmpeg-version.log hdr-metadata-test.log x264-config.mak; do
+  for record in binaries.sha256 compiler-version.log config_components.h config.h config.mak ffmpeg-version.log hdr-metadata-test.log vorbis-init-test.log x264-config.mak; do
     [[ -f "$source/$record" && ! -L "$source/$record" ]] || { echo "Missing or linked native build record: $record" >&2; return 1; }
     cp "$source/$record" "$destination/$record" || return
   done

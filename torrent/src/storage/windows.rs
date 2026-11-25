@@ -22,12 +22,17 @@ use windows_sys::{
     },
     Win32::{
         Foundation::{
-            OBJ_CASE_INSENSITIVE, OBJ_DONT_REPARSE, RtlNtStatusToDosError, UNICODE_STRING,
+            LocalFree, OBJ_CASE_INSENSITIVE, OBJ_DONT_REPARSE, RtlNtStatusToDosError,
+            UNICODE_STRING,
+        },
+        Security::Authorization::{
+            ConvertStringSecurityDescriptorToSecurityDescriptorW, SDDL_REVISION_1,
         },
         Storage::FileSystem::*,
         System::{
             IO::{DeviceIoControl, IO_STATUS_BLOCK},
             Ioctl::FSCTL_SET_SPARSE,
+            SystemServices::FILE_PERSISTENT_ACLS,
         },
     },
 };
@@ -76,11 +81,28 @@ fn open_at(
         MaximumLength: length,
         Buffer: wide.as_mut_ptr(),
     };
+    // Supply a protected inheritable DACL at creation, before the first child
+    // can appear. OW denotes the owner of the object and SY denotes LocalSystem.
+    let mut descriptor = ptr::null_mut();
+    if creation == FILE_CREATE
+        && kind == FILE_DIRECTORY_FILE
+        && unsafe {
+            ConvertStringSecurityDescriptorToSecurityDescriptorW(
+                windows_sys::core::w!("D:P(A;OICI;FA;;;OW)(A;OICI;FA;;;SY)"),
+                SDDL_REVISION_1,
+                &mut descriptor,
+                ptr::null_mut(),
+            )
+        } == 0
+    {
+        return Err(io::Error::last_os_error());
+    }
     let attributes = OBJECT_ATTRIBUTES {
         Length: size_of::<OBJECT_ATTRIBUTES>() as u32,
         RootDirectory: parent.as_raw_handle(),
         ObjectName: &string,
         Attributes: OBJ_CASE_INSENSITIVE | OBJ_DONT_REPARSE,
+        SecurityDescriptor: descriptor.cast(),
         ..Default::default()
     };
     let mut handle = ptr::null_mut();
@@ -101,6 +123,11 @@ fn open_at(
             0,
         )
     };
+    if !descriptor.is_null() {
+        unsafe {
+            LocalFree(descriptor);
+        }
+    }
     if result < 0 {
         return Err(io::Error::from_raw_os_error(
             unsafe { RtlNtStatusToDosError(result) } as i32,
@@ -125,7 +152,32 @@ pub(super) fn directory_at(parent: &File, name: &OsStr, creation: Creation) -> i
     component(name)?;
     let disposition = match creation {
         Creation::Open => FILE_OPEN,
-        Creation::New => FILE_CREATE,
+        Creation::New => {
+            // A filesystem without persistent ACLs can ignore a supplied descriptor.
+            let mut flags = 0;
+            if unsafe {
+                GetVolumeInformationByHandleW(
+                    parent.as_raw_handle(),
+                    ptr::null_mut(),
+                    0,
+                    ptr::null_mut(),
+                    ptr::null_mut(),
+                    &mut flags,
+                    ptr::null_mut(),
+                    0,
+                )
+            } == 0
+            {
+                return Err(io::Error::last_os_error());
+            }
+            if flags & FILE_PERSISTENT_ACLS == 0 {
+                return Err(io::Error::new(
+                    io::ErrorKind::Unsupported,
+                    "Choose a volume that supports private folder permissions",
+                ));
+            }
+            FILE_CREATE
+        }
         Creation::OpenOrCreate => FILE_OPEN_IF,
     };
     let file = open_at(
@@ -202,28 +254,7 @@ pub(super) fn file_at(
     check_type(&file, false)?;
     let info = check_single_link(&file)?;
     if let Some(len) = size {
-        let mut stream = name.to_owned();
-        stream.push(":Zone.Identifier");
-        let mut marker = open_at(
-            parent,
-            &stream,
-            FILE_GENERIC_WRITE | FILE_READ_ATTRIBUTES,
-            share,
-            FILE_OPEN_IF,
-            FILE_NON_DIRECTORY_FILE,
-        )
-        .map_err(|e| {
-            io::Error::new(
-                e.kind(),
-                format!("Cannot mark the torrent file as an Internet download: {e}"),
-            )
-        })?;
-        if identity(&marker)? != identity(&file)? {
-            return Err(io::ErrorKind::PermissionDenied.into());
-        }
-        const ZONE: &[u8] = b"[ZoneTransfer]\r\nZoneId=3\r\n";
-        marker.write_all(ZONE)?;
-        marker.set_len(ZONE.len() as u64)?;
+        mark_internet(parent, name, &file, share)?;
         if info.dwFileAttributes & FILE_ATTRIBUTE_SPARSE_FILE == 0 {
             // Sparse allocation is optional. This operation takes no data buffers.
             let mut returned = 0;
@@ -243,6 +274,54 @@ pub(super) fn file_at(
         if file.metadata()?.len() != len {
             file.set_len(len)?;
         }
+    }
+    Ok(file)
+}
+
+fn mark_internet(parent: &File, name: &OsStr, file: &File, share: u32) -> io::Result<()> {
+    let mut stream = name.to_owned();
+    stream.push(":Zone.Identifier");
+    let mut marker = open_at(
+        parent,
+        &stream,
+        FILE_GENERIC_WRITE | FILE_READ_ATTRIBUTES,
+        share,
+        FILE_OPEN_IF,
+        FILE_NON_DIRECTORY_FILE,
+    )
+    .map_err(|e| {
+        io::Error::new(
+            e.kind(),
+            format!("Cannot mark the file as an Internet download: {e}"),
+        )
+    })?;
+    if identity(&marker)? != identity(file)? {
+        return Err(io::ErrorKind::PermissionDenied.into());
+    }
+    const ZONE: &[u8] = b"[ZoneTransfer]\r\nZoneId=3\r\n";
+    marker.write_all(ZONE)?;
+    marker.set_len(ZONE.len() as u64)
+}
+
+pub(super) fn create_file(parent: &File, name: &OsStr) -> io::Result<File> {
+    component(name)?;
+    let file = open_at(
+        parent,
+        name,
+        FILE_GENERIC_WRITE | FILE_READ_ATTRIBUTES | DELETE,
+        FILE_SHARE_READ,
+        FILE_CREATE,
+        FILE_NON_DIRECTORY_FILE,
+    )?;
+    // A marking failure must not leave an unmarked file available to open.
+    if let Err(error) = mark_internet(
+        parent,
+        name,
+        &file,
+        FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+    ) {
+        dispose(&file)?;
+        return Err(error);
     }
     Ok(file)
 }
@@ -314,6 +393,10 @@ pub(super) fn remove_at(parent: &File, name: &OsStr, directory: bool) -> io::Res
         kind,
     )?;
     check_type(&file, directory)?;
+    dispose(&file)
+}
+
+fn dispose(file: &File) -> io::Result<()> {
     let info = FILE_DISPOSITION_INFO { DeleteFile: true };
     // The checked handle owns DELETE access. The kernel requires directories to be empty.
     if unsafe {

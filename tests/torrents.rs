@@ -1244,6 +1244,17 @@ fn deleting_a_finished_torrent_leaves_what_the_user_added_to_its_folder() {
     let folder = finished.saved_path.clone().unwrap();
     std::fs::write(folder.join("notes.txt"), b"mine").unwrap();
     std::fs::write(folder.join("c.bin"), b"replaced by the user").unwrap();
+    let replaced = folder.join("a.bin");
+    let metadata = replaced.metadata().unwrap();
+    std::fs::rename(&replaced, folder.join("original-a")).unwrap();
+    let replacement = vec![42; metadata.len() as usize];
+    std::fs::write(&replaced, &replacement).unwrap();
+    std::fs::OpenOptions::new()
+        .write(true)
+        .open(&replaced)
+        .unwrap()
+        .set_modified(metadata.modified().unwrap())
+        .unwrap();
 
     bench
         .scheduler
@@ -1262,7 +1273,7 @@ fn deleting_a_finished_torrent_leaves_what_the_user_added_to_its_folder() {
         folder.join("c.bin").exists(),
         "it isn't the downloaded file now"
     );
-    assert!(!folder.join("a.bin").exists());
+    assert_eq!(std::fs::read(replaced).unwrap(), replacement);
     assert!(!folder.join("sub").exists());
 }
 

@@ -92,7 +92,7 @@ stage=ffmpeg-configure
     --disable-autodetect --disable-network --disable-debug --disable-doc \
     --disable-ffplay --disable-x86asm --enable-gpl --enable-version3 --enable-libx264 \
     --extra-cflags="-I$build/prefix/include" --extra-ldflags="-L$build/prefix/lib" \
-    --extra-version=download-engine-security2
+    --extra-version=download-engine-security3
 stage=ffmpeg-build
 make -j"$jobs" ffmpeg ffprobe
 cp ffmpeg ffprobe "$output/"
@@ -104,13 +104,19 @@ if [[ $(uname -s) == Darwin ]]; then
     /usr/bin/codesign --force --sign - "$output/ffprobe"
 fi
 if [[ "${DOWNLOAD_ENGINE_SKIP_FFMPEG_TESTS:-0}" == 1 ]]; then
-    printf 'Not rerun: FFmpeg functional tests explicitly skipped for this app release.\n' > "$output/build-record/hdr-metadata-test.log"
+    for test_name in hdr-metadata-test vorbis-init-test; do
+        printf 'Not rerun: FFmpeg functional tests explicitly skipped for this app release.\n' > "$output/build-record/$test_name.log"
+    done
 else
     stage=hdr-test-build
     cc -std=c17 -O2 -Wall -Wextra -Werror -I. "$repo/tools/ffmpeg/source/test-hdr-metadata.c" \
         libavutil/libavutil.a -lm -pthread -o "$build/hdr-metadata-test"
     stage=hdr-test-run
     "$build/hdr-metadata-test" > "$output/build-record/hdr-metadata-test.log"
+    stage=vorbis-test
+    cc -std=c17 -O2 -Wall -Wextra -Werror -I. "$repo/tools/ffmpeg/source/test-vorbis-init.c" \
+        libavcodec/libavcodec.a libavutil/libavutil.a -lm -pthread -o "$build/vorbis-init-test"
+    "$build/vorbis-init-test" | tee "$output/build-record/vorbis-init-test.log"
 fi
 stage=build-record
 # configure's config.log includes `set` output (the complete environment).

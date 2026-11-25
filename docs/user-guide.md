@@ -232,6 +232,8 @@ Incoming connections are a separate option. Turning them on shows a warning abou
 
 Torrent metadata is retained for later sharing and removed when that history entry is cleared or deleted. Removing history stops sharing and keeps the downloaded payload.
 
+When deleting a completed torrent, Download Engine checks the saved files against their ownership records. Replacements and personal files stay in the folder. For older torrents without those records, remove the history entry and manage the files yourself.
+
 ### Antivirus and file locations for folder torrents
 
 Use **Tools → Antivirus Scan** for a completed torrent. Headless scanners process selected files one at a time, with file progress and individual results. Stop cancels the current scan and skips the remaining files. External antivirus apps receive one request for the whole folder, including any extra files there, and require you to review their results. Stop batch cannot close an external protected scanner that already received the request. A threat report also blocks sharing after moving or renaming the torrent.
@@ -277,7 +279,7 @@ A Download Engine list is UTF-8 JSON. format and version identify it; a newer ve
 
 Open Grabber in the top toolbar (or Tools → Website grabber) and choose Offline website. Enter the starting page, choose a folder (blank uses your Downloads folder), then choose Save offline copy. A new, uniquely named folder keeps each capture separate from existing files. Open offline website opens its index.html in your default browser. Keep the whole folder together when moving or sharing the copy.
 
-Link depth 0 saves only the starting page and its assets. Depth 1 also saves pages linked from it; the maximum is 5. Page links stay on the same origin (the same scheme, host and port). The defaults are 50 pages and 100 MB; the maximum is 200 pages and 500 MB. Stylesheets, CSS imports, background images, responsive images, icons and fonts are saved and linked locally. Include styles and images from other websites allows public CDN assets; it never crawls another website's pages or reaches a different local network service.
+Link depth 0 saves only the starting page and its assets. Depth 1 also saves pages linked from it; the maximum is 5. Page links stay on the same origin (the same scheme, host and port). The defaults are 50 pages and 100 MB; the maximum is 200 pages and 500 MB. Stylesheets, CSS imports, background images, responsive images, icons and fonts are saved and linked locally. To capture styles and images from a public CDN, enable Include styles and images from other websites and select Direct connection in Preferences → Connection → Proxy. With a system or custom proxy, the report lists off-site assets as omissions.
 
 Capture runs immediately while this dialog is open, separately from download queues. Stop capture, closing the dialog or exiting the app cancels network work and finishes a partial copy if the starting page was saved. A failed starting page leaves no copy. Capture does not resume after restarting; start another capture to retry. Each run uses your current Preferences → Connection → Proxy settings, without browser cookies or website logins. Transfer limits for download queues do not apply to website captures; use the capture's size limit.
 
@@ -307,7 +309,7 @@ Scan depth 0 reads the starting page and same-origin HTML fragments included in 
 
 For downloadable releases, enter https://github.com/uBlockOrigin/uBOL-home/releases, use zip, xpi, tar.gz as the file types, set depth 0 and page limit 50, then scan. Review and select only the files you need. To find README.md or images, start at https://github.com/uBlockOrigin/uBOL-home and use md, png. GitHub file-view links are converted to raw-file downloads.
 
-For an offline copy, use the repository home URL in Offline website, set depth 0 and keep Include styles and images from other websites enabled. Open index.html after saving. The repository page, README, styles and images can be read offline; searches, sign-in, live commit details and JavaScript menus remain unavailable. Depth 0 does not copy linked repositories, release downloads or other pages. Uncaptured links open the capture report, which also lists missing source assets.
+For an offline copy, use the repository home URL in Offline website, set depth 0 and enable Include styles and images from other websites. Select Direct connection to capture assets hosted on a different origin. Open index.html after saving. The repository page, README, styles and images can be read offline; searches, sign-in, live commit details and JavaScript menus remain unavailable. Depth 0 does not copy linked repositories, release downloads or other pages. Uncaptured links open the capture report, which also lists missing source assets.
 
 ## Browser integration
 

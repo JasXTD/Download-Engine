@@ -1,7 +1,11 @@
 //! A torrent downloads into a temporary folder beside its destination. Its files appear in
 //! the download folder only when every piece has passed its hash check, and they never
 //! replace anything already there.
-use super::{File, Files, staging::Stage};
+use super::{
+    File, Files,
+    receipts::{self, FileReceipt, Receipts},
+    staging::Stage,
+};
 use crate::{
     download_file, model::Job, store::Store, synchronization::FinishedFile,
     transfer_activity::Phase,
@@ -23,23 +27,16 @@ fn is_missing(error: &std::io::Error) -> bool {
     matches!(error.kind(), ErrorKind::NotFound)
 }
 
-/// Removes the empty folders left above a deleted file, up to and not including `root`.
-fn remove_empty_folders(root: &Path, file: &Path) {
-    let mut folder = file.parent();
-    while let Some(path) = folder {
-        if path == root || !path.starts_with(root) || std::fs::remove_dir(path).is_err() {
-            break;
-        }
-        folder = path.parent();
-    }
-}
-
 fn remove_staged_file(root: &Directory, relative: &Path) -> Result<()> {
     if let Err(e) = root.remove(relative, false)
         && !is_missing(&e)
     {
         return Err(e.into());
     }
+    remove_empty_folders(root, relative)
+}
+
+fn remove_empty_folders(root: &Directory, relative: &Path) -> Result<()> {
     for dir in relative
         .ancestors()
         .skip(1)
@@ -68,17 +65,76 @@ fn remove_skipped(root: &Directory, files: &Files) -> Result<()> {
     Ok(())
 }
 
-fn check_complete(root: &Directory, files: &Files) -> Result<()> {
+fn check_complete(root: &Directory, files: &Files) -> Result<Receipts> {
+    let mut receipts = Receipts::new();
+    let record_children = lone_file(files).is_none();
     for file in files.chosen_files() {
         let actual = root
             .read_file(&file.saved_as)
             .with_context(|| format!("Cannot verify {} before saving", file.path))?;
+        let metadata = actual.metadata()?;
         ensure!(
-            actual.metadata()?.len() == file.len,
+            metadata.len() == file.len,
             "{} changed before saving. Resume to check it again.",
             file.path
         );
+        if record_children {
+            receipts.insert(
+                file.saved_as.clone(),
+                FileReceipt::from_metadata(&actual, &metadata)?,
+            );
+        }
     }
+    Ok(receipts)
+}
+
+/// A directory rename publishes every entry. Check membership as well as the
+/// lengths of chosen leaves, and descend only into known ordinary directories.
+fn check_membership(path: &Path, files: &Files) -> Result<()> {
+    let mut expected = std::collections::HashMap::new();
+    for file in files.chosen_files() {
+        expected.insert(file.saved_as.clone(), false);
+        for parent in file
+            .saved_as
+            .ancestors()
+            .skip(1)
+            .take_while(|p| !p.as_os_str().is_empty())
+        {
+            expected.insert(parent.to_owned(), true);
+        }
+    }
+    let mut pending = vec![PathBuf::new()];
+    while let Some(relative) = pending.pop() {
+        for entry in std::fs::read_dir(path.join(&relative))? {
+            let entry = entry?;
+            let child = relative.join(entry.file_name());
+            let directory = expected
+                .remove(&child)
+                .context("Unexpected entry in torrent staging")?;
+            let ty = entry.file_type()?;
+            ensure!(
+                (directory && ty.is_dir()) || (!directory && ty.is_file()),
+                "Unexpected torrent entry type"
+            );
+            #[cfg(windows)]
+            {
+                use std::os::windows::fs::MetadataExt;
+                ensure!(
+                    entry.metadata()?.file_attributes()
+                        & windows_sys::Win32::Storage::FileSystem::FILE_ATTRIBUTE_REPARSE_POINT
+                        == 0,
+                    "Unexpected reparse point in torrent staging"
+                );
+            }
+            if directory {
+                pending.push(child);
+            }
+        }
+    }
+    ensure!(
+        expected.is_empty(),
+        "Torrent staging is missing a selected entry"
+    );
     Ok(())
 }
 
@@ -176,11 +232,15 @@ async fn publish_entry(
 pub(super) async fn finish(store: &Store, job: &mut Job, stage: &Stage) -> Result<FinishedFile> {
     store.activity.set(&job.id, Phase::Saving);
     let files = store.torrent_files(&job.id)?;
+    #[cfg(windows)]
+    let _parents = download_file::guard_parents(&stage.path)?;
     let root = stage.open_for_move()?;
-    let (root, files) = tokio::task::spawn_blocking(move || -> Result<_> {
+    let stage_path = stage.path.clone();
+    let (root, files, receipts) = tokio::task::spawn_blocking(move || -> Result<_> {
         remove_skipped(&root, &files)?;
-        check_complete(&root, &files)?;
-        Ok((root, files))
+        let receipts = check_complete(&root, &files)?;
+        check_membership(&stage_path, &files)?;
+        Ok((root, files, receipts))
     })
     .await??;
     let single = lone_file(&files);
@@ -192,16 +252,41 @@ pub(super) async fn finish(store: &Store, job: &mut Job, stage: &Stage) -> Resul
     } else {
         (stage.path.clone(), root.handle())
     };
-    let count = store.connect()?.execute(
-        "UPDATE torrent_staging SET published_id=?1 WHERE job_id=?2 AND directory_id=?3",
-        params![file_identity(handle)?, job.id, stage.identity],
-    )?;
-    ensure!(count == 1, "The torrent staging record changed");
+    {
+        let mut conn = store.connect()?;
+        let tx = conn.transaction()?;
+        let count = tx.execute(
+            "UPDATE torrent_staging SET published_id=?1 WHERE job_id=?2 AND directory_id=?3",
+            params![file_identity(handle)?, job.id, stage.identity],
+        )?;
+        ensure!(count == 1, "The torrent staging record changed");
+        if single.is_none() {
+            receipts::save(&tx, &job.id, &receipts)?;
+        }
+        tx.commit()?;
+    }
     let path = publish_entry(store, job, handle, &source, single.is_some()).await?;
     if single.is_some() {
         crate::file_relocation::delete_owned(root.handle(), &stage.path)?;
     }
     Ok(FinishedFile { path, guard: None })
+}
+
+#[cfg(unix)]
+fn restore_move_source(stage: &Stage, files: &Files) -> Result<()> {
+    if let Some(file) = lone_file(files) {
+        let _root = match stage.open_for_move() {
+            Err(e) if is_missing(&e) => return Ok(()),
+            result => result?,
+        };
+        crate::unix_files::restore_interrupted_move(&stage.path.join(&file.saved_as), |entry| {
+            Ok(stage.published.as_ref() == Some(&file_identity(entry)?))
+        })
+    } else {
+        crate::unix_files::restore_interrupted_move(&stage.path, |entry| {
+            Ok(file_identity(entry)? == stage.identity)
+        })
+    }
 }
 
 /// A name that appeared while the app was stopped is never proof of publication.
@@ -217,7 +302,10 @@ pub(super) async fn recover(store: &Store, job: &mut Job) -> Result<Option<Finis
     };
     #[cfg(windows)]
     let _parents = download_file::guard_parents(&path)?;
-    let single = lone_file(&store.torrent_files(&job.id)?).is_some();
+    let files = store.torrent_files(&job.id)?;
+    #[cfg(unix)]
+    restore_move_source(&stage, &files)?;
+    let single = lone_file(&files).is_some();
     let actual = if single {
         let name = path.file_name().context("Missing published filename")?;
         Directory::open(path.parent().context("Missing published folder")?)
@@ -253,6 +341,10 @@ pub(crate) fn discard(store: &Store, job: &Job) -> Result<()> {
     };
     let conn = store.connect()?;
     if let Some(stage) = Stage::load(&conn, job)? {
+        #[cfg(unix)]
+        if stage.published.is_some() {
+            restore_move_source(&stage, &store.torrent_files(&job.id)?)?;
+        }
         match stage.open_for_move() {
             Ok(root) => {
                 if torrent.stage == super::Stage::Chosen {
@@ -275,31 +367,56 @@ pub(crate) fn discard(store: &Store, job: &Job) -> Result<()> {
     super::forget(store, job)
 }
 
+pub(crate) fn published_identity(store: &Store, job: &Job) -> Result<Option<String>> {
+    Ok(Stage::load(&store.connect()?, job)?.and_then(|stage| stage.published))
+}
+
 /// Deletes a finished torrent. A folder may also hold what the user put there, so only the
-/// files this download saved go, and only folders that end up empty. A file that has
-/// changed size is no longer the one that was downloaded, so it stays too.
+/// files matching their publication records go, and only folders that end up empty.
 pub(crate) fn delete_saved(store: &Store, job: &Job, path: &Path) -> Result<()> {
-    let info = std::fs::symlink_metadata(path)
-        .with_context(|| format!("Cannot find {}", path.display()))?;
-    if !info.is_dir() {
-        return download_file::delete_completed(path);
-    }
+    #[cfg(windows)]
+    let _parents = download_file::guard_parents(path)?;
     let files = store.torrent_files(&job.id)?;
-    for file in files.chosen_files() {
-        let target = path.join(&file.saved_as);
-        match std::fs::symlink_metadata(&target) {
-            Err(error) if is_missing(&error) => {}
-            Err(error) => return Err(error.into()),
-            Ok(info) if info.len() != file.len => {}
-            Ok(_) => download_file::delete_completed(&target)?,
-        }
-        remove_empty_folders(path, &target);
+    files.validate()?;
+    let published = published_identity(store, job)?.context(
+        "This torrent has no saved ownership record. Its files were kept; you can remove its history entry.",
+    )?;
+    if let Some(file) = lone_file(&files) {
+        let parent = Directory::open(path.parent().context("Missing torrent destination")?)?;
+        let leaf = Path::new(path.file_name().context("Missing torrent filename")?);
+        return download_file::delete_relative_file(&parent, leaf, |actual| {
+            Ok(actual.metadata()?.len() == file.len && file_identity(actual)? == published)
+        });
     }
-    match std::fs::remove_dir(path) {
+    let root = Directory::open_for_move(path)?;
+    root.verify(&published)
+        .context("The published torrent folder changed")?;
+    let receipts = receipts::load(&store.connect()?, &job.id)?.context(
+        "This torrent predates per-file ownership records. Its files were kept; you can remove its history entry.",
+    )?;
+    for file in files.chosen_files() {
+        let Some(expected) = receipts.get(&file.saved_as) else {
+            continue;
+        };
+        download_file::delete_relative_file(&root, &file.saved_as, |actual| {
+            Ok(expected.size == file.len && expected.matches(actual)?)
+        })?;
+        remove_empty_folders(&root, &file.saved_as)?;
+    }
+    // Keep a folder containing personal files in place. The handle-based
+    // removal below also handles an entry appearing after this check.
+    if std::fs::read_dir(path)?.next().transpose()?.is_some() {
+        return Ok(());
+    }
+    match crate::file_relocation::delete_owned(root.handle(), path) {
         Ok(()) => Ok(()),
-        // Something else is in the folder now, and it stays.
-        Err(error) if error.kind() == ErrorKind::DirectoryNotEmpty => Ok(()),
-        Err(error) if is_missing(&error) => Ok(()),
+        Err(error)
+            if error
+                .downcast_ref::<std::io::Error>()
+                .is_some_and(|e| e.kind() == ErrorKind::DirectoryNotEmpty) =>
+        {
+            Ok(())
+        }
         Err(error) => Err(error).context("Cannot remove the torrent's folder"),
     }
 }

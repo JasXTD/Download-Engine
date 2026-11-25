@@ -97,6 +97,18 @@ impl Directory {
         self.file(path, None, false)
     }
 
+    /// Open the verified parent once for a subsequent identity-checked operation.
+    pub fn file_parent<'a>(&self, path: &'a Path) -> io::Result<(Self, &'a OsStr)> {
+        let (parent, name) = self.parent(path, false)?;
+        Ok((Self(parent), name))
+    }
+
+    /// Create an Internet-origin file exclusively under this directory.
+    pub fn create_file(&self, path: &Path) -> io::Result<File> {
+        let (parent, name) = self.parent(path, false)?;
+        native::create_file(&parent, name)
+    }
+
     pub fn file_for_move(&self, path: &Path) -> io::Result<File> {
         let (parent, name) = self.parent(path, false)?;
         native::file_for_move(&parent, name)
@@ -168,6 +180,54 @@ mod tests {
                 .kind(),
             io::ErrorKind::NotFound
         );
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn private_staging_has_a_protected_inheritable_owner_and_system_acl() {
+        use std::{os::windows::ffi::OsStrExt, ptr};
+        use windows_sys::Win32::{
+            Foundation::LocalFree,
+            Security::{Authorization::*, DACL_SECURITY_INFORMATION},
+        };
+        let base = TempFolder::new();
+        let path = base.path().join("staging");
+        let _root = Directory::create_new(&path).unwrap();
+        let wide: Vec<_> = path.as_os_str().encode_wide().chain([0]).collect();
+        let mut descriptor = ptr::null_mut();
+        let mut string = ptr::null_mut();
+        let mut len = 0;
+        // These APIs allocate the descriptor and its UTF-16 rendering with LocalAlloc.
+        let dacl = unsafe {
+            let result = GetNamedSecurityInfoW(
+                wide.as_ptr(),
+                SE_FILE_OBJECT,
+                DACL_SECURITY_INFORMATION,
+                ptr::null_mut(),
+                ptr::null_mut(),
+                ptr::null_mut(),
+                ptr::null_mut(),
+                &mut descriptor,
+            );
+            assert_eq!(result, 0, "{}", io::Error::from_raw_os_error(result as i32));
+            let converted = ConvertSecurityDescriptorToStringSecurityDescriptorW(
+                descriptor,
+                SDDL_REVISION_1,
+                DACL_SECURITY_INFORMATION,
+                &mut string,
+                &mut len,
+            );
+            LocalFree(descriptor);
+            assert_ne!(converted, 0);
+            let value = String::from_utf16_lossy(std::slice::from_raw_parts(string, len as usize));
+            LocalFree(string.cast());
+            value
+        };
+        assert!(dacl.starts_with("D:P"), "{dacl}");
+        assert_eq!(dacl.matches('(').count(), 2, "{dacl}");
+        for ace in ["(A;OICI;FA;;;OW)", "(A;OICI;FA;;;SY)"] {
+            assert!(dacl.contains(ace), "{dacl}");
+        }
     }
 
     #[cfg(windows)]

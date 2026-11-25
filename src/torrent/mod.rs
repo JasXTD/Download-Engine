@@ -5,6 +5,7 @@ mod details;
 mod helper;
 pub mod limits;
 mod publish;
+pub(crate) mod receipts;
 pub(crate) mod seeding;
 mod settings;
 mod staging;
@@ -17,7 +18,7 @@ pub use helper::{HelperError, Host, RequestOutcome};
 pub use seeding::SharingTotals;
 pub use settings::{OFF_MESSAGE, PROXY_MESSAGE, Settings};
 
-pub(crate) use publish::{delete_saved, discard};
+pub(crate) use publish::{delete_saved, discard, published_identity};
 pub(crate) use settings::initialize;
 
 use crate::{
@@ -1229,7 +1230,7 @@ mod tests {
                 |r| r.get(0),
             )
             .unwrap();
-        assert_eq!(version, 13);
+        assert_eq!(version, crate::store::migrations::PRIVATE_STAGE_VERSION);
         drop(guard);
         let reopened = Store::open(store.paths.clone()).unwrap();
         let (resumed, guard) = prepare(&reopened).unwrap().unwrap();
@@ -1244,6 +1245,117 @@ mod tests {
             "even an empty replacement must survive"
         );
         assert_eq!(std::fs::read(legacy.join("keep")).unwrap(), b"unclaimed");
+    }
+
+    #[tokio::test]
+    async fn folder_publication_and_deletion_require_the_recorded_tree() {
+        let (temp, store) = profile();
+        let details = Details {
+            info_hash: HEX.into(),
+            magnet: format!("magnet:?xt=urn:btih:{HEX}"),
+            name: "collection".into(),
+            files: ["sub/page", "image"]
+                .into_iter()
+                .enumerate()
+                .map(|(index, name)| File {
+                    index,
+                    path: name.into(),
+                    saved_as: name.into(),
+                    len: 3,
+                })
+                .collect(),
+        };
+        let mut job = store
+            .add_torrent(
+                &details,
+                vec![0, 1],
+                Some(temp.path()),
+                "main",
+                "folder-publication".into(),
+            )
+            .unwrap();
+        let (stage, guard) =
+            staging::Stage::prepare(&store, &job, &[0, 1], &CancellationToken::new())
+                .unwrap()
+                .unwrap();
+        std::fs::create_dir(stage.path.join("sub")).unwrap();
+        std::fs::write(stage.path.join("sub/page"), b"one").unwrap();
+        std::fs::write(stage.path.join("image"), b"two").unwrap();
+        drop(guard);
+        let extra = stage.path.join("sub/notes");
+        std::fs::write(&extra, b"keep").unwrap();
+        assert!(publish::finish(&store, &mut job, &stage).await.is_err());
+        assert_eq!(std::fs::read(&extra).unwrap(), b"keep");
+        std::fs::remove_file(&extra).unwrap();
+        std::fs::create_dir(&extra).unwrap();
+        assert!(publish::finish(&store, &mut job, &stage).await.is_err());
+        std::fs::remove_dir(&extra).unwrap();
+        let path = publish::finish(&store, &mut job, &stage)
+            .await
+            .unwrap()
+            .path;
+        let moved = temp.path().join("original-folder");
+        std::fs::rename(&path, &moved).unwrap();
+        std::fs::create_dir(&path).unwrap();
+        std::fs::write(path.join("image"), b"new").unwrap();
+        assert!(publish::delete_saved(&store, &job, &path).is_err());
+        assert_eq!(std::fs::read(path.join("image")).unwrap(), b"new");
+        #[cfg(unix)]
+        {
+            let original = moved.join("sub");
+            let elsewhere = temp.path().join("elsewhere");
+            std::fs::create_dir(&elsewhere).unwrap();
+            std::fs::write(elsewhere.join("page"), b"new").unwrap();
+            std::fs::rename(&original, moved.join("moved-sub")).unwrap();
+            std::os::unix::fs::symlink(&elsewhere, &original).unwrap();
+            assert!(publish::delete_saved(&store, &job, &moved).is_err());
+            assert_eq!(std::fs::read(elsewhere.join("page")).unwrap(), b"new");
+            std::fs::remove_file(&original).unwrap();
+            std::fs::rename(moved.join("moved-sub"), original).unwrap();
+        }
+        publish::delete_saved(&store, &job, &moved).unwrap();
+        assert!(!moved.exists());
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn registered_staging_without_a_private_receipt_is_replaced_once() {
+        let (temp, store) = profile();
+        let job = store
+            .add_magnet_for_later(
+                &format!("magnet:?xt=urn:btih:{HEX}"),
+                Some(temp.path()),
+                "main",
+                "old-stage".into(),
+                false,
+            )
+            .unwrap();
+        let cancel = CancellationToken::new();
+        let prepare = || {
+            staging::Stage::prepare(&store, &job, &[], &cancel)
+                .unwrap()
+                .unwrap()
+        };
+        let (old, guard) = prepare();
+        drop(guard);
+        std::fs::write(old.path.join("unlisted"), b"original").unwrap();
+        store
+            .connect()
+            .unwrap()
+            .execute(
+                "DELETE FROM torrent_private_staging WHERE job_id=?1",
+                [&job.id],
+            )
+            .unwrap();
+        let (new, guard) = prepare();
+        assert_ne!(new.identity, old.identity);
+        assert!(!new.path.join("unlisted").exists());
+        drop(guard);
+        assert_eq!(prepare().0.identity, new.identity);
+        assert_eq!(
+            std::fs::read(old.path.join("unlisted")).unwrap(),
+            b"original"
+        );
     }
 
     #[tokio::test]

@@ -50,13 +50,14 @@ awk '/^copy_media_build_record\(\) \{/ {copy=1} copy {print} copy && /^\}/ {exit
 source "$fixture/copy-record.sh"
 record_source="$fixture/record-source"
 mkdir "$record_source"
-for record in binaries.sha256 compiler-version.log config_components.h config.h config.mak ffmpeg-version.log hdr-metadata-test.log x264-config.mak; do
+for record in binaries.sha256 compiler-version.log config_components.h config.h config.mak ffmpeg-version.log hdr-metadata-test.log vorbis-init-test.log x264-config.mak; do
   printf 'reviewed record\n' > "$record_source/$record"
 done
 printf 'CI_SAMPLE_SECRET=synthetic-value-never-export\n' > "$record_source/config.log"
 printf 'unreviewed file\n' > "$record_source/extra.data"
 copy_media_build_record "$record_source" "$fixture/records"
-test "$(find "$fixture/records" -type f | wc -l | tr -d ' ')" -eq 8
+test "$(find "$fixture/records" -type f | wc -l | tr -d ' ')" -eq 9
+cmp "$record_source/vorbis-init-test.log" "$fixture/records/vorbis-init-test.log"
 test ! -e "$fixture/records/config.log"
 test ! -e "$fixture/records/extra.data"
 mv "$record_source/config.h" "$fixture/header"

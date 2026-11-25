@@ -1429,10 +1429,15 @@ to local paths, with shared resources using one local file. Missing pages lead t
 `report.html`; `report.json` records the captured files and omissions. Stopping
 keeps a partial copy when the starting page is available.
 
+On Windows, each capture starts in a private folder. Saved pages, assets and both reports
+carry the Internet-zone mark. If a capture fails, cleanup preserves unrelated files
+added to its folder.
+
 This is an anonymous static UTF-8 capture, not a JavaScript/browser-session
 snapshot. Scripts, forms, SVG animations and embedded pages are disabled. Pages stay on the
-starting origin; optional CDN assets must resolve to public addresses. Resources
-use the configured proxy without direct fallback. Limits include depth 5,
+starting origin and use the configured connection. Optional CDN assets require
+**Direct connection** so the app can pin the request to a checked public address.
+System and custom proxy captures list off-site assets as omissions. Limits include depth 5,
 200 pages, 2,000 assets, 500 MB total (100 MB by default), 20 MB of HTML/CSS,
 2 MB per text resource, 16 MB per asset, 10,000 inspected URLs and ten minutes.
 The operation runs separately from queues and their bandwidth/quota controls;

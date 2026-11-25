@@ -79,7 +79,30 @@ fn clear(store: &Store, id: &str) -> Result<()> {
     Ok(())
 }
 
-fn commit(store: &Store, intent: &mut Intent) -> Result<()> {
+#[cfg(unix)]
+fn restore_move_source(intent: &Intent) -> Result<()> {
+    let (source, expected) = intent.temporary.as_ref().map_or(
+        (&intent.source, &intent.source_snapshot.key),
+        |(path, key)| (path, key),
+    );
+    crate::unix_files::restore_interrupted_move(source, |file| {
+        Ok(&Snapshot::read(file)?.key == expected)
+    })
+}
+
+fn snapshot_source(store: &Store, job: &Job, file: &File) -> Result<Snapshot> {
+    if job.torrent.is_some()
+        && let Some(id) = crate::torrent::published_identity(store, job)?
+    {
+        ensure!(
+            de_torrent::storage::file_identity(file)? == id,
+            "The published torrent changed before the move"
+        );
+    }
+    Snapshot::read(file)
+}
+
+fn commit(store: &Store, intent: &mut Intent, destination: &File) -> Result<()> {
     let mut conn = store.connect()?;
     let tx = conn.transaction_with_behavior(TransactionBehavior::Immediate)?;
     let data: String = tx.query_row("SELECT data FROM jobs WHERE id=?1", [&intent.job], |r| {
@@ -104,6 +127,18 @@ fn commit(store: &Store, intent: &mut Intent) -> Result<()> {
     data["saved_path"] = serde_json::to_value(&job.saved_path)?;
     data["name"] = serde_json::to_value(&job.name)?;
     data["directory"] = serde_json::to_value(&job.directory)?;
+    if job.torrent.is_some() {
+        // A cross-volume copy has a new filesystem identity. Commit it with the
+        // new saved path, including when recovering an interrupted relocation.
+        tx.execute("UPDATE torrent_staging SET published_id=?1 WHERE job_id=?2 AND published_id IS NOT NULL",
+            params![de_torrent::storage::file_identity(destination)?, job.id])?;
+        if !intent.committed
+            && intent.temporary.is_some()
+            && let Some(entries) = &intent.tree
+        {
+            folder::commit_receipts(&tx, &job.id, entries)?;
+        }
+    }
     intent.committed = true;
     tx.execute(
         "UPDATE jobs SET data=?1 WHERE id=?2",
@@ -208,7 +243,7 @@ fn relocate_inner(
     );
     cancelled(cancel)?;
     let mut original = open_owned(&source, false)?;
-    let source_snapshot = Snapshot::read(&original)?;
+    let source_snapshot = snapshot_source(store, job, &original)?;
     let copied = force_copy
         || !download_file::same_volume(
             &original,
@@ -283,8 +318,12 @@ fn relocate_inner(
         tests::after_publish(&intent.job);
         // Cancellation after publication must finish the metadata commit. The
         // durable intent remains if this commit fails; never guess at rollback.
-        commit(store, &mut intent)
-            .context("File published; its record will be recovered when the app restarts")?;
+        commit(
+            store,
+            &mut intent,
+            staging.as_ref().map_or(&original, |(_, file)| file),
+        )
+        .context("File published; its record will be recovered when the app restarts")?;
         #[cfg(test)]
         tests::after_commit();
         if copied {
@@ -296,6 +335,8 @@ fn relocate_inner(
         Ok(())
     })();
     if result.is_err() && !published {
+        #[cfg(unix)]
+        restore_move_source(&intent)?;
         // The source is still guarded and unchanged. Only our exact staging
         // handle can be removed; never delete a replacement by pathname.
         if let Some((path, file)) = &staging {
@@ -327,6 +368,8 @@ pub(crate) fn recover(store: &Store, id: &str, cancel: &CancellationToken) -> Re
         "File operation identifier does not match its row"
     );
     crate::model::validate_job_id(id)?;
+    #[cfg(unix)]
+    restore_move_source(&intent)?;
     if intent.tree.is_some() {
         return folder::recover(store, intent, cancel);
     }
@@ -352,7 +395,11 @@ pub(crate) fn recover(store: &Store, id: &str, cancel: &CancellationToken) -> Re
             );
         }
         cancelled(cancel)?;
-        commit(store, &mut intent)?;
+        commit(
+            store,
+            &mut intent,
+            target.as_ref().context("Missing moved file")?,
+        )?;
         if intent.temporary.is_some() && intent.source.try_exists()? {
             let original = open_owned(&intent.source, false)?;
             ensure!(

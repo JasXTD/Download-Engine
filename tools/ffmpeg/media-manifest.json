@@ -1,13 +1,13 @@
 {
   "schema": 1,
-  "version": "9.0.2-xdownloader-security2",
+  "version": "9.0.2-xdownloader-security3",
   "license": "GPL-3.0-or-later",
-  "builtAt": "2026-10-22",
-  "ffprobeSha256": "f4faba94399610c63c39998e35479b84fd0515bad753016689dd026027b697c9",
+  "builtAt": "2026-11-25",
+  "ffprobeSha256": "7a824a8ed76735944217f0acbbd690ae96f038ada223aa0afe446ecf8aabccc2",
   "files": [
     {
       "path": "ffmpeg.exe",
-      "sha256": "f1f9097330cc07678bebe983e1e5854bacce5f36cd851e234cdcf074ea54d577"
+      "sha256": "4ac14da35b445022c0a339f1bf39f56d26b69d1501d7b7317de24c179d349854"
     },
     {
       "path": "LICENSE",
@@ -47,19 +47,19 @@
     },
     {
       "path": "PROVENANCE.md",
-      "sha256": "043feeae0f03ec4589fcc414112d9d78c83bc0751498b46005fa2c1296e17176"
+      "sha256": "c9901261076aca23a444d7eb6b622a9f805e64ba2044e9fb70ca0e5bd98ee33d"
     },
     {
-      "path": "README.txt",
-      "sha256": "5344d59e38a73789350457dd541e0f2c6614aaba56836d7d8771dd2364535454"
+      "path": "README.md",
+      "sha256": "e082d5d5fa03968a8634fd0a202a433cbadebe35acdc9b372b0ac52bfe46b3df"
     },
     {
       "path": "source/apply-security-fixes.sh",
-      "sha256": "1bc76b1bc4c4f2b3d3fe3a2a9b97724cc329d1739cf40ac533b948e56f21f9b8"
+      "sha256": "385e2443e2a8e5078f58d41467906d7396a54e7c1c9f0d85f73287bbb4b02ecf"
     },
     {
       "path": "source/build-record/binaries.sha256",
-      "sha256": "eddadbbd9952d0fe85ed05634aa4ee1a65e67b1dfa8d60228e6f6c390643a998"
+      "sha256": "465b824e0780b0a94352d4c3f75a9f09a8348ad9b6b6a0cbdff78737d49a9247"
     },
     {
       "path": "source/build-record/compiler-version.log",
@@ -71,27 +71,27 @@
     },
     {
       "path": "source/build-record/config.h",
-      "sha256": "c7f7072b92ab4979e4d0139b6402a6870dc36974e3a3c14261c24629900bcc00"
+      "sha256": "41f94276326aebfca5fbc977df75ab73bffbfae3aa3e3672ac871a6f329f4408"
     },
     {
       "path": "source/build-record/config.log",
-      "sha256": "b5415e44715d829305b08ef473aac01c77ac25f3206e386cc61f92ccc9a4346b"
+      "sha256": "5381fe837631c29435a0361bf84598733320e270d7919567fd8728fe04a61fc0"
     },
     {
       "path": "source/build-record/config.mak",
-      "sha256": "5523009c0f333c64f8f6288456b0c9ba404f9f9d36caa6110d7e6912a3ad3378"
+      "sha256": "48a09ed2c1ec12f8727234c0333b577055900e1f91915ef554d8610603dfc52c"
     },
     {
       "path": "source/build-record/ffmpeg-pe.log",
-      "sha256": "43c636c0091523e485fa3d1dab60ad88864c2127eda70826a2c20c2d85adcd56"
+      "sha256": "910df3c04d160e51c78456799d046690c648fba06c8c6068915fedbba943c918"
     },
     {
       "path": "source/build-record/ffprobe-pe.log",
-      "sha256": "47fb525c5609ce4a69d0b8b037afcb8f4114fb506cb357b8caf454dea9fc0398"
+      "sha256": "425caaadbbe02a34ed50b7e8b275239f32bb2d7bac1b9ef8fb502917cd7b55c9"
     },
     {
       "path": "source/build-record/toolchain-packages.tsv",
-      "sha256": "39aad8a507f630fb2932d155c3ccc2833b3dcf8642729bde78ee9fbc6b7ae8de"
+      "sha256": "ad1cecf6d803d3e843e4b62178ed6eeeb4550be8a6595d12463ecbbf71731c70"
     },
     {
       "path": "source/build-record/x264-config.h",
@@ -103,7 +103,7 @@
     },
     {
       "path": "source/build.sh",
-      "sha256": "ebec7e1bdd47bb84c46f4916d9d4d5161460914a0463a1d001c1505ba1941d5d"
+      "sha256": "9191a2b5c2d4bf5d7374fdcec2524fe22c0509eda61080c3803b1d833ef13e5e"
     },
     {
       "path": "source/Dockerfile",
@@ -115,7 +115,7 @@
     },
     {
       "path": "source/README.md",
-      "sha256": "bc1933968b4dba48706d1c5caed24407ff0e8825786234766f9f24a0dbb7f1f3"
+      "sha256": "8c47f4353c7d79c991128bfae0a492b7bf6e297fa9f916d6eb724e6cf4c0c9c3"
     },
     {
       "path": "source/SHA256SUMS",
@@ -124,6 +124,10 @@
     {
       "path": "source/test-hdr-metadata.c",
       "sha256": "4cf14b68cc1b2abf674376961d1e725002f464b31b1b3ecfe963a78b400b25a4"
+    },
+    {
+      "path": "source/test-vorbis-init.c",
+      "sha256": "4988b39bd6faec4c8f360a8149baf6fb1c1da0af39487af642714c3369656b28"
     },
     {
       "path": "source/x264-0480cb05fa188d37ae87e8f4fd8f1aea3711f7ee.tar.gz",

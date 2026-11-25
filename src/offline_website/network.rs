@@ -11,6 +11,7 @@ pub(super) struct Resource {
 pub(super) struct Network {
     clients: HashMap<String, Client>,
 }
+
 impl Network {
     pub fn new() -> Self {
         Self {
@@ -23,7 +24,17 @@ impl Network {
         start: &Url,
         route: &crate::proxy::Route,
     ) -> Result<Client> {
-        let origin = url.origin().ascii_serialization();
+        let origin = url.origin();
+        let same_origin = origin == start.origin();
+        // A resolving proxy does not use reqwest's local DNS overrides. Keep
+        // the configured route for the starting site and omit off-site assets
+        // whenever their checked destination cannot be enforced end to end.
+        if !same_origin {
+            route.require_public_pinning().context(
+                "External assets require Direct connection to enforce their public address",
+            )?;
+        }
+        let origin = origin.ascii_serialization();
         if let Some(client) = self.clients.get(&origin) {
             return Ok(client.clone());
         }
@@ -39,7 +50,7 @@ impl Network {
             )?
         };
         ensure!(
-            url.origin() == start.origin() || scope == NetworkScope::Public,
+            same_origin || scope == NetworkScope::Public,
             "External assets cannot connect to a local or special network address"
         );
         let mut builder = route
@@ -223,5 +234,54 @@ impl Network {
             bytes,
             extension,
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::proxy::{Mode, Route, Settings};
+
+    #[tokio::test]
+    async fn off_site_assets_require_a_direct_route_to_a_public_address() {
+        let site = Url::parse("http://127.0.0.1:5000").unwrap();
+        let public = Url::parse("https://1.1.1.1/picture.png").unwrap();
+        for mode in [Mode::System, Mode::Custom] {
+            let route = Route {
+                settings: Settings {
+                    mode,
+                    endpoint: if mode == Mode::Custom {
+                        "http://127.0.0.1:5500".into()
+                    } else {
+                        String::new()
+                    },
+                    ..Default::default()
+                },
+                login: None,
+            };
+            let mut network = Network::new();
+            network.client(&site, &site, &route).await.unwrap();
+            let error = network.client(&public, &site, &route).await.unwrap_err();
+            assert!(
+                error
+                    .to_string()
+                    .contains("External assets require Direct connection"),
+                "{error}"
+            );
+        }
+        let mut network = Network::new();
+        network
+            .client(&public, &site, &Route::direct())
+            .await
+            .unwrap();
+        let local = Url::parse("http://127.0.0.1:5001/picture.png").unwrap();
+        assert!(
+            network
+                .client(&local, &site, &Route::direct())
+                .await
+                .unwrap_err()
+                .to_string()
+                .contains("local or special")
+        );
     }
 }

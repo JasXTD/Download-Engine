@@ -95,7 +95,7 @@ Download Engine builds a modified copy of librqbit-utp 0.7.0 (bounded packet que
 - **flate2 1.1.10** — MIT OR Apache-2.0. [LICENSE-APACHE](rust/flate2-1.1.10/LICENSE-APACHE), [LICENSE-MIT](rust/flate2-1.1.10/LICENSE-MIT).
 - **foldhash 0.2.0** — Zlib. [LICENSE](rust/foldhash-0.2.0/LICENSE).
 - **font-types 0.12.6** — MIT OR Apache-2.0. [LICENSE-APACHE](rust/font-types-0.12.6/LICENSE-APACHE), [LICENSE-MIT](rust/font-types-0.12.6/LICENSE-MIT).
-- **form_urlencoded 1.2.2** — MIT OR Apache-2.0. [LICENSE-APACHE](rust/form_urlencoded-1.2.2/LICENSE-APACHE), [LICENSE-MIT](rust/form_urlencoded-1.2.2/LICENSE-MIT).
+- **form_urlencoded 1.2.3** — MIT OR Apache-2.0. [LICENSE-APACHE](rust/form_urlencoded-1.2.3/LICENSE-APACHE), [LICENSE-MIT](rust/form_urlencoded-1.2.3/LICENSE-MIT).
 - **funty 2.0.0** — MIT. [LICENSE.txt](rust/funty-2.0.0/LICENSE.txt).
 - **futures-channel 0.3.34** — MIT OR Apache-2.0. [LICENSE-APACHE](rust/futures-channel-0.3.34/LICENSE-APACHE), [LICENSE-MIT](rust/futures-channel-0.3.34/LICENSE-MIT).
 - **futures-core 0.3.34** — MIT OR Apache-2.0. [LICENSE-APACHE](rust/futures-core-0.3.34/LICENSE-APACHE), [LICENSE-MIT](rust/futures-core-0.3.34/LICENSE-MIT).
@@ -292,7 +292,7 @@ Download Engine builds a modified copy of librqbit-utp 0.7.0 (bounded packet que
 - **unicode-ident 1.0.26** — (MIT OR Apache-2.0) AND Unicode-3.0. [LICENSE-APACHE](rust/unicode-ident-1.0.26/LICENSE-APACHE), [LICENSE-MIT](rust/unicode-ident-1.0.26/LICENSE-MIT), [LICENSE-UNICODE](rust/unicode-ident-1.0.26/LICENSE-UNICODE).
 - **unicode-segmentation 1.13.3** — MIT OR Apache-2.0. [COPYRIGHT](rust/unicode-segmentation-1.13.3/COPYRIGHT), [LICENSE-APACHE](rust/unicode-segmentation-1.13.3/LICENSE-APACHE), [LICENSE-MIT](rust/unicode-segmentation-1.13.3/LICENSE-MIT).
 - **unicode-width 0.2.3** — MIT OR Apache-2.0. [COPYRIGHT](rust/unicode-width-0.2.3/COPYRIGHT), [LICENSE-APACHE](rust/unicode-width-0.2.3/LICENSE-APACHE), [LICENSE-MIT](rust/unicode-width-0.2.3/LICENSE-MIT).
-- **url 2.5.8** — MIT OR Apache-2.0. [LICENSE-APACHE](rust/url-2.5.8/LICENSE-APACHE), [LICENSE-MIT](rust/url-2.5.8/LICENSE-MIT).
+- **url 2.5.9** — MIT OR Apache-2.0. [LICENSE-APACHE](rust/url-2.5.9/LICENSE-APACHE), [LICENSE-MIT](rust/url-2.5.9/LICENSE-MIT).
 - **utf8_iter 1.0.4** — Apache-2.0 OR MIT. [COPYRIGHT](rust/utf8_iter-1.0.4/COPYRIGHT), [LICENSE-APACHE](rust/utf8_iter-1.0.4/LICENSE-APACHE), [LICENSE-MIT](rust/utf8_iter-1.0.4/LICENSE-MIT).
 - **uuid 1.27.0** — Apache-2.0 OR MIT. [LICENSE-APACHE](rust/uuid-1.27.0/LICENSE-APACHE), [LICENSE-MIT](rust/uuid-1.27.0/LICENSE-MIT).
 - **vcpkg 0.2.15** — MIT/Apache-2.0. [LICENSE-APACHE](rust/vcpkg-0.2.15/LICENSE-APACHE), [LICENSE-MIT](rust/vcpkg-0.2.15/LICENSE-MIT).

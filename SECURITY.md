@@ -108,6 +108,9 @@ facilities. The app does not protect a compromised user account.
 - New Windows downloads and recovered publications receive **Mark of the Web**
   before completion. Older completed files are not retroactively marked. The
   marker supports Windows handling of internet files; it is not a safety verdict.
+- Offline captures mark every file on Windows, including generated HTML and reports.
+  Failed captures clean up only files they created. Off-site assets require Direct
+  connection so the client can enforce its public-address check.
 - File handling rejects unsafe filenames and linked destinations in protected
   write paths. Temporary-file and publication checks aim to prevent unintended
   overwrites and writes through links.
@@ -146,6 +149,9 @@ addresses and peers' messages. That's why this code runs in a separate program:
   identity in the profile. The helper verifies that identity and opens each path component
   relative to an open directory, refusing linked directories and hard-linked payload files.
   On Windows the helper also rejects reparse points and marks payload files as Internet downloads.
+- Windows staging directories grant inheritable access to their owner and LocalSystem.
+  Before publishing a folder, the app verifies its contents against the selected files.
+  A completed torrent folder can retain these permissions in a shared destination.
 - Completed torrents move into place without replacing existing entries. Resume, cleanup and
   recovery check the recorded identity. When upgrading an older partial download, the app can
   copy hash-verified pieces into fresh staging and leaves the original folder intact.

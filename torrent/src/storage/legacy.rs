@@ -11,6 +11,7 @@ pub fn import_verified_pieces(
     hashes: InfoHashes,
     chosen: &[usize],
     source: &Path,
+    expected_source: Option<&str>,
     destination: Arc<Directory>,
     cancel: &CancellationToken,
 ) -> Result<bool> {
@@ -19,6 +20,9 @@ pub fn import_verified_pieces(
         Err(e) if e.kind() == io::ErrorKind::NotFound => return Ok(true),
         Err(e) => return Err(e.into()),
     };
+    if let Some(expected) = expected_source {
+        source_dir.verify(expected)?;
+    }
     let Some(meta) = resume::load_info(state, hashes, vec![]) else {
         // Without authenticated metadata no legacy bytes can be trusted for reuse.
         return Ok(true);
@@ -80,7 +84,9 @@ mod tests {
         let path = base.path().join("new");
         let dir = Arc::new(Directory::create_new(&path).unwrap());
         let cancel = CancellationToken::new();
-        assert!(import_verified_pieces(&state, meta.hashes, &[0], &legacy, dir, &cancel).unwrap());
+        assert!(
+            import_verified_pieces(&state, meta.hashes, &[0], &legacy, None, dir, &cancel).unwrap()
+        );
         let bytes = fs::read(path.join("sample.bin")).unwrap();
         assert_eq!(&bytes[..16_384], &data[..16_384]);
         assert!(bytes[16_384..].iter().all(|&byte| byte == 0));

@@ -1,4 +1,4 @@
-// Exercise the actual bundled parser with small, local MP4 fixtures. The PSSH
+// Exercise the actual bundled parsers with small, local media fixtures. The PSSH
 // cases are a few kilobytes, not stack-exhaustion or memory-pressure payloads.
 const assert = require('node:assert/strict');
 const { test, before, after } = require('node:test');
@@ -89,6 +89,19 @@ test('media helper preserves clear progressive and fragmented MP4 packets', () =
     const output = parse(bytes, `${name}-clear.mp4`);
     assert.equal(output.status, 0, output.stderr);
     assert.equal(output.stdout.split('\n').filter(line => /^0,/.test(line)).length, 3);
+  }
+});
+
+test('media helper decodes Vorbis audio from Ogg and Matroska', () => {
+  for (const name of ['vorbis.ogg', 'vorbis.mka']) {
+    const input = path.join(fixture, name);
+    const generated = run(['-f', 'lavfi', '-i', 'sine=frequency=440:duration=0.25',
+      '-ac', '2', '-c:a', 'vorbis', '-strict', 'experimental', input]);
+    assert.equal(generated.status, 0, generated.stderr);
+    const decoded = run(['-xerror', '-protocol_whitelist', 'file', '-i', input,
+      '-map', '0:a:0', '-c:a', 'pcm_s16le', '-f', 'framehash', '-']);
+    assert.equal(decoded.status, 0, decoded.stderr);
+    assert.match(decoded.stdout, /^0,\s*-?\d+,/m, name);
   }
 });
 

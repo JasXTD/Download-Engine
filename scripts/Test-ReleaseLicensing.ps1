@@ -26,7 +26,7 @@ $fixture = Join-Path $fixtureRoot ('licensing-test-' + [Guid]::NewGuid().ToStrin
 $media = Join-Path $fixture 'tools/ffmpeg'
 New-Item -ItemType Directory -Path (Join-Path $media 'source'),(Join-Path $fixture 'src/hls') -Force | Out-Null
 try {
-    $names = @('ffmpeg.exe','LICENSE','README.txt','PROVENANCE.md','source/Dockerfile','source/build.sh','source/apply-security-fixes.sh','source/test-hdr-metadata.c','source/SHA256SUMS','source/README.md',
+    $names = @('ffmpeg.exe','LICENSE','README.md','PROVENANCE.md','source/Dockerfile','source/build.sh','source/apply-security-fixes.sh','source/test-hdr-metadata.c','source/test-vorbis-init.c','source/SHA256SUMS','source/README.md',
         'licenses/x264-COPYING','licenses/LICENSE.md','licenses/mingw-w64-COPYRIGHT','licenses/gcc-runtime-COPYRIGHT',
         'source/build-record/config.mak','source/build-record/toolchain-packages.tsv','source/build-record/binaries.sha256',
         ('source/ffmpeg-' + ('a' * 40) + '.tar.gz'),('source/x264-' + ('b' * 40) + '.tar.gz'))
@@ -44,10 +44,10 @@ try {
     [IO.File]::WriteAllText($runtime, ('const FFMPEG_SHA256: &str = "{0}";' -f $files[0].sha256))
     Assert-MediaBundle -Root $fixture
     $script:passed++
-    $notice = Join-Path $media 'README.txt'
+    $notice = Join-Path $media 'README.md'
     [IO.File]::WriteAllText($notice, 'altered')
     Expect-Rejection { Assert-MediaBundle -Root $fixture } 'Media checksum mismatch'
-    [IO.File]::WriteAllText($notice, 'fixture README.txt')
+    [IO.File]::WriteAllText($notice, 'fixture README.md')
     $archive = Join-Path $media $names[-1]
     Remove-Item -LiteralPath $archive
     Expect-Rejection { Assert-MediaBundle -Root $fixture } 'Missing media source/notice/binary'
@@ -57,6 +57,8 @@ try {
     $manifest.files = @($files | Where-Object path -ne 'source/apply-security-fixes.sh'); Save-Manifest
     Expect-Rejection { Assert-MediaBundle -Root $fixture } 'Missing required media manifest entry'
     $manifest.files = @($files | Where-Object path -ne 'source/test-hdr-metadata.c'); Save-Manifest
+    Expect-Rejection { Assert-MediaBundle -Root $fixture } 'Missing required media manifest entry'
+    $manifest.files = @($files | Where-Object path -ne 'source/test-vorbis-init.c'); Save-Manifest
     Expect-Rejection { Assert-MediaBundle -Root $fixture } 'Missing required media manifest entry'
     $manifest.files = @($files | Where-Object path -notlike 'source/x264-*'); Save-Manifest
     Expect-Rejection { Assert-MediaBundle -Root $fixture } 'Both pinned FFmpeg and x264'

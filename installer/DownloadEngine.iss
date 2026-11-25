@@ -269,7 +269,7 @@ Source: "{#SourceRoot}\PRIVACY.md"; DestDir: "{app}\extensions\brave"; Flags: ig
 Source: "{#SourceRoot}\PRIVACY.md"; DestDir: "{app}\extensions\firefox"; Flags: ignoreversion
 Source: "{#SourceRoot}\tools\ffmpeg\ffmpeg.exe"; DestDir: "{app}\tools\ffmpeg"; Flags: ignoreversion
 Source: "{#SourceRoot}\tools\ffmpeg\LICENSE"; DestDir: "{app}\tools\ffmpeg"; Flags: ignoreversion
-Source: "{#SourceRoot}\tools\ffmpeg\README.txt"; DestDir: "{app}\tools\ffmpeg"; Flags: ignoreversion
+Source: "{#SourceRoot}\tools\ffmpeg\README.md"; DestDir: "{app}\tools\ffmpeg"; Flags: ignoreversion
 Source: "{#SourceRoot}\tools\ffmpeg\PROVENANCE.md"; DestDir: "{app}\tools\ffmpeg"; Flags: ignoreversion
 Source: "{#SourceRoot}\tools\ffmpeg\media-manifest.json"; DestDir: "{app}\tools\ffmpeg"; Flags: ignoreversion
 Source: "{#SourceRoot}\scripts\Register-Browsers.ps1"; DestDir: "{app}"; Flags: ignoreversion
@@ -442,6 +442,8 @@ Name: "{autodesktop}\Download Engine"; Filename: "{app}\de.exe"; WorkingDir: "{a
 #endif
 
 [InstallDelete]
+; Earlier installers shipped the FFmpeg notice under this name.
+Type: files; Name: "{app}\tools\ffmpeg\README.txt"
 ; Programs and shortcuts of releases before 2.0, replaced by de*.exe above.
 Type: files; Name: "{app}\idm-ex.exe"
 Type: files; Name: "{app}\idm-ex-host.exe"

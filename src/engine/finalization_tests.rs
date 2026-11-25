@@ -189,9 +189,12 @@ async fn media_provider_publication_recovers_only_with_its_verified_staging_rece
         .join(format!(".idm-ex-{}.assembling", fixture.job.id));
     std::fs::copy(&fixture.sources[0], &staging).unwrap();
     fixture.job.integrity.actual = Some(fixture.hash.clone());
-    let published = publish_without_overwrite(&fixture.store, &mut fixture.job, &staging)
-        .await
-        .unwrap();
+    let verified = download_file::read_part_sync(&staging).unwrap();
+    let published =
+        publish_without_overwrite(&fixture.store, &mut fixture.job, &staging, &verified)
+            .await
+            .unwrap();
+    drop(verified);
     let mut pending = fixture.store.get(&fixture.job.id).unwrap().unwrap();
     let result = finalization::recover(
         &fixture.store,

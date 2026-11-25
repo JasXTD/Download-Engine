@@ -193,9 +193,10 @@ pub(super) async fn finish(
     if cancel.is_cancelled() {
         return Ok(None);
     }
-    let path = engine::publish_without_overwrite(store, job, &staging).await?;
+    let output = output.into_std().await;
+    let path = engine::publish_without_overwrite(store, job, &staging, &output).await?;
     Ok(Some(FinishedFile {
         path,
-        guard: Some(output.into_std().await),
+        guard: Some(output),
     }))
 }

@@ -11,12 +11,14 @@ the exact upstream archives and downstream security edits used to build `../ffmp
   Origin: https://code.videolan.org/videolan/x264/-/commit/0480cb05fa188d37ae87e8f4fd8f1aea3711f7ee
 
 `SHA256SUMS` records both unmodified source-archive checksums.
-`apply-security-fixes.sh` applies three downstream changes to FFmpeg: iterative
+`apply-security-fixes.sh` applies four downstream changes to FFmpeg: iterative
 encryption-initialization cleanup for CVE-2026-107678 and immediate PSSH rejection
 in the MOV parser, plus the upstream HDR10+ serialization fix for CVE-2026-107676
 ([commit 2c2f6e96](https://github.com/FFmpeg/FFmpeg/commit/2c2f6e96e31795ae95a8f8323a493ffbc493111f)).
 The HDR10+ fix writes saturation fields independently of tone mapping, so the
-complete advertised payload is initialized. This dedicated helper supports clear media only. Both input
+complete advertised payload is initialized. The fourth change backports the
+[upstream Vorbis initialization fix](https://github.com/FFmpeg/FFmpeg/commit/90f5e61a1da2dcc0050169af8ca593530f26071b)
+for CVE-2026-125224. This dedicated helper supports clear media only. Both input
 and output source-file hashes are checked; an unexpected revision or partial
 edit stops the build. x264 is unchanged.
 `build.sh` applies these edits and contains the full configure and build commands. Network access and
@@ -42,17 +44,20 @@ New-Item -ItemType Directory -Path rebuilt
 docker cp xdownloader-ffmpeg-build:/output/. rebuilt
 .\rebuilt\hdr-metadata-test.exe
 if ($LASTEXITCODE -ne 0) { throw 'HDR10+ regression check failed.' }
+.\rebuilt\vorbis-init-test.exe
+if ($LASTEXITCODE -ne 0) { throw 'Vorbis initialization regression check failed.' }
 docker rm xdownloader-ffmpeg-build
 docker image rm xdownloader-ffmpeg-builder
 ```
 
 The exit code must be zero before using the output. `rebuilt/ffmpeg.exe` is the
-runtime helper; `ffprobe.exe` and `hdr-metadata-test.exe` are test-only tools and
+runtime helper; `ffprobe.exe`, `vorbis-init-test.exe` and `hdr-metadata-test.exe` are test-only tools and
 are not included in the runtime package. The HDR10+ test checks all 84 combinations
 of tone-mapping and saturation flags across one to three windows. Differently
 prefilled buffers must produce identical, fully initialized payloads; caller-owned
 and allocated outputs must agree, preserve guard bytes, and round-trip metadata.
-It links the same Windows libavutil archive as the helper. Preserve the build
+The Vorbis test checks that a second packet reuses the first header decision.
+Both tests link against the same libraries as the helper. Preserve the build
 records and notices alongside any redistributed result. `build-record/` in this
 source directory records the compiler/packages and configuration of the shipped
 binary. Compiler and system package updates can change output hashes.

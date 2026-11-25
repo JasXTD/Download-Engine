@@ -106,7 +106,7 @@ pub(super) async fn finish(
     }
     // The source handle denies other writers/deletion on Windows while the
     // existing intent-before-hard-link protocol publishes these verified bytes.
-    let path = publish_without_overwrite(store, job, &prepared.path).await?;
+    let path = publish_without_overwrite(store, job, &prepared.path, &prepared.file).await?;
     Ok(Some(FinishedFile {
         path,
         guard: Some(prepared.file),
@@ -294,16 +294,26 @@ fn direct_source(job: &Job, root: &Path) -> Option<PathBuf> {
     }
 }
 
+#[cfg(unix)]
+pub(super) fn claim_path(job: &Job) -> PathBuf {
+    job.directory.join(format!(".idm-ex-{}.publishing", job.id))
+}
+
 pub(super) async fn recover(
     store: &Store,
     job: &mut Job,
     root: &Path,
     cancel: &CancellationToken,
 ) -> Result<Option<FinishedFile>> {
+    let staging = job.directory.join(format!(".idm-ex-{}.assembling", job.id));
+    #[cfg(unix)]
+    crate::unix_files::VerifiedLink::recover(
+        &claim_path(job),
+        std::iter::once(staging.clone()).chain(direct_source(job, root)),
+    )?;
     let Some(path) = job.saved_path.clone() else {
         return Ok(None);
     };
-    let staging = job.directory.join(format!(".idm-ex-{}.assembling", job.id));
     for anchor in std::iter::once(staging).chain(direct_source(job, root)) {
         // A name collision can leave an intent pointing at somebody else's
         // file. Do not request exclusive read guards on that unrelated file.
@@ -331,7 +341,12 @@ pub(super) async fn recover(
                 Some(size) == total && size == downloaded,
                 "Published file size changed"
             );
-            let (actual, guard) = crate::integrity::hash_file(&anchor, &token)?;
+            let (actual, guard) = crate::integrity::hash_file(&published, &token)?;
+            ensure!(
+                same_file::Handle::from_file(guard.try_clone()?)?
+                    == same_file::Handle::from_file(destination)?,
+                "Published file changed during recovery"
+            );
             download_file::mark_internet(&anchor)?;
             Ok(Some((actual, guard)))
         })

@@ -1,7 +1,7 @@
 # Bundled media merger
 
 FFmpeg 9.0.2, Windows x64, built by the Download Engine project on
-2026-10-22 from the upstream archives and downstream security edits in `source/`.
+2026-11-25 from the upstream archives and downstream security edits in `source/`.
 It is a separate executable used to remux downloaded, local HLS/DASH tracks
 without re-encoding. The application never passes it a network URL. Network
 support and automatic external-library detection are disabled in this build.
@@ -11,9 +11,9 @@ support and automatic external-library detection are disabled in this build.
 - x264 revision: `0480cb05fa188d37ae87e8f4fd8f1aea3711f7ee`
   ([upstream](https://code.videolan.org/videolan/x264/-/commit/0480cb05fa188d37ae87e8f4fd8f1aea3711f7ee)).
 - `ffmpeg.exe` SHA-256:
-  `f1f9097330cc07678bebe983e1e5854bacce5f36cd851e234cdcf074ea54d577`.
+  `4ac14da35b445022c0a339f1bf39f56d26b69d1501d7b7317de24c179d349854`.
 - Test-only `ffprobe.exe` SHA-256:
-  `f4faba94399610c63c39998e35479b84fd0515bad753016689dd026027b697c9`.
+  `7a824a8ed76735944217f0acbbd690ae96f038ada223aa0afe446ecf8aabccc2`.
 - Combined helper license: **GPL-3.0-or-later**, configured with `--enable-gpl`
   and `--enable-version3`. x264 permits GPL version 2 or later. Full license and
   copyright notices, including compiler/runtime notices, are in `LICENSE` and
@@ -27,8 +27,10 @@ encryption-initialization cleanup with iteration (CVE-2026-107678) and rejects
 PSSH before allocation in the MOV parser, matching the clear-media-only policy.
 It also backports the upstream HDR10+ serialization fix for CVE-2026-107676
 ([commit 2c2f6e96](https://github.com/FFmpeg/FFmpeg/commit/2c2f6e96e31795ae95a8f8323a493ffbc493111f)),
-writing saturation fields independently of tone mapping. The script verifies
-source hashes before and after all three changes. x264 is unchanged. See
+writing saturation fields independently of tone mapping. The Vorbis parser
+backport for CVE-2026-125224 records a header initialization attempt even if it
+fails ([upstream fix](https://github.com/FFmpeg/FFmpeg/commit/90f5e61a1da2dcc0050169af8ca593530f26071b)).
+The script verifies each patched source file before and after the edits. See
 `source/README.md` for rebuilding and updating the application's helper pin.
 
 The portable ZIP and installer include these sources, recipes, records and
@@ -36,9 +38,9 @@ notices with the binary. Keep the complete bundle together when redistributing
 it; an upstream website link alone is not the supplied corresponding source.
 The source ZIP also includes this material, excluding executable binaries.
 
-Only `ffmpeg.exe` is a Windows runtime helper; ffprobe and the HDR10+ regression executable
-are used for isolated tests and are not shipped in the application. The regression
-source is included in `source/test-hdr-metadata.c`. The app checks the helper's pinned hash and
+The Windows runtime uses `ffmpeg.exe`.
+FFprobe and the HDR10+ and Vorbis regression programs are test tools. Their C tests
+are included under `source/`. The app checks the helper's pinned hash and
 holds it against replacement while it runs. `media-manifest.json` records every
 bundle file; packaging verifies those hashes and rejects missing/unlisted files.
 

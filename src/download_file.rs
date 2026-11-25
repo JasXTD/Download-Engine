@@ -527,6 +527,30 @@ pub(crate) fn delete_completed(path: &Path) -> Result<()> {
     }
 }
 
+/// The root, each intermediate directory, and the checked leaf are actual open
+/// objects. An intervening rename must never turn this into a path-based delete.
+pub(crate) fn delete_relative_file(
+    root: &de_torrent::storage::Directory,
+    path: &Path,
+    owned: impl FnOnce(&std::fs::File) -> Result<bool>,
+) -> Result<()> {
+    let (parent, name) = match root.file_parent(path) {
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(()),
+        result => result?,
+    };
+    let file = match parent.file_for_move(Path::new(name)) {
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(()),
+        result => result?,
+    };
+    if !owned(&file)? {
+        return Ok(());
+    }
+    #[cfg(windows)]
+    return crate::file_relocation::delete_owned(&file, path);
+    #[cfg(unix)]
+    crate::unix_files::delete_relative(&file, parent.handle(), name)
+}
+
 pub(crate) fn validate_path(path: &Path) -> Result<()> {
     ensure!(path.is_absolute(), "Choose an absolute local file path");
     for component in path.components() {

@@ -82,15 +82,18 @@ jobs:
       - name: Native toolchain
         run: |
           # Use the runner's installed compiler and SDK; do not install tools.
-          rustc -vV
-          xcrun --show-sdk-path
-          command -v pkg-config
-          node --test scripts/Run-NativeCi.test.cjs
-          node --test scripts/Run-MacTests.test.cjs
-          node --test scripts/LicenseNotices.test.cjs
-          node --test scripts/RustCiCache.test.cjs
-          cargo fetch --locked --target "$(rustc -vV | sed -n 's/^host: //p')"
-          cargo fetch --locked --manifest-path torrent/Cargo.toml --target "$(rustc -vV | sed -n 's/^host: //p')"
+          check() {
+            local stage=$1
+            shift
+            node scripts/Run-NativeCi.cjs "$stage" "$RUNNER_TEMP/native-diagnostics" "$@"
+          }
+          check rust-version rustc -vV
+          check sdk xcrun --show-sdk-path
+          check pkg-config pkg-config --version
+          check ci-checks node --test --test-concurrency=1 scripts/Run-NativeCi.test.cjs scripts/Run-MacTests.test.cjs scripts/LicenseNotices.test.cjs scripts/RustCiCache.test.cjs
+          host_target=$(rustc -vV | sed -n 's/^host: //p')
+          check fetch-root cargo fetch --locked --target "$host_target"
+          check fetch-torrent cargo fetch --locked --manifest-path torrent/Cargo.toml --target "$host_target"
       - name: Isolated test keychain
         run: |
           keychain="$RUNNER_TEMP/download-engine-tests.keychain-db"

@@ -5,7 +5,9 @@ The standalone MP3 encoder uses the included `lame-4.0.tar.gz` archive from
 From an x64 Visual Studio developer PowerShell (PowerShell 7.3 or later), run
 `./Build-Lame.ps1 -Output ../lame.exe`. On macOS and Linux run
 `bash build-lame.sh ../lame` with a C compiler, make and pkg-config installed.
-Both builds verify the source hash before compiling.
+Both builds verify the source hash before compiling. The Unix build corrects
+the locale header guard in the LAME frontend for systems that provide
+`langinfo.h` without a detected `iconv` implementation.
 
 This directory ships with the executable, including in the installer. It contains
 the exact upstream archives and downstream security edits used to build `../ffmpeg.exe`:

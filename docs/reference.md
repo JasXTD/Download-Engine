@@ -831,13 +831,15 @@ A direct-file selection is an anonymous GET, so login-only and POST links can fa
 The native host validates and saves the whole batch atomically. A lost reply
 keeps its original request ID: **Retry same batch** checks that receipt without
 adding the files twice, even if their history was removed. A closed pending
-picker can be reopened with the popup's **Recover handoffs** button. Once saved,
+picker can be reopened with the popup's **Recover handoffs** button. A pending
+Firefox video review can report a consent error while file batches reopen. Once saved,
 the selected queue controls when its files run; the extension cannot auto-open
 or execute them.
 
 Unsent scans and pending selections are held in memory for this browser session,
 including across popup closure or a background-worker restart. Closing an unsent
-or completed picker clears its scan. Restarting the browser or reloading/disabling
+or completed picker clears its scan. Navigating away frees its slot when the
+next scan needs space. Restarting the browser or reloading/disabling
 the extension clears session data, so resolve uncertain batches first, or check
 the desktop queue before collecting them again. Saved desktop jobs persist.
 Browser batch receipts keep IDs and a digest of the request, not another copy of

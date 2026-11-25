@@ -14,7 +14,7 @@ function fixture(userAgent = '') {
     set:async value=>{ if(f.failSave?.(value)) throw Error('Storage unavailable'); Object.assign(f.values,structuredClone(value)); },
     remove:async key=>{delete f.values[key];}
   }},tabs:{
-    query:async()=>[f.tabs.get(0)],
+    query:async query=>query.active ? [f.tabs.get(0)] : [...f.tabs.values()],
     create:async args=>{const tab={id:f.tabs.size+1,...args}; f.tabs.set(tab.id,tab); return structuredClone(tab);},
     get:async id=>{if(!f.tabs.has(id)) throw Error('Missing tab'); return structuredClone(f.tabs.get(id));},
     update:async(id,args)=>{const tab=f.tabs.get(id); if(!tab) throw Error('Missing tab'); Object.assign(tab,args); await f.onNavigate?.(tab); return structuredClone(tab);}
@@ -208,6 +208,43 @@ test('collector resolves base URLs, skips unsafe links, deduplicates and never t
     document.links=Array.from({length:100},(_,i)=>node('/'+i+'x'.repeat(16000))); const bounded=collect(); assert(bounded.links.length<100); assert.equal(bounded.truncated,true); assert(JSON.stringify(bounded).length<701000);
   } finally {delete globalThis.document; delete globalThis.location;}
 });
+function collectAssets(elements, links = []) {
+  globalThis.location = {href:'https://page.test/list/'};
+  globalThis.document = {baseURI:location.href, title:'Assets', links, createTreeWalker:()=>{
+    const iterator = elements.values();
+    return {nextNode:()=>iterator.next().value};
+  }};
+  try { return normalizeScan(collect()); }
+  finally { delete globalThis.document; delete globalThis.location; }
+}
+
+test('a typed media source upgrades a matching anchor or selected media URL to a preview',()=>{
+  const url = 'https://cdn.test/watch/123';
+  const anchor = {localName:'a',textContent:'Watch',getAttribute:name=>({href:url,download:'my-video'}[name] || '')};
+  const video = {localName:'video',currentSrc:url,getAttribute:()=>''};
+  for (const [type,kind] of [['application/vnd.apple.mpegurl','hls'],['application/dash+xml','dash']]) {
+    const source = {localName:'source',getAttribute:name=>({src:url,type}[name] || '')};
+    for (const anchors of [[],[anchor]]) {
+      const scan = collectAssets([video,source],anchors);
+      assert.equal(scan.links.length,1);
+      assert.equal(scan.links[0][kind],true);
+      if (anchors.length) assert.equal(scan.links[0].filename,'my-video');
+      assert.throws(()=>selection(scan,[0],'main','downloads'), /Preview HLS or Preview DASH/);
+    }
+  }
+});
+
+test('srcset preserves commas in URLs and collects HTTP siblings of inline images',()=>{
+  const one='https://cdn.test/w_400,h_250/image.jpg', two='https://cdn.test/w_800,h_500/image.jpg';
+  const image = {localName:'img',currentSrc:one,getAttribute:name=>({
+    srcset:one+' 1x, '+two+' 2x',
+    'data-srcset':'data:image/gif;base64,AAAA 1x, ../large.jpg 2x, plain.jpg, last.jpg'
+  }[name] || '')};
+  assert.deepEqual(collectAssets([image]).links.map(row=>row.url),[
+    one,two,'https://page.test/large.jpg','https://page.test/list/plain.jpg','https://page.test/list/last.jpg'
+  ]);
+});
+
 test('normalized names are safe text; search, final-suffix categories and indices agree',()=>{
   const input=scan(); input.links.push({...input.links[0],url:'https://example.test/a.pdf#duplicate'});
   input.links[1].filename='../CON.\u202eexe';
@@ -338,6 +375,75 @@ test('picker navigation cannot overwrite a request that starts as soon as the pa
 test('at most five outstanding page scans are held in memory',async()=>{
   const f=fixture(); for(let n=0;n<5;n++) await f.manager.scan();
   await assert.rejects(f.manager.scan(),/Close another/); assert.equal(f.scans,5);
+});
+
+test('abandoned picker tabs release capacity while live and pending pickers retain their slots',async()=>{
+  const f=fixture();
+  const pending=await f.start();
+  f.send=async()=>{throw Error('Lost reply');};
+  await assert.rejects(f.manager.submit(pending,f.input),/Lost reply/);
+  const pendingTab=(await f.manager.read(pending)).picker;
+  await f.api.tabs.update(pendingTab,{url:'https://example.test/elsewhere'});
+  for(let i=0;i<4;i++) await f.manager.scan();
+  await assert.rejects(f.manager.scan(),/Close another/);
+  const records=Object.entries(f.values).filter(([key])=>!key.endsWith(pending));
+  const get=f.api.tabs.get;
+  f.api.tabs.get=async()=>{throw Error('Tab lookup unavailable');};
+  await assert.rejects(f.manager.scan(),/Close another/);
+  assert.equal(Object.keys(f.values).length,5);
+  f.api.tabs.get=get;
+  for(const [,record] of records) await f.api.tabs.update(record.picker,{url:'https://example.test/elsewhere'});
+  f.manager=new Manager({api:f.api,native:f.native,uuid:f.uuid});
+  await f.manager.scan();
+  assert((await f.manager.read(pending)).pending);
+  for(const [key] of records) assert.equal(f.values[key],undefined);
+  assert.equal(Object.keys(f.values).length,2);
+});
+
+test('closing a picker during a stream preview releases its saved scan when the reply settles',async()=>{
+  const f=fixture();
+  await f.manager.openScan({...scan(),links:[{url:'https://cdn.test/video.m3u8'}]});
+  const [key, record]=Object.entries(f.values)[0], id=key.slice('page-links:'.length);
+  let started, finish;
+  const ready=new Promise(resolve=>{started=resolve;});
+  f.send=req=>new Promise(resolve=>{finish=()=>resolve({ok:true,preview_id:req.request_id});started();});
+  const preview=f.manager.previewHls(id,0);
+  await ready;
+  f.tabs.delete(record.picker);
+  await f.manager.closed(record.picker);
+  finish();
+  assert((await preview).ok);
+  await assert.rejects(f.manager.get(id),/expired/);
+});
+
+test('revoked Firefox video consent leaves the review pending and recovers an unrelated closed batch',async()=>{
+  const f=fixture('Mozilla/5.0 test');
+  let allowed=true;
+  f.api.runtime.getManifest=()=>({browser_specific_settings:{gecko:{}}});
+  f.api.permissions={contains:async()=>allowed};
+  const id=await f.start();
+  f.send=async req=>{
+    if(req.action==='ping')return {capabilities:['browser_video_user_agent_v1']};
+    throw Error('Lost reply');
+  };
+  await assert.rejects(f.manager.submit(id,f.input),/Lost reply/);
+  const {picker,pending}=await f.manager.read(id);
+  f.tabs.delete(picker);
+  await f.manager.closed(picker);
+  await assert.rejects(f.manager.openScan({...scan(),mode:'videos',links:[{url:'https://cdn.test/video.m3u8'}]}),/Lost reply/);
+  const video=structuredClone(f.values['pending-video-review']);
+  allowed=false;
+  f.send=undefined;
+  const calls=f.requests.length;
+  await assert.rejects(f.manager.recover(),/Permission revoked/);
+  assert.equal(f.requests.length,calls);
+  assert.deepEqual(f.values['pending-video-review'],video);
+  assert([...f.tabs.values()].some(tab=>tab.url.endsWith('#'+id)));
+  await f.manager.submit(id,{retry:true});
+  assert.deepEqual(f.requests.at(-1),pending.request);
+  allowed=true;
+  assert.equal(await f.manager.recover(),1);
+  assert.deepEqual(f.requests.at(-1),video);
 });
 test('native batch acknowledgement must cover every selected link with distinct IDs',async()=>{
   const request={action:'add_batch',links:[{},{}]};

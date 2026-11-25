@@ -18,15 +18,16 @@
   // This function is copied into the isolated top frame. Keep every dependency
   // inside it: no page scripts, network requests, messages, cookies, or frames.
   function collect(mode = "links") {
-    const links = [], seen = new Set();
+    const links = [], seen = new Map(), encoder = new TextEncoder();
+    const maxBytes = 700000;
     let bytes = 0, truncated = false, examined = 0;
     const videos = mode === "videos";
     const direct = /\.(mp4|webm|m4v|mov|ogv|avi|mkv|mpg|mpeg|3gp)$/i;
     const streaming = /\.(m3u8?|mpd|ism|ismc)(?:\/|$)/i;
     const mimeExtension = { "video/mp4": "mp4", "video/webm": "webm", "video/ogg": "ogv", "video/quicktime": "mov" };
     function add(raw, label, name, mime = "", media = false, source = "link", size = null) {
-      if (++examined > 10000 || links.length >= 1000) { truncated = true; return false; }
-      if (!raw || raw.trim().startsWith("#")) return true;
+      if (truncated || ++examined > 10000) { truncated = true; return false; }
+      if (!raw || raw.trim().startsWith("#") || /^data:/i.test(raw)) return true;
       let url;
       try { url = new URL(raw, document.baseURI); } catch { return true; }
       if (!["http:", "https:"].includes(url.protocol) || url.username || url.password || url.href.length > 16384) return true;
@@ -40,17 +41,30 @@
       const dash = /\.mpd$/i.test(url.pathname) || (media && type === "application/dash+xml");
       if (videos && !hls && !dash && (streaming.test(url.pathname) || /mpegurl|dash\+xml/i.test(type) ||
           (!direct.test(url.pathname) && !(media && mimeExtension[type])))) return true;
-      if (seen.has(url.href)) return true;
-      seen.add(url.href);
+      const existing = seen.get(url.href);
+      if (existing) {
+        // Anchors and currentSrc can be visited before a typed <source>.
+        if ((hls || dash) && !existing.hls && !existing.dash) {
+          const kind = hls ? "hls" : "dash";
+          existing[kind] = true;
+          bytes += (',"' + kind + '":true').length;
+          if (bytes > maxBytes) {
+            // One row always covers the extra bytes of a stream flag.
+            links.pop(); truncated = true; return false;
+          }
+        }
+        return true;
+      }
+      if (links.length >= 1000) { truncated = true; return false; }
       if (videos && !hls && !dash && !direct.test(url.pathname) && media && mimeExtension[type]) name = "video." + mimeExtension[type];
       const row = { url: url.href, text: (label || "").slice(0, 200), filename: (name || "").slice(0, 160), source };
       if (/^(video|audio)\//.test(type)) row.mime = type.slice(0, 100);
       if (Number.isSafeInteger(size) && size > 0 && !hls && !dash) row.size = size;
       if (hls) row.hls = true;
       if (dash) row.dash = true;
-      const rowBytes = new TextEncoder().encode(JSON.stringify(row)).length;
-      if (bytes + rowBytes > 700000) { truncated = true; return false; }
-      bytes += rowBytes; links.push(row); return true;
+      const rowBytes = encoder.encode(JSON.stringify(row)).length;
+      if (bytes + rowBytes > maxBytes) { truncated = true; return false; }
+      bytes += rowBytes; seen.set(url.href, row); links.push(row); return true;
     }
     // Resource timing exposes manifest URLs used by many blob/MSE players.
     // Read only this document's entries; never hook page code or request headers.
@@ -86,9 +100,23 @@
     if (!videos && document.createTreeWalker && !truncated) {
       const roots = [document]; let visited = 0, styled = 0;
       const srcset = (value, label) => {
-        if (!value || /data:/i.test(value)) return;
-        for (const candidate of value.split(",")) {
-          if (!add(candidate.trim().split(/\s+/)[0], label, "", "", false, "asset")) break;
+        // A URL token can contain commas. Trailing commas separate bare URLs;
+        // otherwise the separator follows the descriptors, outside parentheses.
+        const tokens = /[^\t\n\f\r ,][^\t\n\f\r ]*/g;
+        let match;
+        while ((match = tokens.exec(value))) {
+          const token = match[0];
+          let end = token.length;
+          while (token[end - 1] === ",") end--;
+          if (!add(token.slice(0, end), label, "", "", false, "asset")) break;
+          if (end !== token.length) continue;
+          let depth = 0;
+          while (tokens.lastIndex < value.length) {
+            const c = value[tokens.lastIndex++];
+            if (c === "," && depth === 0) break;
+            if (c === "(") depth++;
+            else if (c === ")" && depth) depth--;
+          }
         }
       };
       while (roots.length && !truncated) {
@@ -213,13 +241,52 @@
       return record;
     }
     async save(id, record) { await this.api.storage.session.set({ [this.key(id)]: record }); }
+    pickerUrl(id) { return this.api.runtime.getURL("links.html") + "#" + id; }
+    async pickerTab(id, record) {
+      if (!Number.isInteger(record.picker)) return null;
+      let tab;
+      try { tab = await this.api.tabs.get(record.picker); }
+      catch {
+        // A lookup error alone is insufficient reason to discard a saved scan.
+        tab = (await this.api.tabs.query({})).find(item => item.id === record.picker);
+      }
+      const url = this.pickerUrl(id);
+      return tab?.url === url || tab?.pendingUrl === url ? tab : null;
+    }
+    async discardAbandoned(id, record, closed = false) {
+      if (record.pending || this.opening === id || this.inflight.has(id)) return false;
+      if (!closed && await this.pickerTab(id, record)) return false;
+      if (this.inflight.has(id)) return false;
+      // A batch or recovery could have started while we were looking up the tab.
+      this.inflight.add(id);
+      try {
+        const key = this.key(id), latest = (await this.api.storage.session.get(key))[key];
+        if (latest?.pending || (latest && latest.picker !== record.picker)) return false;
+        if (latest) await this.api.storage.session.remove(key);
+        return true;
+      } finally { this.inflight.delete(id); }
+    }
+    async checkPickerLimit() {
+      const records = Object.entries(await this.api.storage.session.get(null)).filter(([key]) => key.startsWith(PREFIX));
+      let count = records.length;
+      if (count < 5) return;
+      for (const [key, record] of records) {
+        if (await this.discardAbandoned(key.slice(PREFIX.length), record)) count--;
+      }
+      if (count >= 5) throw Error(__xdL.t("Close another link picker first. Use Recover handoffs for any pending batch."));
+    }
+    async finishPicker(id) {
+      this.inflight.delete(id);
+      try { await this.discardAbandoned(id, await this.read(id)); }
+      catch { /* The slot can be reclaimed on the next scan. Preserve the native reply. */ }
+    }
     async open(id, record) {
       // Bind the tab before its scripts can send anything back. Writing the old
       // record after loading links.html could overwrite an in-flight receipt.
       const tab = await this.api.tabs.create({ url: "about:blank", active: false });
       record.picker = tab.id;
       await this.save(id, record);
-      await this.api.tabs.update(tab.id, { url: this.api.runtime.getURL("links.html") + "#" + id, active: true });
+      await this.api.tabs.update(tab.id, { url: this.pickerUrl(id), active: true });
     }
     async scan(tab, mode = "links", expectedDocumentId = null) {
       if (!["links", "videos"].includes(mode)) throw Error(__xdL.t("Invalid page scan mode."));
@@ -229,8 +296,7 @@
         tab ||= (await this.api.tabs.query({ active: true, currentWindow: true }))[0];
         if (!tab || !Number.isInteger(tab.id) || !/^https?:\/\//.test(tab.url || "")) throw Error(__xdL.t("Open an HTTP or HTTPS web page, then click the extension on that page."));
         if (tab.incognito) throw Error(__xdL.t("Page-link collection is not available in private windows."));
-        const records = await this.api.storage.session.get(null);
-        if (mode === "links" && Object.keys(records).filter(key => key.startsWith(PREFIX)).length >= 5) throw Error(__xdL.t("Close another link picker first. Use Recover handoffs for any pending batch."));
+        if (mode === "links") await this.checkPickerLimit();
         const results = await this.api.scripting.executeScript({ target: { tabId: tab.id, frameIds: [0] }, func: collect, args: [mode] });
         const result = results.find(item => item.frameId === 0);
         // Scan the currently active top frame, then bind its result to the click.
@@ -269,18 +335,18 @@
     }
     async openScan(value, browserContext = null) {
       if (this.opening) throw Error(__xdL.t("A review is already opening."));
-      this.opening = true;
+      const scan = normalizeScan(value);
+      const id = scan.mode === "videos" ? VIDEO_PENDING : this.uuid();
+      this.opening = id;
       try {
-        const scan = normalizeScan(value);
         if (scan.mode === "videos") return await this.openVideoReview(scan, browserContext);
-        const records = await this.api.storage.session.get(null);
-        if (Object.keys(records).filter(key => key.startsWith(PREFIX)).length >= 5) throw Error(__xdL.t("Close another link picker first. Use Recover handoffs for any pending batch."));
-        const id = this.uuid(), record = { scan, pending: null, receipt: null };
+        await this.checkPickerLimit();
+        const record = { scan, pending: null, receipt: null };
         await this.save(id, record);
         try { await this.open(id, record); }
         catch (error) { await this.api.storage.session.remove(this.key(id)); throw error; }
         return { ok: true, message: __xdL.f("Found {0} {1}. Review them in the new tab.", scan.links.length, scan.mode === "videos" ? __xdL.t("media items") : __xdL.t("files and links")) };
-      } finally { this.opening = false; }
+      } finally { this.opening = null; }
     }
     async openVideoReview(scan, browserContext = null) {
       if ((await this.api.storage.session.get(VIDEO_PENDING))[VIDEO_PENDING]) throw Error(__xdL.t("A video review is awaiting confirmation. Use Browser options → Recover handoffs first."));
@@ -376,7 +442,7 @@
         delete record.hlsRequests[index];
         await this.save(id,record);
         return reply;
-      } finally { this.inflight.delete(id); }
+      } finally { await this.finishPicker(id); }
     }
     async submit(id, input) {
       if (this.inflight.has(id)) throw Error(__xdL.t("This batch is already being sent."));
@@ -407,47 +473,39 @@
           if (error.definitive) { record.pending = null; await this.save(id, record); }
           throw error;
         }
-      } finally {
-        this.inflight.delete(id);
-        // A close event during a native request cannot erase its pending ID.
-        // Release completed/unsent records once that request has settled.
-        try {
-          const record = await this.read(id);
-          if (!record.pending && Number.isInteger(record.picker)) {
-            let tab = null;
-            try { tab = await this.api.tabs.get(record.picker); } catch { /* Closed. */ }
-            if (!tab) await this.closed(record.picker);
-          }
-        } catch { /* Session storage may be unavailable; never hide the reply. */ }
-      }
+      } finally { await this.finishPicker(id); }
     }
     async closed(tabId) {
       const records = await this.api.storage.session.get(null);
       for (const [key, record] of Object.entries(records)) {
-        if (key.startsWith(PREFIX) && record.picker === tabId && !record.pending && !this.inflight.has(key.slice(PREFIX.length))) await this.api.storage.session.remove(key);
+        if (key.startsWith(PREFIX) && record.picker === tabId) await this.discardAbandoned(key.slice(PREFIX.length), record, true);
       }
     }
     async recover() {
       const records = await this.api.storage.session.get(null);
       let count = 0;
-      if (records[VIDEO_PENDING]) { await this.sendVideoReview(records[VIDEO_PENDING]); count++; }
+      let firstError;
+      // A video can be waiting on native confirmation or revoked consent while
+      // unrelated file batches are ready to reopen.
+      const video = records[VIDEO_PENDING];
+      const videoRecovery = video && this.sendVideoReview(video).catch(error => { firstError ??= error; });
       for (const [key, record] of Object.entries(records)) {
         if (!key.startsWith(PREFIX) || !record.pending) continue;
-        let existing = null;
-        if (Number.isInteger(record.picker)) {
-          try { existing = await this.api.tabs.get(record.picker); } catch { /* Closed picker: open it again below. */ }
-        }
-        const url = this.api.runtime.getURL("links.html") + "#" + key.slice(PREFIX.length);
-        if (existing?.url === url) await this.api.tabs.update(existing.id, { active: true });
-        else {
-          const id = key.slice(PREFIX.length);
-          if (this.inflight.has(id)) continue;
-          this.inflight.add(id);
-          try { await this.open(id, await this.read(id)); }
-          finally { this.inflight.delete(id); }
-        }
-        count++;
+        const id = key.slice(PREFIX.length);
+        if (this.inflight.has(id)) continue;
+        this.inflight.add(id);
+        try {
+          const latest = await this.read(id);
+          if (!latest.pending) continue;
+          const tab = await this.pickerTab(id, latest);
+          if (tab) await this.api.tabs.update(tab.id, { active: true });
+          else await this.open(id, latest);
+          count++;
+        } catch (error) { firstError ??= error; }
+        finally { this.inflight.delete(id); }
       }
+      if (await videoRecovery) count++;
+      if (firstError) throw firstError;
       return count;
     }
   }

@@ -561,6 +561,10 @@ impl Desktop {
                                 self.open_hls("");
                                 ui.close();
                             }
+                            if ui.button(tr("Converter")).clicked() {
+                                self.open_converter();
+                                ui.close();
+                            }
                             if ui.button(tr("Website grabber")).clicked() {
                                 self.open_grabber();
                                 ui.close();
@@ -905,6 +909,7 @@ mod tests {
                     tr("Scheduler"),
                     tr("Extensions"),
                     tr("Grabber"),
+                    tr("Converter"),
                     "MCP",
                     tr("Logs"),
                     tr("Preferences"),

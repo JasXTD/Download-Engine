@@ -78,6 +78,9 @@ expected=$(awk '/  ffmpeg$/ {print $1}' "$media/build-record/binaries.sha256")
 probe_expected=$(awk '/  ffprobe$/ {print $1}' "$media/build-record/binaries.sha256")
 [[ "$probe_expected" =~ ^[a-f0-9]{64}$ && "$(hash "$media/ffprobe")" == "$probe_expected" ]] || { echo 'Native FFprobe checksum mismatch' >&2; exit 1; }
 export DOWNLOAD_ENGINE_FFMPEG_SHA256="$expected"
+encoder_expected=$(awk '/  lame$/ {print $1}' "$media/build-record/binaries.sha256")
+[[ "$encoder_expected" =~ ^[a-f0-9]{64}$ && "$(hash "$media/lame")" == "$encoder_expected" ]] || { echo 'Native MP3 encoder checksum mismatch' >&2; exit 1; }
+export DOWNLOAD_ENGINE_LAME_SHA256="$encoder_expected"
 cd "$root"
 for variant in chromium firefox; do
   extension_version=$(sed -n 's/.*"version": *"\([0-9.]*\)".*/\1/p' "extension/manifest.$variant.json")
@@ -100,6 +103,7 @@ for program in de de-cli de-host de-torrent; do
   install -m 755 "$target/release/$program" "$programs/$program"
 done
 install -m 755 "$media/ffmpeg" "$resources/tools/ffmpeg/ffmpeg"
+install -m 755 "$media/lame" "$resources/tools/ffmpeg/lame"
 cp "$media/LICENSE" "$resources/tools/ffmpeg/"
 cp -R "$media/licenses" "$resources/tools/ffmpeg/"
 copy_media_build_record "$media/build-record" "$resources/tools/ffmpeg/build-record"
@@ -192,6 +196,7 @@ PLIST
     /usr/bin/codesign --force --sign - "$programs/$program"
   done
   /usr/bin/codesign --verify "$resources/tools/ffmpeg/ffmpeg"
+  /usr/bin/codesign --verify "$resources/tools/ffmpeg/lame"
   /usr/bin/codesign --force --sign - "$app"
   /usr/bin/codesign --verify --deep --strict "$app"
   /usr/bin/ditto -c -k --keepParent "$app" "$output/$name.zip"

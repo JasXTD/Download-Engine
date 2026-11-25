@@ -28,6 +28,8 @@ jobs:
     timeout-minutes: 120
     env:
       CARGO_INCREMENTAL: '0'
+      # Keep intermediate crates in the checkout directories restored below.
+      CARGO_BUILD_BUILD_DIR: '{workspace-root}/target'
       CARGO_PROFILE_DEV_DEBUG: '0'
       MACOSX_DEPLOYMENT_TARGET: '11.0'
       # App-only releases keep the previously validated media source. Packaging
@@ -81,15 +83,18 @@ jobs:
       - name: Native toolchain
         run: |
           # Use the runner's installed compiler and SDK; do not install tools.
-          rustc -vV
-          xcrun --show-sdk-path
-          command -v pkg-config
-          node --test scripts/Run-NativeCi.test.cjs
-          node --test scripts/Run-MacTests.test.cjs
-          node --test scripts/LicenseNotices.test.cjs
-          node --test scripts/RustCiCache.test.cjs
-          cargo fetch --locked --target "$(rustc -vV | sed -n 's/^host: //p')"
-          cargo fetch --locked --manifest-path torrent/Cargo.toml --target "$(rustc -vV | sed -n 's/^host: //p')"
+          check() {
+            local stage=$1
+            shift
+            node scripts/Run-NativeCi.cjs "$stage" "$RUNNER_TEMP/native-diagnostics" "$@"
+          }
+          check rust-version rustc -vV
+          check sdk xcrun --show-sdk-path
+          check pkg-config pkg-config --version
+          check ci-checks node --test --test-concurrency=1 scripts/Run-NativeCi.test.cjs scripts/Run-MacTests.test.cjs scripts/LicenseNotices.test.cjs scripts/RustCiCache.test.cjs
+          host_target=$(rustc -vV | sed -n 's/^host: //p')
+          check fetch-root cargo fetch --locked --target "$host_target"
+          check fetch-torrent cargo fetch --locked --manifest-path torrent/Cargo.toml --target "$host_target"
       - name: Isolated test keychain
         run: |
           keychain="$RUNNER_TEMP/download-engine-tests.keychain-db"
@@ -112,6 +117,7 @@ jobs:
           echo "DOWNLOAD_ENGINE_FFMPEG_PATH=$RUNNER_TEMP/native-ffmpeg/ffmpeg" >> "$GITHUB_ENV"
           echo "DOWNLOAD_ENGINE_NATIVE_FFMPEG=$RUNNER_TEMP/native-ffmpeg" >> "$GITHUB_ENV"
           echo "DOWNLOAD_ENGINE_FFMPEG_SHA256=$(awk '/  ffmpeg$/ {print $1}' "$RUNNER_TEMP/native-ffmpeg/build-record/binaries.sha256")" >> "$GITHUB_ENV"
+          echo "DOWNLOAD_ENGINE_LAME_SHA256=$(awk '/  lame$/ {print $1}' "$RUNNER_TEMP/native-ffmpeg/build-record/binaries.sha256")" >> "$GITHUB_ENV"
       - name: Native regression tests
         if: github.event.inputs.validation == '' || github.event.inputs.validation == 'full'
         # Intel needed 37 minutes through desktop tests alone. Leave room for

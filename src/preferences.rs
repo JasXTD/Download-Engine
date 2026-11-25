@@ -248,8 +248,9 @@ pub struct InterfacePreferences {
     pub show_details: bool,
     /// Preferred inspector height in logical points. None uses the compact-window default.
     pub details_height: Option<u16>,
-    /// Optional toolbar actions, in the stable order defined by the desktop toolbar.
+    /// The original ten toolbar pins. Older app versions expect this exact length.
     pub toolbar_pins: [bool; 10],
+    pub toolbar_converter: bool,
     pub auto_download_status: bool,
     /// Check for a newer stable release once when this app opens.
     /// Existing profiles without the field use the enabled default.
@@ -279,6 +280,7 @@ impl Default for InterfacePreferences {
             show_details: true,
             details_height: None,
             toolbar_pins: [true; 10],
+            toolbar_converter: true,
             auto_download_status: true,
             check_updates_on_launch: true,
             clipboard_links: true,
@@ -421,11 +423,13 @@ mod tests {
             serde_json::from_str(r#"{"language":"de","compact_rows":true,"show_details":false}"#)
                 .unwrap();
         assert_eq!(older.toolbar_pins, [true; 10]);
+        assert!(older.toolbar_converter);
         assert_eq!(older.details_height, None);
         let conn = Connection::open_in_memory().unwrap();
         initialize(&conn).unwrap();
         let mut changed = older;
         changed.toolbar_pins[6] = false;
+        changed.toolbar_converter = false;
         changed.details_height = Some(237);
         write_interface(&conn, changed).unwrap();
         let data: String = conn
@@ -696,6 +700,7 @@ mod tests {
             toolbar_pins: [
                 true, false, true, false, true, false, true, false, true, false,
             ],
+            toolbar_converter: false,
             auto_download_status: false,
             check_updates_on_launch: false,
             clipboard_links: false,

@@ -27,6 +27,7 @@ pub(super) struct Extras {
     pub(super) launch_update_check: Option<updates::State>,
     checksum: Option<ChecksumDialog>,
     pub(super) checksum_batch: Option<checksums::Batch>,
+    pub(super) converter: audio_conversion::Converter,
     pub(super) watches: HashMap<String, Watch>,
     pub(super) exit_deadline: Option<Instant>,
     /// The shut down, sleep or hibernate countdown. Other code cancels it by
@@ -54,6 +55,7 @@ impl Default for Extras {
             launch_update_check: None,
             checksum: None,
             checksum_batch: None,
+            converter: Default::default(),
             watches: HashMap::new(),
             exit_deadline: None,
             shutdown_deadline: None,

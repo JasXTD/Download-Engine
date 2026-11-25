@@ -268,6 +268,7 @@ Source: "{#SourceRoot}\PRIVACY.md"; DestDir: "{app}\extensions\edge"; Flags: ign
 Source: "{#SourceRoot}\PRIVACY.md"; DestDir: "{app}\extensions\brave"; Flags: ignoreversion
 Source: "{#SourceRoot}\PRIVACY.md"; DestDir: "{app}\extensions\firefox"; Flags: ignoreversion
 Source: "{#SourceRoot}\tools\ffmpeg\ffmpeg.exe"; DestDir: "{app}\tools\ffmpeg"; Flags: ignoreversion
+Source: "{#SourceRoot}\tools\ffmpeg\lame.exe"; DestDir: "{app}\tools\ffmpeg"; Flags: ignoreversion
 Source: "{#SourceRoot}\tools\ffmpeg\LICENSE"; DestDir: "{app}\tools\ffmpeg"; Flags: ignoreversion
 Source: "{#SourceRoot}\tools\ffmpeg\README.md"; DestDir: "{app}\tools\ffmpeg"; Flags: ignoreversion
 Source: "{#SourceRoot}\tools\ffmpeg\PROVENANCE.md"; DestDir: "{app}\tools\ffmpeg"; Flags: ignoreversion

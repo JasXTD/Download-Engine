@@ -66,7 +66,7 @@ impl Snapshot {
     }
 }
 
-pub(super) fn open_owned(path: &Path, create: bool) -> Result<File> {
+pub(crate) fn open_owned(path: &Path, create: bool) -> Result<File> {
     let mut options = std::fs::OpenOptions::new();
     options.read(true).write(create).create_new(create);
     #[cfg(unix)]
@@ -175,7 +175,7 @@ pub(super) fn same_name_ignoring_case(from: &Path, to: &Path) -> bool {
     }
 }
 
-pub(super) fn rename_owned(file: &File, from: &Path, target: &Path) -> Result<()> {
+pub(crate) fn rename_owned(file: &File, from: &Path, target: &Path) -> Result<()> {
     #[cfg(windows)]
     {
         use std::os::windows::{ffi::OsStrExt, io::AsRawHandle};
@@ -186,12 +186,16 @@ pub(super) fn rename_owned(file: &File, from: &Path, target: &Path) -> Result<()
             name.len() <= 32767 && !name.contains(&0),
             "Invalid destination path"
         );
-        let size = std::mem::offset_of!(FILE_RENAME_INFO, FileName) + name.len() * 2;
+        // FileNameLength excludes the terminating WCHAR, but Win32 also reads
+        // FileName as a NUL-terminated path. Reserve that WCHAR explicitly.
+        let name_bytes = name.len() * size_of::<u16>();
+        let size = size_of::<FILE_RENAME_INFO>()
+            .max(std::mem::offset_of!(FILE_RENAME_INFO, FileName) + name_bytes + size_of::<u16>());
         // u64 storage provides the Windows x64 structure's required alignment.
         let mut storage = vec![0u64; size.div_ceil(8)];
         let info = storage.as_mut_ptr().cast::<FILE_RENAME_INFO>();
         unsafe {
-            (*info).FileNameLength = (name.len() * 2) as u32;
+            (*info).FileNameLength = name_bytes as u32;
             std::ptr::copy_nonoverlapping(
                 name.as_ptr(),
                 std::ptr::addr_of_mut!((*info).FileName).cast::<u16>(),

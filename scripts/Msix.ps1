@@ -94,7 +94,7 @@ function Copy-MsixPayload {
             }
         }
     } finally { $zip.Dispose() }
-    foreach ($required in @('de.exe','de-host.exe','de-cli.exe','de-torrent.exe','tools/ffmpeg/ffmpeg.exe','tools/ffmpeg/PROVENANCE.md','LICENSE','THIRD-PARTY-NOTICES.md')) {
+    foreach ($required in @('de.exe','de-host.exe','de-cli.exe','de-torrent.exe','tools/ffmpeg/ffmpeg.exe','tools/ffmpeg/lame.exe','tools/ffmpeg/PROVENANCE.md','LICENSE','THIRD-PARTY-NOTICES.md')) {
         if (-not (Test-Path -LiteralPath (Join-Path $Destination $required) -PathType Leaf)) {
             throw "Required MSIX payload file is missing: $required"
         }

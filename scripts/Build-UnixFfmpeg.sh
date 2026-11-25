@@ -96,12 +96,16 @@ stage=ffmpeg-configure
 stage=ffmpeg-build
 make -j"$jobs" ffmpeg ffprobe
 cp ffmpeg ffprobe "$output/"
+stage=mp3-encoder
+bash "$repo/tools/ffmpeg/source/build-lame.sh" "$output/lame"
+cp "$repo/tools/ffmpeg/licenses/LAME-COPYING" "$output/licenses/"
 if [[ $(uname -s) == Darwin ]]; then
     stage=helper-signing
     # Sign before recording the digest embedded in the app. Signing afterwards
     # would change the helper bytes and make runtime verification reject it.
     /usr/bin/codesign --force --sign - "$output/ffmpeg"
     /usr/bin/codesign --force --sign - "$output/ffprobe"
+    /usr/bin/codesign --force --sign - "$output/lame"
 fi
 if [[ "${DOWNLOAD_ENGINE_SKIP_FFMPEG_TESTS:-0}" == 1 ]]; then
     for test_name in hdr-metadata-test vorbis-init-test; do
@@ -127,5 +131,5 @@ cp COPYING.* LICENSE.md "$output/licenses/"
 cc --version > "$output/build-record/compiler-version.log"
 "$output/ffmpeg" -version > "$output/build-record/ffmpeg-version.log"
 cd "$output"
-sha256sum ffmpeg ffprobe > build-record/binaries.sha256
+sha256sum ffmpeg ffprobe lame > build-record/binaries.sha256
 printf 'Built native helper: %s\n' "$output/ffmpeg"

@@ -538,6 +538,7 @@ fn toolbar_labels_share_one_size_and_top_line() {
                             && text.galley.job.sections[0].format.font_id.size <= 11.0 =>
                     {
                         Some((
+                            text.galley.job.text.as_str(),
                             text.galley.job.sections[0].format.font_id.size,
                             text.pos.y + text.galley.rect.top(),
                         ))
@@ -545,17 +546,39 @@ fn toolbar_labels_share_one_size_and_top_line() {
                     _ => None,
                 })
                 .collect();
-            assert!(
-                labels.len() >= 6 && labels.len() <= 16,
-                "{language:?}: expected readable toolbar actions and More"
-            );
             let what = format!("{language:?} {size:?}");
+            let required = [
+                "Add URL",
+                "Start again",
+                "Pause",
+                "Stop",
+                "Stop all",
+                "More",
+            ];
+            for name in required {
+                let expected = translated(language, name);
+                assert!(
+                    labels.iter().any(|(text, _, _)| *text == expected),
+                    "{what}: missing toolbar label {expected:?}"
+                );
+            }
+            let pinned = app
+                .interface
+                .toolbar_pins
+                .iter()
+                .filter(|&&pin| pin)
+                .count()
+                + usize::from(app.interface.toolbar_converter);
+            assert!(
+                labels.len() <= required.len() + pinned,
+                "{what}: {labels:?}"
+            );
             same(
-                &labels.iter().map(|(size, _)| *size).collect::<Vec<_>>(),
+                &labels.iter().map(|(_, size, _)| *size).collect::<Vec<_>>(),
                 &format!("{what} label sizes"),
             );
             same(
-                &labels.iter().map(|(_, top)| *top).collect::<Vec<_>>(),
+                &labels.iter().map(|(_, _, top)| *top).collect::<Vec<_>>(),
                 &format!("{what} label tops"),
             );
         }

@@ -123,6 +123,7 @@ verification on a real Mac desktop.
 bash scripts/Build-UnixFfmpeg.sh "$PWD/artifacts/native-ffmpeg"
 export DOWNLOAD_ENGINE_FFMPEG_SHA256="$(awk '/  ffmpeg$/ {print $1}' artifacts/native-ffmpeg/build-record/binaries.sha256)"
 export DOWNLOAD_ENGINE_FFMPEG_PATH="$PWD/artifacts/native-ffmpeg/ffmpeg"
+export DOWNLOAD_ENGINE_LAME_SHA256="$(awk '/  lame$/ {print $1}' artifacts/native-ffmpeg/build-record/binaries.sha256)"
 cargo test --locked --offline --all-targets -- --test-threads=2
 cargo test --locked --offline --manifest-path torrent/Cargo.toml -- --test-threads=2
 export DOWNLOAD_ENGINE_NATIVE_FFMPEG="$PWD/artifacts/native-ffmpeg"

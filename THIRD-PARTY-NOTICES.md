@@ -17,7 +17,7 @@ Asset provenance is documented in `assets/themes/README.md` in the source packag
 The separate `tools/ffmpeg/ffmpeg.exe` helper (`ffmpeg` in native packages) is
 distributed under GPL version 3. It is built from the pinned FFmpeg and x264 sources
 with the documented downstream safety fixes. Download Engine invokes it as a
-separate command-line program to merge local tracks without re-encoding.
+separate command-line program to merge local tracks and to decode audio for MP3 conversion.
 
 - License: [GNU GPLv3](tools/ffmpeg/LICENSE).
 - Complete corresponding source: the two original upstream source archives in
@@ -34,6 +34,10 @@ separate command-line program to merge local tracks without re-encoding.
 No separate download or source-code request is required to obtain these sources.
 If redistributing a binary package, keep these materials with it. Publishing
 Download Engine's MIT source alone does not replace this source distribution.
+
+## LAME MP3 encoder
+
+Download Engine uses LAME 4.0 to encode audio from the bundled FFmpeg decoder. The package includes LAME's complete source archive, authors' notices and build scripts. [LAME project](https://lame.sourceforge.io/) · [License](tools/ffmpeg/licenses/LAME-COPYING) · [Rebuild instructions](tools/ffmpeg/source/README.md)
 
 ## Rust dependencies and fonts
 

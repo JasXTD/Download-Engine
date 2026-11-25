@@ -25,15 +25,15 @@ if [[ "$(uname -s)" == Darwin ]]; then
   done
   /usr/bin/codesign --verify --deep --strict "$package/Download Engine.app"
 fi
-expected_ffmpeg=$(awk '/  ffmpeg$/ {print $1}' "$resources/tools/ffmpeg/build-record/binaries.sha256")
-if command -v sha256sum >/dev/null; then
-  actual_ffmpeg=$(sha256sum "$resources/tools/ffmpeg/ffmpeg" | cut -d ' ' -f 1)
-else
-  actual_ffmpeg=$(shasum -a 256 "$resources/tools/ffmpeg/ffmpeg" | cut -d ' ' -f 1)
-fi
-[[ "$expected_ffmpeg" =~ ^[a-f0-9]{64}$ && "$actual_ffmpeg" == "$expected_ffmpeg" ]] || {
-  echo 'Packaged FFmpeg differs from the checksum compiled into the app' >&2; exit 1;
-}
+for helper in ffmpeg lame; do
+  expected=$(awk -v name="$helper" '$2 == name {print $1}' "$resources/tools/ffmpeg/build-record/binaries.sha256")
+  if command -v sha256sum >/dev/null; then
+    actual=$(sha256sum "$resources/tools/ffmpeg/$helper" | cut -d ' ' -f 1)
+  else
+    actual=$(shasum -a 256 "$resources/tools/ffmpeg/$helper" | cut -d ' ' -f 1)
+  fi
+  [[ "$expected" =~ ^[a-f0-9]{64}$ && "$actual" == "$expected" ]] || { echo "Packaged $helper checksum mismatch" >&2; exit 1; }
+done
 export DOWNLOAD_ENGINE_HOME="$fixture/profile"
 "$programs/de-cli" --version
 "$programs/de-cli" list --no-start > "$fixture/list.json"
@@ -54,10 +54,15 @@ else
   "$resources/tools/ffmpeg/ffmpeg" -hide_banner -nostdin -loglevel error -xerror \
     -i "$fixture/harmless.mp4" -f null -
   printf 'Packaged FFmpeg encode/decode passed.\n'
+  "$resources/tools/ffmpeg/ffmpeg" -nostdin -v error -f lavfi -i sine=duration=0.25 -ac 2 -ar 44100 -f s16le pipe:1 |
+    "$resources/tools/ffmpeg/lame" --silent -r -s 44.1 --bitwidth 16 --signed --little-endian -m j -b 192 - - > "$fixture/tone.mp3"
+  "$resources/tools/ffmpeg/ffmpeg" -nostdin -v error -xerror -abort_on empty_output -f mp3 -i "$fixture/tone.mp3" -f null -
 fi
 test -x "$programs/de" && test -x "$programs/de-torrent"
 test -s "$resources/tools/ffmpeg/source/ffmpeg-946fcce07b6dcd0331c8cc609192aeff5e1924f8.tar.gz"
 test -s "$resources/tools/ffmpeg/LICENSE"
+test -s "$resources/tools/ffmpeg/licenses/LAME-COPYING"
+test -s "$resources/tools/ffmpeg/source/lame-4.0.tar.gz"
 test ! -e "$resources/tools/ffmpeg/build-record/config.log"
 test -s "$resources/docs/licenses/RUST-DEPENDENCIES.md"
 test -s "$resources/extensions/firefox/manifest.json"

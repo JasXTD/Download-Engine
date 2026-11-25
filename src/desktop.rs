@@ -2,6 +2,7 @@ use download_engine::{i18n::tr, tf};
 mod about;
 mod add_download;
 mod add_login;
+mod audio_conversion;
 mod authentication;
 mod automation;
 mod background_io;
@@ -134,6 +135,7 @@ impl Filter {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum Dialog {
     Automation,
+    Converter,
     Confirm,
     About,
     CheckUpdates,

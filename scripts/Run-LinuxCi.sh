@@ -65,7 +65,9 @@ case "${1:-}" in
     fi
     cargo test --locked --offline --manifest-path torrent/Cargo.toml -j 2 -- --test-threads=2
     cargo test --locked --offline --lib extensions:: -j 2 -- --test-threads=2
+    cargo test --locked --offline --lib hls::merge::unix_program::tests -j 2 -- --test-threads=2
     cargo test --locked --offline --lib --bin de audio_conversion:: -j 2 -- --test-threads=2
+    cargo test --locked --offline --test downloads categories:: -j 2 -- --test-threads=2
     cargo test --locked --offline --test extension_jobs -j 2 -- --test-threads=2
     cargo test --locked --offline --test hls --test browser_video -j 2 -- --test-threads=2
     cargo test --locked --offline --bin de desktop::extensions::tests -j 2 -- --test-threads=2

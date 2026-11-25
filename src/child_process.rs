@@ -258,6 +258,15 @@ impl Running {
         cancel: &CancellationToken,
         memory_limit: Option<usize>,
     ) -> Result<Self> {
+        Self::spawn_with(command, cancel, memory_limit, Command::spawn)
+    }
+
+    pub(crate) fn spawn_with(
+        command: &mut Command,
+        cancel: &CancellationToken,
+        memory_limit: Option<usize>,
+        start: impl FnOnce(&mut Command) -> std::io::Result<Child>,
+    ) -> Result<Self> {
         ensure!(!cancel.is_cancelled(), "Operation cancelled");
         #[cfg(unix)]
         {
@@ -288,7 +297,7 @@ impl Running {
             use windows_sys::Win32::System::Threading::{CREATE_NO_WINDOW, CREATE_SUSPENDED};
             command.creation_flags(CREATE_NO_WINDOW | CREATE_SUSPENDED);
         }
-        let child = command.spawn().context("Cannot start the helper process")?;
+        let child = start(command).context("Cannot start the helper process")?;
         let running = Self {
             child,
             #[cfg(windows)]

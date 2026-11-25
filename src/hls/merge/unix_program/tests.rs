@@ -1,5 +1,10 @@
+use super::super::Helper;
 use super::*;
 use std::{fs, path::Path};
+
+fn status(command: &mut Command) -> std::io::Result<std::process::ExitStatus> {
+    Helper::start(command, &CancellationToken::new())?.wait()
+}
 
 fn fixture() -> (tempfile::TempDir, PathBuf, String) {
     let root = tempfile::tempdir().unwrap();
@@ -52,7 +57,7 @@ fn permissive_umask_keeps_the_snapshot_private_and_executable() {
         fs::metadata(folder.join("ffmpeg")).unwrap().mode() & 0o777,
         0o500
     );
-    assert!(program.command().status().unwrap().success());
+    assert!(status(&mut program.command()).unwrap().success());
     drop(program);
     assert!(!folder.exists());
 }
@@ -65,7 +70,7 @@ fn replacing_the_resource_cannot_replace_the_verified_program() {
     fs::copy("/usr/bin/false", &source).unwrap();
     // Prove the replacement is executable and distinguishable from the pin.
     assert!(!Command::new(&source).status().unwrap().success());
-    assert!(program.command().status().unwrap().success());
+    assert!(status(&mut program.command()).unwrap().success());
 }
 
 #[test]
@@ -76,7 +81,7 @@ fn rewriting_the_original_inode_does_not_change_the_verified_copy() {
     fs::write(&source, fs::read("/usr/bin/false").unwrap()).unwrap();
     assert_eq!(fs::metadata(&source).unwrap().ino(), before);
     assert!(!Command::new(&source).status().unwrap().success());
-    assert!(program.command().status().unwrap().success());
+    assert!(status(&mut program.command()).unwrap().success());
 }
 
 #[test]
@@ -90,10 +95,7 @@ fn replacing_resource_ancestors_or_the_callers_cwd_cannot_redirect_exec() {
     fs::create_dir(&resource).unwrap();
     fs::copy("/usr/bin/false", resource.join("ffmpeg")).unwrap();
     assert!(
-        program
-            .command()
-            .current_dir(&resource)
-            .status()
+        status(program.command().current_dir(&resource))
             .unwrap()
             .success()
     );
@@ -109,7 +111,7 @@ fn replacing_the_snapshot_name_cannot_redirect_exec_or_recursive_cleanup() {
     fs::create_dir(&original_name).unwrap();
     fs::copy("/usr/bin/false", original_name.join("ffmpeg")).unwrap();
     fs::write(original_name.join("keep"), b"preserve replacement files").unwrap();
-    assert!(program.command().status().unwrap().success());
+    assert!(status(&mut program.command()).unwrap().success());
     drop(program);
     assert_eq!(
         fs::read(original_name.join("keep")).unwrap(),
@@ -133,9 +135,9 @@ fn commands_keep_the_snapshot_alive_and_release_it_after_completion_or_spawn_fai
         assert!(folder.is_dir());
         if fail_spawn {
             command.current_dir(root.path().join("missing"));
-            assert!(command.status().is_err());
+            assert!(status(&mut command).is_err());
         } else {
-            assert!(command.status().unwrap().success());
+            assert!(status(&mut command).unwrap().success());
         }
         drop(command);
         assert!(!folder.exists());
@@ -178,8 +180,7 @@ fn guarded_child_launch_keeps_the_verified_program_and_process_limits() {
     let program = checked(&source, &expected);
     let token = CancellationToken::new();
     let mut command = program.command();
-    let mut running =
-        crate::child_process::Running::spawn(&mut command, &token, Some(64 << 20)).unwrap();
+    let mut running = Helper::spawn(&mut command, &token, Some(64 << 20)).unwrap();
     let deadline = std::time::Instant::now() + std::time::Duration::from_secs(5);
     let status = loop {
         if let Some(status) = running.try_wait().unwrap() {
@@ -193,5 +194,68 @@ fn guarded_child_launch_keeps_the_verified_program_and_process_limits() {
     };
     assert!(status.success());
     token.cancel();
-    assert!(crate::child_process::Running::spawn(&mut command, &token, Some(64 << 20)).is_err());
+    assert!(Helper::spawn(&mut command, &token, Some(64 << 20)).is_err());
+}
+
+#[cfg(target_os = "linux")]
+#[test]
+fn a_busy_verified_helper_waits_for_the_writer_or_cancellation() {
+    use std::{io::ErrorKind, sync::mpsc, time::Duration};
+
+    let (_root, source, expected) = fixture();
+    let program = checked(&source, &expected);
+    let path = program.folder.join("ffmpeg");
+    for cancel_launch in [false, true] {
+        // Keep one writable descriptor open, as a sibling process can between
+        // fork and exec. Restore the executable's normal mode before launch.
+        fs::set_permissions(&path, fs::Permissions::from_mode(0o700)).unwrap();
+        let writer = File::options().write(true).open(&path).unwrap();
+        writer
+            .set_permissions(fs::Permissions::from_mode(0o500))
+            .unwrap();
+        assert_eq!(
+            program.command().spawn().unwrap_err().kind(),
+            ErrorKind::ExecutableFileBusy
+        );
+
+        let cancel = CancellationToken::new();
+        std::thread::scope(|scope| {
+            let (send, receive) = mpsc::channel();
+            let (ready, started) = mpsc::channel();
+            let program = &program;
+            let token = cancel.clone();
+            scope.spawn(move || {
+                ready.send(()).unwrap();
+                let result = Helper::start(&mut program.command(), &token)
+                    .and_then(|mut child| child.wait());
+                send.send(result).unwrap();
+            });
+            started.recv().unwrap();
+            assert!(matches!(
+                receive.recv_timeout(Duration::from_millis(50)),
+                Err(mpsc::RecvTimeoutError::Timeout)
+            ));
+            if cancel_launch {
+                cancel.cancel();
+                assert_eq!(
+                    receive
+                        .recv_timeout(Duration::from_secs(5))
+                        .unwrap()
+                        .unwrap_err()
+                        .kind(),
+                    ErrorKind::Interrupted
+                );
+                drop(writer);
+            } else {
+                drop(writer);
+                assert!(
+                    receive
+                        .recv_timeout(Duration::from_secs(5))
+                        .unwrap()
+                        .unwrap()
+                        .success()
+                );
+            }
+        });
+    }
 }

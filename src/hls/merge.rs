@@ -60,6 +60,31 @@ impl Helper {
             self.program.command()
         }
     }
+    pub(crate) fn spawn(
+        command: &mut Command,
+        cancel: &CancellationToken,
+        memory_limit: Option<usize>,
+    ) -> Result<child_process::Running> {
+        child_process::Running::spawn_with(command, cancel, memory_limit, |cmd| {
+            Self::start(cmd, cancel)
+        })
+    }
+
+    pub(crate) fn start(
+        command: &mut Command,
+        cancel: &CancellationToken,
+    ) -> std::io::Result<std::process::Child> {
+        #[cfg(target_os = "linux")]
+        {
+            unix_program::start(command, cancel)
+        }
+        #[cfg(not(target_os = "linux"))]
+        {
+            let _ = cancel;
+            command.spawn()
+        }
+    }
+
     pub(crate) async fn checked(cancel: &CancellationToken) -> Result<Self> {
         let cancel = cancel.clone();
         tokio::task::spawn_blocking(move || Self::ffmpeg(&cancel)).await?
@@ -451,7 +476,7 @@ fn run_inner(
         .stdin(Stdio::null())
         .stdout(output.try_clone()?)
         .stderr(Stdio::piped());
-    let mut running = child_process::Running::spawn(command, cancel, Some(1024 * 1024 * 1024))?;
+    let mut running = Helper::spawn(command, cancel, Some(1024 * 1024 * 1024))?;
     let stderr = child_process::reader(
         running
             .child

@@ -52,12 +52,18 @@ fn full_disk_does_not_publish_a_partial_mp3() {
 }
 
 fn ffmpeg(args: &[&str]) -> Vec<u8> {
-    let helper = Helper::ffmpeg(&CancellationToken::new()).unwrap();
-    let out = helper
-        .command()
+    let cancel = CancellationToken::new();
+    let helper = Helper::ffmpeg(&cancel).unwrap();
+    let mut command = helper.command();
+    command
         .args(["-nostdin", "-loglevel", "error"])
         .args(args)
-        .output()
+        .stdin(Stdio::null())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped());
+    let out = Helper::start(&mut command, &cancel)
+        .unwrap()
+        .wait_with_output()
         .unwrap();
     assert!(
         out.status.success(),

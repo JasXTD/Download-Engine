@@ -318,6 +318,9 @@ async fn transfer(
         return Ok(Some(file));
     }
     let root = store.paths.parts(&job.id)?;
+    tokio::fs::create_dir_all(&job.directory)
+        .await
+        .context("Cannot create the download folder")?;
     if let Some(file) = finalization::recover(store, job, &root, cancel).await? {
         return Ok(Some(file));
     }
@@ -329,9 +332,6 @@ async fn transfer(
     job.integrity.actual = None;
     let _cache_guards =
         download_file::prepare_parts(&store.paths.data.join("parts"), &root).await?;
-    tokio::fs::create_dir_all(&job.directory)
-        .await
-        .context("Cannot create the download folder")?;
     if job.received_sha256.is_some() {
         return finalize(store, job, &root, cancel, false).await;
     }

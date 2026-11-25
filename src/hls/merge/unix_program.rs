@@ -22,6 +22,39 @@ use tokio_util::sync::CancellationToken;
 
 const MAX_PROGRAM_BYTES: u64 = 512 * 1024 * 1024;
 
+#[cfg(target_os = "linux")]
+pub(super) fn start(
+    command: &mut Command,
+    cancel: &CancellationToken,
+) -> std::io::Result<std::process::Child> {
+    use std::{
+        io,
+        time::{Duration, Instant},
+    };
+
+    // A sibling fork can inherit the snapshot writer until its close-on-exec
+    // descriptors close. Linux rejects exec during that window. No helper
+    // has started on ETXTBSY, so retry only that error on the same command.
+    let deadline = Instant::now() + Duration::from_secs(2);
+    loop {
+        if cancel.is_cancelled() {
+            return Err(io::Error::new(
+                io::ErrorKind::Interrupted,
+                "Operation cancelled",
+            ));
+        }
+        match command.spawn() {
+            Err(error)
+                if error.kind() == io::ErrorKind::ExecutableFileBusy
+                    && Instant::now() < deadline =>
+            {
+                std::thread::sleep(Duration::from_millis(10));
+            }
+            result => return result,
+        }
+    }
+}
+
 pub(super) struct Program {
     directory: File,
     // A private directory limits access to this user. It is not a sandbox

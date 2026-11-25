@@ -138,7 +138,7 @@ pub fn convert_with_bitrate(
             Err(e) => return Err(e).context("Cannot check the source file's Internet zone"),
         }
     }
-    let mut decode = Running::spawn(
+    let mut decode = Helper::spawn(
         decoder
             .command()
             .env_remove("FFREPORT")
@@ -187,7 +187,7 @@ pub fn convert_with_bitrate(
         Format::Wav => (pcm, None),
         Format::Mp3 => {
             let encoder = Helper::mp3_encoder(cancel)?;
-            let mut encode = Running::spawn(
+            let mut encode = Helper::spawn(
                 encoder
                     .command()
                     .env_remove("LAMEOPT")

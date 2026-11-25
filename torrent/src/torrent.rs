@@ -249,13 +249,13 @@ impl TorrentCore {
         meta: Arc<TorrentMeta>,
         options: TorrentOptions,
         context: Context,
-        only: Option<Vec<usize>>,
+        files: &TorrentFiles,
     ) -> Result<Arc<Self>> {
         meta.require_complete_layers()?;
         let wanted = meta.wanted_pieces(if options.seed_only {
             None
         } else {
-            only.as_deref()
+            files.only.as_deref()
         })?;
         let have = Bitfield::new(meta.lengths.total_pieces());
         let mut picker = Picker::new(
@@ -280,12 +280,12 @@ impl TorrentCore {
                 meta.clone(),
                 options.output.clone(),
                 options.file_name.clone(),
-                only.as_deref(),
+                files.only.as_deref(),
             )?
         } else {
             Storage::new(meta.clone(), options.output.clone())
         };
-        if let Some(directory) = &options.directory {
+        if let Some(directory) = &files.directory {
             storage.bind_directory(directory.clone());
         }
         let storage = Arc::new(storage);
@@ -299,7 +299,7 @@ impl TorrentCore {
             crashed_connections: AtomicU32::new(0),
             downloaded: AtomicU64::new(0),
             uploaded: AtomicU64::new(0),
-            only: Mutex::new(only),
+            only: Mutex::new(files.only.clone()),
             checked: AtomicBool::new(false),
             distrust_saved: AtomicBool::new(false),
             checked_pieces: AtomicU32::new(0),
@@ -692,6 +692,12 @@ struct AddedTracker {
     search: Option<CancellationToken>,
 }
 
+#[derive(Default)]
+struct TorrentFiles {
+    only: Option<Vec<usize>>,
+    directory: Option<Arc<crate::storage::Directory>>,
+}
+
 pub struct Torrent {
     info_hash: Id20,
     hashes: crate::v2::InfoHashes,
@@ -704,7 +710,9 @@ pub struct Torrent {
     phase: Mutex<Phase>,
     /// The code of the error in `phase`, when it has one.
     error_code: Mutex<Option<&'static str>>,
-    selection: Mutex<Option<Vec<usize>>>,
+    /// A paused torrent keeps its directory pinned. Removal takes this state even if
+    /// a caller still holds the torrent to inspect its metadata or statistics.
+    files: Mutex<Option<TorrentFiles>>,
     selected: Notify,
     run: tokio::sync::Mutex<Option<RunHandle>>,
     board: Arc<TrackerBoard>,
@@ -741,7 +749,7 @@ impl Torrent {
     fn blank(
         hashes: crate::v2::InfoHashes,
         trackers: Vec<Url>,
-        options: TorrentOptions,
+        mut options: TorrentOptions,
         context: Context,
     ) -> Self {
         let board = TrackerBoard::new(&trackers);
@@ -766,7 +774,10 @@ impl Torrent {
             hashes,
             registry: OnceLock::new(),
             context,
-            selection: Mutex::new(options.only.clone()),
+            files: Mutex::new(Some(TorrentFiles {
+                only: options.only.take(),
+                directory: options.directory.take(),
+            })),
             options,
             trackers,
             meta: OnceLock::new(),
@@ -844,12 +855,17 @@ impl Torrent {
         *self.phase.lock() == Phase::Paused
     }
 
-    /// Starts or resumes the torrent. Does nothing if it is already running.
+    /// Starts or resumes a managed torrent. A removed torrent stays stopped.
     pub async fn start(self: &Arc<Self>) {
         let mut run = self.run.lock().await;
-        if run
-            .as_ref()
-            .is_some_and(|handle| !handle.task.is_finished())
+        self.start_run(&mut run);
+    }
+
+    fn start_run(self: &Arc<Self>, run: &mut Option<RunHandle>) {
+        if self.files.lock().is_none()
+            || run
+                .as_ref()
+                .is_some_and(|handle| !handle.task.is_finished())
         {
             return;
         }
@@ -867,14 +883,29 @@ impl Torrent {
 
     /// Stops all traffic and waits until it has stopped. Everything is kept for resuming.
     pub async fn pause(&self) {
-        let handle = self.run.lock().await.take();
-        if let Some(handle) = handle {
+        let mut run = self.run.lock().await;
+        self.stop_run(&mut run).await;
+    }
+
+    async fn stop_run(&self, run: &mut Option<RunHandle>) {
+        if let Some(handle) = run.as_mut() {
             handle.cancel.cancel();
-            let _ = handle.task.await;
+            // A cancelled caller or another stop must still be able to join this task.
+            let _ = (&mut handle.task).await;
+            *run = None;
         }
         let mut phase = self.phase.lock();
         if !matches!(*phase, Phase::Error(_) | Phase::Finished) {
             *phase = Phase::Paused;
+        }
+    }
+
+    pub(crate) async fn remove(&self) {
+        let mut run = self.run.lock().await;
+        self.stop_run(&mut run).await;
+        self.files.lock().take();
+        if let Some(core) = self.core.get() {
+            core.storage.release();
         }
     }
 
@@ -891,6 +922,8 @@ impl Torrent {
 
     /// Chooses which files to download, at any time.
     pub fn select(&self, only: Option<Vec<usize>>) -> Result<()> {
+        let mut files = self.files.lock();
+        let files = files.as_mut().context("This torrent was removed")?;
         anyhow::ensure!(
             !self.options.seed_only,
             "Stop read-only sharing before changing its file selection"
@@ -909,7 +942,7 @@ impl Torrent {
                 live.nudge_all();
             }
         }
-        *self.selection.lock() = only;
+        files.only = only;
         self.selected.notify_one();
         Ok(())
     }
@@ -946,16 +979,23 @@ impl Torrent {
         let core = match self.core.get() {
             Some(core) => core.clone(),
             None => {
-                if self.options.choose_later && self.selection.lock().is_none() {
+                if self.options.choose_later
+                    && self
+                        .files
+                        .lock()
+                        .as_ref()
+                        .is_some_and(|files| files.only.is_none())
+                {
                     self.set_phase(Phase::Ready);
                     tokio::select! {
                         _ = cancel.cancelled() => return Ok(()),
                         _ = self.selected.notified() => {}
                     }
                 }
-                let only = self.selection.lock().clone();
+                let files = self.files.lock();
+                let files = files.as_ref().context("This torrent was removed")?;
                 let core =
-                    TorrentCore::new(meta, self.options.clone(), self.context.clone(), only)?;
+                    TorrentCore::new(meta, self.options.clone(), self.context.clone(), files)?;
                 self.core.get_or_init(|| core).clone()
             }
         };
@@ -1227,6 +1267,8 @@ impl Torrent {
     /// pass count, and the rest download again. The swarm stops for the check, and a torrent
     /// that was running starts again by itself.
     pub async fn recheck(self: &Arc<Self>) -> Result<()> {
+        let mut run = self.run.lock().await;
+        anyhow::ensure!(self.files.lock().is_some(), "This torrent was removed");
         anyhow::ensure!(
             !self.options.seed_only,
             "A torrent that is only shared can't be checked again"
@@ -1241,10 +1283,10 @@ impl Torrent {
             return Ok(());
         }
         let running = !matches!(phase, Phase::Paused | Phase::Error(_));
-        self.pause().await;
+        self.stop_run(&mut run).await;
         core.forget_progress();
         if running {
-            self.start().await;
+            self.start_run(&mut run);
         }
         Ok(())
     }
@@ -1527,19 +1569,26 @@ async fn hash_files(core: &Arc<TorrentCore>, cancel: &CancellationToken) -> Resu
             Ok(())
         });
     }
-    let mut stopped = false;
-    loop {
+    // A blocking hash may still hold a file when a different worker fails.
+    // Stop scheduling pieces and join every worker before the torrent can be removed.
+    let mut outcome = Ok(true);
+    while !workers.is_empty() {
         tokio::select! {
-            _ = cancel.cancelled(), if !stopped => {
-                stopped = true;
+            _ = cancel.cancelled(), if matches!(outcome, Ok(true)) => {
                 stop.store(true, Ordering::Relaxed);
+                outcome = Ok(false);
             }
-            done = workers.join_next() => match done {
-                None => return Ok(!stopped),
-                Some(result) => result?.context("Could not read the download files")?,
-            },
+            Some(done) = workers.join_next() => {
+                let checked = done.context("The file checker stopped unexpectedly")
+                    .and_then(|result| result.context("Could not read the download files"));
+                if let Err(error) = checked && outcome.is_ok() {
+                    stop.store(true, Ordering::Relaxed);
+                    outcome = Err(error);
+                }
+            }
         }
     }
+    outcome
 }
 
 /// Runs the swarm until it is stopped. Returns the phase to move to, if a new one is due.
@@ -2127,7 +2176,13 @@ mod tests {
 
     fn live_for_tests(folder: &TempFolder) -> Arc<Live> {
         let meta = meta_of(&single_file_torrent("a", &[1u8; 100], 16384));
-        let core = TorrentCore::new(meta, options_for(folder.path()), context(1), None).unwrap();
+        let core = TorrentCore::new(
+            meta,
+            options_for(folder.path()),
+            context(1),
+            &TorrentFiles::default(),
+        )
+        .unwrap();
         let (events, _) = mpsc::unbounded_channel();
         let (found, _) = PeerCandidates::channel(std::iter::empty(), false);
         let (incoming, _) = mpsc::channel(MAX_PEERS);

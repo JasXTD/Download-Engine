@@ -463,8 +463,15 @@ impl Session {
 
     /// Stops a torrent and lets go of its files, which stay on disk.
     pub async fn remove(&self, name: &str) -> Result<()> {
-        self.torrent(name)?.pause().await;
-        self.torrents.lock().remove(name);
+        let torrent = self.torrent(name)?;
+        torrent.remove().await;
+        let mut torrents = self.torrents.lock();
+        if torrents
+            .get(name)
+            .is_some_and(|current| Arc::ptr_eq(current, &torrent))
+        {
+            torrents.remove(name);
+        }
         Ok(())
     }
 
@@ -915,6 +922,115 @@ mod tests {
         wait_until(&torrent, "the check", |stats| stats.finished).await;
         session.remove("one").await.unwrap();
         std::fs::rename(output.path().join("a.bin"), output.path().join("b.bin")).unwrap();
+        assert_eq!(std::fs::read(output.path().join("b.bin")).unwrap(), data);
+    }
+
+    #[tokio::test]
+    async fn removal_releases_bound_staging_before_and_after_file_selection() {
+        for choose_later in [true, false] {
+            let work = TempFolder::new();
+            let output = work.path().join("stage");
+            let moved = work.path().join("saved");
+            std::fs::create_dir(&output).unwrap();
+            let data = sample_bytes(40_000, 57);
+            std::fs::write(output.join("a.bin"), &data).unwrap();
+            let file = single_file_torrent("a.bin", &data, PIECE);
+            let directory = Arc::new(crate::storage::Directory::open(&output).unwrap());
+            let pin = Arc::downgrade(&directory);
+            let session = Session::new(SessionOptions {
+                seed: true,
+                ..Default::default()
+            })
+            .await
+            .unwrap();
+            session
+                .add_torrent_file(
+                    "one".into(),
+                    &file,
+                    AddOptions {
+                        output: output.clone(),
+                        directory: Some(directory),
+                        choose_later,
+                        ..Default::default()
+                    },
+                )
+                .await
+                .unwrap();
+            let retained = session.torrent("one").unwrap();
+            let ready = |stats: &TorrentStats| {
+                if choose_later {
+                    stats.state == "ready"
+                } else {
+                    stats.state == "live" && stats.finished
+                }
+            };
+            wait_until(&retained, "initial file state", ready).await;
+            session.pause("one").await.unwrap();
+            assert!(
+                pin.upgrade().is_some(),
+                "pause must retain the selected directory"
+            );
+            session.resume("one").await.unwrap();
+            wait_until(&retained, "resumed file state", ready).await;
+
+            let (pause, remove) = tokio::join!(session.pause("one"), session.remove("one"));
+            pause.unwrap();
+            remove.unwrap();
+            std::fs::rename(&output, &moved).unwrap();
+            assert_eq!(std::fs::read(moved.join("a.bin")).unwrap(), data);
+            assert!(pin.upgrade().is_none());
+            assert!(retained.select(Some(vec![0])).is_err());
+            assert!(retained.recheck().await.is_err());
+            retained.start().await;
+            assert!(retained.is_paused());
+            assert!(!output.exists());
+        }
+    }
+
+    #[test]
+    fn retrying_an_interrupted_removal_waits_for_the_file_check() {
+        use futures_util::FutureExt;
+
+        tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .max_blocking_threads(1)
+            .build()
+            .unwrap()
+            .block_on(async {
+                let output = TempFolder::new();
+                let data = sample_bytes(40_000, 58);
+                let file = single_file_torrent("a.bin", &data, PIECE);
+                std::fs::write(output.path().join("a.bin"), &data).unwrap();
+                let session = Session::new(SessionOptions::default()).await.unwrap();
+
+                // Keep the actual disk check queued until both remove calls have been polled.
+                let (release, wait) = std::sync::mpsc::channel::<()>();
+                let (started, ready) = tokio::sync::oneshot::channel();
+                let blocker = tokio::task::spawn_blocking(move || {
+                    started.send(()).unwrap();
+                    let _ = wait.recv();
+                });
+                ready.await.unwrap();
+                session
+                    .add_torrent_file("one".into(), &file, add_options(output.path()))
+                    .await
+                    .unwrap();
+                let torrent = session.torrent("one").unwrap();
+                wait_until(&torrent, "the queued file check", |s| {
+                    s.state == "initializing" && s.total_bytes == data.len() as u64
+                })
+                .await;
+
+                assert!(session.remove("one").now_or_never().is_none());
+                let retry = session.remove("one");
+                tokio::pin!(retry);
+                assert!(retry.as_mut().now_or_never().is_none());
+                drop(release);
+                blocker.await.unwrap();
+                retry.await.unwrap();
+                std::fs::rename(output.path().join("a.bin"), output.path().join("b.bin")).unwrap();
+                assert_eq!(std::fs::read(output.path().join("b.bin")).unwrap(), data);
+            });
     }
 
     #[tokio::test]

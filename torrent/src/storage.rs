@@ -463,6 +463,13 @@ impl Storage {
     pub fn close(&self) {
         self.open.lock().files.clear();
     }
+
+    /// Called after the last disk worker has stopped. The directory handle also
+    /// prevents Windows from moving the payload, even after all leaf handles close.
+    pub(crate) fn release(&self) {
+        self.close();
+        self.directory.lock().take();
+    }
 }
 
 fn file_stamp(info: &fs::Metadata) -> Option<FileStamp> {

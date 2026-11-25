@@ -364,14 +364,19 @@ pub(crate) async fn run_connection(
     }
 
     let mut reader = Reader::new(live.clone(), link.clone());
+    let mut upload_read = None;
     let result = tokio::select! {
         biased;
         _ = live.cancel.cancelled() => Ok(()),
         _ = link.kicked.cancelled() => Err(anyhow!("sent bad data too often")),
         result = read_loop(&mut read_half, &mut reader) => result,
-        result = write_loop(&mut write_half, &live, &link) => result,
+        result = write_loop(&mut write_half, &live, &link, &mut upload_read) => result,
     };
     reader.hash_cancel.cancel();
+    // Dropping the writer future leaves a blocking file read running until joined.
+    if let Some(read) = upload_read {
+        let _ = read.await;
+    }
     if let Some(hash) = reader.pending_hash.take() {
         let _ = hash.await;
     }
@@ -429,6 +434,7 @@ async fn write_loop(
     write_half: &mut WriteHalf<BoxedStream>,
     live: &Arc<Live>,
     link: &Arc<PeerLink>,
+    upload_read: &mut Option<UploadRead>,
 ) -> Result<()> {
     let mut control = vec![0u8; MAX_MSG_LEN];
     let mut block = Vec::new();
@@ -465,7 +471,9 @@ async fn write_loop(
                 }
             }
         }
-        block = read_block(live, request, block).await?;
+        let result = upload_read.insert(read_block(live, request, block)?).await;
+        *upload_read = None;
+        block = result??;
         timeout(WRITE_TIMEOUT, write_half.write_all(&block))
             .await
             .context("timed out sending to a peer")??;
@@ -475,8 +483,10 @@ async fn write_loop(
     }
 }
 
+type UploadRead = tokio::task::JoinHandle<io::Result<Vec<u8>>>;
+
 /// Reads a block from disk into a whole piece message. Hands the buffer back to be reused.
-async fn read_block(live: &Arc<Live>, request: Request, mut block: Vec<u8>) -> Result<Vec<u8>> {
+fn read_block(live: &Arc<Live>, request: Request, mut block: Vec<u8>) -> Result<UploadRead> {
     let core = live.core.clone();
     let lengths = &core.meta.lengths;
     let piece = lengths
@@ -495,13 +505,10 @@ async fn read_block(live: &Arc<Live>, request: Request, mut block: Vec<u8>) -> R
     block[PIECE_HEADER..].fill(0);
     let readable = (core.meta.lengths.total_length().saturating_sub(offset))
         .min(u64::from(request.length)) as usize;
-    let (block, result) = tokio::task::spawn_blocking(move || {
-        let result = storage.read(offset, &mut block[PIECE_HEADER..PIECE_HEADER + readable]);
-        (block, result)
-    })
-    .await?;
-    result?;
-    Ok(block)
+    Ok(tokio::task::spawn_blocking(move || {
+        storage.read(offset, &mut block[PIECE_HEADER..PIECE_HEADER + readable])?;
+        Ok(block)
+    }))
 }
 
 /// Puts waiting control messages into `buffer`, and returns how many bytes that made.

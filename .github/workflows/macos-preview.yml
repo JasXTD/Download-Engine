@@ -29,6 +29,8 @@ jobs:
     env:
       CONVERTER_TEST: ${{ github.event_name == 'push' && github.ref_name == 'codex/mp3-converter-ui-macos-20261125' }}
       CARGO_INCREMENTAL: '0'
+      # Keep intermediate crates in the checkout directories restored below.
+      CARGO_BUILD_BUILD_DIR: '{workspace-root}/target'
       CARGO_PROFILE_DEV_DEBUG: '0'
       MACOSX_DEPLOYMENT_TARGET: '11.0'
       # App-only releases keep the previously validated media source. Packaging

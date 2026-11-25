@@ -101,9 +101,10 @@ test('a warm dependency cache rebuilds current app code and still catches failin
   write('src/lib.rs', app(43));
   const cargo = (args, expected = 0) => {
     const isTorrent = args.includes('torrent/Cargo.toml');
-    const result = spawnSync('cargo', [...args, '--target-dir', path.join(root, isTorrent ? 'torrent/target' : 'target')], {
+    const target = path.join(root, isTorrent ? 'torrent/target' : 'target');
+    const result = spawnSync('cargo', [...args, '--target-dir', target], {
       cwd: root, encoding: 'utf8', timeout: 45_000,
-      env: { ...process.env, CARGO_NET_OFFLINE: 'true', CARGO_INCREMENTAL: '0', CARGO_PROFILE_DEV_DEBUG: '0' },
+      env: { ...process.env, CARGO_BUILD_BUILD_DIR: target, CARGO_NET_OFFLINE: 'true', CARGO_INCREMENTAL: '0', CARGO_PROFILE_DEV_DEBUG: '0' },
     });
     assert.ifError(result.error);
     const output = result.stdout + result.stderr;

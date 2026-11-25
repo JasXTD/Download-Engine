@@ -62,6 +62,16 @@ function checkReleaseDocs(root) {
   ];
   const allowedAssets = new Set(assets.flat());
   const linkedAssets = new Set();
+  const pendingAssets = new Set();
+  for (const [anchor, pending] of html.matchAll(/<a\b[^>]*\sdata-pending-release="([^"]+)"[^>]*>/g)) {
+    const platform = pending.split('/')[1];
+    const name = `DownloadEngine-${version}-${platform}.zip`;
+    expect(pending === `${version}/${platform}` &&
+      ['macos-arm64', 'macos-x64'].includes(platform) && !pendingAssets.has(name) &&
+      anchor.match(/\shref="([^"]+)"/)?.[1] === releaseUrl,
+    'docs/index.html: a pending Mac download must link to the current release notes');
+    pendingAssets.add(name);
+  }
   for (const [file, content] of [['README.md', readme], ['docs/index.html', html]]) {
     for (const [url] of content.matchAll(/https:\/\/github\.com\/JasXTD\/Download-Engine\/releases\/[^\s<>"')]+/g)) {
       if (url === `${releaseBase}latest`) continue;
@@ -78,10 +88,11 @@ function checkReleaseDocs(root) {
     }
   }
   for (const choices of assets) {
-    expect(choices.some(name => linkedAssets.has(name)), `docs/index.html: missing release download: ${choices[0]}`);
+    expect(choices.some(name => linkedAssets.has(name) || pendingAssets.has(name)), `docs/index.html: missing release download: ${choices[0]}`);
   }
+  for (const name of pendingAssets) expect(!linkedAssets.has(name), `docs/index.html: both pending and available: ${name}`);
   if (errors.length) throw new Error(`Release documentation check failed:\n- ${errors.join('\n- ')}`);
-  return { version, currentLabels: labels.length, linkedAssets: linkedAssets.size };
+  return { version, currentLabels: labels.length, linkedAssets: linkedAssets.size, pendingAssets: pendingAssets.size };
 }
 
 module.exports = { checkReleaseDocs };

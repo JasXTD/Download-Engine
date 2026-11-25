@@ -39,7 +39,7 @@ test('current release documents pass without changing their bytes', () => {
   fixture({}, folder => {
     const result = checkReleaseDocs(folder);
     assert.equal(result.version, version);
-    assert.equal(result.linkedAssets, 10);
+    assert.equal(result.linkedAssets + result.pendingAssets, 10);
     for (const [file, source] of Object.entries(originals)) {
       assert.equal(fs.readFileSync(path.join(folder, file), 'utf8'), source);
     }
@@ -66,9 +66,9 @@ test('every marked current website label rejects a stale version', async t => {
   rejects('docs/index.html', s => s.replaceAll(' data-release-version', ''), /missing data-release-version/);
 });
 
-test('all ten asset links reject stale tags, stale filenames and missing downloads', async t => {
+test('all available asset links reject stale tags, stale filenames and missing downloads', async t => {
   const urls = [...new Set(originals['docs/index.html'].match(/https:\/\/github\.com\/JasXTD\/Download-Engine\/releases\/download\/[^"<>]+/g))];
-  assert.equal(urls.length, 10);
+  assert.equal(urls.length, checkReleaseDocs(root).linkedAssets);
   for (const url of urls) {
     await t.test(url.slice(url.lastIndexOf('/') + 1), () => {
       rejects('docs/index.html', s => s.replaceAll(url, url.replace(`/v${version}/`, `/v${oldVersion}/`)), /invalid release asset/);
@@ -76,6 +76,20 @@ test('all ten asset links reject stale tags, stale filenames and missing downloa
       rejects('docs/index.html', s => s.replaceAll(url, url.slice(0, split) + url.slice(split).replace(version, oldVersion)), /invalid release asset/);
       rejects('docs/index.html', s => s.replaceAll(url, '#download'), /missing release download/);
     });
+  }
+});
+
+test('a pending Mac architecture must point to this release and cannot hide a missing link for another platform', () => {
+  const site = originals['docs/index.html'];
+  const name = `DownloadEngine-${version}-macos-arm64.zip`;
+  const link = `https://github.com/JasXTD/Download-Engine/releases/tag/v${version}`;
+  const pending = `<a data-pending-release="${version}/macos-arm64" href="${link}">`;
+  const anchor = (site.match(/<a\b[^>]+>/g) || []).find(a => a.includes(name) || a.includes('data-pending-release=') && a.includes('/macos-arm64'));
+  assert.ok(anchor);
+  const html = site.replace(anchor, pending);
+  fixture({'docs/index.html': html}, folder => assert.ok(checkReleaseDocs(folder).pendingAssets >= 1));
+  for (const substitute of [pending.replace(link, '#'), pending.replace('data-pending-release=', 'data-other='), pending.replace('/macos-arm64"', '/linux-x64"'), pending.replace(version + '/macos-arm64', oldVersion + '/macos-arm64')]) {
+    fixture({'docs/index.html': html.replace(pending, substitute)}, folder => assert.throws(() => checkReleaseDocs(folder), /pending Mac|missing release download/));
   }
 });
 

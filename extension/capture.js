@@ -210,7 +210,7 @@
           : reason || __xdL.t("Download kept in the browser."));
     }
     async consider(id) {
-      if (this.running.has(id) || this.running.size >= 3) return;
+      if (this.running.has(id)) return;
       this.running.add(id);
       let record;
       let journalSaved = false;

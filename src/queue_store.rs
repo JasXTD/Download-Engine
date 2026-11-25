@@ -529,28 +529,7 @@ fn prepare_sync_checks(conn: &Connection, queue: &str) -> Result<()> {
         .collect::<rusqlite::Result<_>>()?;
     for (id, data) in jobs {
         let mut job = crate::store::decode_job(&id, &data)?;
-        // Finite HLS jobs keep their reviewed snapshot; a fresh rendition must
-        // go through preview instead of a file synchronization request. FTP
-        // jobs do not participate in HTTP synchronization checks, and a torrent
-        // has no server to compare with.
-        if job.hls.is_some() || job.ftp.is_some() || job.provider.is_some() || job.torrent.is_some()
-        {
-            continue;
-        }
-        if job.status == Status::Complete {
-            crate::synchronization::State::begin(&mut job)?;
-        } else if job.status == Status::Failed && job.synchronization.is_some() {
-            // Keep a resumable replacement plan and the previous saved copy.
-            job.status = Status::Queued;
-            job.error = None;
-            job.retry = crate::retry::State::default();
-            job.synchronization
-                .as_mut()
-                .expect("Synchronization check")
-                .checked_at = None;
-        } else {
-            // Queued/in-flight checks and individually paused jobs keep their
-            // progress and intent. Queue-paused workers use normal recovery.
+        if !crate::synchronization::State::queue_check(&mut job)? {
             continue;
         }
         conn.execute(

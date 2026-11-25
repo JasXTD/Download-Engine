@@ -1753,6 +1753,12 @@ REST offset resume when supported; publication still requires that exact hash.
 Unsupported REST falls back to prefix verification. Changed metadata or saved
 bytes stop the transfer and ask for Restart.
 
+If a full hourly or daily allowance cannot cover the saved prefix and the next
+byte, the download pauses before requesting the file again. Raise or disable
+the limiting quota, then choose **Resume** to keep the partial file.
+If other downloads exhaust the shared allowance during verification and the
+saved file makes no progress, choose **Resume** when enough allowance is available.
+
 Paths use UTF-8, binary transfers, and per-directory CWD commands. A normal URL
 path is relative to the login directory; encode the leading root slash as `%2F`
 when needed, for example `ftps://server/%2Freleases/file.zip`. Encode a literal

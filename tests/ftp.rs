@@ -349,6 +349,136 @@ async fn global_and_file_speed_limits_apply_and_can_be_changed_while_ftp_is_runn
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn ftp_quota_stops_before_replaying_a_prefix_that_exhausts_every_window() {
+    use download_engine::quota::{HOUR, Limits as Quota, MIN_LIMIT};
+    for checksum in [false, true] {
+        let server = Server::new(Mode::Plain).await;
+        server.update(|c| {
+            c.body = vec![17; 3 * MIN_LIMIT as usize];
+            c.rest = !checksum;
+        });
+        let (_home, store) = setup();
+        let now = jiff::Timestamp::now().as_second();
+        store
+            .set_quota_limits_at(
+                Quota {
+                    hourly: Some(MIN_LIMIT),
+                    daily: None,
+                },
+                now,
+            )
+            .unwrap();
+        let mut job = enqueue(&store, &server);
+        if checksum {
+            job.integrity.expected = Some(format!(
+                "{:x}",
+                Sha256::digest(&server.state.config.lock().unwrap().body)
+            ));
+        }
+        let partial = run(&store, job).await;
+        assert_eq!(partial.status, Status::Queued, "{:?}", partial.error);
+        assert!(partial.downloaded >= MIN_LIMIT && partial.quota_waiting);
+        let part = store.paths.parts(&partial.id).unwrap().join("ftp.part");
+        let saved = std::fs::read(&part).unwrap();
+        let transfers = || {
+            server
+                .commands()
+                .iter()
+                .filter(|c| c.starts_with("RETR "))
+                .count()
+        };
+        assert_eq!(transfers(), 1);
+
+        store.quota_status_at(now + HOUR).unwrap();
+        let held = run(&store, partial).await;
+        assert_eq!(held.status, Status::Paused, "{:?}", held.error);
+        assert!(held.quota_waiting && held.error.as_deref().unwrap().contains("quota"));
+        assert_eq!(held.retry.attempts, 0);
+        assert_eq!(held.downloaded, saved.len() as u64);
+        assert_eq!(std::fs::read(&part).unwrap(), saved);
+        assert_eq!(transfers(), 1);
+        assert_eq!(store.quota_status().unwrap().hourly_used, 0);
+
+        store
+            .set_quota_limits_at(
+                Quota {
+                    hourly: None,
+                    daily: Some(8 * MIN_LIMIT),
+                },
+                now + HOUR,
+            )
+            .unwrap();
+        let scheduler = Scheduler::start(store.clone()).unwrap();
+        scheduler.send(Command::Resume(held.id.clone())).unwrap();
+        until(|| store.get(&held.id).unwrap().unwrap().status == Status::Complete).await;
+        let complete = store.get(&held.id).unwrap().unwrap();
+        assert_complete(&complete, &server.state.config.lock().unwrap().body);
+        assert_eq!(transfers(), 2);
+        assert_eq!(
+            store.quota_status().unwrap().daily_used,
+            saved.len() as u64 + complete.downloaded
+        );
+    }
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn ftp_shared_quota_distinguishes_prefix_replay_from_a_verified_rest_offset() {
+    use download_engine::quota::{HOUR, Limits as Quota, MIN_LIMIT};
+    let prefix = 256 * 1024;
+    let suffix = 8192;
+    for checksum in [false, true] {
+        let server = Server::new(Mode::Plain).await;
+        server.update(|c| {
+            c.body = vec![21; prefix + suffix];
+            c.cut = Some(prefix);
+        });
+        let (_home, store) = setup();
+        let mut job = enqueue(&store, &server);
+        if checksum {
+            job.integrity.expected = Some(format!(
+                "{:x}",
+                Sha256::digest(&server.state.config.lock().unwrap().body)
+            ));
+        }
+        let partial = run(&store, job).await;
+        assert_eq!(partial.downloaded, prefix as u64);
+        server.update(|c| c.cut = None);
+        let now = jiff::Timestamp::now().as_second();
+        store
+            .set_quota_limits_at(
+                Quota {
+                    hourly: Some(MIN_LIMIT),
+                    daily: None,
+                },
+                now,
+            )
+            .unwrap();
+        let used = MIN_LIMIT - 64 * 1024;
+        store.record_quota_bytes_at(used, now).unwrap();
+
+        let job = run(&store, partial).await;
+        if checksum {
+            assert_complete(&job, &server.state.config.lock().unwrap().body);
+            assert_eq!(
+                store.quota_status().unwrap().hourly_used,
+                used + suffix as u64
+            );
+        } else {
+            assert_eq!(job.status, Status::Paused, "{:?}", job.error);
+            assert!(job.quota_waiting);
+            assert_eq!(job.downloaded, prefix as u64);
+            store.quota_status_at(now + HOUR).unwrap();
+            let complete = run(&store, job).await;
+            assert_complete(&complete, &server.state.config.lock().unwrap().body);
+            assert_eq!(
+                store.quota_status().unwrap().hourly_used,
+                (prefix + suffix) as u64
+            );
+        }
+    }
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn data_quota_preserves_ftp_partial_and_counts_prefix_verification_after_resume() {
     let server = Server::new(Mode::Plain).await;
     server.update(|c| c.body = vec![42; 2 * 1024 * 1024]);

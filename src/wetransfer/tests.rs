@@ -560,12 +560,9 @@ fn native_and_batch_entry_points_accept_share_links_and_reject_mixed_state() {
     job.plan.as_mut().unwrap().final_url = link();
     job.validate_persisted().unwrap();
     job.status = Status::Complete;
-    assert!(
-        crate::synchronization::State::begin(&mut job)
-            .unwrap_err()
-            .to_string()
-            .contains("WeTransfer")
-    );
+    assert!(!crate::synchronization::State::queue_check(&mut job).unwrap());
+    assert_eq!(job.status, Status::Complete);
+    assert!(job.synchronization.is_none());
 }
 
 /// Explicit opt-in only: never fetch a live share from the regular test suite.

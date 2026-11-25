@@ -226,15 +226,17 @@ pub async fn run(
                     )
                 });
                 job.disk_wait = Some(wait);
-            } else if crate::quota::reached(&error) {
+            } else if let Some(hold) = error.downcast_ref::<crate::quota::Reached>() {
+                use crate::quota::Reached;
                 job.quota_waiting = true;
-                if job.supports_resume() || job.downloaded == 0 {
-                    job.status = Status::Queued;
-                    job.error = Some(error.to_string());
-                } else {
-                    job.status = Status::Paused;
-                    job.error = Some("Data quota reached. This server cannot safely resume the file. Raise or disable the quota, then resume to restart this download.".into());
-                }
+                let (status, message) = match hold {
+                    Reached::Window if job.supports_resume() || job.downloaded == 0 =>
+                        (Status::Queued, error.to_string()),
+                    Reached::Window => (Status::Paused, "Data quota reached. This server cannot safely resume the file. Raise or disable the quota, then resume to restart this download.".into()),
+                    Reached::FtpPrefix => (Status::Paused, error.to_string()),
+                };
+                job.status = status;
+                job.error = Some(message);
             } else {
                 retry::failed(&mut job, &error, jiff::Timestamp::now().as_millisecond());
             }
@@ -389,7 +391,7 @@ async fn single(
     let mut received = Sha256::new();
     let outcome = async {
         loop {
-            if job.total != Some(job.downloaded) {
+            if job.total.is_some_and(|size| size != job.downloaded) {
                 limiter.check_quota().await?;
             }
             let chunk = tokio::select! {
@@ -399,7 +401,18 @@ async fn single(
             let Some(chunk) = chunk else {
                 break;
             };
+            if chunk.is_empty() {
+                continue;
+            }
+            // For an unknown length, only the next read can distinguish EOF
+            // from more payload. Charge even a chunk discarded at the limit.
+            let allowance = if job.total.is_none() {
+                limiter.check_quota().await
+            } else {
+                Ok(())
+            };
             limiter.record_payload(chunk.len()).await?;
+            allowance?;
             if let Some(size) = job.total {
                 ensure!(
                     job.downloaded + chunk.len() as u64 <= size,

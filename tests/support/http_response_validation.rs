@@ -3,6 +3,12 @@ use super::*;
 // Each accepted request receives the next response. Real HTTP responses make
 // these checks cover the engine's probe, fallback and range dispatch paths.
 async fn download_responses(responses: Vec<String>) -> (TempDir, Store, Job) {
+    let (temp, store) = setup();
+    let job = run_responses(&store, responses).await;
+    (temp, store, job)
+}
+
+async fn run_responses(store: &Store, responses: Vec<String>) -> Job {
     let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
     let url = format!("http://{}/file.bin", listener.local_addr().unwrap());
     let server = tokio::spawn(async move {
@@ -16,9 +22,8 @@ async fn download_responses(responses: Vec<String>) -> (TempDir, Store, Job) {
             stream.write_all(response.as_bytes()).await.unwrap();
         }
     });
-    let (temp, store) = setup();
-    let job = enqueue(&store, &url);
-    let outcome = until_stalled(&store, run(&store, job)).await;
+    let job = enqueue(store, &url);
+    let outcome = until_stalled(store, run(store, job)).await;
     if outcome.is_err() {
         server.abort();
     }
@@ -27,7 +32,41 @@ async fn download_responses(responses: Vec<String>) -> (TempDir, Store, Job) {
         .await
         .expect("Engine must request every fixture response")
         .unwrap();
-    (temp, store, job)
+    job
+}
+
+#[tokio::test]
+async fn chunked_http_at_quota_distinguishes_eof_from_more_payload() {
+    use download_engine::quota::{Limits, MIN_LIMIT};
+    for more in [false, true] {
+        let (_temp, store) = setup();
+        let now = jiff::Timestamp::now().as_second();
+        store
+            .set_quota_limits_at(
+                Limits {
+                    hourly: Some(MIN_LIMIT),
+                    daily: None,
+                },
+                now,
+            )
+            .unwrap();
+        store.record_quota_bytes_at(MIN_LIMIT - 3, now).unwrap();
+        let extra = if more { "2\r\nde\r\n" } else { "" };
+        let reply = format!(
+            "HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\nContent-Type: application/octet-stream\r\nConnection: close\r\n\r\n3\r\nabc\r\n{extra}0\r\n\r\n"
+        );
+        let job = run_responses(&store, vec![reply]).await;
+        assert_eq!(job.downloaded, 3);
+        if more {
+            assert_eq!(job.status, Status::Paused, "{:?}", job.error);
+            assert!(job.quota_waiting && job.saved_path.is_none());
+            assert_eq!(store.quota_status().unwrap().hourly_used, MIN_LIMIT + 2);
+        } else {
+            assert_eq!(job.status, Status::Complete, "{:?}", job.error);
+            assert_eq!(std::fs::read(job.saved_path.unwrap()).unwrap(), b"abc");
+            assert_eq!(store.quota_status().unwrap().hourly_used, MIN_LIMIT);
+        }
+    }
 }
 
 fn response(status: &str, headers: &str, body: &str) -> String {

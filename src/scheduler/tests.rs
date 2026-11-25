@@ -1233,7 +1233,7 @@ fn full_quota_admits_only_local_publication_in_regular_and_immediate_queues() {
     let checking = &mut jobs[2];
     checking.status = Status::Complete;
     checking.saved_path = Some(checking.directory.join(&checking.name));
-    crate::synchronization::State::begin(checking).unwrap();
+    assert!(crate::synchronization::State::queue_check(checking).unwrap());
     store.save(checking).unwrap();
     store.save(&jobs[1]).unwrap();
     let now = jiff::Timestamp::now().as_second();

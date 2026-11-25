@@ -96,10 +96,16 @@ pub struct Event {
 }
 
 #[derive(Debug)]
-pub(crate) struct Reached;
+pub(crate) enum Reached {
+    Window,
+    FtpPrefix,
+}
 impl std::fmt::Display for Reached {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str("Data quota reached. Downloads will continue when the allowance resets.")
+        f.write_str(match self {
+            Self::Window => "Data quota reached. Downloads will continue when the allowance resets.",
+            Self::FtpPrefix => "Resume when enough data quota is available to verify the saved FTP bytes and continue. If a full allowance is too small, raise or disable the limit.",
+        })
     }
 }
 impl std::error::Error for Reached {}
@@ -263,7 +269,7 @@ impl Meter {
     }
     pub(crate) async fn check(&self) -> Result<()> {
         if self.0.blocked.load(Ordering::Acquire) && self.status().await?.blocked() {
-            return Err(Reached.into());
+            return Err(Reached::Window.into());
         }
         Ok(())
     }
@@ -373,15 +379,15 @@ mod tests {
     }
     #[test]
     fn quota_cannot_hide_validation_errors_or_consume_retry_budget() {
-        let mut error = Some(anyhow::Error::from(Reached));
+        let mut error = Some(anyhow::Error::from(Reached::Window));
         crate::retry::merge_error(&mut error, crate::retry::incomplete("temporary"));
         assert!(reached(error.as_ref().unwrap()));
         crate::retry::merge_error(&mut error, anyhow::anyhow!("file changed"));
         assert_eq!(error.as_ref().unwrap().to_string(), "file changed");
-        crate::retry::merge_error(&mut error, Reached.into());
+        crate::retry::merge_error(&mut error, Reached::Window.into());
         assert_eq!(error.as_ref().unwrap().to_string(), "file changed");
         let mut transient = Some(crate::retry::incomplete("temporary"));
-        crate::retry::merge_error(&mut transient, Reached.into());
+        crate::retry::merge_error(&mut transient, Reached::Window.into());
         assert!(reached(transient.as_ref().unwrap()));
     }
 }

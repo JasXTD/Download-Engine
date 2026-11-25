@@ -78,10 +78,25 @@ pub(super) async fn transfer_with(
     } else {
         0
     };
-    let (mut data, mut received) = control.retrieve(requested, cancel).await?;
+    let (data, mut received) = control.prepare_retrieval(requested, cancel).await?;
+    let verifying_prefix = received < saved;
+    if verifying_prefix {
+        // A reset can only help if a full window can verify the saved prefix
+        // and deliver at least one new byte (or finish a fully cached file).
+        let required = saved - received + u64::from(metadata.size != Some(saved));
+        let limits = limiter.quota_status().await?.limits;
+        if [limits.hourly, limits.daily]
+            .into_iter()
+            .flatten()
+            .any(|limit| limit < required)
+        {
+            return Err(crate::quota::Reached::FtpPrefix.into());
+        }
+    }
+    let mut data = control.retrieve(data, cancel).await?;
     store.activity.set(
         &job.id,
-        if received < saved {
+        if verifying_prefix {
             crate::transfer_activity::Phase::CheckingSaved
         } else {
             crate::transfer_activity::Phase::Downloading
@@ -145,6 +160,15 @@ pub(super) async fn transfer_with(
     }.await;
     file.sync_all().await?;
     drop(file);
+    // Other transfers can consume a shared allowance during verification.
+    // Stop retrying if this attempt spent quota without extending the file.
+    if verifying_prefix
+        && received > 0
+        && received <= saved
+        && outcome.as_ref().is_err_and(crate::quota::reached)
+    {
+        return Err(crate::quota::Reached::FtpPrefix.into());
+    }
     if !outcome? {
         return Ok(None);
     }

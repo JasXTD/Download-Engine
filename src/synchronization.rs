@@ -55,27 +55,35 @@ pub struct State {
     pub checked_at: Option<i64>,
 }
 impl State {
-    pub(crate) fn begin(job: &mut Job) -> Result<()> {
-        ensure!(
-            job.link_fallback.is_none(),
-            "Files discovered on webpages do not support synchronization checks. Add the direct file URL to check for updates."
-        );
-        ensure!(
-            !crate::mega::is_url(&job.url),
-            "MEGA files do not support synchronization checks. Use Redownload instead."
-        );
-        ensure!(
-            !crate::wetransfer::is_url(&job.url),
-            "WeTransfer transfers do not support synchronization checks. Use Redownload instead."
-        );
-        ensure!(
-            job.ftp.is_none(),
-            "FTP downloads do not support synchronization checks. Use Redownload instead."
-        );
-        ensure!(
-            job.status == Status::Complete,
-            "Finish the download before checking for updates"
-        );
+    pub(crate) fn queue_check(job: &mut Job) -> Result<bool> {
+        // Queue starts preserve active work and individual pauses. Reviewed media
+        // and webpage selections keep their snapshots. Only direct files can be checked.
+        if !matches!(job.status, Status::Complete | Status::Failed)
+            || job.hls.is_some()
+            || job.ftp.is_some()
+            || job.provider.is_some()
+            || job.torrent.is_some()
+            || job.link_fallback.is_some()
+            || crate::mega::is_url(&job.url)
+            || crate::wetransfer::is_url(&job.url)
+        {
+            return Ok(false);
+        }
+        if job.status == Status::Complete {
+            job.synchronization = Some(Self::from_completed(job)?);
+        } else if let Some(check) = &mut job.synchronization {
+            // A failed update keeps its resumable plan and the previous saved copy.
+            check.checked_at = None;
+        } else {
+            return Ok(false);
+        }
+        job.status = Status::Queued;
+        job.error = None;
+        job.retry = retry::State::default();
+        Ok(true)
+    }
+
+    fn from_completed(job: &Job) -> Result<Self> {
         let previous = CompletedCopy {
             path: job
                 .saved_path
@@ -102,15 +110,11 @@ impl State {
                         .and_then(|state| state.previous.expected_mime.clone())
                 }),
         };
-        job.synchronization = Some(Self {
+        Ok(Self {
             phase: Phase::Checking,
             previous,
             checked_at: None,
-        });
-        job.status = Status::Queued;
-        job.error = None;
-        job.retry = retry::State::default();
-        Ok(())
+        })
     }
 
     pub fn label(&self, status: Status) -> &'static str {

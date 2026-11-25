@@ -180,11 +180,23 @@ if (api.scripting?.getRegisteredContentScripts) {
 // All browser events for one download share the recovery-first decision. In
 // particular, a filename event must await an earlier onCreated native lookup.
 const consideringDownloads = new Map();
+const waitingDownloads = [];
+let activeConsiderations = 0;
+async function considerWhenReady(id) {
+  if (activeConsiderations < 3) activeConsiderations++;
+  else await new Promise(resolve => waitingDownloads.push(resolve));
+  try {
+    await ready();
+    if (!await linkRecovery.consider(id)) await capture.consider(id);
+  } finally {
+    const next = waitingDownloads.shift();
+    if (next) next();
+    else activeConsiderations--;
+  }
+}
 function considerDownload(id) {
   if (!consideringDownloads.has(id)) {
-    const task = ready().then(async () => {
-      if (!await linkRecovery.consider(id)) await capture.consider(id);
-    }).finally(() => consideringDownloads.delete(id));
+    const task = considerWhenReady(id).finally(() => consideringDownloads.delete(id));
     consideringDownloads.set(id, task);
   }
   return consideringDownloads.get(id);
@@ -310,7 +322,7 @@ api.runtime.onMessage.addListener((message, sender, respond) => {
   if (message?.action === "on_page_torrent" && /^https?:\/\//.test(sender.url || "") && Number.isInteger(sender.tab?.id)) {
     trackOperation("review", async () => {
       if (sender.tab.incognito || sender.frameId !== 0) throw Error("Automatic torrent capture is unavailable in this context.");
-      if (!(await api.storage.local.get("autoCapture")).autoCapture) throw Error("Automatic capture is off.");
+      if (!await enabled()) throw Error("Automatic capture is off.");
       const request = IDMCore.makeRequest(message.url, crypto.randomUUID());
       if (request.action !== "review_torrent") throw Error("Only magnet links can be offered here.");
       return native(request);

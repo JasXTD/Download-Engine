@@ -3,11 +3,12 @@
 (() => {
   "use strict";
   const api = typeof browser !== "undefined" ? browser : chrome;
-  let enabled = false;
-  let busy = false;
-  api.storage.local.get("autoCapture").then(value => { enabled = value.autoCapture === true; }).catch(() => {});
+  let enabled;
+  const pending = new Set();
+  const captureEnabled = value => value === undefined || value === true;
+  api.storage.local.get("autoCapture").then(value => { enabled ??= captureEnabled(value.autoCapture); }).catch(() => {});
   api.storage.onChanged.addListener((changes, area) => {
-    if (area === "local" && changes.autoCapture) enabled = changes.autoCapture.newValue === true;
+    if (area === "local" && changes.autoCapture) enabled = captureEnabled(changes.autoCapture.newValue);
   });
   document.addEventListener("click", event => {
     if (!enabled || !event.isTrusted || event.defaultPrevented || event.button !== 0 ||
@@ -17,10 +18,10 @@
     if (!url || !/^magnet:/i.test(url) || url.length > 16384) return;
     event.preventDefault();
     event.stopImmediatePropagation();
-    if (busy) return;
-    busy = true;
+    if (pending.has(url)) return;
+    pending.add(url);
     Promise.resolve().then(() => api.runtime.sendMessage({ action: "on_page_torrent", url }))
       .then(reply => { if (!reply?.ok) location.assign(url); }, () => location.assign(url))
-      .finally(() => { busy = false; });
+      .finally(() => pending.delete(url));
   }, true);
 })();

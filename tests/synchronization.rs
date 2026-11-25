@@ -460,6 +460,59 @@ async fn each_schedule_window_checks_once_even_after_restart_or_reenable() {
 }
 
 #[tokio::test]
+async fn due_sync_queue_skips_unsupported_completed_jobs_and_runs_other_queues() {
+    use download_engine::link_fallback::{Selection, State};
+    use sha2::{Digest, Sha256};
+    let server = Server::new().await;
+    let (_temp, store, queue) = setup();
+    let direct = first(&store, &queue, &server).await;
+    let mut skipped = Vec::new();
+    for url in [
+        "https://we.tl/t-review-fixture",
+        "https://mega.nz/file/abcdefgh#AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8",
+        "https://example.test/download-page",
+    ] {
+        let mut job = add(&store, &queue, url);
+        if url.ends_with("/download-page") {
+            job.link_fallback = Some(State {
+                id: uuid::Uuid::new_v4(),
+                page: url.into(),
+                files: vec![],
+                truncated: false,
+                selection: Some(Selection::Page),
+            });
+        }
+        let path = store.paths.downloads.join(&job.id);
+        std::fs::write(&path, b"saved").unwrap();
+        job.status = Status::Complete;
+        job.saved_path = Some(path);
+        job.integrity.actual = Some(format!("{:x}", Sha256::digest(b"saved")));
+        job.downloaded = 5;
+        job.total = Some(5);
+        store.save(&job).unwrap();
+        skipped.push(job);
+    }
+    let other = store.create_queue("Other files").unwrap();
+    let unrelated = add(&store, &other, &server.url);
+    for id in [&queue.id, &other.id] {
+        store.schedule_queue(id, 200, 100).unwrap();
+    }
+    store.apply_queue_schedules(200).unwrap();
+    let scheduler = Scheduler::start(store.clone()).unwrap();
+    let checked = wait_job(&store, &direct.id, |j| j.status == Status::Complete).await;
+    state(&checked, Phase::UpToDate);
+    wait_job(&store, &unrelated.id, |j| j.status == Status::Complete).await;
+    for old in skipped {
+        let job = store.get(&old.id).unwrap().unwrap();
+        assert_eq!(job.status, Status::Complete);
+        assert!(job.synchronization.is_none());
+        assert_eq!(job.saved_path, old.saved_path);
+        assert_eq!(std::fs::read(job.saved_path.unwrap()).unwrap(), b"saved");
+    }
+    assert!(scheduler.errors.try_iter().collect::<Vec<_>>().is_empty());
+}
+
+#[tokio::test]
 async fn one_time_and_manual_checks_preserve_ordinary_queues_and_individual_pause() {
     let server = Server::new().await;
     let (_temp, store, queue) = setup();

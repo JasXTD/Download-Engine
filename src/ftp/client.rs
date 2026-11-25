@@ -315,11 +315,11 @@ impl Client {
         })
         .await
     }
-    pub(super) async fn retrieve(
+    pub(super) async fn prepare_retrieval(
         &mut self,
         requested_offset: u64,
         cancel: &CancellationToken,
-    ) -> Result<(Stream, u64)> {
+    ) -> Result<(TcpStream, u64)> {
         wait(cancel, async {
             let port = match self.command("EPSV", "").await? {
                 Reply { code: 229, text } => epsv_port(&text)?,
@@ -356,6 +356,16 @@ impl Client {
                     r => return Err(unexpected(r.code, "resume")),
                 }
             }
+            Ok((data, offset))
+        })
+        .await
+    }
+    pub(super) async fn retrieve(
+        &mut self,
+        data: TcpStream,
+        cancel: &CancellationToken,
+    ) -> Result<Stream> {
+        wait(cancel, async {
             let path = self.endpoint.path.clone();
             expect(
                 self.command("RETR", &path).await?,
@@ -373,7 +383,7 @@ impl Client {
                 );
                 stream
             };
-            Ok((data, offset))
+            Ok(data)
         })
         .await
     }

@@ -1,5 +1,6 @@
 const { test } = require("node:test");
 const assert = require("node:assert/strict");
+const { randomUUID } = require("node:crypto");
 const fs = require("node:fs");
 const path = require("node:path");
 const vm = require("node:vm");
@@ -51,7 +52,7 @@ for(const variant of ['chromium','firefox']) {
     assert(!JSON.stringify(log).includes(userAgent));
   });
   test(variant+': magnet offers require the trusted extension frame, capture enabled and a validated magnet',async()=>{
-    const {state,api}=background(variant); await flush(); state.values.autoCapture=true;
+    const {state,api}=background(variant, {}, true); await flush();
     const calls=[]; api.runtime.sendNativeMessage=async(_host,request)=>{calls.push(request);return {version:1,ok:true,preview_id:request.request_id,message:'Ready for review'};};
     const sender={id:api.runtime.id,url:'https://example.test/page',frameId:0,tab:{id:7}};
     const url='magnet:?xt=urn:btih:0123456789012345678901234567890123456789';
@@ -63,7 +64,9 @@ for(const variant of ['chromium','firefox']) {
     for(const overrides of [{tab:{id:7,incognito:true}},{frameId:1}]) assert.equal((await ask(url,overrides)).ok,false);
     assert.equal(await ask(url,{id:'foreign'}),undefined);
     for(const invalid of ['file:///C:/secret.torrent','https://example.test/file.torrent','magnet:?xt=urn:btih:invalid']) assert.equal((await ask(invalid)).ok,false);
-    state.values.autoCapture=false; assert.equal((await ask()).ok,false); assert.equal(calls.length,1);
+    state.values.autoCapture=false; assert.equal((await ask()).ok,false);
+    state.values.autoCapture=true; state.granted=false; assert.equal((await ask()).ok,false);
+    assert.equal(calls.length,1);
   });
   test(variant+': content status honors default-on access and saved off without a native call',async()=>{
     const {state,api}=background(variant);await flush();
@@ -193,6 +196,49 @@ for(const variant of ['firefox','chromium']) {
   });
 }
 for (const variant of ["chromium", "firefox"]) {
+  test(variant + ": a fourth concurrent capture waits for a slot and rechecks the browser item", async () => {
+    const { api, downloads, item } = background(variant, {}, true);
+    await flush();
+    const items = Array.from({ length: 5 }, (_, id) => ({
+      ...item, id, filename: id + ".zip", url: "https://example.test/" + id + ".zip"
+    }));
+    downloads.search = async ({ id }) => [structuredClone(items[id])];
+    downloads.pause = async id => { items[id].paused = true; };
+    downloads.cancel = async id => { items[id].state = "interrupted"; items[id].paused = false; };
+    const native = api.runtime.sendNativeMessage;
+    const prepared = [], release = [];
+    api.runtime.sendNativeMessage = async (host, request) => {
+      if (request.action === "capture_prepare") {
+        prepared.push(request.filename);
+        if (prepared.length <= 3) await new Promise(resolve => release.push(resolve));
+      }
+      return native(host, request);
+    };
+    let suggestions = 0;
+    try {
+      for (const file of items.slice(0, 3)) downloads.onCreated.emit(file);
+      await flush();
+      assert.equal(release.length, 3);
+      downloads.onCreated.emit(items[3]);
+      downloads.onChanged.emit({ id: 3, totalBytes: { current: item.totalBytes } });
+      downloads.onDeterminingFilename?.emit(items[3], () => { suggestions++; });
+      downloads.onCreated.emit(items[4]);
+      await flush();
+      assert.equal(prepared.length, 3);
+      assert.equal(items[3].paused, false);
+      assert.equal(suggestions, 0);
+      items[4].state = "complete";
+      release[0]();
+      await flush();
+      assert.deepEqual(prepared.slice(3), ["3.zip"]);
+      assert.equal(items[3].state, "interrupted");
+      assert.equal(items[4].state, "complete");
+      assert.equal(suggestions, variant === "chromium" ? 1 : 0);
+    } finally {
+      release.forEach(resolve => resolve());
+      await flush();
+    }
+  });
   test(variant + ": fresh install captures clicked downloads and detects media without toggling", async () => {
     const { state, downloads, item } = background(variant, {}, true);
     await flush();
@@ -354,7 +400,7 @@ function background(variant, values = {}, granted = false, userAgent = '', brows
   Object.defineProperty(api, "downloads", { get: () => state.granted ? downloads : undefined });
   const context = vm.createContext({ [variant === "firefox" ? "browser" : "chrome"]: api,
     navigator: {userAgent},
-    URL, performance, structuredClone, TextEncoder, TextDecoder, AbortController, fetch: (...args) => state.fetch(...args), crypto: { randomUUID: () => "random" }, setTimeout, clearTimeout, console });
+    URL, performance, structuredClone, TextEncoder, TextDecoder, AbortController, fetch: (...args) => state.fetch(...args), crypto: { randomUUID }, setTimeout, clearTimeout, console });
   // Chrome 148+ exposes browser alongside chrome, including in service workers.
   if (variant === 'chromium' && browserNamespace) context.browser=api;
   const load = name => vm.runInContext(fs.readFileSync(path.join(__dirname, "../extension", name), "utf8"), context, { filename: name });

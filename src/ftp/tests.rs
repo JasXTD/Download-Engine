@@ -1,6 +1,6 @@
 use super::*;
 use crate::{
-    bandwidth::{Limiter, Limits},
+    bandwidth::Limiter,
     model::{Job, Status},
     paths::AppPaths,
     store::Store,
@@ -140,7 +140,7 @@ async fn explicit_and_implicit_ftps_protect_login_and_data_and_publish_exact_byt
                 &mut job,
                 &root,
                 &CancellationToken::new(),
-                &Limiter::default(),
+                &Limiter::default().with_store(&store).unwrap(),
                 trusted()
             )
             .await
@@ -158,7 +158,7 @@ async fn explicit_and_implicit_ftps_protect_login_and_data_and_publish_exact_byt
             &mut job,
             &root,
             &CancellationToken::new(),
-            &Limiter::new(&Limits::default()).unwrap(),
+            &Limiter::default().with_store(&reopened).unwrap(),
             trusted(),
         )
         .await
@@ -356,11 +356,9 @@ async fn tls_errors_never_send_credentials_or_downgrade() {
     )
     .await
     .unwrap();
-    let error = client
-        .retrieve(0, &CancellationToken::new())
-        .await
-        .err()
-        .unwrap();
+    let cancel = CancellationToken::new();
+    let (data, _) = client.prepare_retrieval(0, &cancel).await.unwrap();
+    let error = client.retrieve(data, &cancel).await.err().unwrap();
     assert!(
         error.to_string().contains("different server certificate"),
         "{error:#}"
